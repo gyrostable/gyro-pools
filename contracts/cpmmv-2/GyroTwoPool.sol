@@ -113,7 +113,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         uint256[] memory virtualParameters = new uint256[](2);
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 _invariant = this.getLastInvariant();
+        uint256 _invariant = _lastInvariant;
 
         virtualParameters[0] = _virtualParameters(
             true,
@@ -291,8 +291,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
             );
     }
 
-    //Check: why are these functions not colliding with those in WeightedPool2TokensForGyro, even when those functions are marked as external?
-
     function _onSwapGivenOut(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
@@ -454,7 +452,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         // computing them on each individual swap
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 lastInvariant = this.getLastInvariant();
+        uint256 lastInvariant = _lastInvariant;
 
         uint256 invariantBeforeJoin = GyroTwoMath._calculateInvariant(
             balances,
@@ -531,7 +529,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         uint256[] memory normalizedWeights = _normalizedWeights();
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 lastInvariant = this.getLastInvariant();
+        uint256 lastInvariant = _lastInvariant;
 
         if (_isNotPaused()) {
             // Update price oracle with the pre-exit balances
