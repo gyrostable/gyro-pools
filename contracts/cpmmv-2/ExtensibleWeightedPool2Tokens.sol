@@ -66,7 +66,7 @@ contract ExtensibleWeightedPool2Tokens is
 
     // The protocol fees will always be charged using the token associated with the max weight in the pool.
     // Since these Pools will register tokens only once, we can assume this index will be constant.
-    uint256 private immutable _maxWeightTokenIndex;
+    uint256 internal immutable _maxWeightTokenIndex;
 
     // All token balances are normalized to behave as if the token had 18 decimals. We assume a token's decimals will
     // not change throughout its lifetime, and store the corresponding scaling factor for each at construction time.
@@ -519,7 +519,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256[] memory balances,
         uint256[] memory normalizedWeights,
         bytes memory userData
-    ) internal view returns (uint256, uint256[] memory) {
+    ) internal virtual view returns (uint256, uint256[] memory) {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
 
         if (kind == BaseWeightedPool.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT) {
@@ -579,7 +579,8 @@ contract ExtensibleWeightedPool2Tokens is
     }
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)
-        private
+        internal
+        virtual
         view
         returns (uint256, uint256[] memory)
     {
@@ -712,7 +713,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256[] memory balances,
         uint256[] memory normalizedWeights,
         bytes memory userData
-    ) internal view returns (uint256, uint256[] memory) {
+    ) internal virtual view returns (uint256, uint256[] memory) {
         BaseWeightedPool.ExitKind kind = userData.exitKind();
 
         if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT) {
@@ -754,7 +755,8 @@ contract ExtensibleWeightedPool2Tokens is
     }
 
     function _exitExactBPTInForTokensOut(uint256[] memory balances, bytes memory userData)
-        private
+        internal
+        virtual
         view
         returns (uint256, uint256[] memory)
     {
@@ -947,7 +949,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256 previousInvariant,
         uint256 currentInvariant,
         uint256 protocolSwapFeePercentage
-    ) internal view returns (uint256[] memory) {
+    ) internal virtual view returns (uint256[] memory) {
         // Initialize with zeros
         uint256[] memory dueProtocolFeeAmounts = new uint256[](2);
 

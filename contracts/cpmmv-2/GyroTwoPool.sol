@@ -106,10 +106,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
     // Returns a and b parameters
 
     function getvirtualParameters() external view returns (uint256[] memory) {
-        return _getvirtualParameters();
+        return _getVirtualParameters();
     }
 
-    function _getvirtualParameters() internal view returns (uint256[] memory) {
+    function _getVirtualParameters() internal view returns (uint256[] memory) {
         uint256[] memory virtualParameters = new uint256[](2);
 
         uint256[] memory sqrtParams = _sqrtParameters();
@@ -128,7 +128,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         return virtualParameters;
     }
 
-    function _getvirtualParameters(
+    function _getVirtualParameters(
         uint256[] memory sqrtParams,
         uint256 invariant
     ) internal view virtual returns (uint256[] memory) {
@@ -359,7 +359,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         );
 
         uint256[] memory virtualParam = new uint256[](2);
-        virtualParam = _getvirtualParameters(sqrtParams, currentInvariant);
+        virtualParam = _getVirtualParameters(sqrtParams, currentInvariant);
 
         virtualParamIn = tokenInIsToken0 ? virtualParam[0] : virtualParam[1];
         virtualParamOut = tokenInIsToken0 ? virtualParam[1] : virtualParam[0];
@@ -472,7 +472,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
-            normalizedWeights,
             userData
         );
 
@@ -487,6 +486,38 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         );
 
         return (bptAmountOut, amountsIn, dueProtocolFeeAmounts);
+    }
+
+    function _doJoin(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        returns (uint256, uint256[] memory)
+    {
+        BaseWeightedPool.JoinKind kind = userData.joinKind();
+
+        // We do NOT currently support unbalanced update, i.e., EXACT_TOKENS_IN_FOR_BPT_OUT or TOKEN_IN_FOR_EXACT_BPT_OUT
+        if (kind == BaseWeightedPool.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
+            return _joinAllTokensInForExactBPTOut(balances, userData);
+        } else {
+            _revert(Errors.UNHANDLED_JOIN_KIND);
+        }
+    }
+
+    function _joinAllTokensInForExactBPTOut(
+        uint256[] memory balances,
+        bytes memory userData
+    ) internal view override returns (uint256, uint256[] memory) {
+        uint256 bptAmountOut = userData.allTokensInForExactBptOut();
+        // Note that there is no maximum amountsIn parameter: this is handled by `IVault.joinPool`.
+
+        uint256[] memory amountsIn = GyroTwoMath
+            ._calcAllTokensInGivenExactBptOut(
+                balances,
+                bptAmountOut,
+                totalSupply()
+            );
+
+        return (bptAmountOut, amountsIn);
     }
 
     /**
@@ -560,11 +591,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
             dueProtocolFeeAmounts = new uint256[](2);
         }
 
-        (bptAmountIn, amountsOut) = _doExit(
-            balances,
-            normalizedWeights,
-            userData
-        );
+        (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
         _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
             balances,
@@ -576,5 +603,72 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
         );
 
         return (bptAmountIn, amountsOut, dueProtocolFeeAmounts);
+    }
+
+    function _doExit(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        returns (uint256, uint256[] memory)
+    {
+        BaseWeightedPool.ExitKind kind = userData.exitKind();
+
+        // We do NOT support unbalanced exit at the moment, i.e., EXACT_BPT_IN_FOR_ONE_TOKEN_OUT or
+        // BPT_IN_FOR_EXACT_TOKENS_OUT.
+        if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT) {
+            return _exitExactBPTInForTokensOut(balances, userData);
+        } else {
+            _revert(Errors.UNHANDLED_EXIT_KIND);
+        }
+    }
+
+    function _exitExactBPTInForTokensOut(
+        uint256[] memory balances,
+        bytes memory userData
+    ) internal view override returns (uint256, uint256[] memory) {
+        // This exit function is the only one that is not disabled if the contract is paused: it remains unrestricted
+        // in an attempt to provide users with a mechanism to retrieve their tokens in case of an emergency.
+        // This particular exit function is the only one that remains available because it is the simplest one, and
+        // therefore the one with the lowest likelihood of errors.
+
+        uint256 bptAmountIn = userData.exactBptInForTokensOut();
+        // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
+
+        uint256[] memory amountsOut = GyroTwoMath._calcTokensOutGivenExactBptIn(
+            balances,
+            bptAmountIn,
+            totalSupply()
+        );
+        return (bptAmountIn, amountsOut);
+    }
+
+    // Helpers
+
+    function _getDueProtocolFeeAmounts(
+        uint256[] memory balances,
+        uint256[] memory normalizedWeights,
+        uint256 previousInvariant,
+        uint256 currentInvariant,
+        uint256 protocolSwapFeePercentage
+    ) internal view override returns (uint256[] memory) {
+        // Initialize with zeros
+        uint256[] memory dueProtocolFeeAmounts = new uint256[](2);
+
+        // Early return if the protocol swap fee percentage is zero, saving gas.
+        if (protocolSwapFeePercentage == 0) {
+            return dueProtocolFeeAmounts;
+        }
+
+        // The protocol swap fees are always paid using the token with the largest weight in the Pool. As this is the
+        // token that is expected to have the largest balance, using it to pay fees should not unbalance the Pool.
+        dueProtocolFeeAmounts[_maxWeightTokenIndex] = GyroTwoMath
+            ._calcDueTokenProtocolSwapFeeAmount(
+                balances[_maxWeightTokenIndex],
+                normalizedWeights[_maxWeightTokenIndex],
+                previousInvariant,
+                currentInvariant,
+                protocolSwapFeePercentage
+            );
+
+        return dueProtocolFeeAmounts;
     }
 }
