@@ -1,6 +1,6 @@
 import { PoolSpecialization, SwapKind } from '@balancer-labs/balancer-js';
 import { ZERO_ADDRESS } from '@balancer-labs/v2-helpers/src/constants';
-import { WeightedPoolType } from '@balancer-labs/v2-helpers/src/models/pools/weighted/types';
+import { RawWeightedPoolDeployment, WeightedPoolType } from '@balancer-labs/v2-helpers/src/models/pools/weighted/types';
 import WeightedPool from '@balancer-labs/v2-helpers/src/models/pools/weighted/WeightedPool';
 import TokenList from '@balancer-labs/v2-helpers/src/models/tokens/TokenList';
 import { BigNumberish, bn, fp, pct } from '@balancer-labs/v2-helpers/src/numbers';
@@ -8,7 +8,6 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
-import { RawGyroPoolDeployment } from './GyroTypes';
 
 
 export function itBehavesAsWeightedPool(
@@ -17,7 +16,6 @@ export function itBehavesAsWeightedPool(
 ): void {
   const POOL_SWAP_FEE_PERCENTAGE = fp(0.01);
   const WEIGHTS = [fp(30), fp(70), fp(5), fp(5)];
-  const SQRTS = [fp(0.97 * 10 ** 18), fp(1.02 * 10 ** 18)];
   const INITIAL_BALANCES = [fp(0.9), fp(1.8), fp(2.7), fp(3.6)];
 
   let recipient: SignerWithAddress, other: SignerWithAddress, lp: SignerWithAddress, assetManager: SignerWithAddress;
@@ -26,15 +24,14 @@ export function itBehavesAsWeightedPool(
 
   const ZEROS = Array(numberOfTokens).fill(bn(0));
   const weights: BigNumberish[] = WEIGHTS.slice(0, numberOfTokens);
-  const sqrts: BigNumberish[] = SQRTS.slice(0, numberOfTokens);
   const initialBalances = INITIAL_BALANCES.slice(0, numberOfTokens);
 
-  async function deployPool(params: RawGyroPoolDeployment = {}): Promise<void> {
+  async function deployPool(params: RawWeightedPoolDeployment = {}): Promise<void> {
     const assetManagers = Array(numberOfTokens).fill(assetManager.address);
 
     params = Object.assign(
       {},
-      { tokens, weights, sqrts, assetManagers, swapFeePercentage: POOL_SWAP_FEE_PERCENTAGE, poolType },
+      { tokens, weights, assetManagers, swapFeePercentage: POOL_SWAP_FEE_PERCENTAGE, poolType },
       params
     );
     pool = await WeightedPool.create(params);
