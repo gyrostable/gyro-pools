@@ -1,17 +1,17 @@
-import { ethers } from 'hardhat';
+import { MAX_INT22, MAX_UINT10, MAX_UINT31, MAX_UINT64, MIN_INT22 } from '@balancer-labs/v2-helpers/src/constants';
+import { actionId } from '@balancer-labs/v2-helpers/src/models/misc/actions';
+import { Sample, WeightedPoolType } from '@balancer-labs/v2-helpers/src/models/pools/weighted/types';
+import WeightedPool from '@balancer-labs/v2-helpers/src/models/pools/weighted/WeightedPool';
+import TokenList from '@balancer-labs/v2-helpers/src/models/tokens/TokenList';
+import { BigNumberish, fp } from '@balancer-labs/v2-helpers/src/numbers';
+import { advanceTime, currentTimestamp, lastBlockNumber, MINUTE } from '@balancer-labs/v2-helpers/src/time';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { expect } from 'chai';
 import { BigNumber, ContractReceipt } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { actionId } from '@balancer-labs/v2-helpers/src/models/misc/actions';
-import { BigNumberish, fp } from '@balancer-labs/v2-helpers/src/numbers';
-import { MAX_INT22, MAX_UINT10, MAX_UINT31, MAX_UINT64, MIN_INT22 } from '@balancer-labs/v2-helpers/src/constants';
-import { MINUTE, advanceTime, currentTimestamp, lastBlockNumber } from '@balancer-labs/v2-helpers/src/time';
-
-import TokenList from '@balancer-labs/v2-helpers/src/models/tokens/TokenList';
-import WeightedPool from '@balancer-labs/v2-helpers/src/models/pools/weighted/WeightedPool';
-import { Sample, WeightedPoolType } from '@balancer-labs/v2-helpers/src/models/pools/weighted/types';
-
+import { ethers } from 'hardhat';
 import { itBehavesAsWeightedPool } from './BaseWeightedPool.behavior';
+
+
 
 describe('WeightedPool2Tokens', function () {
   describe('as a 2 token weighted pool', () => {

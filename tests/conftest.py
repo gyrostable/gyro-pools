@@ -2,8 +2,8 @@ from collections import namedtuple
 
 import pytest
 
-NewPoolParams = namedtuple(
-    "NewPoolParams",
+GyroParams = namedtuple(
+    "GyroParams",
     [
         "vault",  #  IVault
         "name",  #  string
@@ -77,7 +77,7 @@ def gyro_pool_testing(
     authorizer = admin.deploy(Authorizer, admin)
     vault = admin.deploy(VaultTesting, authorizer.address, weth9.address, 0, 0)
 
-    args = NewPoolParams(
+    args = GyroParams(
         vault=vault.address,
         name="GyroTwoPool",  #  string
         symbol="GTP",  #  string
@@ -106,7 +106,7 @@ def gyro_poolMockVault_testing(
 
     vault = admin.deploy(MockVault, authorizer)
 
-    args = NewPoolParams(
+    args = GyroParams(
         vault=vault.address,
         name="GyroTwoPool",  #  string
         symbol="GTP",  #  string
