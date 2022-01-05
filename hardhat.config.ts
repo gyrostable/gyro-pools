@@ -6,7 +6,30 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 
 const config: HardhatUserConfig = {
-  solidity: "0.7.6",
+  solidity: {
+    compilers: [
+      {
+        version: "0.7.1",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 9999,
+          },
+        },
+      },
+    ],
+    overrides: {
+      "@balancer-labs/v2-vault/contracts/Vault.sol": {
+        version: "0.7.1",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1500,
+          },
+        },
+      },
+    },
+  },
 };
 
 export default config;

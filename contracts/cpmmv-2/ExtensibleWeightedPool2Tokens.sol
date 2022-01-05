@@ -54,7 +54,7 @@ contract ExtensibleWeightedPool2Tokens is
     // The swap fee is internally stored using 64 bits, which is enough to represent _MAX_SWAP_FEE_PERCENTAGE.
 
     bytes32 internal _miscData;
-    uint256 private _lastInvariant;
+    uint256 internal _lastInvariant;
 
     bytes32 private immutable _poolId;
 
@@ -239,7 +239,7 @@ contract ExtensibleWeightedPool2Tokens is
     /**
      * @dev Returns the current value of the invariant.
      */
-    function getInvariant() public view returns (uint256) {
+    function getInvariant() public virtual view returns (uint256) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
 
         // Since the Pool hooks always work with upscaled balances, we manually
@@ -433,7 +433,7 @@ contract ExtensibleWeightedPool2Tokens is
         address,
         address,
         bytes memory userData
-    ) private returns (uint256, uint256[] memory) {
+    ) internal virtual returns (uint256, uint256[] memory) {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
         _require(kind == BaseWeightedPool.JoinKind.INIT, Errors.UNINITIALIZED);
 
@@ -480,7 +480,8 @@ contract ExtensibleWeightedPool2Tokens is
         uint256 protocolSwapFeePercentage,
         bytes memory userData
     )
-        private
+        internal
+        virtual
         returns (
             uint256,
             uint256[] memory,
@@ -518,7 +519,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256[] memory balances,
         uint256[] memory normalizedWeights,
         bytes memory userData
-    ) private view returns (uint256, uint256[] memory) {
+    ) internal view returns (uint256, uint256[] memory) {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
 
         if (kind == BaseWeightedPool.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT) {
@@ -660,7 +661,8 @@ contract ExtensibleWeightedPool2Tokens is
         uint256 protocolSwapFeePercentage,
         bytes memory userData
     )
-        private
+        internal
+        virtual
         returns (
             uint256 bptAmountIn,
             uint256[] memory amountsOut,
@@ -710,7 +712,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256[] memory balances,
         uint256[] memory normalizedWeights,
         bytes memory userData
-    ) private view returns (uint256, uint256[] memory) {
+    ) internal view returns (uint256, uint256[] memory) {
         BaseWeightedPool.ExitKind kind = userData.exitKind();
 
         if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT) {
@@ -945,7 +947,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256 previousInvariant,
         uint256 currentInvariant,
         uint256 protocolSwapFeePercentage
-    ) private view returns (uint256[] memory) {
+    ) internal view returns (uint256[] memory) {
         // Initialize with zeros
         uint256[] memory dueProtocolFeeAmounts = new uint256[](2);
 
@@ -976,7 +978,7 @@ contract ExtensibleWeightedPool2Tokens is
         uint256[] memory toMutate,
         uint256[] memory arguments,
         function(uint256, uint256) pure returns (uint256) mutation
-    ) private pure {
+    ) internal pure {
         toMutate[0] = mutation(toMutate[0], arguments[0]);
         toMutate[1] = mutation(toMutate[1], arguments[1]);
     }

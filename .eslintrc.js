@@ -1,24 +1,11 @@
 module.exports = {
-  env: {
-    browser: false,
-    es2021: true,
-    mocha: true,
-    node: true,
-  },
-  plugins: ["@typescript-eslint"],
-  extends: [
-    "standard",
-    "plugin:prettier/recommended",
-    "plugin:node/recommended",
-  ],
+  root: true,
   parser: "@typescript-eslint/parser",
-  parserOptions: {
-    ecmaVersion: 12,
-  },
+  plugins: ["@typescript-eslint", "prettier", "mocha-no-only"],
+  extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   rules: {
-    "node/no-unsupported-features/es-syntax": [
-      "error",
-      { ignores: ["modules"] },
-    ],
+    "comma-spacing": ["error", {before: false, after: true}],
+    "prettier/prettier": "error",
+    "mocha-no-only/mocha-no-only": ["error"],
   },
 };
