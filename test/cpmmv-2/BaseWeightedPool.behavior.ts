@@ -1,14 +1,15 @@
-import { ethers } from 'hardhat';
+import { PoolSpecialization, SwapKind } from '@balancer-labs/balancer-js';
+import { ZERO_ADDRESS } from '@balancer-labs/v2-helpers/src/constants';
+import { WeightedPoolType } from '@balancer-labs/v2-helpers/src/models/pools/weighted/types';
+import WeightedPool from '@balancer-labs/v2-helpers/src/models/pools/weighted/WeightedPool';
+import TokenList from '@balancer-labs/v2-helpers/src/models/tokens/TokenList';
+import { BigNumberish, bn, fp, pct } from '@balancer-labs/v2-helpers/src/numbers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { PoolSpecialization, SwapKind } from '@balancer-labs/balancer-js';
-import { BigNumberish, bn, fp, pct } from '@balancer-labs/v2-helpers/src/numbers';
-import { ZERO_ADDRESS } from '@balancer-labs/v2-helpers/src/constants';
+import { ethers } from 'hardhat';
+import { RawGyroPoolDeployment } from './GyroTypes';
 
-import TokenList from '@balancer-labs/v2-helpers/src/models/tokens/TokenList';
-import WeightedPool from '@balancer-labs/v2-helpers/src/models/pools/weighted/WeightedPool';
-import { RawWeightedPoolDeployment, WeightedPoolType } from '@balancer-labs/v2-helpers/src/models/pools/weighted/types';
 
 export function itBehavesAsWeightedPool(
   numberOfTokens: number,
@@ -16,6 +17,7 @@ export function itBehavesAsWeightedPool(
 ): void {
   const POOL_SWAP_FEE_PERCENTAGE = fp(0.01);
   const WEIGHTS = [fp(30), fp(70), fp(5), fp(5)];
+  const SQRTS = [fp(0.97 * 10 ** 18), fp(1.02 * 10 ** 18)];
   const INITIAL_BALANCES = [fp(0.9), fp(1.8), fp(2.7), fp(3.6)];
 
   let recipient: SignerWithAddress, other: SignerWithAddress, lp: SignerWithAddress, assetManager: SignerWithAddress;
@@ -24,14 +26,15 @@ export function itBehavesAsWeightedPool(
 
   const ZEROS = Array(numberOfTokens).fill(bn(0));
   const weights: BigNumberish[] = WEIGHTS.slice(0, numberOfTokens);
+  const sqrts: BigNumberish[] = SQRTS.slice(0, numberOfTokens);
   const initialBalances = INITIAL_BALANCES.slice(0, numberOfTokens);
 
-  async function deployPool(params: RawWeightedPoolDeployment = {}): Promise<void> {
+  async function deployPool(params: RawGyroPoolDeployment = {}): Promise<void> {
     const assetManagers = Array(numberOfTokens).fill(assetManager.address);
 
     params = Object.assign(
       {},
-      { tokens, weights, assetManagers, swapFeePercentage: POOL_SWAP_FEE_PERCENTAGE, poolType },
+      { tokens, weights, sqrts, assetManagers, swapFeePercentage: POOL_SWAP_FEE_PERCENTAGE, poolType },
       params
     );
     pool = await WeightedPool.create(params);
@@ -152,13 +155,13 @@ export function itBehavesAsWeightedPool(
     });
 
     it('fails if no user data', async () => {
-      await expect(pool.join({ data: '0x' })).to.be.revertedWith('Transaction reverted without a reason');
+      await expect(pool.join({ data: '0x' })).to.be.revertedWith("Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.");
     });
 
     it('fails if wrong user data', async () => {
       const wrongUserData = ethers.utils.defaultAbiCoder.encode(['address'], [lp.address]);
 
-      await expect(pool.join({ data: wrongUserData })).to.be.revertedWith('Transaction reverted without a reason');
+      await expect(pool.join({ data: wrongUserData })).to.be.revertedWith("Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.");
     });
 
     context('initialization', () => {
@@ -225,6 +228,8 @@ export function itBehavesAsWeightedPool(
           const minimumBptOut = pct(expectedBptOut, 0.99);
 
           const result = await pool.queryJoinGivenIn({ amountsIn, minimumBptOut });
+          
+          console.log(result.amountsIn);
 
           expect(result.amountsIn).to.deep.equal(amountsIn);
           expect(result.bptOut).to.be.equalWithError(expectedBptOut, 0.0001);
@@ -374,13 +379,13 @@ export function itBehavesAsWeightedPool(
     });
 
     it('fails if no user data', async () => {
-      await expect(pool.exit({ data: '0x' })).to.be.revertedWith('Transaction reverted without a reason');
+      await expect(pool.exit({ data: '0x' })).to.be.revertedWith("Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.");
     });
 
     it('fails if wrong user data', async () => {
       const wrongUserData = ethers.utils.defaultAbiCoder.encode(['address'], [lp.address]);
 
-      await expect(pool.exit({ data: wrongUserData })).to.be.revertedWith('Transaction reverted without a reason');
+      await expect(pool.exit({ data: wrongUserData })).to.be.revertedWith("Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.");
     });
 
     context('exit exact BPT in for one token out', () => {
@@ -511,6 +516,8 @@ export function itBehavesAsWeightedPool(
         const maximumBptIn = pct(expectedBptIn, 1.01);
 
         const result = await pool.queryExitGivenOut({ amountsOut, maximumBptIn });
+
+        console.log(result.amountsOut);
 
         expect(result.amountsOut).to.deep.equal(amountsOut);
         expect(result.bptIn).to.be.equalWithError(previousBptBalance.div(2), 0.001);
