@@ -4,31 +4,17 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import overrideQueryFunctions from "@balancer-labs/v2-helpers/plugins/overrideQueryFunctions";
+import { task } from "hardhat/config";
+import { TASK_COMPILE } from "hardhat/builtin-tasks/task-names";
+import { hardhatBaseConfig } from "@balancer-labs/v2-common";
+
+task(TASK_COMPILE).setAction(overrideQueryFunctions);
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [
-      {
-        version: "0.7.1",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 9999,
-          },
-        },
-      },
-    ],
-    overrides: {
-      "@balancer-labs/v2-vault/contracts/Vault.sol": {
-        version: "0.7.1",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 1500,
-          },
-        },
-      },
-    },
+    compilers: hardhatBaseConfig.compilers,
+    overrides: hardhatBaseConfig.overrides("xxx"),
   },
 };
 

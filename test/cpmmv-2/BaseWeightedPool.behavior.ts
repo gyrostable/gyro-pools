@@ -229,8 +229,6 @@ export function itBehavesAsWeightedPool(
 
           const result = await pool.queryJoinGivenIn({ amountsIn, minimumBptOut });
           
-          console.log(result.amountsIn);
-
           expect(result.amountsIn).to.deep.equal(amountsIn);
           expect(result.bptOut).to.be.equalWithError(expectedBptOut, 0.0001);
         });
@@ -516,8 +514,6 @@ export function itBehavesAsWeightedPool(
         const maximumBptIn = pct(expectedBptIn, 1.01);
 
         const result = await pool.queryExitGivenOut({ amountsOut, maximumBptIn });
-
-        console.log(result.amountsOut);
 
         expect(result.amountsOut).to.deep.equal(amountsOut);
         expect(result.bptIn).to.be.equalWithError(previousBptBalance.div(2), 0.001);
