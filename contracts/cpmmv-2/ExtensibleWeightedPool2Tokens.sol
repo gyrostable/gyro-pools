@@ -34,13 +34,12 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedOracleMath.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
-contract ExtensibleWeightedPool2Tokens is
+abstract contract ExtensibleWeightedPool2Tokens is
     IMinimalSwapInfoPool,
     BasePoolAuthorization,
     BalancerPoolToken,
     TemporarilyPausable,
-    PoolPriceOracle,
-    WeightedOracleMath
+    PoolPriceOracle
 {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
@@ -806,40 +805,40 @@ contract ExtensibleWeightedPool2Tokens is
         uint256 lastChangeBlock,
         uint256 balanceToken0,
         uint256 balanceToken1
-    ) internal {
-        bytes32 miscData = _miscData;
-        if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            int256 logSpotPrice = WeightedOracleMath._calcLogSpotPrice(
-                _normalizedWeight0,
-                balanceToken0,
-                _normalizedWeight1,
-                balanceToken1
-            );
+    ) virtual internal ;
+        // bytes32 miscData = _miscData;
+        // if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
+        //     int256 logSpotPrice = WeightedOracleMath._calcLogSpotPrice(
+        //         _normalizedWeight0,
+        //         balanceToken0,
+        //         _normalizedWeight1,
+        //         balanceToken1
+        //     );
 
-            int256 logBPTPrice = WeightedOracleMath._calcLogBPTPrice(
-                _normalizedWeight0,
-                balanceToken0,
-                miscData.logTotalSupply()
-            );
+        //     int256 logBPTPrice = WeightedOracleMath._calcLogBPTPrice(
+        //         _normalizedWeight0,
+        //         balanceToken0,
+        //         miscData.logTotalSupply()
+        //     );
 
-            uint256 oracleCurrentIndex = miscData.oracleIndex();
-            uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
-            uint256 oracleUpdatedIndex = _processPriceData(
-                oracleCurrentSampleInitialTimestamp,
-                oracleCurrentIndex,
-                logSpotPrice,
-                logBPTPrice,
-                miscData.logInvariant()
-            );
+        //     uint256 oracleCurrentIndex = miscData.oracleIndex();
+        //     uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
+        //     uint256 oracleUpdatedIndex = _processPriceData(
+        //         oracleCurrentSampleInitialTimestamp,
+        //         oracleCurrentIndex,
+        //         logSpotPrice,
+        //         logBPTPrice,
+        //         miscData.logInvariant()
+        //     );
 
-            if (oracleCurrentIndex != oracleUpdatedIndex) {
-                // solhint-disable not-rely-on-time
-                miscData = miscData.setOracleIndex(oracleUpdatedIndex);
-                miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
-                _miscData = miscData;
-            }
-        }
-    }
+        //     if (oracleCurrentIndex != oracleUpdatedIndex) {
+        //         // solhint-disable not-rely-on-time
+        //         miscData = miscData.setOracleIndex(oracleUpdatedIndex);
+        //         miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
+        //         _miscData = miscData;
+        //     }
+        // }
+    
 
     /**
      * @dev Stores the logarithm of the invariant and BPT total supply, to be later used in each oracle update. Because

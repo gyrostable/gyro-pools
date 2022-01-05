@@ -17,15 +17,15 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 
-import "@balancer-labs/v2-pool-weighted/contracts/WeightedOracleMath.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
 import "./ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2PoolErrors.sol";
 import "./GyroTwoMath.sol";
+import "./GyroTwoOracleMath.sol";
 
-contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
+contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -617,32 +617,57 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
 
     // Helpers
 
-    function _getDueProtocolFeeAmounts(
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights,
-        uint256 previousInvariant,
-        uint256 currentInvariant,
-        uint256 protocolSwapFeePercentage
-    ) internal view override returns (uint256[] memory) {
-        // Initialize with zeros
-        uint256[] memory dueProtocolFeeAmounts = new uint256[](2);
+    // Oracle functions
 
-        // Early return if the protocol swap fee percentage is zero, saving gas.
-        if (protocolSwapFeePercentage == 0) {
-            return dueProtocolFeeAmounts;
-        }
+    /**
+     * @dev Updates the Price Oracle based on the Pool's current state (balances, BPT supply and invariant). Must be
+     * called on *all* state-changing functions with the balances *before* the state change happens, and with
+     * `lastChangeBlock` as the number of the block in which any of the balances last changed.
+     */
+    function _updateOracle(
+        uint256 lastChangeBlock,
+        uint256 balanceToken0,
+        uint256 balanceToken1
+    ) internal override {
+        bytes32 miscData = _miscData;
+        if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
+            uint256[] memory virtualParameters = new uint256[](2);
+            virtualParameters = _getVirtualParameters();
 
-        // The protocol swap fees are always paid using the token with the largest weight in the Pool. As this is the
-        // token that is expected to have the largest balance, using it to pay fees should not unbalance the Pool.
-        dueProtocolFeeAmounts[_maxWeightTokenIndex] = GyroTwoMath
-            ._calcDueTokenProtocolSwapFeeAmount(
-                balances[_maxWeightTokenIndex],
-                normalizedWeights[_maxWeightTokenIndex],
-                previousInvariant,
-                currentInvariant,
-                protocolSwapFeePercentage
+            int256 logSpotPrice = GyroTwoOracleMath._calcLogSpotPrice(
+                balanceToken0,
+                virtualParameters[0],
+                balanceToken1,
+                virtualParameters[1]
             );
 
-        return dueProtocolFeeAmounts;
+            int256 logBPTPrice = GyroTwoOracleMath._calcLogBPTPrice(
+                balanceToken0,
+                virtualParameters[0],
+                balanceToken1,
+                virtualParameters[1],
+                miscData.logTotalSupply()
+            );
+
+            uint256 oracleCurrentIndex = miscData.oracleIndex();
+            uint256 oracleCurrentSampleInitialTimestamp = miscData
+                .oracleSampleCreationTimestamp();
+            uint256 oracleUpdatedIndex = _processPriceData(
+                oracleCurrentSampleInitialTimestamp,
+                oracleCurrentIndex,
+                logSpotPrice,
+                logBPTPrice,
+                miscData.logInvariant()
+            );
+
+            if (oracleCurrentIndex != oracleUpdatedIndex) {
+                // solhint-disable not-rely-on-time
+                miscData = miscData.setOracleIndex(oracleUpdatedIndex);
+                miscData = miscData.setOracleSampleCreationTimestamp(
+                    block.timestamp
+                );
+                _miscData = miscData;
+            }
+        }
     }
 }
