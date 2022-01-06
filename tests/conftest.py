@@ -26,12 +26,12 @@ GyroParams = namedtuple(
 gyro_tokensPerUser = 1000 * 10 ** 18
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def admin(accounts):
     return accounts[0]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def users(accounts):
     return (accounts[1], accounts[2])
 
@@ -131,3 +131,8 @@ def gyro_poolMockVault_testing(
 ##    return admin.deploy(GyroTwoFactory,gyro_vault_testing.address)
 ##    return admin
 #    return admin.deploy(GyroTwoFactory, "0x8f7F78080219d4066A8036ccD30D588B416a40DB", ["0x8f7F78080219d4066A8036ccD30D588B416a40DB","0x8f7F78080219d4066A8036ccD30D588B416a40DB"])
+
+
+@pytest.fixture(scope="module")
+def math_testing(admin, MathTesting):
+    return admin.deploy(MathTesting)
