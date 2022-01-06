@@ -65,7 +65,7 @@ def gyro_erc20_funded(admin, SimpleERC20, users):
     gyro_erc20_1.mint(users[1], gyro_tokensPerUser)
 
     # tokens must be ordered when deploying the GyroTwoPool
-    if gyro_erc20_0.address < gyro_erc20_1.address:
+    if gyro_erc20_0.address.lower() < gyro_erc20_1.address.lower():
         return (gyro_erc20_0, gyro_erc20_1)
     else:
         return (gyro_erc20_1, gyro_erc20_0)
