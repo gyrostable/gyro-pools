@@ -4,7 +4,7 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-vault/contracts/Vault.sol";
-import "./Authorizer.sol";
+import "../../testing/Authorizer.sol";
 
 contract BalancerVault is Vault {
     constructor(
