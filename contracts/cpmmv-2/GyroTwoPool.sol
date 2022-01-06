@@ -34,39 +34,13 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens {
     uint256 private _sqrtBeta;
 
     struct GyroParams {
-        IVault vault;
-        string name;
-        string symbol;
-        IERC20 token0;
-        IERC20 token1;
-        uint256 normalizedWeight0; // A: For now we leave it, unclear if we will need it
-        uint256 normalizedWeight1; // A: For now we leave it, unclear if we will need it
+        NewPoolParams baseParams;
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
-        uint256 swapFeePercentage;
-        uint256 pauseWindowDuration;
-        uint256 bufferPeriodDuration;
-        bool oracleEnabled;
-        address owner;
     }
 
     constructor(GyroParams memory params)
-        ExtensibleWeightedPool2Tokens(
-            NewPoolParams(
-                params.vault,
-                params.name,
-                params.symbol,
-                params.token0,
-                params.token1,
-                params.normalizedWeight0,
-                params.normalizedWeight1,
-                params.swapFeePercentage,
-                params.pauseWindowDuration,
-                params.bufferPeriodDuration,
-                params.oracleEnabled,
-                params.owner
-            )
-        )
+        ExtensibleWeightedPool2Tokens(params.baseParams)
     {
         _require(
             params.sqrtAlpha < params.sqrtBeta,

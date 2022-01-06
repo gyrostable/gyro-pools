@@ -2,8 +2,8 @@ from collections import namedtuple
 
 import pytest
 
-GyroParams = namedtuple(
-    "GyroParams",
+BaseParams = namedtuple(
+    "BaseParams",
     [
         "vault",  #  IVault
         "name",  #  string
@@ -12,13 +12,21 @@ GyroParams = namedtuple(
         "token1",  #  IERC20
         "normalizedWeight0",  #  uint256 ; // A: For now we leave it, unclear if we will need it
         "normalizedWeight1",  #  uint256 ; // A: For now we leave it, unclear if we will need it
-        "sqrtAlpha",  #  uint256          // A: Should already be upscaled
-        "sqrtBeta",  #  uint256           // A: Should already be upscaled. Could be passed as an array[](2)
         "swapFeePercentage",  #  uint256
         "pauseWindowDuration",  #  uint256
         "bufferPeriodDuration",  #  uint256
         "oracleEnabled",  #  bool
         "owner",  #  address
+    ],
+)
+
+
+GyroParams = namedtuple(
+    "GyroParams",
+    [
+        "baseParams",  #  BaseParams
+        "sqrtAlpha",  #  uint256          // A: Should already be upscaled
+        "sqrtBeta",  #  uint256           // A: Should already be upscaled. Could be passed as an array[](2)
     ],
 )
 
@@ -78,20 +86,22 @@ def gyro_pool_testing(
     vault = admin.deploy(VaultTesting, authorizer.address, weth9.address, 0, 0)
 
     args = GyroParams(
-        vault=vault.address,
-        name="GyroTwoPool",  #  string
-        symbol="GTP",  #  string
-        token0=gyro_erc20_funded[0].address,  #  IERC20
-        token1=gyro_erc20_funded[1].address,  #  IERC20
-        normalizedWeight0=0.5 * 10 ** 18,  #  uint256 ;
-        normalizedWeight1=0.5 * 10 ** 18,  #  uint256 ;
+        baseParams=BaseParams(
+            vault=vault.address,
+            name="GyroTwoPool",  #  string
+            symbol="GTP",  #  string
+            token0=gyro_erc20_funded[0].address,  #  IERC20
+            token1=gyro_erc20_funded[1].address,  #  IERC20
+            normalizedWeight0=0.5 * 10 ** 18,  #  uint256 ;
+            normalizedWeight1=0.5 * 10 ** 18,  #  uint256 ;
+            swapFeePercentage=1 * 10 ** 15,  # 0.1%
+            pauseWindowDuration=0,  #  uint256
+            bufferPeriodDuration=0,  #  uint256
+            oracleEnabled=False,  #  bool
+            owner=admin,  #  address
+        ),
         sqrtAlpha=0.97 * 10 ** 18,  #  uint256
         sqrtBeta=1.02 * 10 ** 18,  #  uint256
-        swapFeePercentage=1 * 10 ** 15,  # 0.1%
-        pauseWindowDuration=0,  #  uint256
-        bufferPeriodDuration=0,  #  uint256
-        oracleEnabled=False,  #  bool
-        owner=admin,  #  address
     )
     admin.deploy(QueryProcessor)
     gyroTwoPool = admin.deploy(GyroTwoPool, args)
@@ -107,20 +117,22 @@ def gyro_poolMockVault_testing(
     vault = admin.deploy(MockVault, authorizer)
 
     args = GyroParams(
-        vault=vault.address,
-        name="GyroTwoPool",  #  string
-        symbol="GTP",  #  string
-        token0=gyro_erc20_funded[0].address,  #  IERC20
-        token1=gyro_erc20_funded[1].address,  #  IERC20
-        normalizedWeight0=0.6 * 10 ** 18,  #  uint256 ;
-        normalizedWeight1=0.4 * 10 ** 18,  #  uint256 ;
+        baseParams=BaseParams(
+            vault=vault.address,
+            name="GyroTwoPool",  #  string
+            symbol="GTP",  #  string
+            token0=gyro_erc20_funded[0].address,  #  IERC20
+            token1=gyro_erc20_funded[1].address,  #  IERC20
+            normalizedWeight0=0.6 * 10 ** 18,  #  uint256 ;
+            normalizedWeight1=0.4 * 10 ** 18,  #  uint256 ;
+            swapFeePercentage=1 * 10 ** 15,  #  0.5%
+            pauseWindowDuration=0,  #  uint256
+            bufferPeriodDuration=0,  #  uint256
+            oracleEnabled=False,  #  bool
+            owner=admin,  #  address
+        ),
         sqrtAlpha=0.97 * 10 ** 18,  #  uint256
         sqrtBeta=1.02 * 10 ** 18,  #  uint256
-        swapFeePercentage=1 * 10 ** 15,  #  0.5%
-        pauseWindowDuration=0,  #  uint256
-        bufferPeriodDuration=0,  #  uint256
-        oracleEnabled=False,  #  bool
-        owner=admin,  #  address
     )
     gyroTwoPool = admin.deploy(GyroTwoPool, args)
     return (vault, gyroTwoPool)

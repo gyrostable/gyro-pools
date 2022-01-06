@@ -1,10 +1,7 @@
-import math
-from decimal import Decimal, ROUND_FLOOR, getcontext
 from collections import namedtuple
-from enum import Enum
 
 import pytest
-
+from tests.conftest import gyro_tokensPerUser
 
 JoinPoolRequest = namedtuple(
     "JoinPoolRequest",
@@ -39,7 +36,6 @@ ToList = namedtuple(
     ],
 )
 
-from conftest import gyro_tokensPerUser
 
 numTokens = 2
 numUsers = 2

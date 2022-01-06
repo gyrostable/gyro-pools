@@ -22,8 +22,13 @@ import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.
 
 import "./GyroTwoPool.sol";
 
-contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
-    constructor(IVault vault) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
+contract GyroTwoPoolFactory is
+    BasePoolSplitCodeFactory,
+    FactoryWidePauseWindow
+{
+    constructor(IVault vault)
+        BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode)
+    {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -41,23 +46,28 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
         address owner
     ) external returns (address) {
         // TODO: Do not use arrays in the interface for tokens and weights
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
+        (
+            uint256 pauseWindowDuration,
+            uint256 bufferPeriodDuration
+        ) = getPauseConfiguration();
 
         GyroTwoPool.GyroParams memory params = GyroTwoPool.GyroParams({
-            vault: getVault(),
-            name: name,
-            symbol: symbol,
-            token0: tokens[0],
-            token1: tokens[1],
-            normalizedWeight0: weights[0],
-            normalizedWeight1: weights[1],
+            baseParams: ExtensibleWeightedPool2Tokens.NewPoolParams({
+                vault: getVault(),
+                name: name,
+                symbol: symbol,
+                token0: tokens[0],
+                token1: tokens[1],
+                normalizedWeight0: weights[0],
+                normalizedWeight1: weights[1],
+                swapFeePercentage: swapFeePercentage,
+                pauseWindowDuration: pauseWindowDuration,
+                bufferPeriodDuration: bufferPeriodDuration,
+                oracleEnabled: oracleEnabled,
+                owner: owner
+            }),
             sqrtAlpha: sqrts[0],
-            sqrtBeta: sqrts[1],
-            swapFeePercentage: swapFeePercentage,
-            pauseWindowDuration: pauseWindowDuration,
-            bufferPeriodDuration: bufferPeriodDuration,
-            oracleEnabled: oracleEnabled,
-            owner: owner
+            sqrtBeta: sqrts[1]
         });
 
         return _create(abi.encode(params));
