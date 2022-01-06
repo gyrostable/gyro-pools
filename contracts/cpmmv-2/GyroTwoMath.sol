@@ -96,18 +96,27 @@ library GyroTwoMath {
         c = balances[0].mulDown(balances[1]);
     }
 
+    /** @dev Calculates quadratic root for a special case of quadratic
+     *   assumes a > 0, b < 0, and c < 0, which is the case for a L^2 + b L + c = 0
+     *   where   a = 1/sqrt(alpha/beta)
+     *           b = -(y/sqrt(beta) + x*sqrt(alpha))
+     *           c = x*y
+     *   The special case works nicely w/o negative numbers.
+     *   The args use the notation "mb" to represent -b, and "mc" to represent -c
+     */
     function _calculateQuadratic(
         uint256 a,
-        uint256 b,
-        uint256 c
+        uint256 mb,
+        uint256 mc
     ) internal pure returns (uint256 invariant) {
-        // c < 0 , b < 0
         uint256 denominator = a.mulDown(2 * FixedPoint.ONE);
-        uint256 bSquare = b.mulDown(b);
-        uint256 addTerm = a.mulDown(c.mulDown(4 * FixedPoint.ONE));
+        uint256 bSquare = mb.mulDown(mb);
+        uint256 addTerm = a.mulDown(mc.mulDown(4 * FixedPoint.ONE));
+        // The minus sign in the radicand cancels out in this special case, so we add
         uint256 radicand = bSquare.add(addTerm);
         uint256 sqrResult = _squareRoot(radicand);
-        uint256 numerator = b.add(sqrResult);
+        // The minus sign in the numerator cancels out in this special case
+        uint256 numerator = mb.add(sqrResult);
         invariant = numerator.divDown(denominator);
     }
 
