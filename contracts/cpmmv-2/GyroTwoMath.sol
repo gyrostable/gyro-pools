@@ -68,14 +68,18 @@ library GyroTwoMath {
         //                                          2 * a                               //
         //                                                                              //
         **********************************************************************************************/
-        (uint256 a, uint256 b, uint256 c) = _calculateQuadraticTerms(
+        (uint256 a, uint256 mb, uint256 mc) = _calculateQuadraticTerms(
             balances,
             sqrtAlpha,
             sqrtBeta
         );
-        return _calculateQuadratic(a, b, c);
+        return _calculateQuadratic(a, mb, mc);
     }
 
+    /** @dev Prepares quadratic terms for input to _calculateQuadratic
+     *   works with a special case of quadratic that works nicely w/o negative numbers
+     *   assumes a > 0, b < 0, and c < 0 and returns a, -b, -c
+     */
     function _calculateQuadraticTerms(
         uint256[] memory balances,
         uint256 sqrtAlpha,
@@ -85,22 +89,22 @@ library GyroTwoMath {
         pure
         returns (
             uint256 a,
-            uint256 b,
-            uint256 c
+            uint256 mb,
+            uint256 mc
         )
     {
         a = FixedPoint.ONE.sub(sqrtAlpha.divDown(sqrtBeta));
         uint256 bterm0 = balances[1].divDown(sqrtBeta);
         uint256 bterm1 = balances[0].mulDown(sqrtAlpha);
-        b = bterm0.add(bterm1);
-        c = balances[0].mulDown(balances[1]);
+        mb = bterm0.add(bterm1);
+        mc = balances[0].mulDown(balances[1]);
     }
 
     /** @dev Calculates quadratic root for a special case of quadratic
      *   assumes a > 0, b < 0, and c < 0, which is the case for a L^2 + b L + c = 0
      *   where   a = 1/sqrt(alpha/beta)
      *           b = -(y/sqrt(beta) + x*sqrt(alpha))
-     *           c = x*y
+     *           c = -x*y
      *   The special case works nicely w/o negative numbers.
      *   The args use the notation "mb" to represent -b, and "mc" to represent -c
      */
