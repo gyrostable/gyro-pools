@@ -62,8 +62,9 @@ library GyroTwoMath {
         // Calculate with quadratic formula
         // 0 = (1-sqrt(alhpa/beta)*L^2 - (y/sqrt(beta)+x*sqrt(alpha))*L - x*y)
         // 0 = a*L^2 + b*L + c
-        // c < 0 , b < 0                                          (1/2)
-        //                                  b + (b^2 + 4 * a * c)^                      //
+        // here a > 0, b < 0, and c < 0, which is a special case that works well w/o negative numbers
+        // taking mb = -b and mc = -c:                            (1/2)
+        //                                  mb + (mb^2 + 4 * a * mc)^                   //
         //                   L =    ------------------------------------------          //
         //                                          2 * a                               //
         //                                                                              //
@@ -128,30 +129,33 @@ library GyroTwoMath {
         result = input.powDown(FixedPoint.ONE / 2);
     }
 
+    /** @dev calculates change in invariant following an add or remove liquidity operation
+     *   This assumes that the liquidity provided was correctly balanced
+     */
     function _liquidityInvariantUpdate(
         uint256[] memory balances,
         uint256 sqrtAlpha,
         uint256 sqrtBeta,
         uint256 lastInvariant,
-        uint256 incrY,
+        uint256 diffY,
         bool isIncreaseLiq
     ) internal pure returns (uint256 invariant) {
         /**********************************************************************************************
-      // Algorithm in 2.2.2 Liquidity Update                                                       //
+      // From Prop. 3 in Section 2.2.3 Liquidity Update                                            //
       // Assumed that the  liquidity provided is correctly balanced                                //
-      // dL = incrL  = Liquidity                                                                   //
-      // dY = incrY = amountOut < 0                                                                //
-      // sqrtPx = Squared Price              sqrtPx =  L / x'                                      //
-      // x' = virtual reserves X                                                                   //
+      // dL = change in L invariant, absolute value (sign information in isIncreaseLiq)            //
+      // dY = change in Y reserves, absolute value (sign information in isIncreaseLiq)             //
+      // sqrtPx = Square root of Price p_x              sqrtPx =  L / x'                           //
+      // x' = virtual reserves X (real reserves + offsets)                                         //
       //                                /              dY             \                            //
       //                    dL =       |   --------------------------  |                           //
       //                               \    ( sqrtPx - sqrtAlpha)     /                            //
       //                                                                                           //
       **********************************************************************************************/
         uint256 virtualX = balances[0] + lastInvariant.divUp(sqrtBeta);
-        uint256 sqrtPrice = _calculateSqrtPrice(lastInvariant, virtualX);
-        uint256 denominator = sqrtPrice.sub(sqrtAlpha);
-        uint256 diffInvariant = incrY.divDown(denominator);
+        uint256 sqrtPx = _calculateSqrtPrice(lastInvariant, virtualX);
+        uint256 denominator = sqrtPx.sub(sqrtAlpha);
+        uint256 diffInvariant = diffY.divDown(denominator);
         invariant = isIncreaseLiq
             ? lastInvariant.add(diffInvariant)
             : lastInvariant.sub(diffInvariant);
