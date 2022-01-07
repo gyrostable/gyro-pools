@@ -161,10 +161,14 @@ library GyroTwoMath {
             : lastInvariant.sub(diffInvariant);
     }
 
-    // Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
-    // current balances and weights.
-    // virtualParamIn and virtualParamOut should be the virtual reserve offsets L/sqrt(beta) and L*sqrt(alpha) (depending on what the 'in' and 'out' token is, respectively)
-    // Changed signs compared to original algorithm to account for dy < 0
+    /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances
+     *   balanceIn = existing balance of input token
+     *   balanceOut = existing balance of requested output token
+     *   virtualParamIn = virtual reserve offset for input token
+     *   virtualParamOut = virtual reserve offset for output token
+     *   Offsets are L/sqrt(beta) and L*sqrt(alpha) depending on what the `in' and `out' tokens are respectively
+     *   Note signs are changed compared to Prop. 4 in Section 2.2.4 Trade (Swap) Exeuction to account for dy < 0
+     */
     function _calcOutGivenIn(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -174,6 +178,7 @@ library GyroTwoMath {
         uint256 currentInvariant
     ) internal pure returns (uint256) {
         /**********************************************************************************************
+      // Described for X = `in' asset and Y = `out' asset, but equivalent for the other case       //
       // dX = incrX  = amountIn  > 0                                                               //
       // dY = incrY = amountOut < 0                                                                //
       // x = balanceIn             x' = x +  virtualParamX                                         //
@@ -242,8 +247,8 @@ library GyroTwoMath {
         /************************************************************************************
         // tokensInForExactBptOut                                                          //
         // (per token)                                                                     //
-        // aI = amountIn                   /   bptOut   \                                  //
-        // b = balance           aI = b * | ------------ |                                 //
+        // aI = amountIn (vec)             /   bptOut   \                                  //
+        // b = balance (vec)     aI = b * | ------------ |                                 //
         // bptOut = bptAmountOut           \  totalBPT  /                                  //
         // bpt = totalBPT                                                                  //
         ************************************************************************************/
