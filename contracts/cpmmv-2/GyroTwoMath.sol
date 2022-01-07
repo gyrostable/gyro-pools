@@ -103,7 +103,7 @@ library GyroTwoMath {
 
     /** @dev Calculates quadratic root for a special case of quadratic
      *   assumes a > 0, b < 0, and c < 0, which is the case for a L^2 + b L + c = 0
-     *   where   a = 1/sqrt(alpha/beta)
+     *   where   a = 1 - sqrt(alpha/beta)
      *           b = -(y/sqrt(beta) + x*sqrt(alpha))
      *           c = -x*y
      *   The special case works nicely w/o negative numbers.
@@ -197,6 +197,7 @@ library GyroTwoMath {
         );
         uint256 virtIn = balanceIn.add(virtualParamIn);
         uint256 denominator = virtIn.add(amountIn);
+        //Note: should this be mulUp or mulDown?
         uint256 invSquare = currentInvariant.mulUp(currentInvariant);
         uint256 subtrahend = invSquare.divUp(denominator);
         uint256 virtOut = balanceOut.add(virtualParamOut);
