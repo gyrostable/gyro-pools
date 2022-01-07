@@ -243,7 +243,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         }
     }
 
-    //Check: why are these functions not colliding with those in WeightedPool2TokensForGyro, even when those functions are marked as external?
+    //Note: why are these functions not colliding with those in WeightedPool2TokensForGyro, even when those functions are marked as external?
 
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
