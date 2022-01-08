@@ -218,7 +218,7 @@ library GyroTwoMath {
     ) internal pure returns (uint256) {
         /**********************************************************************************************
       // dX = incrX  = amountIn  > 0                                                               //
-      // dY = incrY = amoountOut < 0                                                               //
+      // dY = incrY  = amountOut < 0                                                               //
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
       // x = balanceIn                                                                             //
