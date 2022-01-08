@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 import pytest
-from tests.conftest import gyro_tokensPerUser
+from tests.conftest import TOKENS_PER_USER
 
 JoinPoolRequest = namedtuple(
     "JoinPoolRequest",
@@ -37,80 +37,60 @@ ToList = namedtuple(
 )
 
 
-numTokens = 2
-numUsers = 2
-address0 = "0x0000000000000000000000000000000000000000"
+NUM_TOKENS = 2
+NUM_USERS = 2
+ADDRESS_0 = "0x0000000000000000000000000000000000000000"
 
 
 def test_empty_erc20s(admin, gyro_erc20_empty):
-    for numToken in range(numTokens):
-        gyro_erc20_empty[numToken].mint(admin, gyro_tokensPerUser)
-        assert gyro_erc20_empty[numToken].totalSupply() == gyro_tokensPerUser
+    for token in range(NUM_TOKENS):
+        gyro_erc20_empty[token].mint(admin, TOKENS_PER_USER)
+        assert gyro_erc20_empty[token].totalSupply() == TOKENS_PER_USER
 
 
 def test_funded_erc20s(users, gyro_erc20_funded):
-    for numToken in range(numTokens):
+    for token in range(NUM_TOKENS):
         assert (
-            gyro_erc20_funded[numToken].totalSupply() == gyro_tokensPerUser * numUsers
+            gyro_erc20_funded[token].totalSupply(
+            ) == TOKENS_PER_USER * NUM_USERS
         )
-        for numUser in range(numUsers):
+        for user in range(NUM_USERS):
             assert (
-                gyro_erc20_funded[numToken].balanceOf(users[numUser])
-                == gyro_tokensPerUser
+                gyro_erc20_funded[token].balanceOf(users[user])
+                == TOKENS_PER_USER
             )
 
 
-def test_pool_reg(admin, users, gyro_pool_testing, gyro_erc20_funded):
-    vault = gyro_pool_testing[0]
-    gyroPool = gyro_pool_testing[1]
-
-    poolId = gyroPool.getPoolId()
+def test_pool_reg(vault, pool, gyro_erc20_funded):
+    poolId = pool.getPoolId()
 
     # Check pool and token registration
-    (tokensAddress, balances, lastChangeBlock) = vault.getPoolTokens(poolId)
+    (tokensAddress, balances) = vault.getPoolTokens(poolId)
 
-    for numToken in range(numTokens):
-        assert tokensAddress[numToken] == gyro_erc20_funded[numToken].address
-        assert balances[numToken] == 0
-        assert balances[numToken] == 0
+    for token in range(NUM_TOKENS):
+        assert tokensAddress[token] == gyro_erc20_funded[token].address
+        assert balances[token] == 0
+        assert balances[token] == 0
 
     balances = ToList(
         element0=0,
         element1=0,
     )
 
-    # Initialize Pool => Didnt work due to gas issues
 
+def test_pool_constructor(vault, pool):
+    assert pool.getSwapFeePercentage() == 1 * 10 ** 15
+    assert pool.getNormalizedWeights() == (0.6 * 10 ** 18, 0.4 * 10 ** 18)
 
-##    vault.JoinPoolTest(poolId, users[0] , users[0], balances, 0, 0,100)
-
-
-def test_pool(
-    admin,
-    users,
-    gyro_two_math_testing,
-    gyro_pool_testing,
-    gyro_poolMockVault_testing,
-    gyro_erc20_funded,
-):
-    """Tests a range of interactions with the pool: Initialization, adding liquidity, and swap."""
-    vault = gyro_poolMockVault_testing[0]
-    gyroPool = gyro_poolMockVault_testing[1]
-
-    poolId = gyroPool.getPoolId()
-    ##################################################
-    ## Verify GyroTwoPool Constructor
-    ##################################################
-    assert gyroPool.getSwapFeePercentage() == 1 * 10 ** 15
-    assert gyroPool.getNormalizedWeights() == (0.6 * 10 ** 18, 0.4 * 10 ** 18)
-
-    sqrtParams = gyroPool.getSqrtParameters()
+    sqrtParams = pool.getSqrtParameters()
     assert sqrtParams[0] == 0.97 * 10 ** 18
     assert sqrtParams[1] == 1.02 * 10 ** 18
 
-    ##################################################
-    ## Initialize Pool
-    ##################################################
+
+def test_pool_on_initialize(
+        users,
+        vault,
+        pool):
 
     balances = ToList(
         element0=0,
@@ -118,184 +98,188 @@ def test_pool(
     )
     amountIn = 100 * 10 ** 18
     protocolSwapFees = 0
-    tx = vault.callJoinPoolGyro(
-        gyroPool.address, 0, users[0], users[0], balances, 0, protocolSwapFees, amountIn
-    )
 
-    ## Check Pool balance change
-    assert tx.events["PoolBalanceChanged"]["poolId"] == poolId
-    assert tx.events["PoolBalanceChanged"]["liquidityProvider"] == users[0]
+    # tx = vault.callJoinPoolGyro(
+    #     pool.address, 0, users[0], users[0], balances, 0, protocolSwapFees, amountIn
+    # )
 
-    assert tx.events["PoolBalanceChanged"]["deltas"] == ToList(
-        element0=amountIn,
-        element1=amountIn,
-    )
-    assert tx.events["PoolBalanceChanged"]["protocolFees"] == ToList(
-        element0=0,
-        element1=0,
-    )
+    # poolId = pool.getPoolId()
 
-    ## Check BPT Token minting
-    assert tx.events["Transfer"][1]["from"] == address0
-    assert tx.events["Transfer"][1]["to"] == users[0]
-    bptTokensInit = tx.events["Transfer"][1]["value"]
-    assert bptTokensInit > 0
+    # # Check Pool balance change
+    # assert tx.events["PoolBalanceChanged"]["poolId"] == poolId
+    # assert tx.events["PoolBalanceChanged"]["liquidityProvider"] == users[0]
 
-    ## Check that the amountIn is now stored in the pool balance
-    (_, IniBalances) = vault.getPoolTokens(poolId)
-    assert IniBalances[0] == amountIn
-    assert IniBalances[1] == amountIn
-    # TODO make these amounts asymmetric everywhere
+    # assert tx.events["PoolBalanceChanged"]["deltas"] == ToList(
+    #     element0=amountIn,
+    #     element1=amountIn,
+    # )
+    # assert tx.events["PoolBalanceChanged"]["protocolFees"] == ToList(
+    #     element0=0,
+    #     element1=0,
+    # )
 
-    sqrtAlpha = sqrtParams[0] / (10 ** 18)
-    sqrtBeta = sqrtParams[1] / (10 ** 18)
+    # # Check BPT Token minting
+    # assert tx.events["Transfer"][1]["from"] == ADDRESS_0
+    # assert tx.events["Transfer"][1]["to"] == users[0]
+    # bptTokensInit = tx.events["Transfer"][1]["value"]
+    # assert bptTokensInit > 0
 
-    ## Check pool's invariant after initialization
-    currentInvariant = gyroPool.getLastInvariant()
-    squareInvariant = (amountIn + currentInvariant / sqrtBeta) * (
-        amountIn + currentInvariant * sqrtAlpha
-    )
-    actualSquareInvariant = currentInvariant * currentInvariant
-    assert squareInvariant == pytest.approx(actualSquareInvariant)
+    # # Check that the amountIn is now stored in the pool balance
+    # (_, IniBalances) = vault.getPoolTokens(poolId)
+    # assert IniBalances[0] == amountIn
+    # assert IniBalances[1] == amountIn
+    # # TODO make these amounts asymmetric everywhere
 
-    ##################################################
-    ## Add liqudidity to an already initialized pool
-    ##################################################
-    tx = vault.callJoinPoolGyro(
-        gyroPool.address,
-        0,
-        users[1],
-        users[1],
-        IniBalances,
-        0,
-        protocolSwapFees,
-        amountIn,
-    )
+    # sqrtParams = pool.getSqrtParameters()
+    # sqrtAlpha = sqrtParams[0] / (10 ** 18)
+    # sqrtBeta = sqrtParams[1] / (10 ** 18)
 
-    ## Check Pool balance Change
-    assert tx.events["PoolBalanceChanged"]["liquidityProvider"] == users[1]
+    # # Check pool's invariant after initialization
+    # currentInvariant = pool.getLastInvariant()
+    # squareInvariant = (amountIn + currentInvariant / sqrtBeta) * (
+    #     amountIn + currentInvariant * sqrtAlpha
+    # )
+    # actualSquareInvariant = currentInvariant * currentInvariant
+    # assert squareInvariant == pytest.approx(actualSquareInvariant)
 
-    assert tx.events["PoolBalanceChanged"]["deltas"] == ToList(
-        element0=amountIn,
-        element1=amountIn,
-    )
+#     ##################################################
+#     ## Add liqudidity to an already initialized pool
+#     ##################################################
+#     tx = vault.callJoinPoolGyro(
+#         pool.address,
+#         0,
+#         users[1],
+#         users[1],
+#         IniBalances,
+#         0,
+#         protocolSwapFees,
+#         amountIn,
+#     )
 
-    ## Check BTP Token minting
-    assert tx.events["Transfer"][0]["from"] == address0
-    assert tx.events["Transfer"][0]["to"] == users[1]
-    bptTokensNew = tx.events["Transfer"][0]["value"]
-    assert bptTokensNew > 0
-    assert float(bptTokensNew) == pytest.approx(bptTokensInit)
-    # ^ NB this only works b/c we use the same amounts. - Which is ok & the right thing to do, it should be relative!
+#     ## Check Pool balance Change
+#     assert tx.events["PoolBalanceChanged"]["liquidityProvider"] == users[1]
 
-    (_, balancesAfterJoin) = vault.getPoolTokens(poolId)
-    assert balancesAfterJoin[0] == amountIn * 2
-    assert balancesAfterJoin[1] == amountIn * 2
+#     assert tx.events["PoolBalanceChanged"]["deltas"] == ToList(
+#         element0=amountIn,
+#         element1=amountIn,
+#     )
 
-    ## Check new pool's invariant
-    newInvariant = gyroPool.getLastInvariant()
-    assert newInvariant > currentInvariant
+#     ## Check BTP Token minting
+#     assert tx.events["Transfer"][0]["from"] == ADDRESS_0
+#     assert tx.events["Transfer"][0]["to"] == users[1]
+#     bptTokensNew = tx.events["Transfer"][0]["value"]
+#     assert bptTokensNew > 0
+#     assert float(bptTokensNew) == pytest.approx(bptTokensInit)
+#     # ^ NB this only works b/c we use the same amounts. - Which is ok & the right thing to do, it should be relative!
 
-    currentInvariant = gyroPool.getLastInvariant()
-    squareInvariant = (balancesAfterJoin[0] + currentInvariant / sqrtBeta) * (
-        balancesAfterJoin[1] + currentInvariant * sqrtAlpha
-    )
-    actualSquareInvariant = currentInvariant * currentInvariant
-    assert squareInvariant == pytest.approx(actualSquareInvariant)
+#     (_, balancesAfterJoin) = vault.getPoolTokens(poolId)
+#     assert balancesAfterJoin[0] == amountIn * 2
+#     assert balancesAfterJoin[1] == amountIn * 2
 
-    ##################################################
-    ## Exit pool
-    ##################################################
-    amountOut = 5 * 10 ** 18
+#     ## Check new pool's invariant
+#     newInvariant = pool.getLastInvariant()
+#     assert newInvariant > currentInvariant
 
-    totalSupplyBeforeExit = gyroPool.totalSupply()
+#     currentInvariant = pool.getLastInvariant()
+#     squareInvariant = (balancesAfterJoin[0] + currentInvariant / sqrtBeta) * (
+#         balancesAfterJoin[1] + currentInvariant * sqrtAlpha
+#     )
+#     actualSquareInvariant = currentInvariant * currentInvariant
+#     assert squareInvariant == pytest.approx(actualSquareInvariant)
 
-    tx = vault.callExitPoolGyro(
-        gyroPool.address,
-        0,
-        users[0],
-        users[0],
-        balancesAfterJoin,
-        0,
-        protocolSwapFees,
-        amountOut,
-    )
+#     ##################################################
+#     ## Exit pool
+#     ##################################################
+#     amountOut = 5 * 10 ** 18
 
-    assert tx.events["PoolBalanceChanged"]["deltas"] == ToList(
-        element0=amountOut,
-        element1=amountOut,
-    )
+#     totalSupplyBeforeExit = pool.totalSupply()
 
-    (_, balancesAfterExit) = vault.getPoolTokens(poolId)
-    assert balancesAfterExit[0] == balancesAfterJoin[0] - amountOut
-    assert balancesAfterExit[1] == balancesAfterJoin[1] - amountOut
+#     tx = vault.callExitPoolGyro(
+#         pool.address,
+#         0,
+#         users[0],
+#         users[0],
+#         balancesAfterJoin,
+#         0,
+#         protocolSwapFees,
+#         amountOut,
+#     )
 
-    ## Check BTP Token minting
-    assert tx.events["Transfer"][0]["from"] == users[0]
-    assert tx.events["Transfer"][0]["to"] == address0
-    bptTokensburnt = tx.events["Transfer"][0]["value"]
-    assert bptTokensburnt > 0
-    # Check that approx. amount of tokens burnt is proportional to the amount of tokens substracted from the pool
-    assert float(bptTokensburnt) == pytest.approx(
-        totalSupplyBeforeExit * (amountOut / balancesAfterJoin[0])
-    )
+#     assert tx.events["PoolBalanceChanged"]["deltas"] == ToList(
+#         element0=amountOut,
+#         element1=amountOut,
+#     )
 
-    ## Check new pool's invariant
-    invariantAfterExit = gyroPool.getLastInvariant()
-    assert newInvariant > invariantAfterExit
-    squareInvariant = (balancesAfterExit[0] + invariantAfterExit / sqrtBeta) * (
-        balancesAfterExit[1] + invariantAfterExit * sqrtAlpha
-    )
-    actualSquareInvariant = invariantAfterExit * invariantAfterExit
-    assert squareInvariant == pytest.approx(actualSquareInvariant)
+#     (_, balancesAfterExit) = vault.getPoolTokens(poolId)
+#     assert balancesAfterExit[0] == balancesAfterJoin[0] - amountOut
+#     assert balancesAfterExit[1] == balancesAfterJoin[1] - amountOut
 
-    ##################################################
-    ## Swap
-    ##################################################
-    amountToSwap = 10 * 10 ** 18
-    (
-        currentInvariant,
-        virtualParamIn,
-        virtualParamOut,
-    ) = gyroPool.calculateCurrentValues(
-        balancesAfterExit[0], balancesAfterExit[1], True
-    )
+#     ## Check BTP Token minting
+#     assert tx.events["Transfer"][0]["from"] == users[0]
+#     assert tx.events["Transfer"][0]["to"] == ADDRESS_0
+#     bptTokensburnt = tx.events["Transfer"][0]["value"]
+#     assert bptTokensburnt > 0
+#     # Check that approx. amount of tokens burnt is proportional to the amount of tokens substracted from the pool
+#     assert float(bptTokensburnt) == pytest.approx(
+#         totalSupplyBeforeExit * (amountOut / balancesAfterJoin[0])
+#     )
 
-    fees = amountToSwap * (0.1 / 100)
-    amountToSwapMinusFees = amountToSwap - fees
-    amountOutExpected = gyro_two_math_testing.calcOutGivenIn(
-        balancesAfterExit[0],  # balanceIn,
-        balancesAfterExit[1],  # balanceOut,
-        amountToSwapMinusFees,  # amountIn,
-        virtualParamIn,  # virtualParamIn,
-        virtualParamOut,  # virtualParamOut,
-        currentInvariant,  # currentInvariant
-    )
+#     ## Check new pool's invariant
+#     invariantAfterExit = pool.getLastInvariant()
+#     assert newInvariant > invariantAfterExit
+#     squareInvariant = (balancesAfterExit[0] + invariantAfterExit / sqrtBeta) * (
+#         balancesAfterExit[1] + invariantAfterExit * sqrtAlpha
+#     )
+#     actualSquareInvariant = invariantAfterExit * invariantAfterExit
+#     assert squareInvariant == pytest.approx(actualSquareInvariant)
 
-    swapRequest = SwapRequest(
-        kind=0,  # SwapKind - GIVEN_IN
-        tokenIn=gyro_erc20_funded[0].address,  # IERC20
-        tokenOut=gyro_erc20_funded[1].address,  # IERC20
-        amount=amountToSwap,  # uint256
-        poolId=poolId,  # bytes32
-        lastChangeBlock=0,  # uint256
-        from_aux=users[1],  # address
-        to=users[1],  # address
-        userData=0,  # bytes
-    )
-    tx = vault.callMinimalGyroPoolSwap(
-        gyroPool.address, swapRequest, balancesAfterExit[0], balancesAfterExit[1]
-    )
+#     ##################################################
+#     ## Swap
+#     ##################################################
+#     amountToSwap = 10 * 10 ** 18
+#     (
+#         currentInvariant,
+#         virtualParamIn,
+#         virtualParamOut,
+#     ) = pool.calculateCurrentValues(
+#         balancesAfterExit[0], balancesAfterExit[1], True
+#     )
 
-    assert tx.events["Swap"][0]["tokenIn"] == gyro_erc20_funded[0]
-    assert tx.events["Swap"][0]["tokenOut"] == gyro_erc20_funded[1]
-    amountOut = tx.events["Swap"][0]["amount"]
+#     fees = amountToSwap * (0.1 / 100)
+#     amountToSwapMinusFees = amountToSwap - fees
+#     amountOutExpected = gyro_two_math_testing.calcOutGivenIn(
+#         balancesAfterExit[0],  # balanceIn,
+#         balancesAfterExit[1],  # balanceOut,
+#         amountToSwapMinusFees,  # amountIn,
+#         virtualParamIn,  # virtualParamIn,
+#         virtualParamOut,  # virtualParamOut,
+#         currentInvariant,  # currentInvariant
+#     )
 
-    assert amountOut < amountToSwap
+#     swapRequest = SwapRequest(
+#         kind=0,  # SwapKind - GIVEN_IN
+#         tokenIn=gyro_erc20_funded[0].address,  # IERC20
+#         tokenOut=gyro_erc20_funded[1].address,  # IERC20
+#         amount=amountToSwap,  # uint256
+#         poolId=poolId,  # bytes32
+#         lastChangeBlock=0,  # uint256
+#         from_aux=users[1],  # address
+#         to=users[1],  # address
+#         userData=0,  # bytes
+#     )
+#     tx = vault.callMinimalpoolSwap(
+#         pool.address, swapRequest, balancesAfterExit[0], balancesAfterExit[1]
+#     )
 
-    # Check balances
-    (_, balancesAfterSwap) = vault.getPoolTokens(poolId)
-    assert balancesAfterSwap[0] == balancesAfterExit[0] + amountToSwap
-    assert balancesAfterSwap[1] == balancesAfterExit[1] - amountOut
+#     assert tx.events["Swap"][0]["tokenIn"] == gyro_erc20_funded[0]
+#     assert tx.events["Swap"][0]["tokenOut"] == gyro_erc20_funded[1]
+#     amountOut = tx.events["Swap"][0]["amount"]
 
-    assert float(amountOut) == pytest.approx(amountOutExpected)
+#     assert amountOut < amountToSwap
+
+#     # Check balances
+#     (_, balancesAfterSwap) = vault.getPoolTokens(poolId)
+#     assert balancesAfterSwap[0] == balancesAfterExit[0] + amountToSwap
+#     assert balancesAfterSwap[1] == balancesAfterExit[1] - amountOut
+
+#     assert float(amountOut) == pytest.approx(amountOutExpected)
