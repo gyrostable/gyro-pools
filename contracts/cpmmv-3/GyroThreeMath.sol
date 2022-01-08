@@ -25,39 +25,15 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 library GyroThreeMath {
     using FixedPoint for uint256;
-    // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
-    // implementation of the power function, as these ratios are often exponents.
-    uint256 internal constant _MIN_WEIGHT = 0.01e18;
-    // Having a minimum normalized weight imposes a limit on the maximum number of tokens;
-    // i.e., the largest possible pool is one where all tokens have exactly the minimum weight.
-    uint256 internal constant _MAX_WEIGHTED_TOKENS = 100;
-
-    // Pool limits that arise from limitations in the fixed point power function (and the imposed 1:100 maximum weight
-    // ratio).
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
-    // Invariant growth limit: non-proportional joins cannot cause the invariant to increase by more than this ratio.
-    uint256 internal constant _MAX_INVARIANT_RATIO = 3e18;
-    // Invariant shrink limit: non-proportional exits cannot cause the invariant to decrease by less than this ratio.
-    uint256 internal constant _MIN_INVARIANT_RATIO = 0.7e18;
-
-    // About swap fees on joins and exits:
-    // Any join or exit that is not perfectly balanced (e.g. all single token joins or exits) is mathematically
-    // equivalent to a perfectly balanced join or  exit followed by a series of swaps. Since these swaps would charge
-    // swap fees, it follows that (some) joins and exits should as well.
-    // On these operations, we split the token amounts in 'taxable' and 'non-taxable' portions, where the 'taxable' part
-    // is the one to which swap fees are applied.
-
-    // TODO code for _calculateInvariant to be moved over from the experiments repo (`cpmmv-3` repo), contract version of the code.
-
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
-    // TODO alpha -> alpha3root
-    function _calculateInvariant(uint256[] memory balances, uint256 alpha)
+    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha)
         internal
         pure
         returns (uint256)
