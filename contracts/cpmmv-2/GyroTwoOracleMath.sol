@@ -39,9 +39,10 @@ contract GyroTwoOracleMath {
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
 
-        // pool weights are hard-coded to 1/2
-        uint256 normalizedWeight = 5e17;
-        return (balanceA.add(virtualParameterA)).divUp(normalizedWeight).divUp((balanceB.add(virtualParameterB)).divUp(normalizedWeight));
+        // computes ((balanceA + virtualParameterA) / weightA) / ((balanceB + virtualParameterB) / weightB)
+        // but pool weights are both equal to 0.5 so we can simplify to:
+        // (balanceA + virtualParameterA) / (balanceB + virtualParameterB)
+        return balanceA.add(virtualParameterA).divUp(balanceB.add(virtualParameterB));
     }
 
     /**
