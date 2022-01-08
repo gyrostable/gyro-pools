@@ -25,18 +25,16 @@ def calculateQuadraticTerms(
     return a, -b, -c
 
 
-# This function is not a complete match to _calculateQuadratic in GyroTwoMath.sol, this is just general quadratic formula
-
-
 def calculateQuadratic(a: D, b: D, c: D) -> D:
+    """
+    This function is not a complete match to _calculateQuadratic in GyroTwoMath.sol, this is just general quadratic formula
+    This function should match _calculateQuadratic in GyroTwoMath.sol in both inputs and outputs
+    when a > 0, b < 0, and c < 0
+    """
     assert b * b - 4 * a * c >= 0
     numerator = -b + (b * b - 4 * a * c).sqrt()
     denominator = a * 2
     return numerator / denominator
-
-
-# This function should match _calculateQuadratic in GyroTwoMath.sol in both inputs and outputs
-# when a > 0, b < 0, and c < 0
 
 
 def calculateQuadraticSpecial(a: D, mb: D, mc: D) -> D:

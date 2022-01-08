@@ -2,11 +2,11 @@ from decimal import Decimal
 from typing import Tuple
 
 import hypothesis.strategies as st
+import pytest
 from brownie.test import given
-
-import math_implementation
 from tests.support.utils import scale, to_decimal
 
+import math_implementation
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
@@ -16,7 +16,7 @@ billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
     sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
 )
-def test_calculate_quadratic_terms_balances(
+def test_calculate_quadratic_terms(
     gyro_two_math_testing,
     balances: Tuple[int, int],
     sqrt_alpha: Decimal,
@@ -38,26 +38,94 @@ def test_calculate_quadratic_terms_balances(
     assert mc_sol == scale(mc)
 
 
-# def test_calculate_quadratic_terms_balances2(gyro_two_math_testing):
+@given(
+    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
+)
+def test_calculate_quadratic(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta):
 
-#     balances = list(pairwise(random.sample(range(1, 1000000000), 100)))
-#     # alphas = [random.uniform(0.5, 1) for v in range(10)]
+    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
+    )
 
-#     for balance in balances:
-#         balances = [scale(balance[0]), scale(balance[1])]
-#         sqrt_alpha = scale('0.5')
-#         sqrt_beta = scale('1.5')
+    if any(v > 0 for v in [-a, mb, mc]):
+        return
 
-#         (a, mb, mc) = math_implementation.calculateQuadraticTerms(
-#             balances, sqrt_alpha, sqrt_beta)
+    root = math_implementation.calculateQuadratic(a, mb, mc)
 
-#         balances_sol = [balance[0] * 10 ** 18, balance[1] * 10 ** 18]
-#         sqrt_alpha_sol = 0.5e18
-#         sqrt_beta_sol = 1.5e18
+    root_sol = gyro_two_math_testing.calculateQuadratic(
+        scale(a), scale(mb), scale(mc)
+    )
 
-#         (a_sol, mb_sol, mc_sol) = gyro_two_math_testing.calculateQuadraticTerms(
-#             balances_sol, sqrt_alpha_sol, sqrt_beta_sol)
+    assert root == root_sol
 
-#         assert scale(a) == D(a_sol)
-#         # assert mb == mb_sol //WHY???
-#         assert mc == scale(mc_sol)
+
+@given(
+    balances=st.tuples(billion_balance_strategy,
+                       billion_balance_strategy),
+    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
+)
+def test_calculate_quadratic_special(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta):
+
+    # if balances[0] < 1 or balances[1] < 1:
+    #     return
+
+    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
+    )
+
+    if any(v < 0 for v in [a, mb, mc]):
+        return
+
+    root = math_implementation.calculateQuadraticSpecial(a, mb, mc)
+
+    root_sol = gyro_two_math_testing.calculateQuadratic(
+        scale(a), scale(mb), scale(mc)
+    )
+
+    assert int(root_sol) == scale(root).approxed()
+
+
+# @given(
+#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+#     sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+#     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
+# )
+# def test_calculate_invariant(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta):
+
+#     (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+#         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
+#     )
+
+#     if any(v < 0 for v in [a, mb, mc]):
+#         return
+
+#     invariant = math_implementation.calculateInvariant(
+#         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
+#     )
+
+#     invariant_sol = gyro_two_math_testing.calculateInvariant(
+#         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
+#     )
+
+#     assert to_decimal(invariant_sol) == scale(invariant)
+
+
+# @given(
+#     invariant=st.decimals(min_value="0", max_value="1000000000", places=0),
+#     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
+# )
+# def test_calculate_virtual_parameter_0(gyro_two_math_testing, invariant, sqrt_beta):
+
+#     if invariant == 0:
+#         return
+#     virtual_parameter = math_implementation.calculateVirtualParameter0(
+#         to_decimal(invariant), to_decimal(sqrt_beta)
+#     )
+
+#     virtual_parameter_sol = gyro_two_math_testing.calculateVirtualParameter0(
+#         invariant, sqrt_beta)
+
+#     assert virtual_parameter_sol == scale(virtual_parameter)

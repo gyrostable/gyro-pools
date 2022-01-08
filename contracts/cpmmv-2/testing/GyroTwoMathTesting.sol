@@ -94,4 +94,12 @@ contract GyroTwoMathTesting {
                 currentInvariant
             );
     }
+
+    function calculateVirtualParameter0(uint256 invariant, uint256 sqrtBeta)
+        external
+        pure
+        returns (uint256)
+    {
+        return GyroTwoMath._calculateVirtualParameter0(invariant, sqrtBeta);
+    }
 }

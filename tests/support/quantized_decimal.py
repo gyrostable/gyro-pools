@@ -6,10 +6,12 @@
 
 from __future__ import annotations
 
-import math
 import decimal
+import math
 from functools import total_ordering
 from typing import Any, Optional, Union
+
+import pytest
 
 DECIMAL_PRECISION = 18
 # v Total number of decimal places. This matches uint256, to the degree possible (max uint256 ≈ 1.16e+77).
@@ -48,7 +50,8 @@ class QuantizedDecimal:
             rounding = decimal.ROUND_DOWN
             if isinstance(value, float):
                 rounding = decimal.ROUND_HALF_DOWN
-            high_prec_value = decimal.Decimal(value, context=context) * DECIMAL_MULT
+            high_prec_value = decimal.Decimal(
+                value, context=context) * DECIMAL_MULT
             self._value = self._quantize(high_prec_value, rounding=rounding)
 
     @property
@@ -172,6 +175,9 @@ class QuantizedDecimal:
 
     def __str__(self):
         return str(self._value)
+
+    def approxed(self, **kwargs):
+        return pytest.approx(self.raw, **kwargs)
 
 
 DecimalLike = Union[int, str, decimal.Decimal, QuantizedDecimal]
