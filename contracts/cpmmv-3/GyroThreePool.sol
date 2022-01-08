@@ -24,9 +24,9 @@ import "./GyroThreeMath.sol";
 contract GyroThreePool is ExtensibleBaseWeightedPool {
     using FixedPoint for uint256;
 
-    uint256 private constant _MAX_TOKENS = 3;
+    uint256 private _root3Alpha;
 
-    uint256 private immutable _totalTokens;
+    uint256 private constant _MAX_TOKENS = 3;
 
     IERC20 internal immutable _token0;
     IERC20 internal immutable _token1;
@@ -35,25 +35,16 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     // All token balances are normalized to behave as if the token had 18 decimals. We assume a token's decimals will
     // not change throughout its lifetime, and store the corresponding scaling factor for each at construction time.
     // These factors are always greater than or equal to one: tokens with more than 18 decimals are not supported.
-
     uint256 internal immutable _scalingFactor0;
     uint256 internal immutable _scalingFactor1;
     uint256 internal immutable _scalingFactor2;
-
-    // The protocol fees will always be charged using the token associated with the max weight in the pool.
-    // Since these Pools will register tokens only once, we can assume this index will be constant.
-    uint256 internal immutable _maxWeightTokenIndex;
-
-    uint256 internal immutable _normalizedWeight0;
-    uint256 internal immutable _normalizedWeight1;
-    uint256 internal immutable _normalizedWeight2;
 
     constructor(
         IVault vault,
         string memory name,
         string memory symbol,
         IERC20[] memory tokens,
-        uint256[] memory normalizedWeights,
+        uint256 root3Alpha,
         address[] memory assetManagers,
         uint256 swapFeePercentage,
         uint256 pauseWindowDuration,
@@ -72,44 +63,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             owner
         )
     {
-        uint256 numTokens = tokens.length;
-        InputHelpers.ensureInputLengthMatch(
-            numTokens,
-            normalizedWeights.length
-        );
+        require(tokens.length == 3);
 
-        _totalTokens = numTokens;
-
-        // Ensure  each normalized weight is above them minimum and find the token index of the maximum weight
-        uint256 normalizedSum = 0;
-        uint256 maxWeightTokenIndex = 0;
-        uint256 maxNormalizedWeight = 0;
-        for (uint8 i = 0; i < numTokens; i++) {
-            uint256 normalizedWeight = normalizedWeights[i];
-            _require(
-                normalizedWeight >= GyroThreeMath._MIN_WEIGHT,
-                Errors.MIN_WEIGHT
-            );
-
-            normalizedSum = normalizedSum.add(normalizedWeight);
-            if (normalizedWeight > maxNormalizedWeight) {
-                maxWeightTokenIndex = i;
-                maxNormalizedWeight = normalizedWeight;
-            }
-        }
-        // Ensure that the normalized weights sum to ONE
-        _require(
-            normalizedSum == FixedPoint.ONE,
-            Errors.NORMALIZED_WEIGHT_INVARIANT
-        );
-
-        _maxWeightTokenIndex = maxWeightTokenIndex;
-
-        _normalizedWeight0 = normalizedWeights[0];
-        _normalizedWeight1 = normalizedWeights[1];
-        _normalizedWeight2 = normalizedWeights[2];
-
-        // Immutable variables cannot be initialized inside an if statement, so we must do conditional assignments
         _token0 = tokens[0];
         _token1 = tokens[1];
         _token2 = tokens[2];
@@ -117,7 +72,14 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         _scalingFactor0 = _computeScalingFactor(tokens[0]);
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
+
+        // TODO maybe put a stricter bound here, like 0.9999
+        require(root3Alpha < 1, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+        _root3Alpha = root3Alpha;
     }
+
+    // We don't support weights at the moment; in other words, all tokens are always weighted equally and thus their
+    // normalized weights are all 1/3. This is what the functions return.
 
     function _getNormalizedWeight(IERC20 token)
         internal
@@ -126,13 +88,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         override
         returns (uint256)
     {
-        // prettier-ignore
-        if (token == _token0) { return _normalizedWeight0; }
-        else if (token == _token1) { return _normalizedWeight1; }
-        else if (token == _token2) { return _normalizedWeight2; }
-        else {
-            _revert(Errors.INVALID_TOKEN);
-        }
+        return FixedPoint.ONE/3;
     }
 
     function _getNormalizedWeights()
@@ -142,19 +98,19 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         override
         returns (uint256[] memory)
     {
-        uint256 totalTokens = _getTotalTokens();
-        uint256[] memory normalizedWeights = new uint256[](totalTokens);
+        uint256[] memory normalizedWeights = new uint256[](3);
 
         // prettier-ignore
         {
-            normalizedWeights[0] = _normalizedWeight0;
-            normalizedWeights[1] = _normalizedWeight1;
-            normalizedWeights[2] = _normalizedWeight2;
+            normalizedWeights[0] = FixedPoint.ONE/3;
+            normalizedWeights[1] = FixedPoint.ONE/3;
+            normalizedWeights[2] = FixedPoint.ONE/3;
         }
 
         return normalizedWeights;
     }
 
+    /// @dev Since all weights are always the same, the max-weight token is arbitrary. We return token 0.
     function _getNormalizedWeightsAndMaxWeightIndex()
         internal
         view
@@ -162,7 +118,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         override
         returns (uint256[] memory, uint256)
     {
-        return (_getNormalizedWeights(), _maxWeightTokenIndex);
+        return (_getNormalizedWeights(), 0);
     }
 
     function _getMaxTokens() internal pure virtual override returns (uint256) {
@@ -176,7 +132,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         override
         returns (uint256)
     {
-        return _totalTokens;
+        return 3;
     }
 
     /**
@@ -219,10 +175,41 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         return scalingFactors;
     }
 
-    // Swap handlers
+    function _onSwapGivenIn(
+        SwapRequest memory swapRequest,
+        uint256 currentBalanceTokenIn,
+        uint256 currentBalanceTokenOut
+    ) internal view virtual override whenNotPaused returns (uint256) {
+        (uint256 currentInvariant, uint256 virtualOffset) = _calculateCurrentValues();
+        // todo maybe improve gas: These could be uint8.
+        uint256 tokenIndexIn = _tokenAddressToIndex(swapRequest.tokenIn);
+        uint256 tokenIndexOut = _tokenAddressToIndex(swapRequest.tokenOut);
+        return _onSwapGivenIn(swapRequest, balances, tokenIndexIn, tokenIndexOut, virtualOffset, currentInvariant);
+    }
+
+    /* @dev This function originally comes from 'BaseMinimialSawpInfoPool' and was introduced in the context of
+    /* explicit fee processing. We don't process fees in this pool, but we still need this method for other reasons.
+     */
+    function _tokenAddressToIndex(IERC20 token) internal view virtual override returns (uint256) {
+        if (token == _token0)
+            return 0;
+        if (token == _token1)
+            return 1;
+        if (token == _token2)
+            return 2;
+        _revert(Errors.INVALID_TOKEN);
+    }
+
+    function _calculateCurrentValues() private view returns (uint256 invariant, uint256 virtualOffset) {
+        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        invariant = GyroThreeMath._calculateInvariant(balances, alpha3root);
+        virtualOffset = _root3Alpha.mulDown(invariant);
+    }
+
 
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
+        uint256[] memory balances,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
         uint256 virtualParamIn,
