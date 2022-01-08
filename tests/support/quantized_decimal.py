@@ -34,13 +34,16 @@ class QuantizedDecimal:
     set in `constants`
     """
 
-    def __init__(self, value="0", context=None):
+    def __init__(self, value="0", context: decimal.Context = None):
         if isinstance(value, QuantizedDecimal):
             value = value * DECIMAL_MULT
             self._value = value._value
         elif isinstance(value, decimal.Decimal):
+            rounding = decimal.ROUND_DOWN
+            if context is not None:
+                rounding = context.rounding
             value = value * DECIMAL_MULT
-            self._value = self._quantize(value)
+            self._value = self._quantize(value, rounding=rounding)
         else:
             rounding = decimal.ROUND_DOWN
             if isinstance(value, float):
@@ -141,6 +144,16 @@ class QuantizedDecimal:
 
     def floor(self):
         return QuantizedDecimal(math.floor(self._value))
+
+    def mul_up(self, other: DecimalLike):
+        context = decimal.getcontext().copy()
+        context.rounding = decimal.ROUND_UP
+        return QuantizedDecimal(self._value * self._get_value(other), context=context)
+
+    def div_up(self, other: DecimalLike):
+        context = decimal.getcontext().copy()
+        context.rounding = decimal.ROUND_UP
+        return QuantizedDecimal(self._value / self._get_value(other), context=context)
 
     @classmethod
     def from_float(cls, value: float) -> QuantizedDecimal:
