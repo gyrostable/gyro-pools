@@ -1,6 +1,3 @@
-// NOTE: THIS FILE IS CURRENTLY OUTDATED.
-// For the current math see testing/GyroThreeMathTestContract.sol.
-// This file is to be overwritten with that other file, minus testing output.
 
 // SPDX-License-Identifier: GPL-3.0-or-later
 // This program is free software: you can redistribute it and/or modify
@@ -54,9 +51,12 @@ library GyroThreeMath {
     // On these operations, we split the token amounts in 'taxable' and 'non-taxable' portions, where the 'taxable' part
     // is the one to which swap fees are applied.
 
+    // TODO code for _calculateInvariant to be moved over from the experiments repo (`cpmmv-3` repo), contract version of the code.
+
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
+    // TODO alpha -> alpha3root
     function _calculateInvariant(uint256[] memory balances, uint256 alpha)
         internal
         pure
