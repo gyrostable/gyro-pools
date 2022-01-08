@@ -4,17 +4,12 @@ import operator
 import hypothesis.strategies as st
 from brownie.test import given
 
-from tests.quantized_decimal import QuantizedDecimal
+from tests.support.quantized_decimal import QuantizedDecimal
+from tests.support.utils import scale
 
 operators = ["add", "sub", "mul", "truediv"]
 
 MAX_UINT = 2 ** 256 - 1
-
-
-def scale(x, decimals=18):
-    if not isinstance(x, QuantizedDecimal):
-        x = QuantizedDecimal(x)
-    return (x * 10 ** decimals).floor()
 
 
 def unscale(x, decimals=18):

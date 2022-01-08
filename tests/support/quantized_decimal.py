@@ -115,7 +115,7 @@ class QuantizedDecimal:
             return (
                 self.quantize_to_lower_precision() < other.quantize_to_lower_precision()
             )
-        return self.quantize_to_lower_precision() < other
+        return self < QuantizedDecimal(other)
 
     def __hash__(self):
         return hash(self._value)
@@ -150,7 +150,7 @@ class QuantizedDecimal:
     def _get_value(value: DecimalLike) -> decimal.Decimal:
         if isinstance(value, QuantizedDecimal):
             return value._value  # pylint: disable=protected-access
-        elif isinstance(value, int):
+        elif isinstance(value, (int, str)):
             return decimal.Decimal(value)
         return value
 
@@ -161,7 +161,7 @@ class QuantizedDecimal:
         return str(self._value)
 
 
-DecimalLike = Union[int, decimal.Decimal, QuantizedDecimal]
+DecimalLike = Union[int, str, decimal.Decimal, QuantizedDecimal]
 
 
 def quantize_to_lower_precision(value: Optional[QuantizedDecimal]):
