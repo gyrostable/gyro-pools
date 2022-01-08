@@ -144,346 +144,86 @@ library GyroThreeMath {
     }
 
     // TODO check corner cases (zero real reserves for instance)
+    /** @dev New invariant assuming that the balances increase from 'lastBalances', where the invariant was
+      * 'lastInvariant', to some new value, where the 'z' component (asset index 2) changes by 'deltaZ' and the other
+      * assets change, too, in such a way that the prices stay the same. 'isIncreaseLiq' captures the sign of the change
+      * (true meaning positive).
+      * We apply Proposition 10 from the writeup. */
     function _liquidityInvariantUpdate(
-        uint256[] memory balances,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX,
+        uint256[] memory lastBalances,
+        uint256 root3Alpha,
         uint256 lastInvariant,
         uint256 incrZ,
         bool isIncreaseLiq
     ) internal pure returns (uint256 invariant) {
-        /**********************************************************************************************
-      // Algorithm in 3.1.3 Liquidity Update                                                       //
-      // Assumed that the liquidity provided is correctly balanced                                 //
-      // dL = incrL  = Liquidity                                                                   //
-      // dZ = incrZ = amountOut < 0                                                                //
-      // cbrtPxPy = Cubic Root of Price X * Price Y         cbrtPxPy =  L^2 / x' y'                //
-      // x' = virtual reserves X                                                                   //
-      // y' = virtual reserves Y                                                                   //
-      //                                /              dZ             \                            //
-      //                    dL =       |   --------------------------  |                           //
-      //                               \    ( cbrtPxPy - cbrtAlpha)   /                            //
-      //                                                                                           //
-      **********************************************************************************************/
-      // TODO maybe simplify this: Only implement this for the symmetric case, which we actually use
-        uint256 virtualX = balances[0] +
-            _calculateVirtualParameter0(
-                lastInvariant,
-                _cbrtAlphaX,
-                _cbrtAlphaY,
-                _cbrtBetaX
-            );
-        uint256 virtualY = balances[1] +
-            _calculateVirtualParameter1(
-                lastInvariant,
-                _cbrtAlphaX,
-                _cbrtAlphaY,
-                _cbrtBetaX
-            );
+        uint256 virtualOffset = lastInvariant.mulDown(root3Alpha);
+        uint256 virtX = lastBalances[0].add(virtualOffset);
+        uint256 virtY = lastBalances[1].add(virtualOffset);
         uint256 cbrtPrice = _calculateCbrtPrice(
             lastInvariant,
-            virtualX,
-            virtualY
+            virtX,
+            virtY
         );
-        uint256 denominator = cbrtPrice.sub(_cbrtAlphaX);
+        uint256 denominator = cbrtPrice.sub(root3Alpha);
         uint256 diffInvariant = incrZ.divDown(denominator);
         invariant = isIncreaseLiq
             ? lastInvariant.add(diffInvariant)
             : lastInvariant.sub(diffInvariant);
     }
 
-    // Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
-    // current balances and weights.
-    // Changed signs compared to original algorithm to account for amountOut < 0
+    /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
+     * current balances and weights.
+     * Changed signs compared to original algorithm to account for amountOut < 0.
+     * See Proposition 12.*/
     function _calcOutGivenIn(
-        uint256[] memory balances,
-        uint256 ixIn,
-        uint256 ixOut,
+        uint256 balanceIn,
+        uint256 balanceOut,
         uint256 amountIn,
-        uint256 currentInvariant,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX
+        uint256 virtualOffsetInOut
     ) internal pure returns (uint256 amountOut) {
-        /**********************************************************************************************
-      // dX = incrX = amountIn  > 0                                                                //
-      // dY = incrY = 0                                                                            //
-      // dZ = incrZ = amountOut < 0                                                                //
-      // x = balances[0]             x' = x + virtualParamX                                        //
-      // y = balances[1]             y' = y + virtualParamY                                        //
-      // z = balances[2]             z' = z + virtualParamZ                                        //
-      //                                                                                           //
-      // L  = inv.Liq                   /              L^3             \                           //
-      //                   - dZ = z' - |   --------------------------  |                           //
-      // x' = virtX                     \    ( x' + dX) ( y' + dY)     /                           //
-      // y' = virtY                                                                                //
-      // z' = virtZ                                                                                //
-      **********************************************************************************************/
-
         _require(
-            amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO),
+            amountIn <= balanceIn.mulDown(_MAX_IN_RATIO),
             Errors.MAX_IN_RATIO
         );
-        uint256 virtualParamIn = _getVirtualParameters(
-            ixIn,
-            currentInvariant,
-            _cbrtAlphaX,
-            _cbrtAlphaY,
-            _cbrtBetaX
-        );
-        uint256 virtualParamOut = _getVirtualParameters(
-            ixOut,
-            currentInvariant,
-            _cbrtAlphaX,
-            _cbrtAlphaY,
-            _cbrtBetaX
-        );
-        uint256 virtualParam = _getVirtualParameters(
-            3 - ixIn - ixOut,
-            currentInvariant,
-            _cbrtAlphaX,
-            _cbrtAlphaY,
-            _cbrtBetaX
-        );
 
-        uint256 virtIn = balances[ixIn].add(virtualParamIn);
-        uint256 virt = balances[3 - ixIn - ixOut].add(virtualParam);
-        uint256 denominator = (virtIn.add(amountIn)).mulDown(virt);
-        uint256 invCubic = currentInvariant.mulUp(currentInvariant).mulUp(
-            currentInvariant
+        uint256 virtIn = balanceIn.add(virtualOffsetInOut);
+        uint256 virtOut = balanceOut.add(virtualOffsetInOut);
+        uint256 denominator = virtIn.add(amountOut);
+        uint256 subtrahend = virtIn.mulDown(virtOut).divDown(denominator);
+
+        _require(
+            virtOut <= subtrahend,
+            Errors.INSUFFICIENT_INTERNAL_BALANCE  // TODO is this the right error code?
         );
-        uint256 subtrahend = invCubic.divUp(denominator);
-        uint256 virtOut = balances[ixOut].add(virtualParamOut);
         amountOut = virtOut.sub(subtrahend);
     }
 
-    // Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
-    // current balances and weights.
-    // Similar to the one before but adapting bc negative values
+    /* @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
+     * currhent balances and weights.
+     * Similar to the one before but adapting bc negative values.*/
     function _calcInGivenOut(
-        uint256[] memory balances,
-        uint256 ixIn,
-        uint256 ixOut,
+        uint256 balanceIn,
+        uint256 balanceOut,
         uint256 amountOut,
-        uint256 currentInvariant,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX
+        uint256 virtualOffsetInOut
     ) internal pure returns (uint256 amountIn) {
-        /**********************************************************************************************
-      // dX = incrX = amountIn  > 0                                                                //
-      // dY = incrY = 0                                                                            //
-      // dZ = incrZ = amountOut < 0                                                                //
-      // x = balances[0]             x' = x + virtualParamX                                        //
-      // y = balances[1]             y' = y + virtualParamY                                        //
-      // z = balances[2]             z' = z + virtualParamZ                                        //
-      //                                                                                           //
-      // L  = inv.Liq                /              L^3             \                              //
-      //                     dX =   |   --------------------------  |  -  x'                       //
-      // x' = virtX                  \    ( y' + dY) ( z' + dZ)     /                              //
-      // y' = virtY                                                                                //
-      // z' = virtZ                                                                                //
-      **********************************************************************************************/
         _require(
-            amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO),
+            amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO),
             Errors.MAX_OUT_RATIO
         );
-        uint256 virtualParamIn = _getVirtualParameters(
-            ixIn,
-            currentInvariant,
-            _cbrtAlphaX,
-            _cbrtAlphaY,
-            _cbrtBetaX
-        );
-        uint256 virtualParamOut = _getVirtualParameters(
-            ixOut,
-            currentInvariant,
-            _cbrtAlphaX,
-            _cbrtAlphaY,
-            _cbrtBetaX
-        );
-        uint256 virtualParam = _getVirtualParameters(
-            3 - ixIn - ixOut,
-            currentInvariant,
-            _cbrtAlphaX,
-            _cbrtAlphaY,
-            _cbrtBetaX
-        );
-
-        uint256 virtOut = balances[ixOut].add(virtualParamOut);
-        uint256 virt = balances[3 - ixIn - ixOut].add(virtualParam);
-        uint256 denominator = (virtOut.sub(amountOut)).mulDown(virt);
-        uint256 invCubic = currentInvariant.mulUp(currentInvariant).mulUp(
-            currentInvariant
-        );
-        uint256 term = invCubic.divUp(denominator);
-        uint256 virtIn = balances[ixIn].add(virtualParamIn);
-        amountIn = term.sub(virtIn);
-    }
-
-    function _getVirtualParameters(
-        uint256 idx,
-        uint256 currentInvariant,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX
-    ) internal pure returns (uint256) {
-        if (idx == 0)
-            _calculateVirtualParameter0(
-                currentInvariant,
-                _cbrtAlphaX,
-                _cbrtAlphaY,
-                _cbrtBetaX
-            );
-        else if (idx == 1)
-            _calculateVirtualParameter1(
-                currentInvariant,
-                _cbrtAlphaX,
-                _cbrtAlphaY,
-                _cbrtBetaX
-            );
-        else if (idx == 2)
-            _calculateVirtualParameter0(
-                currentInvariant,
-                _cbrtAlphaX,
-                _cbrtAlphaY,
-                _cbrtBetaX
-            );
-        else revert("!idx");
-    }
-
-    function _calcBptOutGivenExactTokensIn(
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights,
-        uint256[] memory amountsIn,
-        uint256 bptTotalSupply,
-        uint256 swapFeePercentage
-    ) internal pure returns (uint256, uint256[] memory) {
-        // BPT out, so we round down overall.
-
-        uint256[] memory balanceRatiosWithFee = new uint256[](amountsIn.length);
-
-        uint256 invariantRatioWithFees = 0;
-        for (uint256 i = 0; i < balances.length; i++) {
-            balanceRatiosWithFee[i] = balances[i].add(amountsIn[i]).divDown(
-                balances[i]
-            );
-            invariantRatioWithFees = invariantRatioWithFees.add(
-                balanceRatiosWithFee[i].mulDown(normalizedWeights[i])
-            );
-        }
-
-        (
-            uint256 invariantRatio,
-            uint256[] memory swapFees
-        ) = _computeJoinExactTokensInInvariantRatio(
-                balances,
-                normalizedWeights,
-                amountsIn,
-                balanceRatiosWithFee,
-                invariantRatioWithFees,
-                swapFeePercentage
-            );
-
-        uint256 bptOut = (invariantRatio > FixedPoint.ONE)
-            ? bptTotalSupply.mulDown(invariantRatio.sub(FixedPoint.ONE))
-            : 0;
-        return (bptOut, swapFees);
-    }
-
-    /**
-     * @dev Intermediate function to avoid stack-too-deep errors.
-     */
-    function _computeJoinExactTokensInInvariantRatio(
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights,
-        uint256[] memory amountsIn,
-        uint256[] memory balanceRatiosWithFee,
-        uint256 invariantRatioWithFees,
-        uint256 swapFeePercentage
-    ) private pure returns (uint256 invariantRatio, uint256[] memory swapFees) {
-        // Swap fees are charged on all tokens that are being added in a larger proportion than the overall invariant
-        // increase.
-        swapFees = new uint256[](amountsIn.length);
-        invariantRatio = FixedPoint.ONE;
-
-        for (uint256 i = 0; i < balances.length; i++) {
-            uint256 amountInWithoutFee;
-
-            if (balanceRatiosWithFee[i] > invariantRatioWithFees) {
-                uint256 nonTaxableAmount = balances[i].mulDown(
-                    invariantRatioWithFees.sub(FixedPoint.ONE)
-                );
-                uint256 taxableAmount = amountsIn[i].sub(nonTaxableAmount);
-                uint256 swapFee = taxableAmount.mulUp(swapFeePercentage);
-
-                amountInWithoutFee = nonTaxableAmount.add(
-                    taxableAmount.sub(swapFee)
-                );
-                swapFees[i] = swapFee;
-            } else {
-                amountInWithoutFee = amountsIn[i];
-            }
-
-            uint256 balanceRatio = balances[i].add(amountInWithoutFee).divDown(
-                balances[i]
-            );
-
-            invariantRatio = invariantRatio.mulDown(
-                balanceRatio.powDown(normalizedWeights[i])
-            );
-        }
-    }
-
-    function _calcTokenInGivenExactBptOut(
-        uint256 balance,
-        uint256 normalizedWeight,
-        uint256 bptAmountOut,
-        uint256 bptTotalSupply,
-        uint256 swapFeePercentage
-    ) internal pure returns (uint256 amountIn, uint256 swapFee) {
-        /******************************************************************************************
-        // tokenInForExactBPTOut                                                                 //
-        // a = amountIn                                                                          //
-        // b = balance                      /  /    totalBPT + bptOut      \    (1 / w)       \  //
-        // bptOut = bptAmountOut   a = b * |  | --------------------------  | ^          - 1  |  //
-        // bpt = totalBPT                   \  \       totalBPT            /                  /  //
-        // w = weight                                                                            //
-        ******************************************************************************************/
-
-        // Token in, so we round up overall.
-
-        // Calculate the factor by which the invariant will increase after minting BPTAmountOut
-        uint256 invariantRatio = bptTotalSupply.add(bptAmountOut).divUp(
-            bptTotalSupply
-        );
+        // The following is subsumed by the above check, but let's keep it in just in case.
         _require(
-            invariantRatio <= _MAX_INVARIANT_RATIO,
-            Errors.MAX_OUT_BPT_FOR_TOKEN_IN
+            amountOut <= balanceOut,
+            Errors.INSUFFICIENT_INTERNAL_BALANCE
         );
 
-        // Calculate by how much the token balance has to increase to match the invariantRatio
-        uint256 balanceRatio = invariantRatio.powUp(
-            FixedPoint.ONE.divUp(normalizedWeight)
-        );
+        uint256 virtIn = balanceIn.add(virtualOffsetInOut);
+        uint256 virtOut = balanceOut.add(virtualOffsetInOut);
+        uint256 denominator = virtOut.sub(amountOut);
+        uint256 minuend = virtIn.mulDown(virtOut).divDown(denominator);
 
-        uint256 amountInWithoutFee = balance.mulUp(
-            balanceRatio.sub(FixedPoint.ONE)
-        );
-
-        // We can now compute how much extra balance is being deposited and used in virtual swaps, and charge swap fees
-        // accordingly.
-        uint256 taxablePercentage = normalizedWeight.complement();
-        uint256 taxableAmount = amountInWithoutFee.mulUp(taxablePercentage);
-        uint256 nonTaxableAmount = amountInWithoutFee.sub(taxableAmount);
-
-        uint256 taxableAmountPlusFees = taxableAmount.divUp(
-            FixedPoint.ONE.sub(swapFeePercentage)
-        );
-
-        swapFee = taxableAmountPlusFees - taxableAmount;
-        amountIn = nonTaxableAmount.add(taxableAmountPlusFees);
+        // The following mathematically cannot underflow.
+        amountIn = minuend.sub(virtIn);
     }
 
     function _calcAllTokensInGivenExactBptOut(
@@ -509,139 +249,6 @@ library GyroThreeMath {
         }
 
         return amountsIn;
-    }
-
-    function _calcBptInGivenExactTokensOut(
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights,
-        uint256[] memory amountsOut,
-        uint256 bptTotalSupply,
-        uint256 swapFeePercentage
-    ) internal pure returns (uint256, uint256[] memory) {
-        // BPT in, so we round up overall.
-
-        uint256[] memory balanceRatiosWithoutFee = new uint256[](
-            amountsOut.length
-        );
-        uint256 invariantRatioWithoutFees = 0;
-        for (uint256 i = 0; i < balances.length; i++) {
-            balanceRatiosWithoutFee[i] = balances[i].sub(amountsOut[i]).divUp(
-                balances[i]
-            );
-            invariantRatioWithoutFees = invariantRatioWithoutFees.add(
-                balanceRatiosWithoutFee[i].mulUp(normalizedWeights[i])
-            );
-        }
-
-        (
-            uint256 invariantRatio,
-            uint256[] memory swapFees
-        ) = _computeExitExactTokensOutInvariantRatio(
-                balances,
-                normalizedWeights,
-                amountsOut,
-                balanceRatiosWithoutFee,
-                invariantRatioWithoutFees,
-                swapFeePercentage
-            );
-
-        uint256 bptIn = bptTotalSupply.mulUp(invariantRatio.complement());
-        return (bptIn, swapFees);
-    }
-
-    /**
-     * @dev Intermediate function to avoid stack-too-deep errors.
-     */
-    function _computeExitExactTokensOutInvariantRatio(
-        uint256[] memory balances,
-        uint256[] memory normalizedWeights,
-        uint256[] memory amountsOut,
-        uint256[] memory balanceRatiosWithoutFee,
-        uint256 invariantRatioWithoutFees,
-        uint256 swapFeePercentage
-    ) private pure returns (uint256 invariantRatio, uint256[] memory swapFees) {
-        swapFees = new uint256[](amountsOut.length);
-        invariantRatio = FixedPoint.ONE;
-
-        for (uint256 i = 0; i < balances.length; i++) {
-            // Swap fees are typically charged on 'token in', but there is no 'token in' here, so we apply it to
-            // 'token out'. This results in slightly larger price impact.
-
-            uint256 amountOutWithFee;
-            if (invariantRatioWithoutFees > balanceRatiosWithoutFee[i]) {
-                uint256 nonTaxableAmount = balances[i].mulDown(
-                    invariantRatioWithoutFees.complement()
-                );
-                uint256 taxableAmount = amountsOut[i].sub(nonTaxableAmount);
-                uint256 taxableAmountPlusFees = taxableAmount.divUp(
-                    FixedPoint.ONE.sub(swapFeePercentage)
-                );
-
-                swapFees[i] = taxableAmountPlusFees - taxableAmount;
-                amountOutWithFee = nonTaxableAmount.add(taxableAmountPlusFees);
-            } else {
-                amountOutWithFee = amountsOut[i];
-            }
-
-            uint256 balanceRatio = balances[i].sub(amountOutWithFee).divDown(
-                balances[i]
-            );
-
-            invariantRatio = invariantRatio.mulDown(
-                balanceRatio.powDown(normalizedWeights[i])
-            );
-        }
-    }
-
-    function _calcTokenOutGivenExactBptIn(
-        uint256 balance,
-        uint256 normalizedWeight,
-        uint256 bptAmountIn,
-        uint256 bptTotalSupply,
-        uint256 swapFeePercentage
-    ) internal pure returns (uint256 amountOut, uint256 swapFee) {
-        /*****************************************************************************************
-        // exactBPTInForTokenOut                                                                //
-        // a = amountOut                                                                        //
-        // b = balance                     /      /    totalBPT - bptIn       \    (1 / w)  \   //
-        // bptIn = bptAmountIn    a = b * |  1 - | --------------------------  | ^           |  //
-        // bpt = totalBPT                  \      \       totalBPT            /             /   //
-        // w = weight                                                                           //
-        *****************************************************************************************/
-
-        // Token out, so we round down overall. The multiplication rounds down, but the power rounds up (so the base
-        // rounds up). Because (totalBPT - bptIn) / totalBPT <= 1, the exponent rounds down.
-
-        // Calculate the factor by which the invariant will decrease after burning BPTAmountIn
-        uint256 invariantRatio = bptTotalSupply.sub(bptAmountIn).divUp(
-            bptTotalSupply
-        );
-        _require(
-            invariantRatio >= _MIN_INVARIANT_RATIO,
-            Errors.MIN_BPT_IN_FOR_TOKEN_OUT
-        );
-
-        // Calculate by how much the token balance has to decrease to match invariantRatio
-        uint256 balanceRatio = invariantRatio.powUp(
-            FixedPoint.ONE.divDown(normalizedWeight)
-        );
-
-        // Because of rounding up, balanceRatio can be greater than one. Using complement prevents reverts.
-        uint256 amountOutWithoutFee = balance.mulDown(
-            balanceRatio.complement()
-        );
-
-        // We can now compute how much excess balance is being withdrawn as a result of the virtual swaps, which result
-        // in swap fees.
-        uint256 taxablePercentage = normalizedWeight.complement();
-
-        // Swap fees are typically charged on 'token in', but there is no 'token in' here, so we apply it
-        // to 'token out'. This results in slightly larger price impact. Fees are rounded up.
-        uint256 taxableAmount = amountOutWithoutFee.mulUp(taxablePercentage);
-        uint256 nonTaxableAmount = amountOutWithoutFee.sub(taxableAmount);
-
-        swapFee = taxableAmount.mulUp(swapFeePercentage);
-        amountOut = nonTaxableAmount.add(taxableAmount.sub(swapFee));
     }
 
     function _calcTokensOutGivenExactBptIn(
@@ -671,89 +278,15 @@ library GyroThreeMath {
         return amountsOut;
     }
 
-    function _calcDueTokenProtocolSwapFeeAmount(
-        uint256 balance,
-        uint256 normalizedWeight,
-        uint256 previousInvariant,
-        uint256 currentInvariant,
-        uint256 protocolSwapFeePercentage
-    ) internal pure returns (uint256) {
-        /*********************************************************************************
-        /*  protocolSwapFeePercentage * balanceToken * ( 1 - (previousInvariant / currentInvariant) ^ (1 / weightToken))
-        *********************************************************************************/
-
-        if (currentInvariant <= previousInvariant) {
-            // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool
-            // from entering a locked state in which joins and exits revert while computing accumulated swap fees.
-            return 0;
-        }
-
-        // We round down to prevent issues in the Pool's accounting, even if it means paying slightly less in protocol
-        // fees to the Vault.
-
-        // Fee percentage and balance multiplications round down, while the subtrahend (power) rounds up (as does the
-        // base). Because previousInvariant / currentInvariant <= 1, the exponent rounds down.
-
-        uint256 base = previousInvariant.divUp(currentInvariant);
-        uint256 exponent = FixedPoint.ONE.divDown(normalizedWeight);
-
-        // Because the exponent is larger than one, the base of the power function has a lower bound. We cap to this
-        // value to avoid numeric issues, which means in the extreme case (where the invariant growth is larger than
-        // 1 / min exponent) the Pool will pay less in protocol fees than it should.
-        base = Math.max(base, FixedPoint.MIN_POW_BASE_FREE_EXPONENT);
-
-        uint256 power = base.powUp(exponent);
-
-        uint256 tokenAccruedFees = balance.mulDown(power.complement());
-        return tokenAccruedFees.mulDown(protocolSwapFeePercentage);
-    }
-
-    function _calculateVirtualParameter0(
-        uint256 invariant,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX
-    ) internal pure returns (uint256) {
-        return
-            invariant.divDown(_cbrtAlphaX).mulDown(_cbrtAlphaY).divDown(
-                _cbrtBetaX
-            );
-    }
-
-    function _calculateVirtualParameter1(
-        uint256 invariant,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX
-    ) internal pure returns (uint256) {
-        return
-            invariant
-                .mulDown(_cbrtAlphaX.mulDown(_cbrtAlphaX))
-                .divDown(_cbrtAlphaY.mulDown(_cbrtAlphaY))
-                .divDown(_cbrtBetaX);
-    }
-
-    function _calculateVirtualParameter2(
-        uint256 invariant,
-        uint256 _cbrtAlphaX,
-        uint256 _cbrtAlphaY,
-        uint256 _cbrtBetaX
-    ) internal pure returns (uint256) {
-        return
-            invariant
-                .mulDown(_cbrtAlphaX.powDown(FixedPoint.ONE / 2))
-                .mulDown(_cbrtAlphaY)
-                .mulDown(_cbrtBetaX.powDown(FixedPoint.ONE / 2));
-    }
-
+    /** @dev Cube root of the product of the prices of x and y. Helper value. See Lemma 4. */
     function _calculateCbrtPrice(
         uint256 invariant,
         uint256 virtualX,
         uint256 virtualY
     ) internal pure returns (uint256) {
-        /*********************************************************************************
-      /*  cbrtPrice =  L^2 / x' y'
-      *********************************************************************************/
+      /*********************************************************************************
+       *  cbrtPrice =  L^2 / x' y'
+       ********************************************************************************/
         return invariant.divDown(virtualX).mulDown(invariant).divDown(virtualY);
     }
 }

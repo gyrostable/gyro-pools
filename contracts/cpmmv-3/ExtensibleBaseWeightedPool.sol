@@ -638,7 +638,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256[] memory toMutate,
         uint256[] memory arguments,
         function(uint256, uint256) pure returns (uint256) mutation
-    ) internal pure {
+    ) internal view {
         for (uint256 i = 0; i < _getTotalTokens(); ++i) {
             toMutate[i] = mutation(toMutate[i], arguments[i]);
         }

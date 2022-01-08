@@ -129,7 +129,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
     function _getTotalTokens()
         internal
-        view
+        pure
         virtual
         override
         returns (uint256)
@@ -348,10 +348,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         );
 
         // We have the incrementX (amountIn) and balances (excluding fees) so we should be able to calculate incrementL
+        // TODO this is currently *wrong* b/c balances and lastInvariant don't match and don't reflect the current state.
+        // Revise when we've integrated the new fees in BPT; same for exit
         _lastInvariant = GyroThreeMath._liquidityInvariantUpdate(
             balances,
-            root3Alpha,
-            root3Alpha,
             root3Alpha,
             lastInvariant,
             amountsIn[2],
@@ -445,8 +445,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         _lastInvariant = GyroThreeMath._liquidityInvariantUpdate(
             balances,
-            root3Alpha,
-            root3Alpha,
             root3Alpha,
             lastInvariant,
             amountsOut[2],
