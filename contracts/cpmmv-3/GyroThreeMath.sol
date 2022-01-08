@@ -143,6 +143,7 @@ library GyroThreeMath {
         }
     }
 
+    // TODO check corner cases (zero real reserves for instance)
     function _liquidityInvariantUpdate(
         uint256[] memory balances,
         uint256 _cbrtAlphaX,
@@ -165,6 +166,7 @@ library GyroThreeMath {
       //                               \    ( cbrtPxPy - cbrtAlpha)   /                            //
       //                                                                                           //
       **********************************************************************************************/
+      // TODO maybe simplify this: Only implement this for the symmetric case, which we actually use
         uint256 virtualX = balances[0] +
             _calculateVirtualParameter0(
                 lastInvariant,

@@ -16,7 +16,7 @@ pragma solidity ^0.7.0;
 
 // solhint-disable
 
-library Gyro2PoolErrors {
+library GyroThreePoolErrors {
     // Math
     uint256 internal constant PRICE_BOUNDS_WRONG = 0;
 }

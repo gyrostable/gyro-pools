@@ -33,22 +33,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
 
-    uint256 private _lastInvariant;
-
-    // For backwards compatibility, make sure new join and exit kinds are added at the end of the enum.
-
-    enum JoinKind {
-        INIT,
-        EXACT_TOKENS_IN_FOR_BPT_OUT,
-        TOKEN_IN_FOR_EXACT_BPT_OUT,
-        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
-    }
-    enum ExitKind {
-        EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,
-        EXACT_BPT_IN_FOR_TOKENS_OUT,
-        BPT_IN_FOR_EXACT_TOKENS_OUT,
-        MANAGEMENT_FEE_TOKENS_OUT // for InvestmentPool
-    }
+    uint256 internal _lastInvariant;
 
     constructor(
         IVault vault,
@@ -119,7 +104,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
     /**
      * @dev Returns the current value of the invariant.
      */
-    function getInvariant() public view returns (uint256) {
+    function getInvariant() public virtual view returns (uint256) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
 
         // Since the Pool hooks always work with upscaled balances, we manually
@@ -193,8 +178,8 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         // It would be strange for the Pool to be paused before it is initialized, but for consistency we prevent
         // initialization in this case.
 
-        JoinKind kind = userData.joinKind();
-        _require(kind == JoinKind.INIT, Errors.UNINITIALIZED);
+        BaseWeightedPool.JoinKind kind = userData.joinKind();
+        _require(kind == BaseWeightedPool.JoinKind.INIT, Errors.UNINITIALIZED);
 
         uint256[] memory amountsIn = userData.initialAmountsIn();
         InputHelpers.ensureInputLengthMatch(
@@ -294,9 +279,9 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256[] memory scalingFactors,
         bytes memory userData
     ) internal returns (uint256, uint256[] memory) {
-        JoinKind kind = userData.joinKind();
+        BaseWeightedPool.JoinKind kind = userData.joinKind();
 
-        if (kind == JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT) {
+        if (kind == BaseWeightedPool.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT) {
             return
                 _joinExactTokensInForBPTOut(
                     balances,
@@ -304,14 +289,14 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
                     scalingFactors,
                     userData
                 );
-        } else if (kind == JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT) {
+        } else if (kind == BaseWeightedPool.JoinKind.TOKEN_IN_FOR_EXACT_BPT_OUT) {
             return
                 _joinTokenInForExactBPTOut(
                     balances,
                     normalizedWeights,
                     userData
                 );
-        } else if (kind == JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
+        } else if (kind == BaseWeightedPool.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
             return _joinAllTokensInForExactBPTOut(balances, userData);
         } else {
             _revert(Errors.UNHANDLED_JOIN_KIND);
@@ -384,7 +369,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
     function _joinAllTokensInForExactBPTOut(
         uint256[] memory balances,
         bytes memory userData
-    ) private view returns (uint256, uint256[] memory) {
+    ) internal virtual view returns (uint256, uint256[] memory) {
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
         // Note that there is no maximum amountsIn parameter: this is handled by `IVault.joinPool`.
 
@@ -476,18 +461,18 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256[] memory scalingFactors,
         bytes memory userData
     ) internal returns (uint256, uint256[] memory) {
-        ExitKind kind = userData.exitKind();
+        BaseWeightedPool.ExitKind kind = userData.exitKind();
 
-        if (kind == ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT) {
+        if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT) {
             return
                 _exitExactBPTInForTokenOut(
                     balances,
                     normalizedWeights,
                     userData
                 );
-        } else if (kind == ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT) {
+        } else if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT) {
             return _exitExactBPTInForTokensOut(balances, userData);
-        } else if (kind == ExitKind.BPT_IN_FOR_EXACT_TOKENS_OUT) {
+        } else if (kind == BaseWeightedPool.ExitKind.BPT_IN_FOR_EXACT_TOKENS_OUT) {
             return
                 _exitBPTInForExactTokensOut(
                     balances,
@@ -537,7 +522,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
     function _exitExactBPTInForTokensOut(
         uint256[] memory balances,
         bytes memory userData
-    ) private view returns (uint256, uint256[] memory) {
+    ) internal virtual view returns (uint256, uint256[] memory) {
         // This exit function is the only one that is not disabled if the contract is paused: it remains unrestricted
         // in an attempt to provide users with a mechanism to retrieve their tokens in case of an emergency.
         // This particular exit function is the only one that remains available because it is the simplest one, and
@@ -653,7 +638,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256[] memory toMutate,
         uint256[] memory arguments,
         function(uint256, uint256) pure returns (uint256) mutation
-    ) private view {
+    ) internal pure {
         for (uint256 i = 0; i < _getTotalTokens(); ++i) {
             toMutate[i] = mutation(toMutate[i], arguments[i]);
         }
