@@ -19,4 +19,5 @@ pragma solidity ^0.7.0;
 library GyroThreePoolErrors {
     // Math
     uint256 internal constant PRICE_BOUNDS_WRONG = 0;
+    uint256 internal constant INVARIANT_DIDNT_CONVERGE = 1;
 }

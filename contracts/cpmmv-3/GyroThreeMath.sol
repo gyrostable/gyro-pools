@@ -19,6 +19,8 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
+import "./GyroThreePoolErrors.sol";
+
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
@@ -30,6 +32,8 @@ library GyroThreeMath {
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
+    uint8 internal constant _INVARIANT_CALCULATION_MAX_ITERATIONS = 10;  // TODO WIP
+
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
@@ -38,86 +42,114 @@ library GyroThreeMath {
         pure
         returns (uint256)
     {
-        /**********************************************************************************************
-        // Calculate with cubic formula
-        // TODO: need a way to tackle complex number in _calculateCubic
-        **********************************************************************************************/
-        (uint256 a, uint256 b, uint256 c, uint256 d) = _calculateCubicTerms(
-            balances,
-            alpha
-        );
-        return _calculateCubic(a, b, c, d);
+        (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
+        return _calculateCubic(a, mb, mc, md);
     }
 
     // a > 0, b < 0, c < 0, d < 0
-    function _calculateCubicTerms(uint256[] memory balances, uint256 alpha)
+    function _calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
         internal
         pure
         returns (
             uint256 a,
-            uint256 b,
-            uint256 c,
-            uint256 d
+            uint256 mb,
+            uint256 mc,
+            uint256 md
         )
     {
-        // TODO it's prob more efficient to compute alpha^1/3 once, then only square later. (saves one fractional powDown)
-        // TODO review all Up/Down.
+        uint256 alpha23 = root3Alpha.mulDown(root3Alpha);  // alpha to the power of (2/3)
+        uint256 alpha = alpha23.mulDown(root3Alpha);
         a = FixedPoint.ONE.sub(alpha);
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
-        b = bterm.mulDown(alpha.powDown((2 * FixedPoint.ONE) / 3));
+        mb = bterm.mulDown(alpha23);
         uint256 cterm = (balances[0].mulDown(balances[1]))
             .add(balances[1].mulDown(balances[2]))
             .add(balances[2].mulDown(balances[0]));
-        c = cterm.mulDown(alpha.powDown(FixedPoint.ONE / 3));
-        d = balances[0].mulDown(balances[1]).mulDown(balances[2]);
+        mc = cterm.mulDown(root3Alpha);
+        md = balances[0].mulDown(balances[1]).mulDown(balances[2]);
     }
 
+    // Calculate the maximal root of the polynomial a L^3 - mb L^2 - mc L - md.
+    // This root is always non-negative, and it is the unique positive root unless mb == mc == md == 0.
     function _calculateCubic(
         uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md
     ) internal pure returns (uint256 l) {
-        // a > 0 , b < 0, c < 0, d < 0
-        // Only absolute values are provided. `mb` is -b, etc.
-        // For TESTING. EXPERIMENTAL!
-        // TODO review rounding directions (Up vs Down)
-
-        // Starting point:
-        uint256 radic = mb.mulUp(mb) + a.mulUp(mc).mulUp(3 * FixedPoint.ONE);
-        // TODO maybe swap out sqrt implementation. This is Daniel's hack.
-        l =
-            mb.divUp(a * 3) +
-            radic.powUp(FixedPoint.ONE / 2).divUp(a * 3) *
-            ((3 * FixedPoint.ONE) / 2);
-
-        // TODO evaluation is not super optimized yet
-        // Note that f(l) may be negative for the first iteration and will then be positive. f'(l) is always positive.
-        // TODO some check against numerical issues and/or gas issues would be good:
-        // - define limit for steps.
-        // - check if we were at an f(l)-positive point before and now are negative. This shouldn't happen, prob stop.
-        while (true) {
-            // f(l) can be positive or negative, so we represent the positive and negative part separately (we know which ones those are)
-            // TODO review Up / Down
-            uint256 f_l_plus = a.mulUp(l).mulUp(l).mulUp(l);
-            uint256 f_l_minus = mb.mulUp(l).mulUp(l).add(mc.mulUp(l)).add(md);
-            uint256 df_l = (3 * a).mulUp(l).mulUp(l).sub((2 * mb).mulUp(l)).sub(
-                mc
-            ); // Trust the math this doesn't create an undeflow. It really shouldn't.
-            if (f_l_plus < f_l_minus) {
-                // f(l) < 0
-                // delta is always non-negative here, but we use it differently.
-                uint256 delta = f_l_minus.sub(f_l_plus).divDown(df_l);
-                if (delta == 0) return l;
-                l = l.add(delta);
-            } else {
-                // f_l_plus >= f_l_minus
-                uint256 delta = f_l_plus.sub(f_l_minus).divDown(df_l);
-                if (delta == 0) return l;
-                l = l.sub(delta);
-            }
+        if (md == 0) {
+            // lower-order special case
+            uint256 radic = mb.mulDown(mb).add(4*a.mulDown(mc));
+            l = mb.add(radic.powDown(FixedPoint.ONE / 2)).divDown(2*a);
+        } else {
+            l = _calculateCubicStartingPoint(a, mb, mc, md);
+            l = _runNewtonIteration(a, mb, mc, md, l, _INVARIANT_CALCULATION_MAX_ITERATIONS);
         }
     }
+
+    // Starting point for Newton iteration. Safe with all cubic polynomials where the coefficients have the appropriate
+    // signs, but calibrated to the particular polynomial for computing the invariant.
+    function _calculateCubicStartingPoint(uint256 a, uint256 mb, uint256 mc, uint256 md) internal pure returns (uint256 l0) {
+        uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3*FixedPoint.ONE));
+        uint256 lmin = mb.divUp(a * 3) + radic.powUp(FixedPoint.ONE / 2).divUp(a * 3);
+        // The factor 3/2 is a magic number found experimentally for our invariant. All factors > 1 are safe.
+        l0 = lmin.mulUp(3 * FixedPoint.ONE / 2); 
+    }
+
+    // Find a root of the given polynomial with the given starting point l.
+    // Safe iff l > the local minimum.
+    // Note that f(l) may be negative for the first iteration and will then be positive (up to rounding errors).
+    // f'(l) is always positive for the range of values we consider.
+    // todo maybe define a limit on the number of steps? (careful with exploits though! - maybe this is bad
+    // practice?)
+    // TODO maybe add check against numerical issues:
+    // - check if delta increased from one step to the next. Again, this shouldn't happen.
+    // As our stopping condition, we use that delta=0 or we are going upwards in l even though we've previously been
+    // going downwards. By convexity of the function, this should never happen and this means that numerical error
+    // now dominates what we do, and we stop. This is more robust than any fixed threshold on the step size or value
+    // of f, for which we can always find sufficiently large numbers where we are always above the threshold.
+    function _runNewtonIteration (uint256 a, uint256 mb, uint256 mc, uint256 md, uint256 l, uint8 maxiter)
+            pure internal returns (uint256) {
+        uint256 delta_abs_prev = l;
+        uint8 iteration = 0;
+        while (iteration < maxiter) {
+            // The delta to the next step can be positive or negative, so we represent a positive and a negative part
+            // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
+            // TODO any reason why we don't just take the sign and the abs as values?
+            (uint256 delta_abs, bool delta_is_pos) =  _calcNewtonDelta(a, mb, mc, md, l);
+            if (delta_abs == 0                                         // literally stopped
+                || (iteration > 0 && delta_abs > delta_abs_prev / 10)  // stalled
+                || (iteration > 0 && delta_is_pos)) {                  // numerical error dominates
+                return l;
+            }
+            delta_abs_prev = delta_abs;
+            if (delta_is_pos)
+                l = l.add(delta_abs);
+            else
+                l = l.sub(delta_abs);
+            ++iteration;
+        }
+        _revert(GyroThreePoolErrors.INVARIANT_DIDNT_CONVERGE);
+    }
+
+    // -f(l)/f'(l), represented as an absolute value and a sign. Require that l is sufficiently large so that f is strictly increasing.
+    function _calcNewtonDelta(uint256 a, uint256 mb, uint256 mc, uint256 md, uint256 l)
+            pure internal returns (uint256 delta_abs, bool delta_is_pos) {
+        uint256 df_l = (3 * a).mulUp(l).sub(2 * mb).mulUp(l).sub(mc);  // Does not underflow since l >> 0 by assumption.
+        // We know that a l^2 / df_l ~ 1. (this is pretty exact actually, see the Mathematica notebook). We use this
+        // multiplication order to prevent overflows that can otherwise occur when computing l^3 for very large
+        // reserves.
+        uint256 delta_minus = a.mulUp(l).mulUp(l);
+        delta_minus = delta_minus.divUp(df_l).mulUp(l);
+        // use multiple statements to prevent 'stack too deep'. The order of operations is chosen to prevent overflows
+        // for very large numbers.
+        uint256 delta_plus = mb.mulUp(l).add(mc).divUp(df_l);
+        delta_plus = delta_plus.mulUp(l).add(md.divUp(df_l));
+
+        delta_is_pos = (delta_plus >= delta_minus);
+        delta_abs = (delta_is_pos ? delta_plus - delta_minus : delta_minus - delta_plus);
+    }
+
 
     // TODO check corner cases (zero real reserves for instance)
     /** @dev New invariant assuming that the balances increase from 'lastBalances', where the invariant was
