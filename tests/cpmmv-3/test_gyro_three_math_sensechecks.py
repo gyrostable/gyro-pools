@@ -26,12 +26,12 @@ def gen_root3Alpha():
     addl_balances=triple_uniform_integers(500_000_000)
 )
 def test_calculateInvariant_growth(gyro_three_math_testing, balances, root3Alpha, addl_balances):
-    l_low = gyro_three_math_testing.calculateInvariant(
+    l_low = gyro_three_math_testing._calculateInvariant(
         scale(balances), scale(root3Alpha)
     )
 
     balances_high = tuple(map(add, balances, addl_balances))
-    l_high = gyro_three_math_testing.calculateInvariant(
+    l_high = gyro_three_math_testing._calculateInvariant(
         scale(balances_high), scale(root3Alpha)
     )
 
