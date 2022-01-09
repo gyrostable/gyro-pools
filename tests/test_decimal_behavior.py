@@ -36,7 +36,8 @@ def test_decimal_behavior(math_testing, a, b, ops):
                 or (op_name == "div" and a > unscale(MAX_UINT, 18))
             ):
                 a = QuantizedDecimal(1)
-        except decimal.InvalidOperation:  # failed to quantize because op(a, b) is too large
+        # failed to quantize because op(a, b) is too large
+        except decimal.InvalidOperation:
             a = QuantizedDecimal(1)
         solidity_b = getattr(math_testing, op_name)(scale(a), scale(b))
         a, b = b, op(a, b)

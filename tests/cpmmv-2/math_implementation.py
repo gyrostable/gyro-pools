@@ -1,4 +1,3 @@
-from logging import warning
 from typing import Iterable
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -9,6 +8,10 @@ _MAX_OUT_RATIO = D("0.3")
 # Kinda arbitrary. It also almost doesn't matter b/c Newton is so fast in the end.
 prec_convergence = D("1E-18")
 # TODO I guess this should match precision of QuantizedDecimal.
+
+
+def squareRoot(input: D):
+    return input.sqrt()
 
 
 def calculateInvariant(balances: Iterable[D], sqrtAlpha: D, sqrtBeta: D) -> D:
@@ -26,10 +29,12 @@ def calculateQuadraticTerms(
     return a, -b, -c
 
 
-# This function is not a complete match to _calculateQuadratic in GyroTwoMath.sol, this is just general quadratic formula
-
-
 def calculateQuadratic(a: D, b: D, c: D) -> D:
+    """
+    This function is not a complete match to _calculateQuadratic in GyroTwoMath.sol, this is just general quadratic formula
+    This function should match _calculateQuadratic in GyroTwoMath.sol in both inputs and outputs
+    when a > 0, b < 0, and c < 0
+    """
     assert b * b - 4 * a * c >= 0
     numerator = -b + (b * b - 4 * a * c).sqrt()
     denominator = a * 2
@@ -116,7 +121,7 @@ def calcDueTokenProtocolSwapFeeAmount(
     sqrtParams: Iterable[D],
 ) -> tuple[D, D]:
     if currentInvariant <= previousInvariant:
-        return 0, 0
+        return D(0), D(0)
 
     deltaL = protocolSwapFeePercentage * (currentInvariant - previousInvariant)
     sqrtAlpha, sqrtBeta = sqrtParams

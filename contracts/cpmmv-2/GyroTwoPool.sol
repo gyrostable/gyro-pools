@@ -243,8 +243,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         }
     }
 
-    //Check: why are these functions not colliding with those in WeightedPool2TokensForGyro, even when those functions are marked as external?
-
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
@@ -339,7 +337,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         virtualParamOut = tokenInIsToken0 ? virtualParam[1] : virtualParam[0];
     }
 
-    //Note is public visibility ok for the following function?
+    //Note: is public visibility ok for the following function?
 
     /**
      * @dev Called when the Pool is joined for the first time; that is, when the BPT total supply is zero.

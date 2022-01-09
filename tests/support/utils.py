@@ -3,6 +3,7 @@ from typing import List, Tuple, Union, overload
 
 from tests.support.quantized_decimal import DecimalLike, QuantizedDecimal
 
+from hypothesis import strategies as st
 
 def scalar_to_decimal(x: DecimalLike):
     assert isinstance(x, (Decimal, int, str, QuantizedDecimal))
@@ -49,3 +50,6 @@ def scale(x, decimals=18):
     if isinstance(x, (list, tuple)):
         return [scale_scalar(v, decimals) for v in x]
     return scale_scalar(x, decimals)
+
+def qdecimals(*args, **kwargs) -> st.SearchStrategy[QuantizedDecimal]:
+    return st.decimals(*args, **kwargs).map(QuantizedDecimal)

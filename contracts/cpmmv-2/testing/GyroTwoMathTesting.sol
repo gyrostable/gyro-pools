@@ -94,4 +94,75 @@ contract GyroTwoMathTesting {
                 currentInvariant
             );
     }
+
+    function calculateVirtualParameter0(uint256 invariant, uint256 sqrtBeta)
+        external
+        pure
+        returns (uint256)
+    {
+        return GyroTwoMath._calculateVirtualParameter0(invariant, sqrtBeta);
+    }
+
+    function calculateVirtualParameter1(uint256 invariant, uint256 sqrtAlpha)
+        external
+        pure
+        returns (uint256)
+    {
+        return GyroTwoMath._calculateVirtualParameter1(invariant, sqrtAlpha);
+    }
+
+    function calculateSqrtPrice(uint256 invariant, uint256 virtualX)
+        external
+        pure
+        returns (uint256)
+    {
+        return GyroTwoMath._calculateSqrtPrice(invariant, virtualX);
+    }
+
+    function sqrt(uint256 input) external pure returns (uint256) {
+        return GyroTwoMath._squareRoot(input);
+    }
+
+    function calcAllTokensInGivenExactBptOut(
+        uint256[] memory balances,
+        uint256 bptAmountOut,
+        uint256 totalBPT
+    ) external pure returns (uint256[] memory) {
+        return
+            GyroTwoMath._calcAllTokensInGivenExactBptOut(
+                balances,
+                bptAmountOut,
+                totalBPT
+            );
+    }
+
+    function calcTokensOutGivenExactBptIn(
+        uint256[] memory balances,
+        uint256 bptAmountIn,
+        uint256 totalBPT
+    ) external pure returns (uint256[] memory) {
+        return
+            GyroTwoMath._calcTokensOutGivenExactBptIn(
+                balances,
+                bptAmountIn,
+                totalBPT
+            );
+    }
+
+    function calcProtocolFees(
+        uint256 previousInvariant,
+        uint256 currentInvariant,
+        uint256 currentBptSupply,
+        uint256 protocolSwapFeePerc,
+        uint256 protocolFeeGyroPortion
+    ) external pure returns (uint256, uint256) {
+        return
+            GyroTwoMath._calcProtocolFees(
+                previousInvariant,
+                currentInvariant,
+                currentBptSupply,
+                protocolSwapFeePerc,
+                protocolFeeGyroPortion
+            );
+    }
 }
