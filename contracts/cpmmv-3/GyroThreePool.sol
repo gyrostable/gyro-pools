@@ -331,13 +331,12 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             root3Alpha
         );
 
-        (
-            uint256[] memory dueFees,
-            address gyroTreasury,
-            address balTreasury
-        ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeJoin);
+        _distributeFees(invariantBeforeJoin);
 
-        _payFeesBpt(dueFees, gyroTreasury, balTreasury);
+        (bptAmountOut, amountsIn) = _doJoin(
+            balances,
+            userData
+        );
 
         // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
@@ -420,13 +419,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
                 root3Alpha
             );
 
-            (
-                uint256[] memory dueFees,
-                address gyroTreasury,
-                address balTreasury
-            ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeExit);
-
-            _payFeesBpt(dueFees, gyroTreasury, balTreasury);
+            _distributeFees(invariantBeforeExit);
 
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
@@ -518,33 +511,115 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
     // Helpers
 
-    // TODO to be updated with new fee structure. Should perhaps also override, i'm not sure.
+    // Protocol Fee Helpers. These are the same functions as in GyroTwoPool.
+
+    /**
+     * @dev Computes and distributes fees between the Balancer and the Gyro treasury
+     * The fees are computed and distributed in BPT rather than using the
+     * Balancer regular distribution mechanism which would pay these in underlying
+     */
+    function _distributeFees(uint256 invariantBeforeAction) internal {
+        // calculate Protocol fees in BPT
+        // _lastInvariant is the invariant logged at the end of the last liquidity update
+        // protocol fees are calculated on swap fees earned between liquidity updates
+        (
+            uint256 gyroFees,
+            uint256 balancerFees,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getDueProtocolFeeAmounts(_lastInvariant, invariantBeforeAction);
+
+        // Pay fees in BPT
+        _payFeesBpt(gyroFees, balancerFees, gyroTreasury, balTreasury);
+    }
+
+    /**
+     * @dev this function overrides inherited function to make sure it is never used
+     */
     function _getDueProtocolFeeAmounts(
-        uint256[] memory balances,
+        uint256[] memory, // balances,
+        uint256[] memory, // normalizedWeights,
+        uint256, // maxWeightTokenIndex,
+        uint256, // previousInvariant,
+        uint256, // currentInvariant,
+        uint256  // protocolSwapFeePercentage
+    ) internal pure override returns (uint256[] memory) {
+        revert("Not implemented");
+    }
+
+    /**
+     * @dev Calculates protocol fee amounts in BPT terms
+     * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
+     * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
+     * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
+     */
+    function _getDueProtocolFeeAmounts(
         uint256 previousInvariant,
-        uint256 currentInvariant,
-        uint256 protocolSwapFeePercentage
-    ) internal view returns (uint256[] memory) {
-        // Initialize with zeros
-        uint256[] memory dueProtocolFeeAmounts = new uint256[](3);
+        uint256 currentInvariant
+    )
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            address,
+            address
+        )
+    {
+        (
+            uint256 protocolSwapFeePerc,
+            uint256 protocolFeeGyroPortion,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getFeesMetadata();
 
         // Early return if the protocol swap fee percentage is zero, saving gas.
-        if (protocolSwapFeePercentage == 0) {
-            return dueProtocolFeeAmounts;
+        if (protocolSwapFeePerc == 0) {
+            return (0, 0, gyroTreasury, balTreasury);
         }
 
-        // The protocol swap fees are always paid using the token with the largest weight in the Pool. As this is the
-        // token that is expected to have the largest balance, using it to pay fees should not unbalance the Pool.
-        // TODO this is broken; broke it to get it  to compile.
-//        dueProtocolFeeAmounts[_maxWeightTokenIndex] = GyroThreeMath
-//            ._calcDueTokenProtocolSwapFeeAmount(
-//                balances[_maxWeightTokenIndex],
-//                normalizedWeights[_maxWeightTokenIndex],
-//                previousInvariant,
-//                currentInvariant,
-//                protocolSwapFeePercentage
-//            );
+        // Calculate fees in BPT
+        (uint256 gyroFees, uint256 balancerFees) = GyroThreeMath
+            ._calcProtocolFees(
+                previousInvariant,
+                currentInvariant,
+                totalSupply(),
+                protocolSwapFeePerc,
+                protocolFeeGyroPortion
+            );
 
-        return dueProtocolFeeAmounts;
+        return (gyroFees, balancerFees, gyroTreasury, balTreasury);
     }
+
+    function _payFeesBpt(
+        uint256 gyroFees,
+        uint256 balancerFees,
+        address gyroTreasury,
+        address balTreasury
+    ) internal {
+        // Pay fees in BPT to gyro treasury
+        if (gyroFees > 0) {
+            _mintPoolTokens(gyroTreasury, gyroFees);
+        }
+        // Pay fees in BPT to bal treasury
+        if (balancerFees > 0) {
+            _mintPoolTokens(balTreasury, balancerFees);
+        }
+    }
+
+    function _getFeesMetadata()
+        internal
+        pure
+        returns (
+            uint256,
+            uint256,
+            address,
+            address
+        )
+    {
+        // TODO: Get the fee parameters from GyroConfig
+        // Next line needs to be altered in with calling GyroConfig, for now hardcoding something
+        return (0, 1e18, address(0), address(0));
+    }
+
 }
