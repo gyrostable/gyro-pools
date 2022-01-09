@@ -212,36 +212,70 @@ billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 #     assert to_decimal(sqrt_sol) == scale(
 #         sqrt).approxed()
 
-@given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
-    sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4))
-def test_calc_in_given_out(gyro_two_math_testing, amount_out, balances, sqrt_alpha, sqrt_beta):
+# @given(
+#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+#     amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+#     sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+#     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4))
+# def test_calc_in_given_out(gyro_two_math_testing, amount_out, balances, sqrt_alpha, sqrt_beta):
 
-    if amount_out > to_decimal('0.3') * (balances[1]):
-        return
+#     if amount_out > to_decimal('0.3') * (balances[1]):
+#         return
 
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
-    )
+#     (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+#         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
+#     )
 
-    if any(v < 0 for v in [a, mb, mc]):
-        return
+#     if any(v < 0 for v in [a, mb, mc]):
+#         return
 
-    invariant = math_implementation.calculateInvariant(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta))
+#     invariant = math_implementation.calculateInvariant(
+#         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta))
 
-    virtual_param_in = math_implementation.calculateVirtualParameter0(
-        to_decimal(invariant), to_decimal(sqrt_beta))
+#     virtual_param_in = math_implementation.calculateVirtualParameter0(
+#         to_decimal(invariant), to_decimal(sqrt_beta))
 
-    virtual_param_out = math_implementation.calculateVirtualParameter1(
-        to_decimal(invariant), to_decimal(sqrt_alpha))
+#     virtual_param_out = math_implementation.calculateVirtualParameter1(
+#         to_decimal(invariant), to_decimal(sqrt_alpha))
 
-    in_amount = math_implementation.calcInGivenOut(
-        to_decimal(balances[0]), to_decimal(balances[1]), amount_out, virtual_param_in, virtual_param_out, to_decimal(invariant))
+#     in_amount = math_implementation.calcInGivenOut(
+#         to_decimal(balances[0]), to_decimal(balances[1]), amount_out, virtual_param_in, virtual_param_out, to_decimal(invariant))
 
-    in_amount_sol = gyro_two_math_testing.calcInGivenOut(scale(balances[0]), scale(balances[1]), scale(
-        amount_out), scale(virtual_param_in), scale(virtual_param_out), scale(invariant))
+#     in_amount_sol = gyro_two_math_testing.calcInGivenOut(scale(balances[0]), scale(balances[1]), scale(
+#         amount_out), scale(virtual_param_in), scale(virtual_param_out), scale(invariant))
 
-    assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
+#     assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
+
+# @given(
+#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+#     amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+#     sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+#     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4))
+# def test_calc_out_given_in(gyro_two_math_testing, amount_in, balances, sqrt_alpha, sqrt_beta):
+
+#     if amount_in > to_decimal('0.3') * (balances[0]):
+#         return
+
+#     (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+#         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
+#     )
+
+#     if any(v < 0 for v in [a, mb, mc]):
+#         return
+
+#     invariant = math_implementation.calculateInvariant(
+#         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta))
+
+#     virtual_param_in = math_implementation.calculateVirtualParameter0(
+#         to_decimal(invariant), to_decimal(sqrt_beta))
+
+#     virtual_param_out = math_implementation.calculateVirtualParameter1(
+#         to_decimal(invariant), to_decimal(sqrt_alpha))
+
+#     in_amount = math_implementation.calcOutGivenIn(
+#         to_decimal(balances[0]), to_decimal(balances[1]), amount_in, virtual_param_in, virtual_param_out, to_decimal(invariant))
+
+#     in_amount_sol = gyro_two_math_testing.calcOutGivenIn(scale(balances[0]), scale(balances[1]), scale(
+#         amount_in), scale(virtual_param_in), scale(virtual_param_out), scale(invariant))
+
+#     assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
