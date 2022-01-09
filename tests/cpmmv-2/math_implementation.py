@@ -113,25 +113,24 @@ def calcTokensOutGivenExactBptIn(
     return x * bptRatio, y * bptRatio
 
 
-def calcDueTokenProtocolSwapFeeAmount(
-    balances: Iterable[D],
+def calcProtocolFees(
     previousInvariant: D,
     currentInvariant: D,
-    protocolSwapFeePercentage: D,
-    sqrtParams: Iterable[D],
+    currentBptSupply: D,
+    protocolSwapFeePerc: D,
+    protocolFeeGyroPortion: D,
 ) -> tuple[D, D]:
     if currentInvariant <= previousInvariant:
-        return D(0), D(0)
+        return 0, 0
 
-    deltaL = protocolSwapFeePercentage * (currentInvariant - previousInvariant)
-    sqrtAlpha, sqrtBeta = sqrtParams
-    x, y = balances
-    a = calculateVirtualParameter0(currentInvariant, sqrtBeta)
-    sqrtPrice = calculateSqrtPrice(currentInvariant, x + a)
+    diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
+    numerator = diffInvariant * currentBptSupply
+    denominator = currentInvariant - diffInvariant
+    deltaS = numerator / denominator
 
-    dueProtocolFeeAmountX = deltaL * (1 / sqrtPrice - 1 / sqrtBeta)
-    dueProtocolFeeAmountY = deltaL * (sqrtPrice - sqrtAlpha)
-    return dueProtocolFeeAmountX, dueProtocolFeeAmountY
+    gyroFees = protocolFeeGyroPortion * deltaS
+    balancerFees = deltaS - gyroFees
+    return gyroFees, balancerFees
 
 
 def calculateVirtualParameter0(invariant: D, sqrtBeta: D) -> D:
