@@ -111,7 +111,7 @@ library GyroThreeMath {
     function _runNewtonIteration (uint256 a, uint256 mb, uint256 mc, uint256 md, uint256 l)
             pure internal returns (uint256) {
         uint256 delta_abs_prev = l;
-        for (uint256 i = 0; i < 255; ++i) {
+        for (uint256 iteration = 0; iteration < 255; ++iteration) {
             // The delta to the next step can be positive or negative, so we represent a positive and a negative part
             // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
             (uint256 delta_abs, bool delta_is_pos) =  _calcNewtonDelta(a, mb, mc, md, l);
@@ -297,7 +297,6 @@ library GyroThreeMath {
        ********************************************************************************/
         return invariant.divDown(virtualX).mulDown(invariant).divDown(virtualY);
     }
-}
 
     /** @dev Calculates protocol fees due to Gyro and Balancer
      *   Note: we do this differently than normal Balancer pools by paying fees in BPT tokens

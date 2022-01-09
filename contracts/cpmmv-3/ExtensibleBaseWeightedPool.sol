@@ -582,7 +582,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256 previousInvariant,
         uint256 currentInvariant,
         uint256 protocolSwapFeePercentage
-    ) private view returns (uint256[] memory) {
+    ) internal virtual view returns (uint256[] memory) {
         // Initialize with zeros
         uint256[] memory dueProtocolFeeAmounts = new uint256[](
             _getTotalTokens()
