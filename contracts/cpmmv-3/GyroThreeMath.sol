@@ -149,7 +149,6 @@ library GyroThreeMath {
     }
 
 
-    // TODO check corner cases (zero real reserves for instance)
     /** @dev New invariant assuming that the balances increase from 'lastBalances', where the invariant was
       * 'lastInvariant', to some new value, where the 'z' component (asset index 2) changes by 'deltaZ' and the other
       * assets change, too, in such a way that the prices stay the same. 'isIncreaseLiq' captures the sign of the change
