@@ -281,50 +281,49 @@ def test_calc_out_given_in(gyro_two_math_testing, amount_in, balances, sqrt_alph
     assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
 
 
-# Weird numerical error in this and the next test
-# @given(
-#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-#     bpt_amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
-#     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4))
-# def test_all_tokens_in_given_exact_bpt_out(gyro_two_math_testing, balances, bpt_amount_out, total_bpt):
+@given(
+    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+    bpt_amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+    total_bpt=st.decimals(min_value="1", max_value="1000000", places=4))
+def test_all_tokens_in_given_exact_bpt_out(gyro_two_math_testing, balances, bpt_amount_out, total_bpt):
 
-#     if total_bpt < bpt_amount_out:
-#         return
+    if total_bpt < bpt_amount_out:
+        return
 
-#     amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
-#         to_decimal(balances), bpt_amount_out, total_bpt)
+    amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
+        to_decimal(balances), to_decimal(bpt_amount_out), to_decimal(total_bpt))
 
-#     amounts_in_sol = gyro_two_math_testing.calcAllTokensInGivenExactBptOut(
-#         to_decimal(balances), bpt_amount_out, total_bpt)
+    amounts_in_sol = gyro_two_math_testing.calcAllTokensInGivenExactBptOut(
+        scale(balances), scale(bpt_amount_out), scale(total_bpt))
 
-#     if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
-#         return
+    if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
+        return
 
-#     print(amounts_in_sol[0])
-#     print(amounts_in[0])
+    assert to_decimal(amounts_in_sol[0]) == scale(amounts_in[0]).approxed()
+    assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
 
-# @given(
-#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-#     bpt_amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
-#     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4))
-# def test_tokens_out_given_exact_bpt_in(gyro_two_math_testing, balances, bpt_amount_in, total_bpt):
 
-#     if total_bpt < bpt_amount_in:
-#         return
+@given(
+    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+    bpt_amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    total_bpt=st.decimals(min_value="1", max_value="1000000", places=4))
+def test_tokens_out_given_exact_bpt_in(gyro_two_math_testing, balances, bpt_amount_in, total_bpt):
 
-#     amounts_in = math_implementation.calcTokensOutGivenExactBptIn(
-#         to_decimal(balances), bpt_amount_in, total_bpt)
+    if total_bpt < bpt_amount_in:
+        return
 
-#     amounts_in_sol = gyro_two_math_testing.calcTokensOutGivenExactBptIn(
-#         to_decimal(balances), bpt_amount_in, total_bpt)
+    amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
+        to_decimal(balances), to_decimal(bpt_amount_in), to_decimal(total_bpt))
 
-#     if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
-#         return
+    amounts_in_sol = gyro_two_math_testing.calcAllTokensInGivenExactBptOut(
+        scale(balances), scale(bpt_amount_in), scale(total_bpt))
 
-#     print(amounts_in_sol[0])
-#     print(amounts_in[0])
+    if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
+        return
 
-# Not sure which functions match up
+    assert to_decimal(amounts_in_sol[0]) == scale(amounts_in[0]).approxed()
+    assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
+
 # @given(
 #     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
 #     sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
