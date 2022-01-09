@@ -442,7 +442,9 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
             // In the paused state, we do not recompute the invariant to reduce the potential for errors and to avoid
             // lock-up in case the pool is in a state where the involved numerical method does not converge.
-            // Note that this implies that protocol fees will accumulate and be paid on the next non-paused join or exit.
+            // Instead, we set the invariant such that any following (non-paused) join/exit will ignore and recompute it
+            // (see GyroThreeMath._calcProtocolFees())
+            _lastInvariant = type(uint256).max;
         }
 
         // returns a new uint256[](3) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead

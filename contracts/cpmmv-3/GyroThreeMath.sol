@@ -323,8 +323,9 @@ library GyroThreeMath {
         *********************************************************************************/
 
         if (currentInvariant <= previousInvariant) {
-            // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool
-            // from entering a locked state in which joins and exits revert while computing accumulated swap fees.
+            // This shouldn't happen outside of rounding errors or after a pause.
+            // We have this safeguard to prevent the Pool in any case from entering a locked state in which joins and
+            // exits revert while computing accumulated swap fees.
             return (0, 0);
         }
 
