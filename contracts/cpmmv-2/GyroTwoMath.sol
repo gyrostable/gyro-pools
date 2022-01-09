@@ -303,7 +303,7 @@ library GyroTwoMath {
         uint256 currentBptSupply,
         uint256 protocolSwapFeePerc,
         uint256 protocolFeeGyroPortion
-    ) internal pure returns (uint256[] memory dueFees) {
+    ) internal pure returns (uint256, uint256) {
         /*********************************************************************************
         /*  Protocol fee collection should decrease the invariant L by
         *        Delta L = protocolSwapFeePerc * (currentInvariant - previousInvariant)
@@ -312,12 +312,11 @@ library GyroTwoMath {
         *   where S = current BPT supply
         *   The protocol then splits the fees (in BPT) considering protocolFeeGyroPortion
         *********************************************************************************/
-        dueFees = new uint256[](2);
 
         if (currentInvariant <= previousInvariant) {
             // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool
             // from entering a locked state in which joins and exits revert while computing accumulated swap fees.
-            return dueFees;
+            return (0, 0);
         }
 
         // Calculate due protocol fees in BPT terms
@@ -332,16 +331,10 @@ library GyroTwoMath {
         uint256 deltaS = numerator.divDown(denominator);
 
         // Split fees between Gyro and Balancer
-        if (protocolFeeGyroPortion == 1e18) {
-            dueFees[0] = deltaS;
-        } else {
-            dueFees[0] = protocolFeeGyroPortion.mulDown(deltaS);
-            dueFees[1] = (FixedPoint.ONE.sub(protocolFeeGyroPortion)).mulDown(
-                deltaS
-            );
-        }
+        uint256 gyroFees = protocolFeeGyroPortion.mulDown(deltaS);
+        uint256 balancerFees = deltaS.sub(gyroFees);
 
-        return dueFees;
+        return (gyroFees, balancerFees);
     }
 
     /** @dev calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2

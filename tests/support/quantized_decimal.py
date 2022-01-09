@@ -34,13 +34,16 @@ class QuantizedDecimal:
     set in `constants`
     """
 
-    def __init__(self, value="0", context=None):
+    def __init__(self, value="0", context: decimal.Context = None):
         if isinstance(value, QuantizedDecimal):
             value = value * DECIMAL_MULT
             self._value = value._value
         elif isinstance(value, decimal.Decimal):
+            rounding = decimal.ROUND_DOWN
+            if context is not None:
+                rounding = context.rounding
             value = value * DECIMAL_MULT
-            self._value = self._quantize(value)
+            self._value = self._quantize(value, rounding=rounding)
         else:
             rounding = decimal.ROUND_DOWN
             if isinstance(value, float):
@@ -115,7 +118,7 @@ class QuantizedDecimal:
             return (
                 self.quantize_to_lower_precision() < other.quantize_to_lower_precision()
             )
-        return self.quantize_to_lower_precision() < other
+        return self < QuantizedDecimal(other)
 
     def __hash__(self):
         return hash(self._value)
@@ -142,6 +145,16 @@ class QuantizedDecimal:
     def floor(self):
         return QuantizedDecimal(math.floor(self._value))
 
+    def mul_up(self, other: DecimalLike):
+        context = decimal.getcontext().copy()
+        context.rounding = decimal.ROUND_UP
+        return QuantizedDecimal(self._value * self._get_value(other), context=context)
+
+    def div_up(self, other: DecimalLike):
+        context = decimal.getcontext().copy()
+        context.rounding = decimal.ROUND_UP
+        return QuantizedDecimal(self._value / self._get_value(other), context=context)
+
     @classmethod
     def from_float(cls, value: float) -> QuantizedDecimal:
         return cls(value)
@@ -150,7 +163,7 @@ class QuantizedDecimal:
     def _get_value(value: DecimalLike) -> decimal.Decimal:
         if isinstance(value, QuantizedDecimal):
             return value._value  # pylint: disable=protected-access
-        elif isinstance(value, int):
+        elif isinstance(value, (int, str)):
             return decimal.Decimal(value)
         return value
 
@@ -161,7 +174,7 @@ class QuantizedDecimal:
         return str(self._value)
 
 
-DecimalLike = Union[int, decimal.Decimal, QuantizedDecimal]
+DecimalLike = Union[int, str, decimal.Decimal, QuantizedDecimal]
 
 
 def quantize_to_lower_precision(value: Optional[QuantizedDecimal]):
