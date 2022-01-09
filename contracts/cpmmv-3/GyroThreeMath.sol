@@ -309,3 +309,58 @@ library GyroThreeMath {
         return invariant.divDown(virtualX).mulDown(invariant).divDown(virtualY);
     }
 }
+
+/** @dev Calculates protocol fees due to Gyro and Balancer
+     *   Note: we do this differently than normal Balancer pools by paying fees in BPT tokens
+     *   b/c this is much more gas efficient than doing many transfers of underlying assets
+     *   This function gets protocol fee parameters from GyroConfig
+     *
+     *   This function is exactly equal to the corresponding one in GyroTwoMath.
+     *   TODO someday maybe make one function or a little library for this.
+     */
+    function _calcProtocolFees(
+        uint256 previousInvariant,
+        uint256 currentInvariant,
+        uint256 currentBptSupply,
+        uint256 protocolSwapFeePerc,
+        uint256 protocolFeeGyroPortion
+    ) internal pure returns (uint256[] memory dueFees) {
+        /*********************************************************************************
+        /*  Protocol fee collection should decrease the invariant L by
+        *        Delta L = protocolSwapFeePerc * (currentInvariant - previousInvariant)
+        *   To take these fees in BPT LP shares, the protocol mints Delta S new LP shares where
+        *        Delta S = S * Delta L / ( currentInvariant - Delta L )
+        *   where S = current BPT supply
+        *   The protocol then splits the fees (in BPT) considering protocolFeeGyroPortion
+        *********************************************************************************/
+        dueFees = new uint256[](2);
+
+        if (currentInvariant <= previousInvariant) {
+            // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool
+            // from entering a locked state in which joins and exits revert while computing accumulated swap fees.
+            return dueFees;
+        }
+
+        // Calculate due protocol fees in BPT terms
+        // We round down to prevent issues in the Pool's accounting, even if it means paying slightly less in protocol
+        // fees to the Vault.
+        // For the numerator, we need to round down delta L. Also for the denominator b/c subtracted
+        uint256 diffInvariant = protocolSwapFeePerc.mulDown(
+            currentInvariant.sub(previousInvariant)
+        );
+        uint256 numerator = diffInvariant.mulDown(currentBptSupply);
+        uint256 denominator = currentInvariant.sub(diffInvariant);
+        uint256 deltaS = numerator.divDown(denominator);
+
+        // Split fees between Gyro and Balancer
+        if (protocolFeeGyroPortion == 1e18) {
+            dueFees[0] = deltaS;
+        } else {
+            dueFees[0] = protocolFeeGyroPortion.mulDown(deltaS);
+            dueFees[1] = (FixedPoint.ONE.sub(protocolFeeGyroPortion)).mulDown(
+                deltaS
+            );
+        }
+
+        return dueFees;
+    }

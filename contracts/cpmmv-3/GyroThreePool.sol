@@ -299,8 +299,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * The tokens granted to the Pool will be transferred from `sender`. These amounts are considered upscaled and will
      * be downscaled (rounding up) before being returned to the Vault.
      *
-     * Due protocol swap fees will be taken from the Pool's balance in the Vault (see `IBasePool.onJoinPool`). These
-     * amounts are considered upscaled and will be downscaled (rounding down) before being returned to the Vault.
+     * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      */
     function _onJoinPool(
         bytes32,
@@ -308,7 +307,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         address,
         uint256[] memory balances,
         uint256,
-        uint256 protocolSwapFeePercentage,
+        uint256,  // protocolSwapFeePercentage, not used
         uint256[] memory,
         bytes memory userData
     )
@@ -332,33 +331,29 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             root3Alpha
         );
 
-        // TODO protocol fees paid in BPT; to be adjusted.
-        dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(
-            balances,
-            lastInvariant,
-            invariantBeforeJoin,
-            protocolSwapFeePercentage
-        );
+        (
+            uint256[] memory dueFees,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeJoin);
 
-        // Update current balances by subtracting the protocol fee amounts
-        _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
-        (bptAmountOut, amountsIn) = _doJoin(
-            balances,
-            userData
-        );
+        _payFeesBpt(dueFees, gyroTreasury, balTreasury);
 
-        // We have the incrementX (amountIn) and balances (excluding fees) so we should be able to calculate incrementL
-        // TODO this is currently *wrong* b/c balances and lastInvariant don't match and don't reflect the current state.
-        // Revise when we've integrated the new fees in BPT; same for exit
+        // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+        // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
+        // re-computation.
+        // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
+        // protocol fee factor.
         _lastInvariant = GyroThreeMath._liquidityInvariantUpdate(
             balances,
             root3Alpha,
-            lastInvariant,
+            invariantBeforeJoin,
             amountsIn[2],
             true
         );
 
-        return (bptAmountOut, amountsIn, dueProtocolFeeAmounts);
+        // returns a new uint256[](3) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
+        return (bptAmountOut, amountsIn, new uint256[](3));
     }
 
     function _doJoin(uint256[] memory balances, bytes memory userData)
@@ -390,8 +385,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * The Pool will grant tokens to `recipient`. These amounts are considered upscaled and will be downscaled
      * (rounding down) before being returned to the Vault.
      *
-     * Due protocol swap fees will be taken from the Pool's balance in the Vault (see `IBasePool.onExitPool`). These
-     * amounts are considered upscaled and will be downscaled (rounding down) before being returned to the Vault.
+     * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      */
     function _onExitPool(
         bytes32,
@@ -399,7 +393,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         address,
         uint256[] memory balances,
         uint256 lastChangeBlock,
-        uint256 protocolSwapFeePercentage,
+        uint256, // protocolSwapFeePercentage
         uint256[] memory,
         bytes memory userData
     )
@@ -421,37 +415,45 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            // TODO: Same here as in joinPool
             uint256 invariantBeforeExit = GyroThreeMath._calculateInvariant(
                 balances,
                 root3Alpha
             );
-            dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(
-                balances,
-                lastInvariant,
-                invariantBeforeExit,
-                protocolSwapFeePercentage
-            );
 
-            // Update current balances by subtracting the protocol fee amounts
-            _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+            (
+                uint256[] memory dueFees,
+                address gyroTreasury,
+                address balTreasury
+            ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeExit);
+
+            _payFeesBpt(dueFees, gyroTreasury, balTreasury);
+
+            (bptAmountIn, amountsOut) = _doExit(balances, userData);
+
+            // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+            // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
+            // re-computation.
+            // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the
+            // total protocol fee factor.
+            _lastInvariant = GyroThreeMath._liquidityInvariantUpdate(
+                balances,
+                root3Alpha,
+                invariantBeforeExit,
+                amountsOut[2],
+                false
+            );
         } else {
-            // If the contract is paused, swap protocol fee amounts are not charged
+            // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.
-            dueProtocolFeeAmounts = new uint256[](2);
+            (bptAmountIn, amountsOut) = _doExit(balances, userData);
+
+            // In the paused state, we do not recompute the invariant to reduce the potential for errors and to avoid
+            // lock-up in case the pool is in a state where the involved numerical method does not converge.
+            // Note that this implies that protocol fees will accumulate and be paid on the next non-paused join or exit.
         }
 
-        (bptAmountIn, amountsOut) = _doExit(balances, userData);
-
-        _lastInvariant = GyroThreeMath._liquidityInvariantUpdate(
-            balances,
-            root3Alpha,
-            lastInvariant,
-            amountsOut[2],
-            false
-        );
-
-        return (bptAmountIn, amountsOut, dueProtocolFeeAmounts);
+        // returns a new uint256[](3) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
+        return (bptAmountIn, amountsOut, new uint256[](3));
     }
 
     /**
