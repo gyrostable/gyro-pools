@@ -292,43 +292,53 @@ library GyroTwoMath {
         return amountsOut;
     }
 
-    function _calcDueTokenProtocolSwapFeeAmount(
-        uint256 balance,
-        uint256 normalizedWeight,
+    /** @dev Calculates protocol fees due to Gyro and Balancer
+     *   Note: we do this differently than normal Balancer pools by paying fees in BPT tokens
+     *   b/c this is much more gas efficient than doing many transfers of underlying assets
+     *   This function gets protocol fee parameters from GyroConfig
+     */
+    function _calcProtocolFees(
         uint256 previousInvariant,
         uint256 currentInvariant,
-        uint256 protocolSwapFeePercentage
-    ) internal pure returns (uint256) {
+        uint256 currentBptSupply,
+        uint256 protocolSwapFeePerc,
+        uint256 protocolFeeGyroPortion
+    ) internal pure returns (uint256, uint256) {
         /*********************************************************************************
-        /*  protocolSwapFeePercentage * balanceToken * ( 1 - (previousInvariant / currentInvariant) ^ (1 / weightToken))
+        /*  Protocol fee collection should decrease the invariant L by
+        *        Delta L = protocolSwapFeePerc * (currentInvariant - previousInvariant)
+        *   To take these fees in BPT LP shares, the protocol mints Delta S new LP shares where
+        *        Delta S = S * Delta L / ( currentInvariant - Delta L )
+        *   where S = current BPT supply
+        *   The protocol then splits the fees (in BPT) considering protocolFeeGyroPortion
         *********************************************************************************/
 
         if (currentInvariant <= previousInvariant) {
             // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool
             // from entering a locked state in which joins and exits revert while computing accumulated swap fees.
-            return 0;
+            return (0, 0);
         }
 
+        // Calculate due protocol fees in BPT terms
         // We round down to prevent issues in the Pool's accounting, even if it means paying slightly less in protocol
         // fees to the Vault.
+        // For the numerator, we need to round down delta L. Also for the denominator b/c subtracted
+        uint256 diffInvariant = protocolSwapFeePerc.mulDown(
+            currentInvariant.sub(previousInvariant)
+        );
+        uint256 numerator = diffInvariant.mulDown(currentBptSupply);
+        uint256 denominator = currentInvariant.sub(diffInvariant);
+        uint256 deltaS = numerator.divDown(denominator);
 
-        // Fee percentage and balance multiplications round down, while the subtrahend (power) rounds up (as does the
-        // base). Because previousInvariant / currentInvariant <= 1, the exponent rounds down.
+        // Split fees between Gyro and Balancer
+        uint256 gyroFees = protocolFeeGyroPortion.mulDown(deltaS);
+        uint256 balancerFees = deltaS.sub(gyroFees);
 
-        uint256 base = previousInvariant.divUp(currentInvariant);
-        uint256 exponent = FixedPoint.ONE.divDown(normalizedWeight);
-
-        // Because the exponent is larger than one, the base of the power function has a lower bound. We cap to this
-        // value to avoid numeric issues, which means in the extreme case (where the invariant growth is larger than
-        // 1 / min exponent) the Pool will pay less in protocol fees than it should.
-        base = Math.max(base, FixedPoint.MIN_POW_BASE_FREE_EXPONENT);
-
-        uint256 power = base.powUp(exponent);
-
-        uint256 tokenAccruedFees = balance.mulDown(power.complement());
-        return tokenAccruedFees.mulDown(protocolSwapFeePercentage);
+        return (gyroFees, balancerFees);
     }
 
+    /** @dev calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2
+     */
     function _calculateVirtualParameter0(uint256 invariant, uint256 _sqrtBeta)
         internal
         pure
@@ -337,6 +347,8 @@ library GyroTwoMath {
         return invariant.divDown(_sqrtBeta);
     }
 
+    /** @dev calculate virtual offset b for reserves y, as in (x+a)*(y+b)=L^2
+     */
     function _calculateVirtualParameter1(uint256 invariant, uint256 _sqrtAlpha)
         internal
         pure
@@ -345,6 +357,9 @@ library GyroTwoMath {
         return invariant.mulDown(_sqrtAlpha);
     }
 
+    /** @dev calculate square root price of asset X in terms of asset Y
+     *   derived from relation p_x * (x+a)^2 = L^2
+     */
     function _calculateSqrtPrice(uint256 invariant, uint256 virtualX)
         internal
         pure

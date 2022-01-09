@@ -50,7 +50,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         _sqrtBeta = params.sqrtBeta;
     }
 
-    // Returns sqrtAlpha and sqrtBeta
+    // Returns sqrtAlpha and sqrtBeta (square roots of lower and upper price bounds of p_x respectively)
 
     function getSqrtParameters() external view returns (uint256[] memory) {
         return _sqrtParameters();
@@ -77,7 +77,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         return parameter0 ? _sqrtAlpha : _sqrtBeta;
     }
 
-    // Returns a and b parameters
+    // Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
 
     function getvirtualParameters() external view returns (uint256[] memory) {
         return _getVirtualParameters();
@@ -401,6 +401,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      *
      * Due protocol swap fees will be taken from the Pool's balance in the Vault (see `IBasePool.onJoinPool`). These
      * amounts are considered upscaled and will be downscaled (rounding down) before being returned to the Vault.
+     *
+     * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      */
     function _onJoinPool(
         bytes32,
@@ -408,7 +410,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         address,
         uint256[] memory balances,
         uint256,
-        uint256 protocolSwapFeePercentage,
+        uint256, //protocolSwapFeePercentage,
         bytes memory userData
     )
         internal
@@ -419,8 +421,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             uint256[] memory
         )
     {
-        uint256[] memory normalizedWeights = _normalizedWeights();
-
         // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous join
         // or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids spending gas
         // computing them on each individual swap
@@ -428,22 +428,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256[] memory sqrtParams = _sqrtParameters();
         uint256 lastInvariant = _lastInvariant;
 
-        uint256 invariantBeforeJoin = GyroTwoMath._calculateInvariant(
-            balances,
-            sqrtParams[0],
-            sqrtParams[1]
-        );
+        _distributeFees(balances, sqrtParams, lastInvariant);
 
-        uint256[] memory dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(
-            balances,
-            normalizedWeights,
-            lastInvariant,
-            invariantBeforeJoin,
-            protocolSwapFeePercentage
-        );
-
-        // Update current balances by subtracting the protocol fee amounts
-        _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
             userData
@@ -459,19 +445,23 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             true
         );
 
-        return (bptAmountOut, amountsIn, dueProtocolFeeAmounts);
+        // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
+        return (bptAmountOut, amountsIn, new uint256[](2));
     }
 
     function _doJoin(uint256[] memory balances, bytes memory userData)
         internal
         view
-        returns (uint256, uint256[] memory)
+        returns (uint256 bptAmountOut, uint256[] memory amountsIn)
     {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
 
         // We do NOT currently support unbalanced update, i.e., EXACT_TOKENS_IN_FOR_BPT_OUT or TOKEN_IN_FOR_EXACT_BPT_OUT
         if (kind == BaseWeightedPool.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
-            return _joinAllTokensInForExactBPTOut(balances, userData);
+            (bptAmountOut, amountsIn) = _joinAllTokensInForExactBPTOut(
+                balances,
+                userData
+            );
         } else {
             _revert(Errors.UNHANDLED_JOIN_KIND);
         }
@@ -510,6 +500,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      *
      * Due protocol swap fees will be taken from the Pool's balance in the Vault (see `IBasePool.onExitPool`). These
      * amounts are considered upscaled and will be downscaled (rounding down) before being returned to the Vault.
+     *
+     * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      */
     function _onExitPool(
         bytes32,
@@ -517,7 +509,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         address,
         uint256[] memory balances,
         uint256 lastChangeBlock,
-        uint256 protocolSwapFeePercentage,
+        uint256, // protocolSwapFeePercentage,
         bytes memory userData
     )
         internal
@@ -531,38 +523,16 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // Exits are not completely disabled while the contract is paused: proportional exits (exact BPT in for tokens
         // out) remain functional.
 
-        uint256[] memory normalizedWeights = _normalizedWeights();
-
         uint256[] memory sqrtParams = _sqrtParameters();
         uint256 lastInvariant = _lastInvariant;
 
+        // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
+        // to avoid extra calculations and reduce the potential for errors.
         if (_isNotPaused()) {
             // Update price oracle with the pre-exit balances
             _updateOracle(lastChangeBlock, balances[0], balances[1]);
 
-            // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
-            // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
-            // spending gas calculating the fees on each individual swap.
-            // TO DO: Same here as in joinPool
-            uint256 invariantBeforeExit = GyroTwoMath._calculateInvariant(
-                balances,
-                sqrtParams[0],
-                sqrtParams[1]
-            );
-            dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(
-                balances,
-                normalizedWeights,
-                lastInvariant,
-                invariantBeforeExit,
-                protocolSwapFeePercentage
-            );
-
-            // Update current balances by subtracting the protocol fee amounts
-            _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
-        } else {
-            // If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
-            // to avoid extra calculations and reduce the potential for errors.
-            dueProtocolFeeAmounts = new uint256[](2);
+            _distributeFees(balances, sqrtParams, lastInvariant);
         }
 
         (bptAmountIn, amountsOut) = _doExit(balances, userData);
@@ -576,20 +546,24 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             false
         );
 
-        return (bptAmountIn, amountsOut, dueProtocolFeeAmounts);
+        // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
+        return (bptAmountIn, amountsOut, new uint256[](2));
     }
 
     function _doExit(uint256[] memory balances, bytes memory userData)
         internal
         view
-        returns (uint256, uint256[] memory)
+        returns (uint256 bptAmountIn, uint256[] memory amountsOut)
     {
         BaseWeightedPool.ExitKind kind = userData.exitKind();
 
         // We do NOT support unbalanced exit at the moment, i.e., EXACT_BPT_IN_FOR_ONE_TOKEN_OUT or
         // BPT_IN_FOR_EXACT_TOKENS_OUT.
         if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT) {
-            return _exitExactBPTInForTokensOut(balances, userData);
+            (bptAmountIn, amountsOut) = _exitExactBPTInForTokensOut(
+                balances,
+                userData
+            );
         } else {
             _revert(Errors.UNHANDLED_EXIT_KIND);
         }
@@ -617,7 +591,126 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
     // Helpers
 
-    // Oracle functions
+    /**
+     * @dev Computes and distributes fees between the Balancer and the Gyro treasury
+     * The fees are computed and distributed in BPT rather than using the
+     * Balancer regular distribution mechanism which would pay these in underlying
+     */
+
+    function _distributeFees(
+        uint256[] memory balances,
+        uint256[] memory sqrtParams,
+        uint256 lastInvariant
+    ) internal {
+        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
+        // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
+        // spending gas calculating the fees on each individual swap.
+        // TO DO: Same here as in joinPool
+        uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+            balances,
+            sqrtParams[0],
+            sqrtParams[1]
+        );
+
+        // calculate Protocol fees in BPT
+        (
+            uint256 gyroFees,
+            uint256 balancerFees,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeAction);
+
+        // Pay fees in BPT
+        _payFeesBpt(gyroFees, balancerFees, gyroTreasury, balTreasury);
+    }
+
+    /**
+     * @dev this function overrides inherited function to make sure it is never used
+     */
+    function _getDueProtocolFeeAmounts(
+        uint256[] memory, // balances,
+        uint256[] memory, // normalizedWeights,
+        uint256, // previousInvariant,
+        uint256, // currentInvariant,
+        uint256 // protocolSwapFeePercentage
+    ) internal pure override returns (uint256[] memory) {
+        revert("Not implemented");
+    }
+
+    /**
+     * @dev Calculates protocol fee amounts in BPT terms
+     * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
+     * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
+     * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
+     */
+    function _getDueProtocolFeeAmounts(
+        uint256 previousInvariant,
+        uint256 currentInvariant
+    )
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            address,
+            address
+        )
+    {
+        (
+            uint256 protocolSwapFeePerc,
+            uint256 protocolFeeGyroPortion,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getFeesMetadata();
+
+        // Early return if the protocol swap fee percentage is zero, saving gas.
+        if (protocolSwapFeePerc == 0) {
+            return (0, 0, gyroTreasury, balTreasury);
+        }
+
+        // Calculate fees in BPT
+        (uint256 gyroFees, uint256 balancerFees) = GyroTwoMath
+            ._calcProtocolFees(
+                previousInvariant,
+                currentInvariant,
+                totalSupply(),
+                protocolSwapFeePerc,
+                protocolFeeGyroPortion
+            );
+
+        return (gyroFees, balancerFees, gyroTreasury, balTreasury);
+    }
+
+    function _payFeesBpt(
+        uint256 gyroFees,
+        uint256 balancerFees,
+        address gyroTreasury,
+        address balTreasury
+    ) internal {
+        // Pay fees in BPT to gyro treasury
+        if (gyroFees > 0) {
+            _mintPoolTokens(gyroTreasury, gyroFees);
+        }
+        // Pay fees in BPT to bal treasury
+        if (balancerFees > 0) {
+            _mintPoolTokens(balTreasury, balancerFees);
+        }
+    }
+
+    function _getFeesMetadata()
+        internal
+        pure
+        returns (
+            uint256,
+            uint256,
+            address,
+            address
+        )
+    {
+        // TODO: Get the fee parameters from GyroConfig
+        // Next line needs to be altered in with calling GyroConfig, for now hardcoding something
+        return (0, 1e18, address(0), address(0));
+    }
 
     /**
      * @dev Updates the Price Oracle based on the Pool's current state (balances, BPT supply and invariant). Must be
