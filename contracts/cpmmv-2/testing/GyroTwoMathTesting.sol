@@ -135,4 +135,34 @@ contract GyroTwoMathTesting {
                 totalBPT
             );
     }
+
+    function calcTokensOutGivenExactBptIn(
+        uint256[] memory balances,
+        uint256 bptAmountIn,
+        uint256 totalBPT
+    ) external pure returns (uint256[] memory) {
+        return
+            GyroTwoMath._calcTokensOutGivenExactBptIn(
+                balances,
+                bptAmountIn,
+                totalBPT
+            );
+    }
+
+    function calcProtocolFees(
+        uint256 previousInvariant,
+        uint256 currentInvariant,
+        uint256 currentBptSupply,
+        uint256 protocolSwapFeePerc,
+        uint256 protocolFeeGyroPortion
+    ) external pure returns (uint256, uint256) {
+        return
+            GyroTwoMath._calcProtocolFees(
+                previousInvariant,
+                currentInvariant,
+                currentBptSupply,
+                protocolSwapFeePerc,
+                protocolFeeGyroPortion
+            );
+    }
 }
