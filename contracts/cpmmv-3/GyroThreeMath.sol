@@ -29,6 +29,8 @@ library GyroThreeMath {
     using FixedPoint for uint256;
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
+    // _MAX_OUT_RATIO also ensures that we never compute swaps that take more out than is in the pool. (because
+    // it's <= ONE)
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
@@ -194,12 +196,14 @@ library GyroThreeMath {
         uint256 virtOut = balanceOut.add(virtualOffsetInOut);
         uint256 denominator = virtIn.add(amountOut);
         uint256 subtrahend = virtIn.mulDown(virtOut).divDown(denominator);
-
-        _require(
-            virtOut <= subtrahend,
-            Errors.INSUFFICIENT_INTERNAL_BALANCE  // TODO is this the right error code?
-        );
         amountOut = virtOut.sub(subtrahend);
+
+        // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
+        // the balance.
+        _require(
+            amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO),
+            Errors.MAX_OUT_RATIO
+        );
     }
 
     /* @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
@@ -211,23 +215,23 @@ library GyroThreeMath {
         uint256 amountOut,
         uint256 virtualOffsetInOut
     ) internal pure returns (uint256 amountIn) {
+        // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
+        // the pool than is in it.
         _require(
             amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO),
             Errors.MAX_OUT_RATIO
-        );
-        // The following is subsumed by the above check, but let's keep it in just in case.
-        _require(
-            amountOut <= balanceOut,
-            Errors.INSUFFICIENT_INTERNAL_BALANCE
         );
 
         uint256 virtIn = balanceIn.add(virtualOffsetInOut);
         uint256 virtOut = balanceOut.add(virtualOffsetInOut);
         uint256 denominator = virtOut.sub(amountOut);
         uint256 minuend = virtIn.mulDown(virtOut).divDown(denominator);
-
-        // The following mathematically cannot underflow.
         amountIn = minuend.sub(virtIn);
+
+        _require(
+            amountIn <= balanceIn.mulDown(_MAX_IN_RATIO),
+            Errors.MAX_IN_RATIO
+        );
     }
 
     function _calcAllTokensInGivenExactBptOut(
