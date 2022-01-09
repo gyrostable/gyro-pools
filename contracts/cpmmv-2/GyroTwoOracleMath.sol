@@ -20,7 +20,6 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/LogCompression.sol";
 contract GyroTwoOracleMath {
     using FixedPoint for uint256;
 
-
     /**
      * @dev Calculates the spot price of token B in token A.
      *
@@ -39,10 +38,12 @@ contract GyroTwoOracleMath {
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
 
-        // computes ((balanceA + virtualParameterA) / weightA) / ((balanceB + virtualParameterB) / weightB)
-        // but pool weights are both equal to 0.5 so we can simplify to:
-        // (balanceA + virtualParameterA) / (balanceB + virtualParameterB)
-        return balanceA.add(virtualParameterA).divUp(balanceB.add(virtualParameterB));
+        // pool weights are hard-coded to 1/2
+        uint256 normalizedWeight = 5e17;
+        return
+            (balanceA.add(virtualParameterA)).divUp(normalizedWeight).divUp(
+                (balanceB.add(virtualParameterB)).divUp(normalizedWeight)
+            );
     }
 
     /**
@@ -65,12 +66,17 @@ contract GyroTwoOracleMath {
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
-        uint256 spotPrice = _calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
+        uint256 spotPrice = _calcSpotPrice(
+            balanceA,
+            virtualParameterA,
+            balanceB,
+            virtualParameterB
+        );
         return LogCompression.toLowResLog(spotPrice);
     }
 
     /**
-     * @dev Calculates the price of BPT in token A. `logBptTotalSupply` should be the result of calling `toLowResLog`
+     * @dev Calculates the (spot) price of BPT in token A. `logBptTotalSupply` should be the result of calling `toLowResLog`
      * with the current BPT supply.
      *
      * This uses the pool's spot price and so is also manipulable within a block and may not be accurate if the true price
@@ -93,7 +99,12 @@ contract GyroTwoOracleMath {
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `mulUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
-        uint256 spotPrice = _calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
+        uint256 spotPrice = _calcSpotPrice(
+            balanceA,
+            virtualParameterA,
+            balanceB,
+            virtualParameterB
+        );
         uint256 portfolioValue = balanceA.add(balanceB.mulUp(spotPrice));
         int256 logPortfolioValue = LogCompression.toLowResLog(portfolioValue);
 

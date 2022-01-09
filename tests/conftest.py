@@ -148,3 +148,8 @@ def gyro_poolMockVault_testing(
 @pytest.fixture(scope="module")
 def math_testing(admin, MathTesting):
     return admin.deploy(MathTesting)
+
+
+@pytest.fixture(scope="module")
+def mock_gyro_two_oracle_math(admin, MockGyroTwoOracleMath):
+    return admin.deploy(MockGyroTwoOracleMath)

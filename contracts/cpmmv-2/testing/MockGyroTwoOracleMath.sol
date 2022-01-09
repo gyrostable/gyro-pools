@@ -25,7 +25,13 @@ contract MockGyroTwoOracleMath is GyroTwoOracleMath, MockLogCompression {
         uint256 balanceB,
         uint256 virtualParameterB
     ) external pure returns (uint256) {
-        return GyroTwoOracleMath._calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
+        return
+            GyroTwoOracleMath._calcSpotPrice(
+                balanceA,
+                virtualParameterA,
+                balanceB,
+                virtualParameterB
+            );
     }
 
     function calcLogSpotPrice(
@@ -34,7 +40,13 @@ contract MockGyroTwoOracleMath is GyroTwoOracleMath, MockLogCompression {
         uint256 balanceB,
         uint256 virtualParameterB
     ) external pure returns (int256) {
-        return GyroTwoOracleMath._calcLogSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
+        return
+            GyroTwoOracleMath._calcLogSpotPrice(
+                balanceA,
+                virtualParameterA,
+                balanceB,
+                virtualParameterB
+            );
     }
 
     function calcLogBPTPrice(
@@ -44,6 +56,13 @@ contract MockGyroTwoOracleMath is GyroTwoOracleMath, MockLogCompression {
         uint256 virtualParameterB,
         int256 logBptTotalSupply
     ) external pure returns (int256) {
-        return GyroTwoOracleMath._calcLogBPTPrice(balanceA, virtualParameterA, balanceB, virtualParameterB, logBptTotalSupply);
+        return
+            GyroTwoOracleMath._calcLogBPTPrice(
+                balanceA,
+                virtualParameterA,
+                balanceB,
+                virtualParameterB,
+                logBptTotalSupply
+            );
     }
 }
