@@ -428,7 +428,16 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256[] memory sqrtParams = _sqrtParameters();
         uint256 lastInvariant = _lastInvariant;
 
-        _distributeFees(balances, sqrtParams, lastInvariant);
+        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
+        // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
+        // spending gas calculating the fees on each individual swap.
+        uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+            balances,
+            sqrtParams[0],
+            sqrtParams[1]
+        );
+
+        _distributeFees(balances, sqrtParams, lastInvariant, invariantBeforeAction);
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
@@ -444,7 +453,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             balances,
             sqrtParams[0],
             sqrtParams[1],
-            invariantBeforeJoin,
+            invariantBeforeAction,
             amountsIn[1],
             true
         );
@@ -536,8 +545,16 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             // Update price oracle with the pre-exit balances
             _updateOracle(lastChangeBlock, balances[0], balances[1]);
 
-            _distributeFees(balances, sqrtParams, lastInvariant);
-        }
+            // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
+            // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
+            // spending gas calculating the fees on each individual swap.
+            uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+                balances,
+                sqrtParams[0],
+                sqrtParams[1]
+            );
+
+            _distributeFees(balances, sqrtParams, lastInvariant, invariantBeforeAction);
 
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
@@ -550,7 +567,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
                 balances,
                 sqrtParams[0],
                 sqrtParams[1],
-                invariantBeforeExit,
+                invariantBeforeAction,
                 amountsOut[1],
                 false
             );
@@ -622,18 +639,9 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     function _distributeFees(
         uint256[] memory balances,
         uint256[] memory sqrtParams,
-        uint256 lastInvariant
+        uint256 lastInvariant,
+        uint256 invariantBeforeAction
     ) internal {
-        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
-        // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
-        // spending gas calculating the fees on each individual swap.
-        // TO DO: Same here as in joinPool
-        uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
-            balances,
-            sqrtParams[0],
-            sqrtParams[1]
-        );
-
         // calculate Protocol fees in BPT
         (
             uint256 gyroFees,
