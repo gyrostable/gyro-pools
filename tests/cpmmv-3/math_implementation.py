@@ -1,39 +1,172 @@
-from decimal import Decimal
-from typing import Tuple
+from tests.support.quantized_decimal import QuantizedDecimal as D
 
-import hypothesis.strategies as st
-import pytest
-from brownie.test import given
-from tests.support.utils import scale, to_decimal, qdecimals
+from logging import warning
+from typing import Iterable
 
-from operator import add
+_MAX_IN_RATIO = D("0.3")
+_MAX_OUT_RATIO = D("0.3")
 
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
+prec_convergence = D(
+    "1E-18"
+)  # Kinda arbitrary. It also almost doesn't matter b/c Newton is so fast in the end.
+# TODO I guess this should match precision of QuantizedDecimal.
 
-def triple_uniform_integers(min_value=0, max_value=1_000_000_000):
-    g = st.integers(min_value=min_value, max_value=max_value)
-    return st.tuples(g, g, g)
 
-def gen_balances():
-    return st.tuples(billion_balance_strategy, billion_balance_strategy, billion_balance_strategy)
+def calculateInvariant(balances: Iterable[D], root3Alpha: D) -> D:
+    (a, mb, mc, md) = calculateCubicTerms(balances, root3Alpha)
+    return calculateCubic(a, mb, mc, md, root3Alpha, balances)
 
-def gen_root3Alpha():
-    return qdecimals(min_value="0.9", max_value="0.99996")
 
-@given(
-    balances=gen_balances(),
-    root3Alpha=gen_root3Alpha(),
-    addl_balances=triple_uniform_integers(500_000_000)
-)
-def test_calculateInvariant_growth(gyro_three_math_testing, balances, root3Alpha, addl_balances):
-    l_low = gyro_three_math_testing._calculateInvariant(
-        scale(balances), scale(root3Alpha)
+def calculateCubicTerms(balances: Iterable[D], root3Alpha: D) -> tuple[D, D, D, D]:
+    x, y, z = balances
+    a = D(1) - root3Alpha * root3Alpha * root3Alpha
+    b = -(x + y + z) * root3Alpha * root3Alpha
+    c = -(x * y + y * z + z * x) * root3Alpha
+    d = -x * y * z
+    assert a > 0 and b < 0 and c < 0 and d <= 0
+    return a, -b, -c, -d
+
+
+# Doesn't completely mirror _calculateCubic in GyroThreeMath.sol
+def calculateCubic(
+    a: D, mb: D, mc: D, md: D, root3Alpha: D, balances: Iterable[D]
+) -> D:
+    invariant, log_steps = calculateInvariantNewton(
+        a, -mb, -mc, -md, root3Alpha, balances
     )
+    return invariant
 
-    balances_high = tuple(map(add, balances, addl_balances))
-    l_high = gyro_three_math_testing._calculateInvariant(
-        scale(balances_high), scale(root3Alpha)
-    )
 
-    assert l_low < l_high
+def calculateInvariantNewton(
+    a: D, b: D, c: D, d: D, alpha1: D, balances: Iterable[D]
+) -> tuple[D, list]:
+    log = []
+    x, y, z = balances
 
+    lmin = -b / (a * 3) + (b ** 2 - a * c * 3).sqrt() / (
+        a * 3
+    )  # Sqrt is not gonna make a problem b/c all summands are positive.
+    # ^ Local minimum, and also the global minimum of f among l > 0; towards a starting point
+    l0 = lmin * D(
+        "1.5"
+    )  # 1.5 is a magic number, experimentally found; it seems this becomes exact for alpha -> 1.
+
+    l = l0
+    delta = D(1)
+    delta_pre = None  # Not really used, only to flag the first iteration.
+
+    while True:
+        # todo ~ some potential to optimize evaluation using Horner's schema.
+        # Alt, to make the numbers smaller, intersperse division by df_l.
+        # delta = f(l)/f'(l)
+        f_l = a * l ** 3 + b * l ** 2 + c * l + d
+
+        # Compute derived values for comparison:
+        # TESTING only; co  uld base the exit condition on this if I really wanted
+        # todo ~ should prob resolve/simplify these conditions if I really wanna use them
+        gamma = l ** 2 / ((x + l * alpha1) * (y + l * alpha1))  # 3√(px py)
+        px = (z + l * alpha1) / (x + l * alpha1)
+        py = (z + l * alpha1) / (y + l * alpha1)
+        x1 = l * (gamma / px - alpha1)
+        y1 = l * (gamma / py - alpha1)
+        z1 = l * (gamma - alpha1)
+
+        log.append(dict(l=l, delta=delta, f_l=f_l, dx=x1 - x, dy=y1 - y, dz=z1 - z))
+
+        # if abs(f_l) < prec_convergence:
+        if (
+            abs(x - x1) < prec_convergence
+            and abs(y - y1) < prec_convergence
+            and abs(z - z1) < prec_convergence
+        ):
+            return l, log
+        df_l = a * 3 * l ** 2 + b * 2 * l + c
+        delta = f_l / df_l
+
+        # delta==0 can happen with poor numerical precision! In this case, this is all we can get.
+        if delta_pre is not None and (delta == 0 or f_l < 0):
+            warning("Early exit due to numerical instability")
+            return l, log
+
+        l -= delta
+        delta_pre = delta
+
+
+def liquidityInvariantUpdate(
+    balances: Iterable[D],
+    root3Alpha: D,
+    lastInvariant: D,
+    diffZ: D,
+    isIncreaseLiq: bool,
+) -> D:
+    x, y, z = balances
+    # virtual offsets
+    virtualOffset = lastInvariant * root3Alpha
+    # cube root of p_x p_y
+    cbrtPxPy = calculateCbrtPrice(lastInvariant, z + virtualOffset)
+    diffInvariant = diffZ / (cbrtPxPy - root3Alpha)
+
+    if isIncreaseLiq == True:
+        invariant = lastInvariant + diffInvariant
+    else:
+        invariant = lastInvariant - diffInvariant
+    return invariant
+
+
+def calcOutGivenIn(balanceIn: D, balanceOut: D, amountIn: D, virtualOffset: D) -> D:
+    assert amountIn <= balanceIn * _MAX_IN_RATIO
+    virtIn = balanceIn + virtualOffset
+    virtOut = balanceOut + virtualOffset
+    # minus b/c amountOut is negative
+    amountOut = -(virtIn * virtOut / (virtIn + amountIn) - virtOut)
+    assert amountOut <= balanceOut * _MAX_OUT_RATIO
+    return amountOut
+
+
+def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) -> D:
+    assert amountOut <= balanceOut * _MAX_OUT_RATIO
+    virtIn = balanceIn + virtualOffset
+    virtOut = balanceOut + virtualOffset
+    amountIn = virtIn * virtOut / (virtOut - amountOut) - virtIn
+    assert amountIn <= balanceIn * _MAX_IN_RATIO
+    return amountIn
+
+
+def calcAllTokensInGivenExactBptOut(
+    balances: Iterable[D], bptAmountOut: D, totalBPT: D
+) -> tuple[D, D]:
+    bptRatio = bptAmountOut / totalBPT
+    x, y, z = balances
+    return x * bptRatio, y * bptRatio, z * bptRatio
+
+
+def calcTokensOutGivenExactBptIn(
+    balances: Iterable[D], bptAmountIn: D, totalBPT: D
+) -> tuple[D, D]:
+    bptRatio = bptAmountIn / totalBPT
+    x, y, z = balances
+    return x * bptRatio, y * bptRatio, z * bptRatio
+
+
+def calcProtocolFees(
+    previousInvariant: D,
+    currentInvariant: D,
+    currentBptSupply: D,
+    protocolSwapFeePerc: D,
+    protocolFeeGyroPortion: D,
+) -> tuple[D, D]:
+    if currentInvariant <= previousInvariant:
+        return 0, 0
+
+    diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
+    numerator = diffInvariant * currentBptSupply
+    denominator = currentInvariant - diffInvariant
+    deltaS = numerator / denominator
+
+    gyroFees = protocolFeeGyroPortion * deltaS
+    balancerFees = deltaS - gyroFees
+    return gyroFees, balancerFees
+
+
+def calculateCbrtPrice(invariant: D, virtualZ: D) -> D:
+    return virtualZ / invariant
