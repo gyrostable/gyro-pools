@@ -102,4 +102,20 @@ contract GyroTwoMathTesting {
     {
         return GyroTwoMath._calculateVirtualParameter0(invariant, sqrtBeta);
     }
+
+    function calculateVirtualParameter1(uint256 invariant, uint256 sqrtAlpha)
+        external
+        pure
+        returns (uint256)
+    {
+        return GyroTwoMath._calculateVirtualParameter1(invariant, sqrtAlpha);
+    }
+
+    function calculateSqrtPrice(uint256 invariant, uint256 virtualX)
+        external
+        pure
+        returns (uint256)
+    {
+        return GyroTwoMath._calculateSqrtPrice(invariant, virtualX);
+    }
 }
