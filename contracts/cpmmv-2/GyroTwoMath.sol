@@ -197,7 +197,6 @@ library GyroTwoMath {
         );
         uint256 virtIn = balanceIn.add(virtualParamIn);
         uint256 denominator = virtIn.add(amountIn);
-        //Note: should this be mulUp or mulDown?
         uint256 invSquare = currentInvariant.mulUp(currentInvariant);
         uint256 subtrahend = invSquare.divUp(denominator);
         uint256 virtOut = balanceOut.add(virtualParamOut);
