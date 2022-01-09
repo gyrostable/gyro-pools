@@ -5,16 +5,16 @@ pragma solidity ^0.7.0;
 import "../GyroThreeMath.sol";
 
 contract GyroThreeMathTesting {
-    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha)
-        public
+    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha)
+        external
         pure
         returns (uint256)
     {
         return GyroThreeMath._calculateInvariant(balances, root3Alpha);
     }
 
-    function _calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
-        public
+    function calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
+        external
         pure
         returns (
             uint256 a,
@@ -26,51 +26,51 @@ contract GyroThreeMathTesting {
         return GyroThreeMath._calculateCubicTerms(balances, root3Alpha);
     }
 
-    function _calculateCubic(
+    function calculateCubic(
         uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md
-    ) public pure returns (uint256 l) {
+    ) external pure returns (uint256 rootEst) {
         return GyroThreeMath._calculateCubic(a, mb, mc, md);
     }
 
-    function _calculateCubicStartingPoint(
+    function calculateCubicStartingPoint(
         uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md
-    ) public pure returns (uint256 l0) {
+    ) external pure returns (uint256 l0) {
         return GyroThreeMath._calculateCubicStartingPoint(a, mb, mc, md);
     }
 
-    function _runNewtonIteration(
+    function runNewtonIteration(
         uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
-        uint256 l
-    ) public pure returns (uint256) {
-        return GyroThreeMath._runNewtonIteration(a, mb, mc, md, l);
+        uint256 rootEst
+    ) external pure returns (uint256) {
+        return GyroThreeMath._runNewtonIteration(a, mb, mc, md, rootEst);
     }
 
-    function _calcNewtonDelta(
+    function calcNewtonDelta(
         uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
-        uint256 l
-    ) public pure returns (uint256 delta_abs, bool delta_is_pos) {
-        return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, l);
+        uint256 rootEst
+    ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
+        return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, rootEst);
     }
 
-    function _liquidityInvariantUpdate(
+    function liquidityInvariantUpdate(
         uint256[] memory lastBalances,
         uint256 root3Alpha,
         uint256 lastInvariant,
         uint256 incrZ,
         bool isIncreaseLiq
-    ) public pure returns (uint256 invariant) {
+    ) external pure returns (uint256 invariant) {
         return
             GyroThreeMath._liquidityInvariantUpdate(
                 lastBalances,
@@ -81,12 +81,12 @@ contract GyroThreeMathTesting {
             );
     }
 
-    function _calcOutGivenIn(
+    function calcOutGivenIn(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountIn,
         uint256 virtualOffsetInOut
-    ) public pure returns (uint256 amountOut) {
+    ) external pure returns (uint256 amountOut) {
         return
             GyroThreeMath._calcOutGivenIn(
                 balanceIn,
@@ -96,12 +96,12 @@ contract GyroThreeMathTesting {
             );
     }
 
-    function _calcInGivenOut(
+    function calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountOut,
         uint256 virtualOffsetInOut
-    ) public pure returns (uint256 amountIn) {
+    ) external pure returns (uint256 amountIn) {
         return
             GyroThreeMath._calcInGivenOut(
                 balanceIn,
@@ -111,11 +111,11 @@ contract GyroThreeMathTesting {
             );
     }
 
-    function _calcAllTokensInGivenExactBptOut(
+    function calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
         uint256 bptAmountOut,
         uint256 totalBPT
-    ) public pure returns (uint256[] memory) {
+    ) external pure returns (uint256[] memory) {
         return
             GyroThreeMath._calcAllTokensInGivenExactBptOut(
                 balances,
@@ -124,11 +124,11 @@ contract GyroThreeMathTesting {
             );
     }
 
-    function _calcTokensOutGivenExactBptIn(
+    function calcTokensOutGivenExactBptIn(
         uint256[] memory balances,
         uint256 bptAmountIn,
         uint256 totalBPT
-    ) public pure returns (uint256[] memory) {
+    ) external pure returns (uint256[] memory) {
         return
             GyroThreeMath._calcTokensOutGivenExactBptIn(
                 balances,
@@ -137,21 +137,21 @@ contract GyroThreeMathTesting {
             );
     }
 
-    function _calculateCbrtPrice(uint256 invariant, uint256 virtualZ)
-        public
+    function calculateCbrtPrice(uint256 invariant, uint256 virtualZ)
+        external
         pure
         returns (uint256)
     {
         return GyroThreeMath._calculateCbrtPrice(invariant, virtualZ);
     }
 
-    function _calcProtocolFees(
+    function calcProtocolFees(
         uint256 previousInvariant,
         uint256 currentInvariant,
         uint256 currentBptSupply,
         uint256 protocolSwapFeePerc,
         uint256 protocolFeeGyroPortion
-    ) public pure returns (uint256, uint256) {
+    ) external pure returns (uint256, uint256) {
         return
             GyroThreeMath._calcProtocolFees(
                 previousInvariant,
