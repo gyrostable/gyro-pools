@@ -426,7 +426,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // computing them on each individual swap
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 lastInvariant = _lastInvariant;
 
         // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
         // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
@@ -437,7 +436,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             sqrtParams[1]
         );
 
-        _distributeFees(balances, sqrtParams, lastInvariant, invariantBeforeAction);
+        _distributeFees(invariantBeforeAction);
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
@@ -537,7 +536,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // out) remain functional.
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 lastInvariant = _lastInvariant;
 
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
@@ -554,7 +552,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
                 sqrtParams[1]
             );
 
-            _distributeFees(balances, sqrtParams, lastInvariant, invariantBeforeAction);
+            _distributeFees(invariantBeforeAction);
 
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
@@ -636,19 +634,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      * Balancer regular distribution mechanism which would pay these in underlying
      */
 
-    function _distributeFees(
-        uint256[] memory balances,
-        uint256[] memory sqrtParams,
-        uint256 lastInvariant,
-        uint256 invariantBeforeAction
-    ) internal {
+    function _distributeFees(uint256 invariantBeforeAction) internal {
         // calculate Protocol fees in BPT
         (
             uint256 gyroFees,
             uint256 balancerFees,
             address gyroTreasury,
             address balTreasury
-        ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeAction);
+        ) = _getDueProtocolFeeAmounts(_lastInvariant, invariantBeforeAction);
 
         // Pay fees in BPT
         _payFeesBpt(gyroFees, balancerFees, gyroTreasury, balTreasury);
