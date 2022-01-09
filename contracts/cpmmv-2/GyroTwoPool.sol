@@ -426,21 +426,33 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // computing them on each individual swap
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 lastInvariant = _lastInvariant;
 
-        _distributeFees(balances, sqrtParams, lastInvariant);
+        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
+        // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
+        // spending gas calculating the fees on each individual swap.
+        uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+            balances,
+            sqrtParams[0],
+            sqrtParams[1]
+        );
+
+        _distributeFees(invariantBeforeAction);
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
             userData
         );
 
-        // We have the incrementX (amountIn) and balances (excluding fees) so we should be able to calculate incrementL
+        // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+        // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
+        // re-computation.
+        // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
+        // protocol fee factor.
         _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
             balances,
             sqrtParams[0],
             sqrtParams[1],
-            lastInvariant,
+            invariantBeforeAction,
             amountsIn[1],
             true
         );
@@ -524,7 +536,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // out) remain functional.
 
         uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 lastInvariant = _lastInvariant;
 
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
@@ -532,19 +543,45 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             // Update price oracle with the pre-exit balances
             _updateOracle(lastChangeBlock, balances[0], balances[1]);
 
-            _distributeFees(balances, sqrtParams, lastInvariant);
+            // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
+            // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
+            // spending gas calculating the fees on each individual swap.
+            uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+                balances,
+                sqrtParams[0],
+                sqrtParams[1]
+            );
+
+            _distributeFees(invariantBeforeAction);
+
+            (bptAmountIn, amountsOut) = _doExit(balances, userData);
+
+            // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+            // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
+            // re-computation.
+            // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
+            // protocol fee factor.
+            _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
+                balances,
+                sqrtParams[0],
+                sqrtParams[1],
+                invariantBeforeAction,
+                amountsOut[1],
+                false
+            );
+        } else {
+            // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
+            // to avoid extra calculations and reduce the potential for errors.
+            (bptAmountIn, amountsOut) = _doExit(balances, userData);
+
+            // We need to re-calculate the invariant with the updated balances from scratch in this case.
+            _mutateAmounts(balances, amountsOut, FixedPoint.sub);
+            _lastInvariant = GyroTwoMath._calculateInvariant(
+                balances,
+                sqrtParams[0],
+                sqrtParams[1]
+            );
         }
-
-        (bptAmountIn, amountsOut) = _doExit(balances, userData);
-
-        _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
-            balances,
-            sqrtParams[0],
-            sqrtParams[1],
-            lastInvariant,
-            amountsOut[1],
-            false
-        );
 
         // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountIn, amountsOut, new uint256[](2));
@@ -597,28 +634,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      * Balancer regular distribution mechanism which would pay these in underlying
      */
 
-    function _distributeFees(
-        uint256[] memory balances,
-        uint256[] memory sqrtParams,
-        uint256 lastInvariant
-    ) internal {
-        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
-        // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
-        // spending gas calculating the fees on each individual swap.
-        // TO DO: Same here as in joinPool
-        uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
-            balances,
-            sqrtParams[0],
-            sqrtParams[1]
-        );
-
+    function _distributeFees(uint256 invariantBeforeAction) internal {
         // calculate Protocol fees in BPT
         (
             uint256 gyroFees,
             uint256 balancerFees,
             address gyroTreasury,
             address balTreasury
-        ) = _getDueProtocolFeeAmounts(lastInvariant, invariantBeforeAction);
+        ) = _getDueProtocolFeeAmounts(_lastInvariant, invariantBeforeAction);
 
         // Pay fees in BPT
         _payFeesBpt(gyroFees, balancerFees, gyroTreasury, balTreasury);
