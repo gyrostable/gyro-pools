@@ -122,4 +122,17 @@ contract GyroTwoMathTesting {
     function sqrt(uint256 input) external pure returns (uint256) {
         return GyroTwoMath._squareRoot(input);
     }
+
+    function calcAllTokensInGivenExactBptOut(
+        uint256[] memory balances,
+        uint256 bptAmountOut,
+        uint256 totalBPT
+    ) external pure returns (uint256[] memory) {
+        return
+            GyroTwoMath._calcAllTokensInGivenExactBptOut(
+                balances,
+                bptAmountOut,
+                totalBPT
+            );
+    }
 }
