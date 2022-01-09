@@ -567,20 +567,35 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
             // Pay fees in BPT
             _payFeesBpt(dueFees, gyroTreasury, balTreasury);
+
+            (bptAmountIn, amountsOut) = _doExit(balances, userData);
+
+            // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+            // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
+            // re-computation.
+            // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
+            // protocol fee factor.
+            _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
+                balances,
+                sqrtParams[0],
+                sqrtParams[1],
+                invariantBeforeExit,
+                amountsOut[1],
+                false
+            );
+        } else {
+            // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
+            // to avoid extra calculations and reduce the potential for errors.
+            (bptAmountIn, amountsOut) = _doExit(balances, userData);
+
+            // We need to re-calculate the invariant with the updated balances from scratch in this case.
+            _mutateAmounts(balances, amountsOut, FixedPoint.sub);
+            _lastInvariant = GyroTwoMath._calculateInvariant(
+                balances,
+                sqrtParams[0],
+                sqrtParams[1]
+            );
         }
-        // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
-        // to avoid extra calculations and reduce the potential for errors.
-
-        (bptAmountIn, amountsOut) = _doExit(balances, userData);
-
-        _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
-            balances,
-            sqrtParams[0],
-            sqrtParams[1],
-            lastInvariant,
-            amountsOut[1],
-            false
-        );
 
         // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountIn, amountsOut, new uint256[](2));
