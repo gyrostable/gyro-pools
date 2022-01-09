@@ -443,7 +443,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             userData
         );
 
-        // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+        // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
         // re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
@@ -556,7 +556,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
-            // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+            // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
             // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
             // re-computation.
             // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
@@ -636,6 +636,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
     function _distributeFees(uint256 invariantBeforeAction) internal {
         // calculate Protocol fees in BPT
+        // lastInvariant is the invariant logged at the end of the last liquidity update
+        // protocol fees are calculated on swap fees earned between liquidity updates
         (
             uint256 gyroFees,
             uint256 balancerFees,

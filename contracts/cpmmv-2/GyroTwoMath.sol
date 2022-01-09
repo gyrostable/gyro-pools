@@ -131,6 +131,7 @@ library GyroTwoMath {
 
     /** @dev calculates change in invariant following an add or remove liquidity operation
      *   This assumes that the liquidity provided was correctly balanced
+     *   Using this instead of _calculateInvariant saves evaluating a square root
      */
     function _liquidityInvariantUpdate(
         uint256[] memory balances,
