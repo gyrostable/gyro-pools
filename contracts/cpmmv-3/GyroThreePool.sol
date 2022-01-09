@@ -324,7 +324,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         // computing them on each individual swap
 
         uint256 root3Alpha = _root3Alpha;
-        uint256 lastInvariant = _lastInvariant;
 
         uint256 invariantBeforeJoin = GyroThreeMath._calculateInvariant(
             balances,
@@ -407,7 +406,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         // Exits are not completely disabled while the contract is paused: proportional exits (exact BPT in for tokens
         // out) remain functional.
 
-        uint256 lastInvariant = _lastInvariant;
         uint256 root3Alpha = _root3Alpha;
 
         if (_isNotPaused()) {
