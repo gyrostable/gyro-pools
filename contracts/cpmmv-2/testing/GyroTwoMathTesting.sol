@@ -118,4 +118,8 @@ contract GyroTwoMathTesting {
     {
         return GyroTwoMath._calculateSqrtPrice(invariant, virtualX);
     }
+
+    function sqrt(uint256 input) external pure returns (uint256) {
+        return GyroTwoMath._squareRoot(input);
+    }
 }

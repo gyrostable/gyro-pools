@@ -101,6 +101,8 @@ def test_calculate_invariant(gyro_two_math_testing, balances, sqrt_alpha, sqrt_b
     if any(v < 0 for v in [a, mb, mc]):
         return
 
+    print(a, mb, mc)
+
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
@@ -194,3 +196,18 @@ def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha,
 
     assert to_decimal(new_invariant_sol) == scale(
         new_invariant).approxed()
+
+
+@given(
+    input=st.decimals(min_value="0", max_value="100000000", places=4))
+def test_calculate_sqrt(gyro_two_math_testing, input):
+
+    sqrt = math_implementation.squareRoot(
+        input
+    )
+
+    sqrt_sol = gyro_two_math_testing.sqrt(
+        scale(input))
+
+    assert to_decimal(sqrt_sol) == scale(
+        sqrt).approxed()
