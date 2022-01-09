@@ -41,7 +41,7 @@ def calculateQuadratic(a: D, b: D, c: D) -> D:
 
 
 def calculateQuadraticSpecial(a: D, mb: D, mc: D) -> D:
-    assert a > 0 and mb > 0 and mc > 0
+    assert a > 0 and mb > 0 and mc >= 0
     return calculateQuadratic(a, -mb, -mc)
 
 

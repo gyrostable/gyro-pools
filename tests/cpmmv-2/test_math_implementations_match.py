@@ -4,17 +4,31 @@ from typing import Tuple
 import hypothesis.strategies as st
 import pytest
 from brownie.test import given
-from tests.support.utils import scale, to_decimal, qdecimals
+from tests.support.utils import scale, to_decimal
 
 import math_implementation
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
+# this is a multiplicative separation
+# This is consistent with tightest price range of 0.9999 - 1.0001
+MIN_SQRTPARAM_SEPARATION = to_decimal("1.0001")
+
+
+def faulty_params(balances, sqrt_alpha, sqrt_beta):
+    balances = [to_decimal(b) for b in balances]
+    if balances[0] == 0 and balances[1] == 0:
+        return True
+    if sqrt_beta <= sqrt_alpha * MIN_SQRTPARAM_SEPARATION:
+        return True
+    else:
+        return False
+
 
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_alpha=qdecimals(min_value="0.5", max_value="0.9998", places=4),
-    sqrt_beta=qdecimals(min_value="1.0002", max_value="1.5", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
+    sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
 )
 def test_calculate_quadratic_terms(
     gyro_two_math_testing,
@@ -22,11 +36,12 @@ def test_calculate_quadratic_terms(
     sqrt_alpha: Decimal,
     sqrt_beta: Decimal,
 ):
+    if faulty_params(balances, sqrt_alpha, sqrt_beta):
+        return
+
     (a, mb, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
-
-    assert not any(v < 0 for v in [a, mb, mc])
 
     (a_sol, mb_sol, mc_sol) = gyro_two_math_testing.calculateQuadraticTerms(
         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
@@ -39,8 +54,8 @@ def test_calculate_quadratic_terms(
 
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_alpha=qdecimals(min_value="0.5", max_value="0.9999", places=4),
-    sqrt_beta=qdecimals(min_value="1.0002", max_value="1.5", places=4),
+    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
 )
 def test_calculate_quadratic(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta):
 
@@ -48,33 +63,32 @@ def test_calculate_quadratic(gyro_two_math_testing, balances, sqrt_alpha, sqrt_b
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    assert not any(v < 0 for v in [a, mb, mc])
+    if any(v > 0 for v in [-a, mb, mc]):
+        return
 
-    root = math_implementation.calculateQuadratic(a, -mb, -mc)
+    root = math_implementation.calculateQuadratic(a, mb, mc)
 
     root_sol = gyro_two_math_testing.calculateQuadratic(
         scale(a), scale(mb), scale(mc)
     )
 
-    assert int(root_sol) == scale(root).approxed()
+    assert root == root_sol
 
 
 @given(
     balances=st.tuples(billion_balance_strategy,
                        billion_balance_strategy),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
 )
 def test_calculate_quadratic_special(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta):
 
+    if faulty_params(balances, sqrt_alpha, sqrt_beta):
+        return
+
     (a, mb, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
-
-    if any(v < 0 for v in [a, mb, mc]):
-        return
-
-    print(a)
 
     root = math_implementation.calculateQuadraticSpecial(a, mb, mc)
 
@@ -87,19 +101,17 @@ def test_calculate_quadratic_special(gyro_two_math_testing, balances, sqrt_alpha
 
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
 )
 def test_calculate_invariant(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta):
 
+    if faulty_params(balances, sqrt_alpha, sqrt_beta):
+        return
+
     (a, mb, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
-
-    if any(v <= 0 for v in [a, mb, mc]):
-        return
-
-    print(a, mb, mc)
 
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
@@ -131,7 +143,7 @@ def test_calculate_virtual_parameter_0(gyro_two_math_testing, sqrt_beta, invaria
 
 @given(
     invariant=st.decimals(min_value="100", max_value="100000000", places=4),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
 )
 def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invariant):
 
@@ -165,19 +177,12 @@ def test_calculate_sqrt_price(gyro_two_math_testing, invariant, virtual_x):
 
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4),
     diff_y=st.decimals(min_value="100", max_value="1000000000", places=4))
 def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, diff_y):
 
-    if any(b == 0 for b in [balances[0], balances[1]]):
-        return
-
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
-    )
-
-    if any(v < 0 for v in [a, mb, mc]):
+    if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
 
     last_invariant = math_implementation.calculateInvariant(
@@ -210,21 +215,18 @@ def test_calculate_sqrt(gyro_two_math_testing, input):
     assert to_decimal(sqrt_sol) == scale(
         sqrt).approxed()
 
+
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
     amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4))
 def test_calc_in_given_out(gyro_two_math_testing, amount_out, balances, sqrt_alpha, sqrt_beta):
 
     if amount_out > to_decimal('0.3') * (balances[1]):
         return
 
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
-    )
-
-    if any(v < 0 for v in [a, mb, mc]):
+    if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
 
     invariant = math_implementation.calculateInvariant(
@@ -244,21 +246,18 @@ def test_calc_in_given_out(gyro_two_math_testing, amount_out, balances, sqrt_alp
 
     assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
 
+
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
     amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
-    sqrt_alpha=st.decimals(min_value="0.9", max_value="0.9999", places=4),
+    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.9999", places=4),
     sqrt_beta=st.decimals(min_value="0.02", max_value="1.8", places=4))
 def test_calc_out_given_in(gyro_two_math_testing, amount_in, balances, sqrt_alpha, sqrt_beta):
 
     if amount_in > to_decimal('0.3') * (balances[0]):
         return
 
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
-    )
-
-    if any(v < 0 for v in [a, mb, mc]):
+    if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
 
     invariant = math_implementation.calculateInvariant(
@@ -277,3 +276,25 @@ def test_calc_out_given_in(gyro_two_math_testing, amount_in, balances, sqrt_alph
         amount_in), scale(virtual_param_in), scale(virtual_param_out), scale(invariant))
 
     assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
+
+
+# @given(
+#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+#     bpt_amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+#     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4))
+# def test_all_tokens_in_given_exact_bpt_out(gyro_two_math_testing, balances, bpt_amount_out, total_bpt):
+
+#     if total_bpt < bpt_amount_out:
+#         return
+
+#     amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
+#         to_decimal(balances), bpt_amount_out, total_bpt)
+
+#     amounts_in_sol = gyro_two_math_testing.calcAllTokensInGivenExactBptOut(
+#         to_decimal(balances), bpt_amount_out, total_bpt)
+
+#     if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
+#         return
+
+#     print(amounts_in_sol[0])
+#     print(amounts_in[0])
