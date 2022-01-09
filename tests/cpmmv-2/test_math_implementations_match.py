@@ -65,10 +65,9 @@ def test_calculate_quadratic(gyro_two_math_testing, balances, sqrt_alpha, sqrt_b
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    if any(v < 0 for v in [a, mb, mc]):
-        return
+    assert not any(v < 0 for v in [a, mb, mc])
 
-    root = math_implementation.calculateQuadratic(a, mb, mc)
+    root = math_implementation.calculateQuadratic(a, -mb, -mc)
 
     root_sol = gyro_two_math_testing.calculateQuadratic(
         scale(a), scale(mb), scale(mc)
