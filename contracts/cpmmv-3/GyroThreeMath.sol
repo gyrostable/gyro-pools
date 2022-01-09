@@ -102,8 +102,6 @@ library GyroThreeMath {
     // f'(l) is always positive for the range of values we consider.
     // todo maybe define a limit on the number of steps? (careful with exploits though! - maybe this is bad
     // practice?)
-    // TODO maybe add check against numerical issues:
-    // - check if delta increased from one step to the next. Again, this shouldn't happen.
     // As our stopping condition, we use that delta=0 or we are going upwards in l even though we've previously been
     // going downwards. By convexity of the function, this should never happen and this means that numerical error
     // now dominates what we do, and we stop. This is more robust than any fixed threshold on the step size or value
@@ -118,21 +116,8 @@ library GyroThreeMath {
             if (delta_abs == 0 || (iteration > 0 && delta_is_pos))  // literally stopped or numerical error dominates
                 return l;
             if (delta_abs > delta_abs_prev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {  // stalled
-                return l - delta_abs;  // Move one more step to the left to ensure we're underestimating L
-                // TODO:
-                //
-                // We've converged. Now move to the left until f(L) is negative to make sure we slightly underestimate,
-                // rather than overestimate, the invariant. It is not trivial to check if f(L) < 0 because computing
-                // f(L) can involve some rather large numbers. Instead, we use our existing Newton step function to
-                // do this. Importantly, we use our existing Newton step width, not the newly computed one, as the step
-                // width!
-                // for (uint256 j = 0; j < 255; ++j) {
-                //     (, delta_is_pos) = _calcNewtonDelta(a, mb, mc, md, l)
-                //     if (delta_is_pos)
-                //         return
-                //     l -= delta_abs
-                // }
-                // _revert(GyroThreePoolErrors.INVARIANT_DIDNT_CONVERGE);
+                // Move one more step to the left to ensure we're underestimating, rather than overestimating, L
+                return l - delta_abs;
             }
             delta_abs_prev = delta_abs;
             if (delta_is_pos)
