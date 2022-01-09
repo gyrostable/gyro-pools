@@ -449,12 +449,16 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             userData
         );
 
-        // We have the incrementX (amountIn) and balances (excluding fees) so we should be able to calculate incrementL
+        // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
+        // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
+        // re-computation.
+        // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
+        // protocol fee factor.
         _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
             balances,
             sqrtParams[0],
             sqrtParams[1],
-            lastInvariant,
+            invariantBeforeJoin,
             amountsIn[1],
             true
         );
