@@ -59,7 +59,11 @@ library GyroThreeMath {
         return _calculateCubic(a, mb, mc, md);
     }
 
-    // a > 0, b < 0, c < 0, d < 0
+    /** @dev Prepares quadratic terms for input to _calculateCubic
+     *  assumes a > 0, b < 0, c < 0, and d <= 0 and returns a, -b, -c, -d
+     *  terms come from cubic in Section 3.1.1
+     *  argument root3Alpha = cube root of alpha
+     */
     function _calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
         internal
         pure
@@ -198,7 +202,7 @@ library GyroThreeMath {
         uint256[] memory lastBalances,
         uint256 root3Alpha,
         uint256 lastInvariant,
-        uint256 incrZ,
+        uint256 diffZ,
         bool isIncreaseLiq
     ) internal pure returns (uint256 invariant) {
         /**********************************************************************************************
@@ -216,11 +220,10 @@ library GyroThreeMath {
 
         // all offsets are L * root3Alpha b/c symmetric, see 3.1.4
         uint256 virtualOffset = lastInvariant.mulDown(root3Alpha);
-        uint256 virtX = lastBalances[0].add(virtualOffset);
-        uint256 virtY = lastBalances[1].add(virtualOffset);
-        uint256 cbrtPrice = _calculateCbrtPrice(lastInvariant, virtX, virtY);
+        uint256 virtZ = lastBalances[2].add(virtualOffset);
+        uint256 cbrtPrice = _calculateCbrtPrice(lastInvariant, virtZ);
         uint256 denominator = cbrtPrice.sub(root3Alpha);
-        uint256 diffInvariant = incrZ.divDown(denominator);
+        uint256 diffInvariant = diffZ.divDown(denominator);
         invariant = isIncreaseLiq
             ? lastInvariant.add(diffInvariant)
             : lastInvariant.sub(diffInvariant);
@@ -229,7 +232,7 @@ library GyroThreeMath {
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
      * current balances and weights.
      * Changed signs compared to original algorithm to account for amountOut < 0.
-     * See Proposition 12.*/
+     * See Proposition 12 in 3.1.4.*/
     function _calcOutGivenIn(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -270,7 +273,7 @@ library GyroThreeMath {
 
     /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
      * currhent balances and weights.
-     * Similar to the one before but adapting bc negative values.*/
+     * Similar to the one before but adapting bc negative values (amountOut would be negative).*/
     function _calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -362,16 +365,17 @@ library GyroThreeMath {
         return amountsOut;
     }
 
-    /** @dev Cube root of the product of the prices of x and y. Helper value. See Lemma 4. */
-    function _calculateCbrtPrice(
-        uint256 invariant,
-        uint256 virtualX,
-        uint256 virtualY
-    ) internal pure returns (uint256) {
+    /** @dev Cube root of the product of the prices of x and y (priced in z). Helper value.
+     *   See pf to Prop 8 in 3.1.2, similarly see Lemma 6 in 3.3 */
+    function _calculateCbrtPrice(uint256 invariant, uint256 virtualZ)
+        internal
+        pure
+        returns (uint256)
+    {
         /*********************************************************************************
-         *  cbrtPrice =  L^2 / x' y'
+         *  cbrtPrice =  z' / L
          ********************************************************************************/
-        return invariant.divDown(virtualX).mulDown(invariant).divDown(virtualY);
+        return virtualZ.divDown(invariant);
     }
 
     /** @dev Calculates protocol fees due to Gyro and Balancer
