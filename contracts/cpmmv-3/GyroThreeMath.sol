@@ -32,7 +32,7 @@ library GyroThreeMath {
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
-    uint8 internal constant _INVARIANT_CALCULATION_MAX_ITERATIONS = 10;  // TODO WIP
+    uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 10;
 
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
@@ -83,7 +83,7 @@ library GyroThreeMath {
             l = mb.add(radic.powDown(FixedPoint.ONE / 2)).divDown(2*a);
         } else {
             l = _calculateCubicStartingPoint(a, mb, mc, md);
-            l = _runNewtonIteration(a, mb, mc, md, l, _INVARIANT_CALCULATION_MAX_ITERATIONS);
+            l = _runNewtonIteration(a, mb, mc, md, l);
         }
     }
 
@@ -108,26 +108,37 @@ library GyroThreeMath {
     // going downwards. By convexity of the function, this should never happen and this means that numerical error
     // now dominates what we do, and we stop. This is more robust than any fixed threshold on the step size or value
     // of f, for which we can always find sufficiently large numbers where we are always above the threshold.
-    function _runNewtonIteration (uint256 a, uint256 mb, uint256 mc, uint256 md, uint256 l, uint8 maxiter)
+    function _runNewtonIteration (uint256 a, uint256 mb, uint256 mc, uint256 md, uint256 l)
             pure internal returns (uint256) {
         uint256 delta_abs_prev = l;
-        uint8 iteration = 0;
-        while (iteration < maxiter) {
+        for (uint256 i = 0; i < 255; ++i) {
             // The delta to the next step can be positive or negative, so we represent a positive and a negative part
             // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
-            // TODO any reason why we don't just take the sign and the abs as values?
             (uint256 delta_abs, bool delta_is_pos) =  _calcNewtonDelta(a, mb, mc, md, l);
-            if (delta_abs == 0                                         // literally stopped
-                || (iteration > 0 && delta_abs > delta_abs_prev / 10)  // stalled
-                || (iteration > 0 && delta_is_pos)) {                  // numerical error dominates
+            if (delta_abs == 0 || (iteration > 0 && delta_is_pos))  // literally stopped or numerical error dominates
                 return l;
+            if (delta_abs > delta_abs_prev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {  // stalled
+                return l - delta_abs;  // Move one more step to the left to ensure we're underestimating L
+                // TODO:
+                //
+                // We've converged. Now move to the left until f(L) is negative to make sure we slightly underestimate,
+                // rather than overestimate, the invariant. It is not trivial to check if f(L) < 0 because computing
+                // f(L) can involve some rather large numbers. Instead, we use our existing Newton step function to
+                // do this. Importantly, we use our existing Newton step width, not the newly computed one, as the step
+                // width!
+                // for (uint256 j = 0; j < 255; ++j) {
+                //     (, delta_is_pos) = _calcNewtonDelta(a, mb, mc, md, l)
+                //     if (delta_is_pos)
+                //         return
+                //     l -= delta_abs
+                // }
+                // _revert(GyroThreePoolErrors.INVARIANT_DIDNT_CONVERGE);
             }
             delta_abs_prev = delta_abs;
             if (delta_is_pos)
                 l = l.add(delta_abs);
             else
                 l = l.sub(delta_abs);
-            ++iteration;
         }
         _revert(GyroThreePoolErrors.INVARIANT_DIDNT_CONVERGE);
     }
