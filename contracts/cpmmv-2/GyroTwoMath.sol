@@ -134,7 +134,7 @@ library GyroTwoMath {
      *   Using this instead of _calculateInvariant saves evaluating a square root
      */
     function _liquidityInvariantUpdate(
-        uint256[] memory balances,
+        uint256[] memory lastBalances,
         uint256 sqrtAlpha,
         uint256 sqrtBeta,
         uint256 lastInvariant,
@@ -153,7 +153,7 @@ library GyroTwoMath {
       //                               \    ( sqrtPx - sqrtAlpha)     /                            //
       //                                                                                           //
       **********************************************************************************************/
-        uint256 virtualX = balances[0] + lastInvariant.divUp(sqrtBeta);
+        uint256 virtualX = lastBalances[0] + lastInvariant.divUp(sqrtBeta);
         uint256 sqrtPx = _calculateSqrtPrice(lastInvariant, virtualX);
         uint256 denominator = sqrtPx.sub(sqrtAlpha);
         uint256 diffInvariant = diffY.divDown(denominator);
