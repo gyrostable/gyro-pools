@@ -132,7 +132,7 @@ def test_calculate_invariant(gyro_two_math_testing, balances, sqrt_alpha, sqrt_b
 def test_calculate_virtual_parameter_0(gyro_two_math_testing, sqrt_beta, invariant):
 
     virtual_parameter = math_implementation.calculateVirtualParameter0(
-        invariant, sqrt_beta
+        to_decimal(invariant), to_decimal(sqrt_beta)
     )
 
     virtual_parameter_sol = gyro_two_math_testing.calculateVirtualParameter0(
@@ -149,7 +149,7 @@ def test_calculate_virtual_parameter_0(gyro_two_math_testing, sqrt_beta, invaria
 def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invariant):
 
     virtual_parameter = math_implementation.calculateVirtualParameter1(
-        invariant, sqrt_alpha
+        to_decimal(invariant), to_decimal(sqrt_alpha)
     )
 
     virtual_parameter_sol = gyro_two_math_testing.calculateVirtualParameter1(
@@ -166,7 +166,7 @@ def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invari
 def test_calculate_sqrt_price(gyro_two_math_testing, invariant, virtual_x):
 
     sqrt_price = math_implementation.calculateSqrtPrice(
-        invariant, virtual_x
+        to_decimal(invariant), to_decimal(virtual_x)
     )
 
     sqrt_price_sol = gyro_two_math_testing.calculateSqrtPrice(
@@ -190,8 +190,8 @@ def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha,
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), sqrt_alpha,
-                                                                 sqrt_beta, last_invariant, diff_y, True)
+    new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), to_decimal(sqrt_alpha),
+                                                                 to_decimal(sqrt_beta), to_decimal(last_invariant), to_decimal(diff_y), True)
 
     if new_invariant < 0:
         return
@@ -207,7 +207,7 @@ def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha,
 def test_calculate_sqrt(gyro_two_math_testing, input):
 
     sqrt = math_implementation.squareRoot(
-        input
+        to_decimal(input)
     )
 
     sqrt_sol = gyro_two_math_testing.sqrt(
@@ -241,7 +241,7 @@ def test_calc_in_given_out(gyro_two_math_testing, amount_out, balances, sqrt_alp
         to_decimal(invariant), to_decimal(sqrt_alpha))
 
     in_amount = math_implementation.calcInGivenOut(
-        to_decimal(balances[0]), to_decimal(balances[1]), amount_out, virtual_param_in, virtual_param_out, to_decimal(invariant))
+        to_decimal(balances[0]), to_decimal(balances[1]), to_decimal(amount_out), to_decimal(virtual_param_in), to_decimal(virtual_param_out), to_decimal(invariant))
 
     in_amount_sol = gyro_two_math_testing.calcInGivenOut(scale(balances[0]), scale(balances[1]), scale(
         amount_out), scale(virtual_param_in), scale(virtual_param_out), scale(invariant))
@@ -273,7 +273,7 @@ def test_calc_out_given_in(gyro_two_math_testing, amount_in, balances, sqrt_alph
         to_decimal(invariant), to_decimal(sqrt_alpha))
 
     in_amount = math_implementation.calcOutGivenIn(
-        to_decimal(balances[0]), to_decimal(balances[1]), amount_in, virtual_param_in, virtual_param_out, to_decimal(invariant))
+        to_decimal(balances[0]), to_decimal(balances[1]), to_decimal(amount_in), to_decimal(virtual_param_in), to_decimal(virtual_param_out), to_decimal(invariant))
 
     in_amount_sol = gyro_two_math_testing.calcOutGivenIn(scale(balances[0]), scale(balances[1]), scale(
         amount_in), scale(virtual_param_in), scale(virtual_param_out), scale(invariant))
