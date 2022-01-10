@@ -1,5 +1,7 @@
 from collections import namedtuple
 
+from tests.support.quantized_decimal import QuantizedDecimal as D
+
 JOIN_POOL_REQUEST = namedtuple(
     "JoinPoolRequest",
     [
