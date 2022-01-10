@@ -412,7 +412,8 @@ library GyroThreeMathDebug {
         *   To take these fees in BPT LP shares, the protocol mints Delta S new LP shares where
         *        Delta S = S * Delta L / ( currentInvariant - Delta L )
         *   where S = current BPT supply
-        *   The protocol then splits the fees (in BPT) considering protocolFeeGyroPortion
+        *   The protocol then splits the fees (in BPT) considering protocolFeeGyroPortion.
+        *   See also the write-up, Proposition 7.
         *********************************************************************************/
 
         if (currentInvariant <= previousInvariant) {
