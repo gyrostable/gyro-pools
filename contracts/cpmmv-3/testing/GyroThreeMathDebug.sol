@@ -130,13 +130,7 @@ library GyroThreeMathDebug {
     /** @dev Find a root of the given polynomial with the given starting point l.
      *   Safe iff l > the local minimum.
      *   Note that f(l) may be negative for the first iteration and will then be positive (up to rounding errors).
-     *   f'(l) is always positive for the range of values we consider.
-     *   todo maybe define a limit on the number of steps? (careful with exploits though! - maybe this is bad
-     *   practice?)
-     *   As our stopping condition, we use that delta=0 or we are going upwards in l even though we've previously been
-     *   going downwards. By convexity of the function, this should never happen and this means that numerical error
-     *   now dominates what we do, and we stop. This is more robust than any fixed threshold on the step size or value
-     *   of f, for which we can always find sufficiently large numbers where we are always above the threshold. */
+     *   f'(l) is always positive for the range of values we consider.*/
     function _runNewtonIteration(
         uint256 a,
         uint256 mb,
@@ -421,7 +415,6 @@ library GyroThreeMathDebug {
      *   This function gets protocol fee parameters from GyroConfig
      *
      *   This function is exactly equal to the corresponding one in GyroTwoMath.
-     *   TODO someday maybe make one function or a little library for this.
      */
     function _calcProtocolFees(
         uint256 previousInvariant,

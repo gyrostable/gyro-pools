@@ -45,7 +45,6 @@ contract GyroTwoPoolFactory is
         bool oracleEnabled,
         address owner
     ) external returns (address) {
-        // TODO: Do not use arrays in the interface for tokens and weights
         (
             uint256 pauseWindowDuration,
             uint256 bufferPeriodDuration

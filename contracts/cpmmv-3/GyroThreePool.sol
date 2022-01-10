@@ -220,7 +220,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         uint256 root3Alpha = _root3Alpha;
         invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
-        virtualOffset = invariant.mulDown(root3Alpha); // todo maybe move this line to the math library?
+        virtualOffset = invariant.mulDown(root3Alpha);
     }
 
     function _onSwapGivenIn(
@@ -253,7 +253,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             );
     }
 
-    // TODO move these comments to the ExtensibleBaseWeightedPool? Alt, everything should have them.
     /**
      * @dev Called when the Pool is joined for the first time; that is, when the BPT total supply is zero.
      *

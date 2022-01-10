@@ -138,7 +138,7 @@ contract MockVault is IPoolSwapStructs {
         uint256[] currentBalances;
         uint256 lastChangeBlock;
         uint256 protocolSwapFeePercentage;
-        uint256 amountIn; // TODO make this work non-symmetrically
+        uint256 amountIn;
         uint256 bptOut;
     }
 

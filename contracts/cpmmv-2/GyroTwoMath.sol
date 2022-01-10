@@ -277,7 +277,6 @@ library GyroTwoMath {
         uint256 bptAmountIn,
         uint256 totalBPT
     ) internal pure returns (uint256[] memory) {
-        // todo maybe make this part of the contract template rather than the math library. It's the same for any AMM with a reasonably transformed invariant; see Remark 5 in the writeup.
         /**********************************************************************************************
         // exactBPTInForTokensOut                                                                    //
         // (per token)                                                                               //
