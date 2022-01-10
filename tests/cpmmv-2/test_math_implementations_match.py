@@ -180,8 +180,8 @@ def test_calculate_sqrt_price(gyro_two_math_testing, invariant, virtual_x):
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
     sqrt_alpha=st.decimals(min_value="0.02", max_value="0.99995", places=4),
     sqrt_beta=st.decimals(min_value="1.00005", max_value="1.8", places=4),
-    diff_y=st.decimals(min_value="100", max_value="1000000000", places=4))
-def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, diff_y):
+    delta_balances=st.tuples(billion_balance_strategy, billion_balance_strategy))
+def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, delta_balances):
 
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
@@ -190,16 +190,14 @@ def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha,
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    # TODO broken call
     new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), to_decimal(sqrt_alpha),
-                                                                 to_decimal(sqrt_beta), to_decimal(last_invariant), to_decimal(diff_y), True)
+                                                                 to_decimal(sqrt_beta), to_decimal(last_invariant), to_decimal(delta_balances), True)
 
     if new_invariant < 0:
         return
 
-    # TODO broken call
     new_invariant_sol = gyro_two_math_testing.liquidityInvariantUpdate(scale(balances), scale(
-        sqrt_alpha), scale(sqrt_beta), scale(last_invariant), scale(diff_y), True)
+        sqrt_alpha), scale(sqrt_beta), scale(last_invariant), scale(delta_balances), True)
 
     assert to_decimal(new_invariant_sol) == scale(
         new_invariant).approxed()
