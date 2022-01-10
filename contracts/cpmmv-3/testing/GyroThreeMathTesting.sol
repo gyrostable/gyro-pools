@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: UNLICENSE
 pragma solidity ^0.7.0;
 
 /// @dev We can't call the functions of the math library for testing b/c they're internal. That's why this contract forwards calls to the math library.
@@ -88,13 +89,7 @@ contract GyroThreeMathTesting {
         uint256 amountIn,
         uint256 virtualOffsetInOut
     ) external pure returns (uint256 amountOut) {
-        return
-            GyroThreeMath._calcOutGivenIn(
-                balanceIn,
-                balanceOut,
-                amountIn,
-                virtualOffsetInOut
-            );
+        return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffsetInOut);
     }
 
     function calcInGivenOut(
@@ -103,13 +98,7 @@ contract GyroThreeMathTesting {
         uint256 amountOut,
         uint256 virtualOffsetInOut
     ) external pure returns (uint256 amountIn) {
-        return
-            GyroThreeMath._calcInGivenOut(
-                balanceIn,
-                balanceOut,
-                amountOut,
-                virtualOffsetInOut
-            );
+        return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffsetInOut);
     }
 
     function calcAllTokensInGivenExactBptOut(
@@ -117,12 +106,7 @@ contract GyroThreeMathTesting {
         uint256 bptAmountOut,
         uint256 totalBPT
     ) external pure returns (uint256[] memory) {
-        return
-            GyroThreeMath._calcAllTokensInGivenExactBptOut(
-                balances,
-                bptAmountOut,
-                totalBPT
-            );
+        return GyroThreeMath._calcAllTokensInGivenExactBptOut(balances, bptAmountOut, totalBPT);
     }
 
     function calcTokensOutGivenExactBptIn(
@@ -130,12 +114,7 @@ contract GyroThreeMathTesting {
         uint256 bptAmountIn,
         uint256 totalBPT
     ) external pure returns (uint256[] memory) {
-        return
-            GyroThreeMath._calcTokensOutGivenExactBptIn(
-                balances,
-                bptAmountIn,
-                totalBPT
-            );
+        return GyroThreeMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalBPT);
     }
 
     function calculateCbrtPrice(uint256 invariant, uint256 virtualZ)
@@ -165,20 +144,18 @@ contract GyroThreeMathTesting {
 
     // DEBUG
     // Must be declared here, otherwise we can't see it.
+    // solhint-disable-next-line use-forbidden-name
     event NewtonStep(bool high, uint256 delta, uint256 l);
 
-    function calculateInvariantDebug(
-        uint256[] memory balances,
-        uint256 root3Alpha
-    ) external returns (uint256) {
+    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha)
+        external
+        pure
+        returns (uint256)
+    {
         return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
     }
 
-    function maxOtherBalances(uint256[] memory balances)
-        external
-        pure
-        returns (uint8[] memory)
-    {
+    function maxOtherBalances(uint256[] memory balances) external pure returns (uint8[] memory) {
         return GyroThreeMath.maxOtherBalances(balances);
     }
 }

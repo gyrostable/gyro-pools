@@ -22,13 +22,8 @@ import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.
 
 import "./GyroThreePool.sol";
 
-contract GyroThreePoolFactory is
-    BasePoolSplitCodeFactory,
-    FactoryWidePauseWindow
-{
-    constructor(IVault vault)
-        BasePoolSplitCodeFactory(vault, type(GyroThreePool).creationCode)
-    {
+contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+    constructor(IVault vault) BasePoolSplitCodeFactory(vault, type(GyroThreePool).creationCode) {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -44,10 +39,7 @@ contract GyroThreePoolFactory is
         uint256 swapFeePercentage,
         address owner
     ) external returns (address) {
-        (
-            uint256 pauseWindowDuration,
-            uint256 bufferPeriodDuration
-        ) = getPauseConfiguration();
+        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
 
         return
             _create(

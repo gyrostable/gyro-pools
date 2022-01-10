@@ -118,8 +118,7 @@ library GyroThreeMath {
         uint256 // md
     ) internal pure returns (uint256 l0) {
         uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
-        uint256 lmin = mb.divUp(a * 3) +
-            radic.powUp(FixedPoint.ONE / 2).divUp(a * 3);
+        uint256 lmin = mb.divUp(a * 3) + radic.powUp(FixedPoint.ONE / 2).divUp(a * 3);
         // The factor 3/2 is a magic number found experimentally for our invariant. All factors > 1 are safe.
         l0 = lmin.mulUp((3 * FixedPoint.ONE) / 2);
     }
@@ -140,19 +139,14 @@ library GyroThreeMath {
         for (uint256 iteration = 0; iteration < 255; ++iteration) {
             // The delta to the next step can be positive or negative, so we represent a positive and a negative part
             // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
-            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(
-                a,
-                mb,
-                mc,
-                md,
-                rootEst
-            );
+            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, rootEst);
             // ^ Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
             if (deltaAbs == 0 || (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos))
                 // Iteration literally stopped or numerical error dominates
                 return rootEst;
             if (
-                iteration >= _INVARIANT_MIN_ITERATIONS && deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP
+                iteration >= _INVARIANT_MIN_ITERATIONS &&
+                deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP
             ) {
                 // stalled
                 // Move one more step to the left to ensure we're underestimating, rather than overestimating, L
@@ -173,11 +167,7 @@ library GyroThreeMath {
         uint256 md,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        uint256 dfRootEst = (3 * a)
-            .mulUp(rootEst)
-            .sub(2 * mb)
-            .mulUp(rootEst)
-            .sub(mc); // Does not underflow since rootEst >> 0 by assumption.
+        uint256 dfRootEst = (3 * a).mulUp(rootEst).sub(2 * mb).mulUp(rootEst).sub(mc); // Does not underflow since rootEst >> 0 by assumption.
         // We know that a rootEst^2 / dfRootEst ~ 1. (this is pretty exact actually, see the Mathematica notebook). We use this
         // multiplication order to prevent overflows that can otherwise occur when computing l^3 for very large
         // reserves.
@@ -189,9 +179,7 @@ library GyroThreeMath {
         deltaPlus = deltaPlus.mulUp(rootEst).add(md.divUp(dfRootEst));
 
         deltaIsPos = (deltaPlus >= deltaMinus);
-        deltaAbs = (
-            deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus
-        );
+        deltaAbs = (deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus);
     }
 
     /** @dev New invariant assuming that the balances increase from 'lastBalances', where the invariant was
@@ -290,10 +278,7 @@ library GyroThreeMath {
         // Note that -dz > 0 is what the trader receives.                                            //
         // We exploit the fact that this formula is symmetric up to virtualParam{X,Y,Z}.             //
         **********************************************************************************************/
-        _require(
-            amountIn <= balanceIn.mulDown(_MAX_IN_RATIO),
-            Errors.MAX_IN_RATIO
-        );
+        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
 
         uint256 virtIn = balanceIn.add(virtualOffsetInOut);
         uint256 virtOut = balanceOut.add(virtualOffsetInOut);
@@ -303,10 +288,7 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
-        _require(
-            amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO),
-            Errors.MAX_OUT_RATIO
-        );
+        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
 
     /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
@@ -334,10 +316,7 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
         // the pool than is in it.
-        _require(
-            amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO),
-            Errors.MAX_OUT_RATIO
-        );
+        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
 
         uint256 virtIn = balanceIn.add(virtualOffsetInOut);
         uint256 virtOut = balanceOut.add(virtualOffsetInOut);
@@ -345,10 +324,7 @@ library GyroThreeMath {
         uint256 minuend = virtIn.mulDown(virtOut).divDown(denominator);
         amountIn = minuend.sub(virtIn);
 
-        _require(
-            amountIn <= balanceIn.mulDown(_MAX_IN_RATIO),
-            Errors.MAX_IN_RATIO
-        );
+        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
     function _calcAllTokensInGivenExactBptOut(

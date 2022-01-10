@@ -53,9 +53,7 @@ contract Authorizer is AccessControl, IAuthorizer {
     /**
      * @dev Grants roles to a list of accounts.
      */
-    function grantRolesToMany(bytes32[] memory roles, address[] memory accounts)
-        external
-    {
+    function grantRolesToMany(bytes32[] memory roles, address[] memory accounts) external {
         InputHelpers.ensureInputLengthMatch(roles.length, accounts.length);
         for (uint256 i = 0; i < roles.length; i++) {
             grantRole(roles[i], accounts[i]);
@@ -74,10 +72,7 @@ contract Authorizer is AccessControl, IAuthorizer {
     /**
      * @dev Revokes roles from a list of accounts.
      */
-    function revokeRolesFromMany(
-        bytes32[] memory roles,
-        address[] memory accounts
-    ) external {
+    function revokeRolesFromMany(bytes32[] memory roles, address[] memory accounts) external {
         InputHelpers.ensureInputLengthMatch(roles.length, accounts.length);
         for (uint256 i = 0; i < roles.length; i++) {
             revokeRole(roles[i], accounts[i]);

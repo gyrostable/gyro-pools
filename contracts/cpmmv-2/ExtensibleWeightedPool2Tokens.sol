@@ -173,7 +173,12 @@ abstract contract ExtensibleWeightedPool2Tokens is
     }
 
     // Caller must be approved by the Vault's Authorizer
-    function setSwapFeePercentage(uint256 swapFeePercentage) public virtual authenticate whenNotPaused {
+    function setSwapFeePercentage(uint256 swapFeePercentage)
+        public
+        virtual
+        authenticate
+        whenNotPaused
+    {
         _setSwapFeePercentage(swapFeePercentage);
     }
 
@@ -238,7 +243,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
     /**
      * @dev Returns the current value of the invariant.
      */
-    function getInvariant() public virtual view returns (uint256) {
+    function getInvariant() public view virtual returns (uint256) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
 
         // Since the Pool hooks always work with upscaled balances, we manually
@@ -504,7 +509,11 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // Update current balances by subtracting the protocol fee amounts
         _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
-        (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, normalizedWeights, userData);
+        (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
+            balances,
+            normalizedWeights,
+            userData
+        );
 
         // Update the invariant with the balances the Pool will have after the join, in order to compute the
         // protocol swap fee amounts due in future joins and exits.
@@ -518,7 +527,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256[] memory balances,
         uint256[] memory normalizedWeights,
         bytes memory userData
-    ) internal virtual view returns (uint256, uint256[] memory) {
+    ) internal view virtual returns (uint256, uint256[] memory) {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
 
         if (kind == BaseWeightedPool.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT) {
@@ -579,8 +588,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)
         internal
-        virtual
         view
+        virtual
         returns (uint256, uint256[] memory)
     {
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
@@ -608,15 +617,19 @@ abstract contract ExtensibleWeightedPool2Tokens is
     ) public virtual override onlyVault(poolId) returns (uint256[] memory, uint256[] memory) {
         _upscaleArray(balances);
 
-        (uint256 bptAmountIn, uint256[] memory amountsOut, uint256[] memory dueProtocolFeeAmounts) = _onExitPool(
-            poolId,
-            sender,
-            recipient,
-            balances,
-            lastChangeBlock,
-            protocolSwapFeePercentage,
-            userData
-        );
+        (
+            uint256 bptAmountIn,
+            uint256[] memory amountsOut,
+            uint256[] memory dueProtocolFeeAmounts
+        ) = _onExitPool(
+                poolId,
+                sender,
+                recipient,
+                balances,
+                lastChangeBlock,
+                protocolSwapFeePercentage,
+                userData
+            );
 
         // Note we no longer use `balances` after calling `_onExitPool`, which may mutate it.
 
@@ -681,7 +694,10 @@ abstract contract ExtensibleWeightedPool2Tokens is
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            uint256 invariantBeforeExit = WeightedMath._calculateInvariant(normalizedWeights, balances);
+            uint256 invariantBeforeExit = WeightedMath._calculateInvariant(
+                normalizedWeights,
+                balances
+            );
             dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(
                 balances,
                 normalizedWeights,
@@ -712,7 +728,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256[] memory balances,
         uint256[] memory normalizedWeights,
         bytes memory userData
-    ) internal virtual view returns (uint256, uint256[] memory) {
+    ) internal view virtual returns (uint256, uint256[] memory) {
         BaseWeightedPool.ExitKind kind = userData.exitKind();
 
         if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT) {
@@ -755,8 +771,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
     function _exitExactBPTInForTokensOut(uint256[] memory balances, bytes memory userData)
         internal
-        virtual
         view
+        virtual
         returns (uint256, uint256[] memory)
     {
         // This exit function is the only one that is not disabled if the contract is paused: it remains unrestricted
@@ -767,7 +783,11 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 bptAmountIn = userData.exactBptInForTokensOut();
         // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
 
-        uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalSupply());
+        uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(
+            balances,
+            bptAmountIn,
+            totalSupply()
+        );
         return (bptAmountIn, amountsOut);
     }
 
@@ -805,40 +825,40 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 lastChangeBlock,
         uint256 balanceToken0,
         uint256 balanceToken1
-    ) virtual internal ;
-        // bytes32 miscData = _miscData;
-        // if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-        //     int256 logSpotPrice = WeightedOracleMath._calcLogSpotPrice(
-        //         _normalizedWeight0,
-        //         balanceToken0,
-        //         _normalizedWeight1,
-        //         balanceToken1
-        //     );
+    ) internal virtual;
 
-        //     int256 logBPTPrice = WeightedOracleMath._calcLogBPTPrice(
-        //         _normalizedWeight0,
-        //         balanceToken0,
-        //         miscData.logTotalSupply()
-        //     );
+    // bytes32 miscData = _miscData;
+    // if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
+    //     int256 logSpotPrice = WeightedOracleMath._calcLogSpotPrice(
+    //         _normalizedWeight0,
+    //         balanceToken0,
+    //         _normalizedWeight1,
+    //         balanceToken1
+    //     );
 
-        //     uint256 oracleCurrentIndex = miscData.oracleIndex();
-        //     uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
-        //     uint256 oracleUpdatedIndex = _processPriceData(
-        //         oracleCurrentSampleInitialTimestamp,
-        //         oracleCurrentIndex,
-        //         logSpotPrice,
-        //         logBPTPrice,
-        //         miscData.logInvariant()
-        //     );
+    //     int256 logBPTPrice = WeightedOracleMath._calcLogBPTPrice(
+    //         _normalizedWeight0,
+    //         balanceToken0,
+    //         miscData.logTotalSupply()
+    //     );
 
-        //     if (oracleCurrentIndex != oracleUpdatedIndex) {
-        //         // solhint-disable not-rely-on-time
-        //         miscData = miscData.setOracleIndex(oracleUpdatedIndex);
-        //         miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
-        //         _miscData = miscData;
-        //     }
-        // }
-    
+    //     uint256 oracleCurrentIndex = miscData.oracleIndex();
+    //     uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
+    //     uint256 oracleUpdatedIndex = _processPriceData(
+    //         oracleCurrentSampleInitialTimestamp,
+    //         oracleCurrentIndex,
+    //         logSpotPrice,
+    //         logBPTPrice,
+    //         miscData.logInvariant()
+    //     );
+
+    //     if (oracleCurrentIndex != oracleUpdatedIndex) {
+    //         // solhint-disable not-rely-on-time
+    //         miscData = miscData.setOracleIndex(oracleUpdatedIndex);
+    //         miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
+    //         _miscData = miscData;
+    //     }
+    // }
 
     /**
      * @dev Stores the logarithm of the invariant and BPT total supply, to be later used in each oracle update. Because
@@ -948,7 +968,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 previousInvariant,
         uint256 currentInvariant,
         uint256 protocolSwapFeePercentage
-    ) internal virtual view returns (uint256[] memory) {
+    ) internal view virtual returns (uint256[] memory) {
         // Initialize with zeros
         uint256[] memory dueProtocolFeeAmounts = new uint256[](2);
 
@@ -959,13 +979,14 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // The protocol swap fees are always paid using the token with the largest weight in the Pool. As this is the
         // token that is expected to have the largest balance, using it to pay fees should not unbalance the Pool.
-        dueProtocolFeeAmounts[_maxWeightTokenIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
-            balances[_maxWeightTokenIndex],
-            normalizedWeights[_maxWeightTokenIndex],
-            previousInvariant,
-            currentInvariant,
-            protocolSwapFeePercentage
-        );
+        dueProtocolFeeAmounts[_maxWeightTokenIndex] = WeightedMath
+            ._calcDueTokenProtocolSwapFeeAmount(
+                balances[_maxWeightTokenIndex],
+                normalizedWeights[_maxWeightTokenIndex],
+                previousInvariant,
+                currentInvariant,
+                protocolSwapFeePercentage
+            );
 
         return dueProtocolFeeAmounts;
     }
@@ -1102,58 +1123,67 @@ abstract contract ExtensibleWeightedPool2Tokens is
             assembly {
                 // This call should always revert to decode the bpt and token amounts from the revert reason
                 switch success
-                    case 0 {
-                        // Note we are manually writing the memory slot 0. We can safely overwrite whatever is
-                        // stored there as we take full control of the execution and then immediately return.
+                case 0 {
+                    // Note we are manually writing the memory slot 0. We can safely overwrite whatever is
+                    // stored there as we take full control of the execution and then immediately return.
 
-                        // We copy the first 4 bytes to check if it matches with the expected signature, otherwise
-                        // there was another revert reason and we should forward it.
-                        returndatacopy(0, 0, 0x04)
-                        let error := and(mload(0), 0xffffffff00000000000000000000000000000000000000000000000000000000)
+                    // We copy the first 4 bytes to check if it matches with the expected signature, otherwise
+                    // there was another revert reason and we should forward it.
+                    returndatacopy(0, 0, 0x04)
+                    let error := and(
+                        mload(0),
+                        0xffffffff00000000000000000000000000000000000000000000000000000000
+                    )
 
-                        // If the first 4 bytes don't match with the expected signature, we forward the revert reason.
-                        if eq(eq(error, 0x43adbafb00000000000000000000000000000000000000000000000000000000), 0) {
-                            returndatacopy(0, 0, returndatasize())
-                            revert(0, returndatasize())
-                        }
-
-                        // The returndata contains the signature, followed by the raw memory representation of the
-                        // `bptAmount` and `tokenAmounts` (array: length + data). We need to return an ABI-encoded
-                        // representation of these.
-                        // An ABI-encoded response will include one additional field to indicate the starting offset of
-                        // the `tokenAmounts` array. The `bptAmount` will be laid out in the first word of the
-                        // returndata.
-                        //
-                        // In returndata:
-                        // [ signature ][ bptAmount ][ tokenAmounts length ][ tokenAmounts values ]
-                        // [  4 bytes  ][  32 bytes ][       32 bytes      ][ (32 * length) bytes ]
-                        //
-                        // We now need to return (ABI-encoded values):
-                        // [ bptAmount ][ tokeAmounts offset ][ tokenAmounts length ][ tokenAmounts values ]
-                        // [  32 bytes ][       32 bytes     ][       32 bytes      ][ (32 * length) bytes ]
-
-                        // We copy 32 bytes for the `bptAmount` from returndata into memory.
-                        // Note that we skip the first 4 bytes for the error signature
-                        returndatacopy(0, 0x04, 32)
-
-                        // The offsets are 32-bytes long, so the array of `tokenAmounts` will start after
-                        // the initial 64 bytes.
-                        mstore(0x20, 64)
-
-                        // We now copy the raw memory array for the `tokenAmounts` from returndata into memory.
-                        // Since bpt amount and offset take up 64 bytes, we start copying at address 0x40. We also
-                        // skip the first 36 bytes from returndata, which correspond to the signature plus bpt amount.
-                        returndatacopy(0x40, 0x24, sub(returndatasize(), 36))
-
-                        // We finally return the ABI-encoded uint256 and the array, which has a total length equal to
-                        // the size of returndata, plus the 32 bytes of the offset but without the 4 bytes of the
-                        // error signature.
-                        return(0, add(returndatasize(), 28))
+                    // If the first 4 bytes don't match with the expected signature, we forward the revert reason.
+                    if eq(
+                        eq(
+                            error,
+                            0x43adbafb00000000000000000000000000000000000000000000000000000000
+                        ),
+                        0
+                    ) {
+                        returndatacopy(0, 0, returndatasize())
+                        revert(0, returndatasize())
                     }
-                    default {
-                        // This call should always revert, but we fail nonetheless if that didn't happen
-                        invalid()
-                    }
+
+                    // The returndata contains the signature, followed by the raw memory representation of the
+                    // `bptAmount` and `tokenAmounts` (array: length + data). We need to return an ABI-encoded
+                    // representation of these.
+                    // An ABI-encoded response will include one additional field to indicate the starting offset of
+                    // the `tokenAmounts` array. The `bptAmount` will be laid out in the first word of the
+                    // returndata.
+                    //
+                    // In returndata:
+                    // [ signature ][ bptAmount ][ tokenAmounts length ][ tokenAmounts values ]
+                    // [  4 bytes  ][  32 bytes ][       32 bytes      ][ (32 * length) bytes ]
+                    //
+                    // We now need to return (ABI-encoded values):
+                    // [ bptAmount ][ tokeAmounts offset ][ tokenAmounts length ][ tokenAmounts values ]
+                    // [  32 bytes ][       32 bytes     ][       32 bytes      ][ (32 * length) bytes ]
+
+                    // We copy 32 bytes for the `bptAmount` from returndata into memory.
+                    // Note that we skip the first 4 bytes for the error signature
+                    returndatacopy(0, 0x04, 32)
+
+                    // The offsets are 32-bytes long, so the array of `tokenAmounts` will start after
+                    // the initial 64 bytes.
+                    mstore(0x20, 64)
+
+                    // We now copy the raw memory array for the `tokenAmounts` from returndata into memory.
+                    // Since bpt amount and offset take up 64 bytes, we start copying at address 0x40. We also
+                    // skip the first 36 bytes from returndata, which correspond to the signature plus bpt amount.
+                    returndatacopy(0x40, 0x24, sub(returndatasize(), 36))
+
+                    // We finally return the ABI-encoded uint256 and the array, which has a total length equal to
+                    // the size of returndata, plus the 32 bytes of the offset but without the 4 bytes of the
+                    // error signature.
+                    return(0, add(returndatasize(), 28))
+                }
+                default {
+                    // This call should always revert, but we fail nonetheless if that didn't happen
+                    invalid()
+                }
             }
         } else {
             _upscaleArray(balances);
@@ -1185,7 +1215,10 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
                 // We send one extra value for the error signature "QueryError(uint256,uint256[])" which is 0x43adbafb
                 // We use the previous slot to `bptAmount`.
-                mstore(sub(start, 0x20), 0x0000000000000000000000000000000000000000000000000000000043adbafb)
+                mstore(
+                    sub(start, 0x20),
+                    0x0000000000000000000000000000000000000000000000000000000043adbafb
+                )
                 start := sub(start, 0x04)
 
                 // When copying from `tokenAmounts` into returndata, we copy the additional 68 bytes to also return

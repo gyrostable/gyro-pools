@@ -1,8 +1,7 @@
 import pytest
-from tests.conftest import TOKENS_PER_USER
 from brownie import ZERO_ADDRESS
-
-import constants
+from tests.conftest import TOKENS_PER_USER
+from tests.cpmmv2 import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
 
 

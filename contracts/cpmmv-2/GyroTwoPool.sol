@@ -47,10 +47,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     constructor(GyroParams memory params, address configAddress)
         ExtensibleWeightedPool2Tokens(params.baseParams)
     {
-        _require(
-            params.sqrtAlpha < params.sqrtBeta,
-            Gyro2PoolErrors.SQRT_PARAMS_WRONG
-        );
+        _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
 
@@ -63,24 +60,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         return _sqrtParameters();
     }
 
-    function _sqrtParameters()
-        internal
-        view
-        virtual
-        returns (uint256[] memory)
-    {
+    function _sqrtParameters() internal view virtual returns (uint256[] memory) {
         uint256[] memory virtualParameters = new uint256[](2);
         virtualParameters[0] = _sqrtParameters(true);
         virtualParameters[1] = _sqrtParameters(false);
         return virtualParameters;
     }
 
-    function _sqrtParameters(bool parameter0)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
+    function _sqrtParameters(bool parameter0) internal view virtual returns (uint256) {
         return parameter0 ? _sqrtAlpha : _sqrtBeta;
     }
 
@@ -96,35 +83,21 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256[] memory sqrtParams = _sqrtParameters();
         uint256 _invariant = _lastInvariant;
 
-        virtualParameters[0] = _virtualParameters(
-            true,
-            sqrtParams[1],
-            _invariant
-        );
-        virtualParameters[1] = _virtualParameters(
-            false,
-            sqrtParams[0],
-            _invariant
-        );
+        virtualParameters[0] = _virtualParameters(true, sqrtParams[1], _invariant);
+        virtualParameters[1] = _virtualParameters(false, sqrtParams[0], _invariant);
         return virtualParameters;
     }
 
-    function _getVirtualParameters(
-        uint256[] memory sqrtParams,
-        uint256 invariant
-    ) internal view virtual returns (uint256[] memory) {
+    function _getVirtualParameters(uint256[] memory sqrtParams, uint256 invariant)
+        internal
+        view
+        virtual
+        returns (uint256[] memory)
+    {
         uint256[] memory virtualParameters = new uint256[](2);
 
-        virtualParameters[0] = _virtualParameters(
-            true,
-            sqrtParams[1],
-            invariant
-        );
-        virtualParameters[1] = _virtualParameters(
-            false,
-            sqrtParams[0],
-            invariant
-        );
+        virtualParameters[0] = _virtualParameters(true, sqrtParams[1], invariant);
+        virtualParameters[1] = _virtualParameters(false, sqrtParams[0], invariant);
         return virtualParameters;
     }
 
@@ -135,18 +108,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     ) internal view virtual returns (uint256) {
         return
             parameter0
-                ? (
-                    GyroTwoMath._calculateVirtualParameter0(
-                        invariant,
-                        sqrtParam
-                    )
-                )
-                : (
-                    GyroTwoMath._calculateVirtualParameter1(
-                        invariant,
-                        sqrtParam
-                    )
-                );
+                ? (GyroTwoMath._calculateVirtualParameter0(invariant, sqrtParam))
+                : (GyroTwoMath._calculateVirtualParameter1(invariant, sqrtParam));
     }
 
     /**
@@ -160,12 +123,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // upscale here for consistency
         _upscaleArray(balances);
 
-        return
-            GyroTwoMath._calculateInvariant(
-                balances,
-                sqrtParams[0],
-                sqrtParams[1]
-            );
+        return GyroTwoMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
     }
 
     // Swap Hooks
@@ -174,14 +132,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         SwapRequest memory request,
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
-    )
-        public
-        virtual
-        override
-        whenNotPaused
-        onlyVault(request.poolId)
-        returns (uint256)
-    {
+    ) public virtual override whenNotPaused onlyVault(request.poolId) returns (uint256) {
         bool tokenInIsToken0 = request.tokenIn == _token0;
 
         uint256 scalingFactorTokenIn = _scalingFactor(tokenInIsToken0);
@@ -203,20 +154,13 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             uint256 currentInvariant,
             uint256 virtualParamIn,
             uint256 virtualParamOut
-        ) = _calculateCurrentValues(
-                balanceTokenIn,
-                balanceTokenOut,
-                tokenInIsToken0
-            );
+        ) = _calculateCurrentValues(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
 
         if (request.kind == IVault.SwapKind.GIVEN_IN) {
             // Fees are subtracted before scaling, to reduce the complexity of the rounding direction analysis.
             // This is amount - fee amount, so we round up (favoring a higher fee amount).
             uint256 feeAmount = request.amount.mulUp(getSwapFeePercentage());
-            request.amount = _upscale(
-                request.amount.sub(feeAmount),
-                scalingFactorTokenIn
-            );
+            request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
             uint256 amountOut = _onSwapGivenIn(
                 request,
@@ -303,12 +247,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             uint256 virtualParamOut
         )
     {
-        return
-            _calculateCurrentValues(
-                balanceTokenIn,
-                balanceTokenOut,
-                tokenInIsToken0
-            );
+        return _calculateCurrentValues(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
     }
 
     function _calculateCurrentValues(
@@ -331,11 +270,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
         uint256[] memory sqrtParams = _sqrtParameters();
 
-        currentInvariant = GyroTwoMath._calculateInvariant(
-            balances,
-            sqrtParams[0],
-            sqrtParams[1]
-        );
+        currentInvariant = GyroTwoMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
 
         uint256[] memory virtualParam = new uint256[](2);
         virtualParam = _getVirtualParameters(sqrtParams, currentInvariant);
@@ -443,10 +378,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
         _distributeFees(invariantBeforeAction);
 
-        (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
-            balances,
-            userData
-        );
+        (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, userData);
 
         // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
@@ -475,28 +407,26 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
         // We do NOT currently support unbalanced update, i.e., EXACT_TOKENS_IN_FOR_BPT_OUT or TOKEN_IN_FOR_EXACT_BPT_OUT
         if (kind == BaseWeightedPool.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
-            (bptAmountOut, amountsIn) = _joinAllTokensInForExactBPTOut(
-                balances,
-                userData
-            );
+            (bptAmountOut, amountsIn) = _joinAllTokensInForExactBPTOut(balances, userData);
         } else {
             _revert(Errors.UNHANDLED_JOIN_KIND);
         }
     }
 
-    function _joinAllTokensInForExactBPTOut(
-        uint256[] memory balances,
-        bytes memory userData
-    ) internal view override returns (uint256, uint256[] memory) {
+    function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        override
+        returns (uint256, uint256[] memory)
+    {
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
         // Note that there is no maximum amountsIn parameter: this is handled by `IVault.joinPool`.
 
-        uint256[] memory amountsIn = GyroTwoMath
-            ._calcAllTokensInGivenExactBptOut(
-                balances,
-                bptAmountOut,
-                totalSupply()
-            );
+        uint256[] memory amountsIn = GyroTwoMath._calcAllTokensInGivenExactBptOut(
+            balances,
+            bptAmountOut,
+            totalSupply()
+        );
 
         return (bptAmountOut, amountsIn);
     }
@@ -602,19 +532,18 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // We do NOT support unbalanced exit at the moment, i.e., EXACT_BPT_IN_FOR_ONE_TOKEN_OUT or
         // BPT_IN_FOR_EXACT_TOKENS_OUT.
         if (kind == BaseWeightedPool.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT) {
-            (bptAmountIn, amountsOut) = _exitExactBPTInForTokensOut(
-                balances,
-                userData
-            );
+            (bptAmountIn, amountsOut) = _exitExactBPTInForTokensOut(balances, userData);
         } else {
             _revert(Errors.UNHANDLED_EXIT_KIND);
         }
     }
 
-    function _exitExactBPTInForTokensOut(
-        uint256[] memory balances,
-        bytes memory userData
-    ) internal view override returns (uint256, uint256[] memory) {
+    function _exitExactBPTInForTokensOut(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        override
+        returns (uint256, uint256[] memory)
+    {
         // This exit function is the only one that is not disabled if the contract is paused: it remains unrestricted
         // in an attempt to provide users with a mechanism to retrieve their tokens in case of an emergency.
         // This particular exit function is the only one that remains available because it is the simplest one, and
@@ -673,10 +602,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
      * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
      */
-    function _getDueProtocolFeeAmounts(
-        uint256 previousInvariant,
-        uint256 currentInvariant
-    )
+    function _getDueProtocolFeeAmounts(uint256 previousInvariant, uint256 currentInvariant)
         internal
         view
         returns (
@@ -699,14 +625,13 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         }
 
         // Calculate fees in BPT
-        (uint256 gyroFees, uint256 balancerFees) = GyroTwoMath
-            ._calcProtocolFees(
-                previousInvariant,
-                currentInvariant,
-                totalSupply(),
-                protocolSwapFeePerc,
-                protocolFeeGyroPortion
-            );
+        (uint256 gyroFees, uint256 balancerFees) = GyroTwoMath._calcProtocolFees(
+            previousInvariant,
+            currentInvariant,
+            totalSupply(),
+            protocolSwapFeePerc,
+            protocolFeeGyroPortion
+        );
 
         return (gyroFees, balancerFees, gyroTreasury, balTreasury);
     }
@@ -776,8 +701,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             );
 
             uint256 oracleCurrentIndex = miscData.oracleIndex();
-            uint256 oracleCurrentSampleInitialTimestamp = miscData
-                .oracleSampleCreationTimestamp();
+            uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
             uint256 oracleUpdatedIndex = _processPriceData(
                 oracleCurrentSampleInitialTimestamp,
                 oracleCurrentIndex,
@@ -789,9 +713,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             if (oracleCurrentIndex != oracleUpdatedIndex) {
                 // solhint-disable not-rely-on-time
                 miscData = miscData.setOracleIndex(oracleUpdatedIndex);
-                miscData = miscData.setOracleSampleCreationTimestamp(
-                    block.timestamp
-                );
+                miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
                 _miscData = miscData;
             }
         }

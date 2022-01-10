@@ -1,5 +1,5 @@
 from logging import warning
-from typing import Iterable
+from typing import Iterable, List, Tuple
 
 import numpy as np
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -7,9 +7,8 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 _MAX_IN_RATIO = D("0.3")
 _MAX_OUT_RATIO = D("0.3")
 
-prec_convergence = D(
-    "1E-18"
-)
+prec_convergence = D("1E-18")
+
 
 def calculateInvariant(balances: Iterable[D], root3Alpha: D) -> D:
     (a, mb, mc, md) = calculateCubicTerms(balances, root3Alpha)
@@ -40,19 +39,19 @@ def calculateInvariantNewton(
     a: D, b: D, c: D, d: D, alpha1: D, balances: Iterable[D]
 ) -> tuple[D, list]:
     log = []
-# def test_calc_out_given_in(gyro_three_math_testing, amount_in, balances, root_three_alpha):
+    # def test_calc_out_given_in(gyro_three_math_testing, amount_in, balances, root_three_alpha):
 
-#     if amount_in > to_decimal('0.3') * (balances[0]):
-#         return
+    #     if amount_in > to_decimal('0.3') * (balances[0]):
+    #         return
 
-#     if faulty_params(balances, root_three_alpha):
-#         return
+    #     if faulty_params(balances, root_three_alpha):
+    #         return
 
-#     invariant = math_implementation.calculateInvariant(
-#         to_decimal(balances), to_decimal(root_three_alpha))
+    #     invariant = math_implementation.calculateInvariant(
+    #         to_decimal(balances), to_decimal(root_three_alpha))
 
-#     virtual_param_in = math_implementation.calculateVirtualParameter0(
-#         to_decimal(invariant))
+    #     virtual_param_in = math_implementation.calculateVirtualParameter0(
+    #         to_decimal(invariant))
     x, y, z = balances
 
     lmin = -b / (a * 3) + (b ** 2 - a * c * 3).sqrt() / (
@@ -102,11 +101,11 @@ def calculateInvariantNewton(
 
 
 def liquidityInvariantUpdate(
-    balances: Iterable[D],
+    balances: List[D],
     root3Alpha: D,
     lastInvariant: D,
-    deltaBalances: Iterable[D],
-    isIncreaseLiq: bool
+    deltaBalances: List[D],
+    isIncreaseLiq: bool,
 ) -> D:
     indices = maxOtherBalances(balances)
     # virtual offsets
@@ -122,10 +121,10 @@ def liquidityInvariantUpdate(
     return invariant
 
 
-def maxOtherBalances(balances: Iterable[D]) -> Iterable[D]:
-    indices = [0,0,0]
-    if (balances[0] >= balances[1]):
-        if (balances[0] >= balances[2]):
+def maxOtherBalances(balances: List[D]) -> List[int]:
+    indices = [0, 0, 0]
+    if balances[0] >= balances[1]:
+        if balances[0] >= balances[2]:
             indices[0] = 0
             indices[1] = 1
             indices[2] = 2
@@ -134,14 +133,14 @@ def maxOtherBalances(balances: Iterable[D]) -> Iterable[D]:
             indices[1] = 0
             indices[2] = 1
     else:
-        if (balances[1] >= balances[2]):
+        if balances[1] >= balances[2]:
             indices[0] = 1
             indices[1] = 0
             indices[2] = 2
         else:
             indices[0] = 2
             indices[1] = 1
-            indices[2] = 0 
+            indices[2] = 0
 
     return indices
 
@@ -167,7 +166,7 @@ def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) 
 
 def calcAllTokensInGivenExactBptOut(
     balances: Iterable[D], bptAmountOut: D, totalBPT: D
-) -> tuple[D, D]:
+) -> Tuple[D, D, D]:
     bptRatio = bptAmountOut / totalBPT
     x, y, z = balances
     return x * bptRatio, y * bptRatio, z * bptRatio
@@ -175,7 +174,7 @@ def calcAllTokensInGivenExactBptOut(
 
 def calcTokensOutGivenExactBptIn(
     balances: Iterable[D], bptAmountIn: D, totalBPT: D
-) -> tuple[D, D]:
+) -> Tuple[D, D, D]:
     bptRatio = bptAmountIn / totalBPT
     x, y, z = balances
     return x * bptRatio, y * bptRatio, z * bptRatio
@@ -187,9 +186,9 @@ def calcProtocolFees(
     currentBptSupply: D,
     protocolSwapFeePerc: D,
     protocolFeeGyroPortion: D,
-) -> tuple[D, D]:
+) -> Tuple[D, D]:
     if currentInvariant <= previousInvariant:
-        return 0, 0
+        return D(0), D(0)
 
     diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
     numerator = diffInvariant * currentBptSupply
