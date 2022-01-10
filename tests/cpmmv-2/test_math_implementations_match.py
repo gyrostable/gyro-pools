@@ -328,13 +328,13 @@ def test_tokens_out_given_exact_bpt_in(gyro_two_math_testing, balances, bpt_amou
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
     sqrt_alpha=st.decimals(min_value="0.02", max_value="0.99995", places=4),
-    diff_y=st.decimals(min_value="1", max_value="10000", places=4),
+    delta_balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
     sqrt_beta=st.decimals(min_value="1.00005", max_value="1.8", places=4),
     current_bpt_supply=st.decimals(min_value="1", max_value="1000000", places=4),
     protocol_fee_gyro_portion=st.decimals(min_value="0.00", max_value="0.5", places=4),
     protocol_swap_fee_percentage=st.decimals(min_value="0.0", max_value="0.4", places=4)
 )
-def test_protocol_fees(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, diff_y, current_bpt_supply, protocol_swap_fee_percentage, protocol_fee_gyro_portion):
+def test_protocol_fees(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, delta_balances, current_bpt_supply, protocol_swap_fee_percentage, protocol_fee_gyro_portion):
 
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
@@ -342,9 +342,7 @@ def test_protocol_fees(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, d
     old_invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta))
     
-    print(old_invariant)
-
-    new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta), to_decimal(old_invariant), to_decimal(diff_y), True )
+    new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta), to_decimal(old_invariant), to_decimal(delta_balances), True )
 
     protocol_fees = math_implementation.calcProtocolFees(to_decimal(old_invariant), to_decimal(new_invariant), to_decimal(current_bpt_supply), to_decimal(protocol_swap_fee_percentage), to_decimal(protocol_fee_gyro_portion))
 
