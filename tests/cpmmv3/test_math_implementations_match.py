@@ -4,10 +4,9 @@ from typing import Protocol, Tuple
 import hypothesis.strategies as st
 import numpy
 import pytest
+import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie.test import given
 from tests.support.utils import scale, to_decimal
-
-import tests.cpmmv3.v3_math_implementation as math_implementation
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 

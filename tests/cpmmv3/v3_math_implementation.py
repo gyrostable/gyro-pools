@@ -42,6 +42,19 @@ def calculateInvariantNewton(
     a: D, b: D, c: D, d: D, alpha1: D, balances: Iterable[D]
 ) -> tuple[D, list]:
     log = []
+# def test_calc_out_given_in(gyro_three_math_testing, amount_in, balances, root_three_alpha):
+
+#     if amount_in > to_decimal('0.3') * (balances[0]):
+#         return
+
+#     if faulty_params(balances, root_three_alpha):
+#         return
+
+#     invariant = math_implementation.calculateInvariant(
+#         to_decimal(balances), to_decimal(root_three_alpha))
+
+#     virtual_param_in = math_implementation.calculateVirtualParameter0(
+#         to_decimal(invariant))
     x, y, z = balances
 
     lmin = -b / (a * 3) + (b ** 2 - a * c * 3).sqrt() / (
