@@ -1,5 +1,6 @@
 from logging import warning
 from typing import Iterable
+import numpy as np
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
@@ -96,21 +97,25 @@ def liquidityInvariantUpdate(
     balances: Iterable[D],
     root3Alpha: D,
     lastInvariant: D,
-    diffZ: D,
+    deltaBalances: Iterable[D],
     isIncreaseLiq: bool,
 ) -> D:
-    x, y, z = balances
+    indices = maxOtherBalances(balances)
     # virtual offsets
     virtualOffset = lastInvariant * root3Alpha
     # cube root of p_x p_y
-    cbrtPxPy = calculateCbrtPrice(lastInvariant, z + virtualOffset)
-    diffInvariant = diffZ / (cbrtPxPy - root3Alpha)
+    cbrtPxPy = calculateCbrtPrice(lastInvariant, balances[indices[0]] + virtualOffset)
+    diffInvariant = balances[indices[0]] / (cbrtPxPy - root3Alpha)
 
     if isIncreaseLiq == True:
         invariant = lastInvariant + diffInvariant
     else:
         invariant = lastInvariant - diffInvariant
     return invariant
+
+
+def maxOtherBalances(balances: Iterable[D]) -> Iterable[D]:
+    return np.argsort(list(balances))
 
 
 def calcOutGivenIn(balanceIn: D, balanceOut: D, amountIn: D, virtualOffset: D) -> D:
