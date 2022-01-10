@@ -247,33 +247,6 @@ library GyroTwoMath {
         return term.sub(virtIn);
     }
 
-    // Ensures balances[i] <= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
-    // comparison.
-    function minOtherBalances(uint256[] memory balances) internal returns (uint8[3] memory indices) {
-        if (balances[0] <= balances[1]) {
-            if (balances[0] <= balances[2]) {
-                indices[0] = 0;
-                indices[1] = 1;
-                indices[2] = 2;
-            }
-            else {
-                indices[0] = 2;
-                indices[1] = 0;
-                indices[2] = 1;
-            }
-        } else {
-            if (balances[1] <= balances[2]) {
-                indices[0] = 1;
-                indices[1] = 0;
-                indices[2] = 2;
-            } else {
-                indices[0] = 2;
-                indices[1] = 0;
-                indices[2] = 1;
-            }
-        }
-    }
-
     function _calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
         uint256 bptAmountOut,
