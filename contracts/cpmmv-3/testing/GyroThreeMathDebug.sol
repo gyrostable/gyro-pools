@@ -35,7 +35,12 @@ library GyroThreeMathDebug {
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
+    // Stopping criterion for the Newton iteration that computes the invariant:
+    // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
+    // - ... but in any case, make at least _INVARIANT_MIN_ITERATIONS iterations. This is useful to compensate for a
+    // less-than-ideal starting point, which is important when alpha is small.
     uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 10;
+    uint8 internal constant _INVARIANT_MIN_ITERATIONS = 2;
 
     // DEBUG
     event NewtonStep(bool high, uint256 delta, uint256 l);
@@ -138,8 +143,8 @@ library GyroThreeMathDebug {
         uint256 mc,
         uint256 md,
         uint256 rootEst
-    ) internal returns (uint256) {
-        uint256 deltaAbsPrev = 0;  // 0 means invalid. Safe b/c if it was actually 0, we would've already exited.
+    ) internal pure returns (uint256) {
+        uint256 deltaAbsPrev = 0;
         for (uint256 iteration = 0; iteration < 255; ++iteration) {
             // The delta to the next step can be positive or negative, so we represent a positive and a negative part
             // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
@@ -150,15 +155,12 @@ library GyroThreeMathDebug {
                 md,
                 rootEst
             );
-
-            // We emit this even if we don't make the step. So the last one should be ignored.
-            emit NewtonStep(!deltaIsPos, deltaAbs, rootEst);
-
-            if (deltaAbs == 0 || (iteration > 0 && deltaIsPos))
-                // literally stopped or numerical error dominates
+            // ^ Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
+            if (deltaAbs == 0 || (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos))
+                // Iteration literally stopped or numerical error dominates
                 return rootEst;
             if (
-                deltaAbsPrev != 0 && deltaAbs > deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP
+                iteration >= _INVARIANT_MIN_ITERATIONS && deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP
             ) {
                 // stalled
                 // Move one more step to the left to ensure we're underestimating, rather than overestimating, L
