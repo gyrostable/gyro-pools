@@ -289,9 +289,7 @@ def test_tokens_out_given_exact_bpt_in(
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     ),
-    root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
 )
 def test_calculate_invariant(
     gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
@@ -310,10 +308,71 @@ def test_calculate_invariant(
 
     roots = np.roots([a, -b, -c, -d])
 
-    print(roots)
-
     invariant_sol = gyro_three_math_testing.calculateInvariant(
         scale(balances), scale(root_three_alpha)
     )
 
-    assert to_decimal(invariant_sol) == scale(invariant).approxed(abs=1e13)
+    assert int(invariant_sol) == scale(invariant).approxed(rel=1 / to_decimal(10) ** 6)
+
+
+@given(
+    balances=st.tuples(
+        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+    ),
+    delta_balances=st.tuples(
+        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+    ),
+    protocol_fee_gyro_portion=st.decimals(min_value="0.00", max_value="0.5", places=4),
+    protocol_swap_fee_percentage=st.decimals(
+        min_value="0.0", max_value="0.4", places=4
+    ),
+    current_bpt_supply=st.decimals(min_value="1", max_value="100000", places=4),
+    root_three_alpha=st.decimals(
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+    ),
+)
+def test_protocol_fees(
+    gyro_three_math_testing,
+    current_bpt_supply: Decimal,
+    balances: Tuple[int, int, int],
+    delta_balances: Tuple[int, int, int],
+    protocol_swap_fee_percentage,
+    protocol_fee_gyro_portion,
+    root_three_alpha: Decimal,
+):
+
+    if faulty_params(balances, root_three_alpha):
+        return
+
+    old_invariant = math_implementation.calculateInvariant(
+        to_decimal(balances), to_decimal(root_three_alpha)
+    )
+
+    new_balance_0 = balances[0] + delta_balances[0]
+    new_balance_1 = balances[1] + delta_balances[1]
+    new_balance_2 = balances[2] + delta_balances[2]
+
+    new_balances = (new_balance_0, new_balance_1, new_balance_2)
+
+    new_invariant = math_implementation.calculateInvariant(
+        to_decimal(new_balances), to_decimal(root_three_alpha)
+    )
+
+    protocol_fees = math_implementation.calcProtocolFees(
+        to_decimal(old_invariant),
+        to_decimal(new_invariant),
+        to_decimal(current_bpt_supply),
+        to_decimal(protocol_swap_fee_percentage),
+        to_decimal(protocol_fee_gyro_portion),
+    )
+
+    protocol_fees_sol = gyro_three_math_testing.calcProtocolFees(
+        scale(old_invariant),
+        scale(new_invariant),
+        scale(current_bpt_supply),
+        scale(protocol_swap_fee_percentage),
+        scale(protocol_fee_gyro_portion),
+    )
+
+    assert to_decimal(protocol_fees_sol[0]) == scale(protocol_fees[0])
+    assert to_decimal(protocol_fees_sol[1]) == scale(protocol_fees[1])
