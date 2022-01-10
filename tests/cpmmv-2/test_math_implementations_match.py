@@ -334,7 +334,7 @@ def test_tokens_out_given_exact_bpt_in(gyro_two_math_testing, balances, bpt_amou
     protocol_fee_gyro_portion=st.decimals(min_value="0.00", max_value="0.5", places=4),
     protocol_swap_fee_percentage=st.decimals(min_value="0.0", max_value="0.4", places=4)
 )
-def test_calc_out_given_in(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, diff_y, current_bpt_supply, protocol_swap_fee_percentage, protocol_fee_gyro_portion):
+def test_protocol_fees(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, diff_y, current_bpt_supply, protocol_swap_fee_percentage, protocol_fee_gyro_portion):
 
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
