@@ -20,6 +20,9 @@ def users(accounts):
 def gyro_two_math_testing(admin, GyroTwoMathTesting):
     return admin.deploy(GyroTwoMathTesting)
 
+@pytest.fixture(scope="module")
+def gyro_three_math_testing(admin, GyroThreeMathTesting):
+    return admin.deploy(GyroThreeMathTesting)
 
 @pytest.fixture(scope="module")
 def mock_gyro_config(admin, MockGyroConfig):

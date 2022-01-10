@@ -190,6 +190,7 @@ def test_liquidity_invariant_update(gyro_two_math_testing, balances, sqrt_alpha,
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
+    # TODO broken call
     new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), to_decimal(sqrt_alpha),
                                                                  to_decimal(sqrt_beta), to_decimal(last_invariant), to_decimal(delta_balances), True)
 
