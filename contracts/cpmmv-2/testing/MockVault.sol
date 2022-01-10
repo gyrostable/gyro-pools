@@ -130,60 +130,67 @@ contract MockVault is IPoolSwapStructs {
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amount);
     }
 
-    function callJoinPoolGyro(
-        IBasePool gyroTwoPool,
-        bytes32 poolId,
-        address sender,
-        address recipient,
-        uint256[] memory currentBalances,
-        uint256 lastChangeBlock,
-        uint256 protocolSwapFeePercentage,
-        uint256 amountIn // TODO make this work non-symmetrically
-    )
+    struct CallJoinPoolGyroParams {
+        IBasePool gyroTwoPool;
+        bytes32 poolId;
+        address sender;
+        address recipient;
+        uint256[] currentBalances;
+        uint256 lastChangeBlock;
+        uint256 protocolSwapFeePercentage;
+        uint256 amountIn; // TODO make this work non-symmetrically
+        uint256 bptOut;
+    }
+
+    function callJoinPoolGyro(CallJoinPoolGyroParams memory params)
         public
-    //      returns  (uint256[] memory amountsIn,  uint256[] memory dueProtocolFeeAmounts)
+        returns (
+            uint256[] memory amountsIn,
+            uint256[] memory dueProtocolFeeAmounts
+        )
     {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
         uint256[] memory amountsInStr = new uint256[](2);
-        amountsInStr[0] = amountIn;
-        amountsInStr[1] = amountIn;
+        amountsInStr[0] = params.amountIn;
+        amountsInStr[1] = params.amountIn;
 
         WeightedPoolUserData.JoinKind kind;
-        if (currentBalances[0] == 0 && currentBalances[1] == 0) {
+        bytes memory userData;
+        if (params.currentBalances[0] == 0 && params.currentBalances[1] == 0) {
             kind = WeightedPoolUserData.JoinKind.INIT;
+            userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
         } else {
-            kind = WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT;
+            kind = WeightedPoolUserData
+                .JoinKind
+                .ALL_TOKENS_IN_FOR_EXACT_BPT_OUT;
+            userData = abi.encode(kind, params.bptOut); // bptOut
         }
 
-        bytes memory userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
+        (amountsIn, dueProtocolFeeAmounts) = params.gyroTwoPool.onJoinPool(
+            params.poolId,
+            params.sender,
+            params.recipient,
+            params.currentBalances,
+            params.lastChangeBlock,
+            params.protocolSwapFeePercentage,
+            userData
+        );
 
-        (
-            uint256[] memory amountsIn,
-            uint256[] memory dueProtocolFeeAmounts
-        ) = gyroTwoPool.onJoinPool(
-                poolId,
-                sender,
-                recipient,
-                currentBalances,
-                lastChangeBlock,
-                protocolSwapFeePercentage,
-                userData
-            );
+        Pool storage pool = pools[params.poolId];
 
-        Pool storage pool = pools[poolId];
         for (uint256 i = 0; i < pool.tokens.length; i++) {
             pool.balances[pool.tokens[i]] += amountsIn[i];
         }
 
-        IERC20[] memory tokens = new IERC20[](currentBalances.length);
+        IERC20[] memory tokens = new IERC20[](params.currentBalances.length);
         int256[] memory deltas = new int256[](amountsIn.length);
         for (uint256 i = 0; i < amountsIn.length; ++i) {
             deltas[i] = int256(amountsIn[i]);
         }
 
         emit PoolBalanceChanged(
-            poolId,
-            sender,
+            params.poolId,
+            params.sender,
             tokens,
             deltas,
             dueProtocolFeeAmounts
@@ -198,34 +205,31 @@ contract MockVault is IPoolSwapStructs {
         uint256[] memory currentBalances,
         uint256 lastChangeBlock,
         uint256 protocolSwapFeePercentage,
-        uint256 amountOut
+        uint256 bptAmountIn
     )
         public
-    //      returns  (uint256[] memory amountsIn,  uint256[] memory dueProtocolFeeAmounts)
+        returns (
+            uint256[] memory amountsOut,
+            uint256[] memory dueProtocolFeeAmounts
+        )
     {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
-        uint256[] memory amountsOutStr = new uint256[](2);
-        amountsOutStr[0] = amountOut;
-        amountsOutStr[1] = amountOut;
 
         WeightedPoolUserData.ExitKind kind = WeightedPoolUserData
             .ExitKind
-            .BPT_IN_FOR_EXACT_TOKENS_OUT;
+            .EXACT_BPT_IN_FOR_TOKENS_OUT;
 
-        bytes memory userData = abi.encode(kind, amountsOutStr, 10 * 10**25); //maxBPTAmountIn
+        bytes memory userData = abi.encode(kind, bptAmountIn);
 
-        (
-            uint256[] memory amountsOut,
-            uint256[] memory dueProtocolFeeAmounts
-        ) = gyroTwoPool.onExitPool(
-                poolId,
-                sender,
-                recipient,
-                currentBalances,
-                lastChangeBlock,
-                protocolSwapFeePercentage,
-                userData
-            );
+        (amountsOut, dueProtocolFeeAmounts) = gyroTwoPool.onExitPool(
+            poolId,
+            sender,
+            recipient,
+            currentBalances,
+            lastChangeBlock,
+            protocolSwapFeePercentage,
+            userData
+        );
 
         Pool storage pool = pools[poolId];
         for (uint256 i = 0; i < pool.tokens.length; i++) {
@@ -248,7 +252,7 @@ contract MockVault is IPoolSwapStructs {
     }
 
     function callMinimalGyroPoolSwap(
-        address pool,
+        address poolAddress,
         SwapRequest memory request, //with incomplete userData
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
@@ -257,7 +261,7 @@ contract MockVault is IPoolSwapStructs {
         // bytes memory userData = abi.encode(kind,amountsOutStr,10 * 10 ** 25); //maxBPTAmountIn
         //request.userData  = userData;
 
-        uint256 amount = IMinimalSwapInfoPool(pool).onSwap(
+        uint256 amount = IMinimalSwapInfoPool(poolAddress).onSwap(
             request,
             balanceTokenIn,
             balanceTokenOut
