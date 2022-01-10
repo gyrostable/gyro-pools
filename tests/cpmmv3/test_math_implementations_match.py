@@ -279,28 +279,28 @@ def test_tokens_out_given_exact_bpt_in(
     assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
 
 
-# @given(
-#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy, billion_balance_strategy),
-#     root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4),
-# )
-# def test_calculate_invariant(gyro_three_math_testing, balances, root_three_alpha):
+@given(
+    balances=st.tuples(billion_balance_strategy, billion_balance_strategy, billion_balance_strategy),
+    root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4),
+)
+def test_calculate_invariant(gyro_three_math_testing, balances, root_three_alpha):
 
-#     if faulty_params(balances, root_three_alpha):
-#         return
+    if faulty_params(balances, root_three_alpha):
+        return
 
-#     invariant = math_implementation.calculateInvariant(
-#         to_decimal(balances), to_decimal(root_three_alpha)
-#     )
+    invariant = math_implementation.calculateInvariant(
+        to_decimal(balances), to_decimal(root_three_alpha)
+    )
 
-#     (a,b,c,d) = math_implementation.calculateCubicTerms(balances,root_three_alpha)
+    (a,b,c,d) = math_implementation.calculateCubicTerms(balances,root_three_alpha)
 
-#     roots = numpy.roots([a, -b, -c, -d])
+    roots = numpy.roots([a, -b, -c, -d])
 
-#     print(roots)
+    print(roots)
 
-#     invariant_sol = gyro_three_math_testing.calculateInvariant(
-#         scale(balances), scale(root_three_alpha)
-#     )
+    invariant_sol = gyro_three_math_testing.calculateInvariant(
+        scale(balances), scale(root_three_alpha)
+    )
 
 
-#     assert to_decimal(invariant_sol) == scale(invariant).approxed(abs=1e15)
+    assert to_decimal(invariant_sol) == scale(invariant).approxed(abs=1e13)
