@@ -15,6 +15,8 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
+
 import "./ExtensibleBaseWeightedPool.sol";
 import "./GyroThreeMath.sol";
 import "./GyroThreePoolErrors.sol";
@@ -65,7 +67,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             owner
         )
     {
-        require(tokens.length == 3);
+        _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
 
         _token0 = tokens[0];
         _token1 = tokens[1];
@@ -82,23 +84,11 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     // We don't support weights at the moment; in other words, all tokens are always weighted equally and thus their
     // normalized weights are all 1/3. This is what the functions return.
 
-    function _getNormalizedWeight(IERC20 token)
-        internal
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function _getNormalizedWeight(IERC20) internal view virtual override returns (uint256) {
         return FixedPoint.ONE / 3;
     }
 
-    function _getNormalizedWeights()
-        internal
-        view
-        virtual
-        override
-        returns (uint256[] memory)
-    {
+    function _getNormalizedWeights() internal view virtual override returns (uint256[] memory) {
         uint256[] memory normalizedWeights = new uint256[](3);
 
         // prettier-ignore
@@ -126,13 +116,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         return _MAX_TOKENS;
     }
 
-    function _getTotalTokens()
-        internal
-        pure
-        virtual
-        override
-        returns (uint256)
-    {
+    function _getTotalTokens() internal pure virtual override returns (uint256) {
         return 3;
     }
 
@@ -145,24 +129,20 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         view
         virtual
         override
-        returns (uint256)
+        returns (uint256 scalingFactor)
     {
-        // prettier-ignore
-        if (token == _token0) { return _scalingFactor0; }
-        else if (token == _token1) { return _scalingFactor1; }
-        else if (token == _token2) { return _scalingFactor2; }
-        else {
+        if (token == _token0) {
+            scalingFactor = _scalingFactor0;
+        } else if (token == _token1) {
+            scalingFactor = _scalingFactor1;
+        } else if (token == _token2) {
+            scalingFactor = _scalingFactor2;
+        } else {
             _revert(Errors.INVALID_TOKEN);
         }
     }
 
-    function _scalingFactors()
-        internal
-        view
-        virtual
-        override
-        returns (uint256[] memory)
-    {
+    function _scalingFactors() internal view virtual override returns (uint256[] memory) {
         uint256 totalTokens = _getTotalTokens();
         uint256[] memory scalingFactors = new uint256[](totalTokens);
 
@@ -281,10 +261,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         // uint256[] memory sqrtParams = _sqrtParameters();
 
-        uint256 invariantAfterJoin = GyroThreeMath._calculateInvariant(
-            amountsIn,
-            _root3Alpha
-        );
+        uint256 invariantAfterJoin = GyroThreeMath._calculateInvariant(amountsIn, _root3Alpha);
 
         // Set the initial BPT to the value of the invariant times the number of tokens. This makes BPT supply more
         // consistent in Pools with similar compositions but different number of tokens.
@@ -335,10 +312,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         uint256 root3Alpha = _root3Alpha;
 
-        uint256 invariantBeforeJoin = GyroThreeMath._calculateInvariant(
-            balances,
-            root3Alpha
-        );
+        uint256 invariantBeforeJoin = GyroThreeMath._calculateInvariant(balances, root3Alpha);
 
         _distributeFees(invariantBeforeJoin);
 
@@ -364,13 +338,13 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     function _doJoin(uint256[] memory balances, bytes memory userData)
         internal
         view
-        returns (uint256, uint256[] memory)
+        returns (uint256 bptAmountOut, uint256[] memory amountsIn)
     {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
 
         // We do NOT currently support unbalanced update, i.e., EXACT_TOKENS_IN_FOR_BPT_OUT or TOKEN_IN_FOR_EXACT_BPT_OUT
         if (kind == BaseWeightedPool.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT) {
-            return _joinAllTokensInForExactBPTOut(balances, userData);
+            (bptAmountOut, amountsIn) = _joinAllTokensInForExactBPTOut(balances, userData);
         } else {
             _revert(Errors.UNHANDLED_JOIN_KIND);
         }
@@ -397,7 +371,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         address,
         address,
         uint256[] memory balances,
-        uint256 lastChangeBlock,
+        uint256,
         uint256, // protocolSwapFeePercentage
         uint256[] memory,
         bytes memory userData
@@ -419,10 +393,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            uint256 invariantBeforeExit = GyroThreeMath._calculateInvariant(
-                balances,
-                root3Alpha
-            );
+            uint256 invariantBeforeExit = GyroThreeMath._calculateInvariant(balances, root3Alpha);
 
             _distributeFees(invariantBeforeExit);
 
@@ -463,18 +434,19 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         (invariant, ) = _calculateCurrentValues();
     }
 
-    function _joinAllTokensInForExactBPTOut(
-        uint256[] memory balances,
-        bytes memory userData
-    ) internal view override returns (uint256, uint256[] memory) {
+    function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        override
+        returns (uint256, uint256[] memory)
+    {
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
 
-        uint256[] memory amountsIn = GyroThreeMath
-            ._calcAllTokensInGivenExactBptOut(
-                balances,
-                bptAmountOut,
-                totalSupply()
-            );
+        uint256[] memory amountsIn = GyroThreeMath._calcAllTokensInGivenExactBptOut(
+            balances,
+            bptAmountOut,
+            totalSupply()
+        );
 
         return (bptAmountOut, amountsIn);
     }
@@ -482,7 +454,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     function _doExit(uint256[] memory balances, bytes memory userData)
         internal
         view
-        returns (uint256, uint256[] memory)
+        returns (uint256 bptAmountIn, uint256[] memory amountsOut)
     {
         BaseWeightedPool.ExitKind kind = userData.exitKind();
 
@@ -495,10 +467,12 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         }
     }
 
-    function _exitExactBPTInForTokensOut(
-        uint256[] memory balances,
-        bytes memory userData
-    ) internal view override returns (uint256, uint256[] memory) {
+    function _exitExactBPTInForTokensOut(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        override
+        returns (uint256, uint256[] memory)
+    {
         // This exit function is the only one that is not disabled if the contract is paused: it remains unrestricted
         // in an attempt to provide users with a mechanism to retrieve their tokens in case of an emergency.
         // This particular exit function is the only one that remains available because it is the simplest one, and
@@ -507,12 +481,11 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 bptAmountIn = userData.exactBptInForTokensOut();
         // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
 
-        uint256[] memory amountsOut = GyroThreeMath
-            ._calcTokensOutGivenExactBptIn(
-                balances,
-                bptAmountIn,
-                totalSupply()
-            );
+        uint256[] memory amountsOut = GyroThreeMath._calcTokensOutGivenExactBptIn(
+            balances,
+            bptAmountIn,
+            totalSupply()
+        );
         return (bptAmountIn, amountsOut);
     }
 
@@ -560,10 +533,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
      * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
      */
-    function _getDueProtocolFeeAmounts(
-        uint256 previousInvariant,
-        uint256 currentInvariant
-    )
+    function _getDueProtocolFeeAmounts(uint256 previousInvariant, uint256 currentInvariant)
         internal
         view
         returns (
@@ -586,14 +556,13 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         }
 
         // Calculate fees in BPT
-        (uint256 gyroFees, uint256 balancerFees) = GyroThreeMath
-            ._calcProtocolFees(
-                previousInvariant,
-                currentInvariant,
-                totalSupply(),
-                protocolSwapFeePerc,
-                protocolFeeGyroPortion
-            );
+        (uint256 gyroFees, uint256 balancerFees) = GyroThreeMath._calcProtocolFees(
+            previousInvariant,
+            currentInvariant,
+            totalSupply(),
+            protocolSwapFeePerc,
+            protocolFeeGyroPortion
+        );
 
         return (gyroFees, balancerFees, gyroTreasury, balTreasury);
     }

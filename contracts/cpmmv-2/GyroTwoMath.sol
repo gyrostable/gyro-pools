@@ -161,7 +161,9 @@ library GyroTwoMath {
             uint256 denominator = sqrtPx.sub(sqrtAlpha);
             diffInvariant = deltaBalances[1].divDown(denominator);
         } else {
-            uint256 denominator = FixedPoint.ONE.divUp(sqrtPx).sub(FixedPoint.ONE.divDown(sqrtBeta));
+            uint256 denominator = FixedPoint.ONE.divUp(sqrtPx).sub(
+                FixedPoint.ONE.divDown(sqrtBeta)
+            );
             diffInvariant = deltaBalances[0].divDown(denominator);
         }
         invariant = isIncreaseLiq
@@ -199,10 +201,7 @@ library GyroTwoMath {
       // We exploit the fact that this formula is symmetric up to virtualParam{X,Y}.               //
       **********************************************************************************************/
 
-        _require(
-            amountIn <= balanceIn.mulDown(_MAX_IN_RATIO),
-            Errors.MAX_IN_RATIO
-        );
+        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         uint256 virtIn = balanceIn.add(virtualParamIn);
         uint256 denominator = virtIn.add(amountIn);
         uint256 invSquare = currentInvariant.mulUp(currentInvariant);
@@ -235,10 +234,7 @@ library GyroTwoMath {
       // y' = virtOut                                                                              //
       // Note that dy < 0 < dx.                                                                    //
       **********************************************************************************************/
-        _require(
-            amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO),
-            Errors.MAX_OUT_RATIO
-        );
+        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         uint256 virtOut = balanceOut.add(virtualParamOut);
         uint256 denominator = virtOut.sub(amountOut);
         uint256 invSquare = currentInvariant.mulUp(currentInvariant);

@@ -26,8 +26,7 @@ contract GyroTwoMathTesting {
             uint256
         )
     {
-        return
-            GyroTwoMath._calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta);
+        return GyroTwoMath._calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta);
     }
 
     function calculateInvariant(
@@ -128,12 +127,7 @@ contract GyroTwoMathTesting {
         uint256 bptAmountOut,
         uint256 totalBPT
     ) external pure returns (uint256[] memory) {
-        return
-            GyroTwoMath._calcAllTokensInGivenExactBptOut(
-                balances,
-                bptAmountOut,
-                totalBPT
-            );
+        return GyroTwoMath._calcAllTokensInGivenExactBptOut(balances, bptAmountOut, totalBPT);
     }
 
     function calcTokensOutGivenExactBptIn(
@@ -141,12 +135,7 @@ contract GyroTwoMathTesting {
         uint256 bptAmountIn,
         uint256 totalBPT
     ) external pure returns (uint256[] memory) {
-        return
-            GyroTwoMath._calcTokensOutGivenExactBptIn(
-                balances,
-                bptAmountIn,
-                totalBPT
-            );
+        return GyroTwoMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalBPT);
     }
 
     function calcProtocolFees(

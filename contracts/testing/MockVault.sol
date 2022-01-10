@@ -72,11 +72,7 @@ contract MockVault is IPoolSwapStructs {
         }
     }
 
-    function registerPool(IVault.PoolSpecialization)
-        external
-        view
-        returns (bytes32)
-    {
+    function registerPool(IVault.PoolSpecialization) external view returns (bytes32) {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -91,9 +87,7 @@ contract MockVault is IPoolSwapStructs {
         }
     }
 
-    function updateBalances(bytes32 poolId, uint256[] memory balances)
-        external
-    {
+    function updateBalances(bytes32 poolId, uint256[] memory balances) external {
         Pool storage pool = pools[poolId];
         for (uint256 i = 0; i < balances.length; i++) {
             pool.balances[pool.tokens[i]] = balances[i];
@@ -121,12 +115,7 @@ contract MockVault is IPoolSwapStructs {
         uint256 indexIn,
         uint256 indexOut
     ) external {
-        uint256 amount = IGeneralPool(pool).onSwap(
-            request,
-            balances,
-            indexIn,
-            indexOut
-        );
+        uint256 amount = IGeneralPool(pool).onSwap(request, balances, indexIn, indexOut);
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amount);
     }
 
@@ -144,10 +133,7 @@ contract MockVault is IPoolSwapStructs {
 
     function callJoinPoolGyro(CallJoinPoolGyroParams memory params)
         public
-        returns (
-            uint256[] memory amountsIn,
-            uint256[] memory dueProtocolFeeAmounts
-        )
+        returns (uint256[] memory amountsIn, uint256[] memory dueProtocolFeeAmounts)
     {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
         uint256[] memory amountsInStr = new uint256[](2);
@@ -160,9 +146,7 @@ contract MockVault is IPoolSwapStructs {
             kind = WeightedPoolUserData.JoinKind.INIT;
             userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
         } else {
-            kind = WeightedPoolUserData
-                .JoinKind
-                .ALL_TOKENS_IN_FOR_EXACT_BPT_OUT;
+            kind = WeightedPoolUserData.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT;
             userData = abi.encode(kind, params.bptOut); // bptOut
         }
 
@@ -206,13 +190,7 @@ contract MockVault is IPoolSwapStructs {
         uint256 lastChangeBlock,
         uint256 protocolSwapFeePercentage,
         uint256 bptAmountIn
-    )
-        public
-        returns (
-            uint256[] memory amountsOut,
-            uint256[] memory dueProtocolFeeAmounts
-        )
-    {
+    ) public returns (uint256[] memory amountsOut, uint256[] memory dueProtocolFeeAmounts) {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
 
         WeightedPoolUserData.ExitKind kind = WeightedPoolUserData
@@ -242,13 +220,7 @@ contract MockVault is IPoolSwapStructs {
             deltas[i] = int256(amountsOut[i]);
         }
 
-        emit PoolBalanceChanged(
-            poolId,
-            sender,
-            tokens,
-            deltas,
-            dueProtocolFeeAmounts
-        );
+        emit PoolBalanceChanged(poolId, sender, tokens, deltas, dueProtocolFeeAmounts);
     }
 
     function callMinimalGyroPoolSwap(

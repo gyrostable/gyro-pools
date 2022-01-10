@@ -50,8 +50,7 @@ class QuantizedDecimal:
             rounding = decimal.ROUND_DOWN
             if isinstance(value, float):
                 rounding = decimal.ROUND_HALF_DOWN
-            high_prec_value = decimal.Decimal(
-                value, context=context) * DECIMAL_MULT
+            high_prec_value = decimal.Decimal(value, context=context) * DECIMAL_MULT
             self._value = self._quantize(high_prec_value, rounding=rounding)
 
     @property

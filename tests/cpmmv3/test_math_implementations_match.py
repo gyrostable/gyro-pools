@@ -1,9 +1,8 @@
 from decimal import Decimal
-from typing import Protocol, Tuple
+from typing import Tuple
 
 import hypothesis.strategies as st
-import numpy
-import pytest
+import numpy as np
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie.test import given
 from tests.support.utils import scale, to_decimal
@@ -90,18 +89,19 @@ def test_calculate_cbrt_price(gyro_three_math_testing, invariant, virtual_z):
     assert to_decimal(cbrt_price_sol) == scale(cbrt_price).approxed()
 
 
-
-@given(balances=st.tuples(
+@given(
+    balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     )
 )
-def test_max_other_balances(gyro_three_math_testing, balances):
+def test_max_other_balances(gyro_three_math_testing, balances: Tuple[int, int, int]):
 
     array = math_implementation.maxOtherBalances(to_decimal(balances))
 
     array_sol = gyro_three_math_testing.maxOtherBalances(scale(balances))
 
     assert to_decimal(array_sol[0]) == array[0]
+
 
 # Delta balances are supposed to be proportional; here they are just random
 @given(
@@ -113,9 +113,13 @@ def test_max_other_balances(gyro_three_math_testing, balances):
     ),
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ))
+    ),
+)
 def test_liquidity_invariant_update(
-    gyro_three_math_testing, balances, root_three_alpha, delta_balances
+    gyro_three_math_testing,
+    balances: Tuple[int, int, int],
+    root_three_alpha,
+    delta_balances: Tuple[int, int, int],
 ):
 
     if faulty_params(balances, root_three_alpha):
@@ -130,14 +134,14 @@ def test_liquidity_invariant_update(
         to_decimal(root_three_alpha),
         to_decimal(last_invariant),
         to_decimal(delta_balances),
-        True
+        True,
     )
     new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
         scale(balances),
         scale(root_three_alpha),
         scale(last_invariant),
         scale(delta_balances),
-        True
+        True,
     )
 
     assert to_decimal(new_invariant_sol) == scale(new_invariant).approxed()
@@ -153,7 +157,10 @@ def test_liquidity_invariant_update(
     ),
 )
 def test_calc_in_given_out(
-    gyro_three_math_testing, root_three_alpha, balances, amount_out
+    gyro_three_math_testing,
+    root_three_alpha,
+    balances: Tuple[int, int, int],
+    amount_out,
 ):
 
     if faulty_params:
@@ -192,9 +199,8 @@ def test_calc_in_given_out(
     ),
 )
 def test_calc_out_given_in(
-    gyro_three_math_testing, root_three_alpha, balances, amount_in
+    gyro_three_math_testing, root_three_alpha, balances: Tuple[int, int, int], amount_in
 ):
-
     if faulty_params:
         return
 
@@ -229,7 +235,7 @@ def test_calc_out_given_in(
     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4),
 )
 def test_all_tokens_in_given_exact_bpt_out(
-    gyro_three_math_testing, balances, bpt_amount_out, total_bpt
+    gyro_three_math_testing, balances: Tuple[int, int, int], bpt_amount_out, total_bpt
 ):
 
     if total_bpt < bpt_amount_out:
@@ -258,7 +264,7 @@ def test_all_tokens_in_given_exact_bpt_out(
     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4),
 )
 def test_tokens_out_given_exact_bpt_in(
-    gyro_three_math_testing, balances, bpt_amount_in, total_bpt
+    gyro_three_math_testing, balances: Tuple[int, int, int], bpt_amount_in, total_bpt
 ):
 
     if total_bpt < bpt_amount_in:
@@ -280,10 +286,16 @@ def test_tokens_out_given_exact_bpt_in(
 
 
 @given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy, billion_balance_strategy),
-    root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4),
+    balances=st.tuples(
+        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+    ),
+    root_three_alpha=st.decimals(
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+    ),
 )
-def test_calculate_invariant(gyro_three_math_testing, balances, root_three_alpha):
+def test_calculate_invariant(
+    gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
+):
 
     if faulty_params(balances, root_three_alpha):
         return
@@ -292,15 +304,16 @@ def test_calculate_invariant(gyro_three_math_testing, balances, root_three_alpha
         to_decimal(balances), to_decimal(root_three_alpha)
     )
 
-    (a,b,c,d) = math_implementation.calculateCubicTerms(balances,root_three_alpha)
+    (a, b, c, d) = math_implementation.calculateCubicTerms(
+        to_decimal(balances), root_three_alpha
+    )
 
-    roots = numpy.roots([a, -b, -c, -d])
+    roots = np.roots([a, -b, -c, -d])
 
     print(roots)
 
     invariant_sol = gyro_three_math_testing.calculateInvariant(
         scale(balances), scale(root_three_alpha)
     )
-
 
     assert to_decimal(invariant_sol) == scale(invariant).approxed(abs=1e13)

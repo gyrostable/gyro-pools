@@ -64,7 +64,7 @@ def liquidityInvariantUpdate(
     if x <= y:
         diffInvariant = dy / (sqrtPx - sqrtAlpha)
     else:
-        diffInvariant = dx / (1/sqrtPx - 1/sqrtBeta)
+        diffInvariant = dx / (1 / sqrtPx - 1 / sqrtBeta)
     if isIncreaseLiq == True:
         invariant = lastInvariant + diffInvariant
     else:
@@ -137,10 +137,10 @@ def calcProtocolFees(
     protocolFeeGyroPortion: D,
 ) -> tuple[D, D]:
     if currentInvariant <= previousInvariant:
-        return 0, 0
+        return D(0), D(0)
 
     if protocolSwapFeePerc == 0:
-        return 0,0
+        return D(0), D(0)
 
     diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
     numerator = diffInvariant * currentBptSupply

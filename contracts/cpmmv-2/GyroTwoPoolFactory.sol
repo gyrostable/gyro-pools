@@ -22,13 +22,8 @@ import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.
 
 import "./GyroTwoPool.sol";
 
-contract GyroTwoPoolFactory is
-    BasePoolSplitCodeFactory,
-    FactoryWidePauseWindow
-{
-    constructor(IVault vault)
-        BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode)
-    {
+contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+    constructor(IVault vault) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -45,10 +40,7 @@ contract GyroTwoPoolFactory is
         bool oracleEnabled,
         address owner
     ) external returns (address) {
-        (
-            uint256 pauseWindowDuration,
-            uint256 bufferPeriodDuration
-        ) = getPauseConfiguration();
+        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
 
         GyroTwoPool.GyroParams memory params = GyroTwoPool.GyroParams({
             baseParams: ExtensibleWeightedPool2Tokens.NewPoolParams({
