@@ -106,13 +106,13 @@ def liquidityInvariantUpdate(
     root3Alpha: D,
     lastInvariant: D,
     deltaBalances: Iterable[D],
-    isIncreaseLiq: bool,
+    isIncreaseLiq: bool
 ) -> D:
     indices = maxOtherBalances(balances)
     # virtual offsets
     virtualOffset = lastInvariant * root3Alpha
     # cube root of p_x p_y
-    cbrtPxPy = calculateCbrtPrice(lastInvariant, deltaBalances[indices[0]] + virtualOffset)
+    cbrtPxPy = calculateCbrtPrice(lastInvariant, balances[indices[0]] + virtualOffset)
     diffInvariant = deltaBalances[indices[0]] / (cbrtPxPy - root3Alpha)
 
     if isIncreaseLiq == True:
@@ -123,8 +123,27 @@ def liquidityInvariantUpdate(
 
 
 def maxOtherBalances(balances: Iterable[D]) -> Iterable[D]:
-    # May not give exactly the same outputs as the solidity version
-    return np.argsort(list(balances))
+    indices = [0,0,0]
+    if (balances[0] >= balances[1]):
+        if (balances[0] >= balances[2]):
+            indices[0] = 0
+            indices[1] = 1
+            indices[2] = 2
+        else:
+            indices[0] = 2
+            indices[1] = 0
+            indices[2] = 1
+    else:
+        if (balances[1] >= balances[2]):
+            indices[0] = 1
+            indices[1] = 0
+            indices[2] = 2
+        else:
+            indices[0] = 2
+            indices[1] = 1
+            indices[2] = 0 
+
+    return indices
 
 
 def calcOutGivenIn(balanceIn: D, balanceOut: D, amountIn: D, virtualOffset: D) -> D:

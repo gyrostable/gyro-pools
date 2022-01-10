@@ -167,11 +167,18 @@ contract GyroThreeMathTesting {
     // Must be declared here, otherwise we can't see it.
     event NewtonStep(bool high, uint256 delta, uint256 l);
 
-
-    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha)
-        external
-        returns (uint256)
-    {
+    function calculateInvariantDebug(
+        uint256[] memory balances,
+        uint256 root3Alpha
+    ) external returns (uint256) {
         return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
+    }
+
+    function maxOtherBalances(uint256[] memory balances)
+        external
+        pure
+        returns (uint8[] memory)
+    {
+        return GyroThreeMath.maxOtherBalances(balances);
     }
 }

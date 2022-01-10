@@ -90,6 +90,20 @@ def test_calculate_cbrt_price(gyro_three_math_testing, invariant, virtual_z):
     assert to_decimal(cbrt_price_sol) == scale(cbrt_price).approxed()
 
 
+
+@given(balances=st.tuples(
+        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+    )
+)
+def test_max_other_balances(gyro_three_math_testing, balances):
+
+    array = math_implementation.maxOtherBalances(to_decimal(balances))
+
+    array_sol = gyro_three_math_testing.maxOtherBalances(scale(balances))
+
+    assert to_decimal(array_sol[0]) == array[0]
+
+# Delta balances are supposed to be proportional; here they are just random
 @given(
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
@@ -116,14 +130,14 @@ def test_liquidity_invariant_update(
         to_decimal(root_three_alpha),
         to_decimal(last_invariant),
         to_decimal(delta_balances),
-        True,
+        True
     )
     new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
         scale(balances),
         scale(root_three_alpha),
         scale(last_invariant),
         scale(delta_balances),
-        True,
+        True
     )
 
     assert to_decimal(new_invariant_sol) == scale(new_invariant).approxed()
