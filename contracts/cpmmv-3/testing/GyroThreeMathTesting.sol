@@ -3,6 +3,7 @@ pragma solidity ^0.7.0;
 /// @dev We can't call the functions of the math library for testing b/c they're internal. That's why this contract forwards calls to the math library.
 
 import "../GyroThreeMath.sol";
+import "./GyroThreeMathDebug.sol";
 
 contract GyroThreeMathTesting {
     function calculateInvariant(uint256[] memory balances, uint256 root3Alpha)
@@ -160,5 +161,17 @@ contract GyroThreeMathTesting {
                 protocolSwapFeePerc,
                 protocolFeeGyroPortion
             );
+    }
+
+    // DEBUG
+    // Must be declared here, otherwise we can't see it.
+    event NewtonStep(bool high, uint256 delta, uint256 l);
+
+
+    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha)
+        external
+        returns (uint256)
+    {
+        return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
     }
 }
