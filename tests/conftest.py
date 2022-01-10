@@ -1,37 +1,9 @@
-from collections import namedtuple
-
 from tests.support.quantized_decimal import QuantizedDecimal as D
 import pytest
 
+from tests.support.types import TwoPoolBaseParams, TwoPoolParams
+
 TOKENS_PER_USER = 1000 * 10 ** 18
-
-BASE_PARAMS = namedtuple(
-    "BaseParams",
-    [
-        "vault",  # IVault
-        "name",  # string
-        "symbol",  # string
-        "token0",  # IERC20
-        "token1",  # IERC20
-        "normalizedWeight0",  # uint256
-        "normalizedWeight1",  # uint256
-        "swapFeePercentage",  # uint256
-        "pauseWindowDuration",  # uint256
-        "bufferPeriodDuration",  # uint256
-        "oracleEnabled",  # bool
-        "owner",  # address
-    ],
-)
-
-
-GYRO_PARAMS = namedtuple(
-    "GyroParams",
-    [
-        "baseParams",  # BaseParams
-        "sqrtAlpha",  # uint256, should already be upscaled
-        "sqrtBeta",  # uint256, Should already be upscaled
-    ],
-)
 
 
 @pytest.fixture(scope="module")
@@ -47,6 +19,11 @@ def users(accounts):
 @pytest.fixture(scope="module")
 def gyro_two_math_testing(admin, GyroTwoMathTesting):
     return admin.deploy(GyroTwoMathTesting)
+
+
+@pytest.fixture(scope="module")
+def mock_gyro_config(admin, MockGyroConfig):
+    return admin.deploy(MockGyroConfig)
 
 
 @pytest.fixture(scope="module")
@@ -89,35 +66,42 @@ def balancer_vault(admin, BalancerVault, SimpleERC20, authorizer):
 
 @pytest.fixture(scope="module")
 def balancer_vault_pool(
-    admin, GyroTwoPool, gyro_erc20_funded, balancer_vault, QueryProcessor
+    admin,
+    GyroTwoPool,
+    gyro_erc20_funded,
+    balancer_vault,
+    QueryProcessor,
+    mock_gyro_config,
 ):
     admin.deploy(QueryProcessor)
-    args = GYRO_PARAMS(
-        baseParams=BASE_PARAMS(
+    args = TwoPoolParams(
+        baseParams=TwoPoolBaseParams(
             vault=balancer_vault.address,
             name="GyroTwoPool",  # string
             symbol="GTP",  # string
             token0=gyro_erc20_funded[0].address,  # IERC20
             token1=gyro_erc20_funded[1].address,  # IERC20
-            normalizedWeight0=0.6 * 10 ** 18,  # uint256
-            normalizedWeight1=0.4 * 10 ** 18,  # uint256
+            normalizedWeight0=D("0.6") * 10 ** 18,  # uint256
+            normalizedWeight1=D("0.4") * 10 ** 18,  # uint256
             swapFeePercentage=1 * 10 ** 15,  # 0.5%
             pauseWindowDuration=0,  # uint256
             bufferPeriodDuration=0,  # uint256
             oracleEnabled=False,  # bool
             owner=admin,  # address
         ),
-        sqrtAlpha=0.97 * 10 ** 18,  # uint256
-        sqrtBeta=1.02 * 10 ** 18,  # uint256
+        sqrtAlpha=D("0.97") * 10 ** 18,  # uint256
+        sqrtBeta=D("1.02") * 10 ** 18,  # uint256
     )
-    return admin.deploy(GyroTwoPool, args)
+    return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
 
 @pytest.fixture(scope="module")
-def mock_vault_pool(admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProcessor):
+def mock_vault_pool(
+    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProcessor, mock_gyro_config
+):
     admin.deploy(QueryProcessor)
-    args = GYRO_PARAMS(
-        baseParams=BASE_PARAMS(
+    args = TwoPoolParams(
+        baseParams=TwoPoolBaseParams(
             vault=mock_vault.address,
             name="GyroTwoPool",  # string
             symbol="GTP",  # string
@@ -134,7 +118,7 @@ def mock_vault_pool(admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProc
         sqrtAlpha=D("0.97") * 10 ** 18,  # uint256
         sqrtBeta=D("1.02") * 10 ** 18,  # uint256
     )
-    return admin.deploy(GyroTwoPool, args)
+    return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
 
 @pytest.fixture(scope="module")

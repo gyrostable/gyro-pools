@@ -1,5 +1,7 @@
 from typing import NamedTuple
 
+from tests.support.quantized_decimal import DecimalLike
+
 address = str
 
 
@@ -30,3 +32,24 @@ class SwapRequest(NamedTuple):
     from_aux: address
     to: address
     userData: bytes
+
+
+class TwoPoolBaseParams(NamedTuple):
+    vault: str
+    name: str
+    symbol: str
+    token0: str
+    token1: str
+    normalizedWeight0: DecimalLike
+    normalizedWeight1: DecimalLike
+    swapFeePercentage: DecimalLike
+    pauseWindowDuration: DecimalLike
+    bufferPeriodDuration: DecimalLike
+    oracleEnabled: bool
+    owner: str
+
+
+class TwoPoolParams(NamedTuple):
+    baseParams: TwoPoolBaseParams
+    sqrtAlpha: DecimalLike  # should already be upscaled
+    sqrtBeta: DecimalLike  # Should already be upscaled
