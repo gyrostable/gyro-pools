@@ -107,8 +107,6 @@ def test_pool_on_join(users, mock_vault_pool, mock_vault):
 
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
 
-    # # TODO make these amounts asymmetric everywhere
-
     sqrtParams = mock_vault_pool.getSqrtParameters()
     sqrtAlpha = sqrtParams[0] / (10 ** 18)
     sqrtBeta = sqrtParams[1] / (10 ** 18)

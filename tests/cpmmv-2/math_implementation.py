@@ -6,9 +6,7 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 _MAX_IN_RATIO = D("0.3")
 _MAX_OUT_RATIO = D("0.3")
 
-# Kinda arbitrary. It also almost doesn't matter b/c Newton is so fast in the end.
 prec_convergence = D("1E-18")
-# TODO I guess this should match precision of QuantizedDecimal.
 
 
 def squareRoot(input: D):

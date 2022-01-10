@@ -9,9 +9,7 @@ _MAX_OUT_RATIO = D("0.3")
 
 prec_convergence = D(
     "1E-18"
-)  # Kinda arbitrary. It also almost doesn't matter b/c Newton is so fast in the end.
-# TODO I guess this should match precision of QuantizedDecimal.
-
+)
 
 def calculateInvariant(balances: Iterable[D], root3Alpha: D) -> D:
     (a, mb, mc, md) = calculateCubicTerms(balances, root3Alpha)
@@ -70,14 +68,11 @@ def calculateInvariantNewton(
     delta_pre = None  # Not really used, only to flag the first iteration.
 
     while True:
-        # todo ~ some potential to optimize evaluation using Horner's schema.
-        # Alt, to make the numbers smaller, intersperse division by df_l.
         # delta = f(l)/f'(l)
         f_l = a * l ** 3 + b * l ** 2 + c * l + d
 
         # Compute derived values for comparison:
-        # TESTING only; co  uld base the exit condition on this if I really wanted
-        # todo ~ should prob resolve/simplify these conditions if I really wanna use them
+        # TESTING only; could base the exit condition on this if I really wanted
         gamma = l ** 2 / ((x + l * alpha1) * (y + l * alpha1))  # 3√(px py)
         px = (z + l * alpha1) / (x + l * alpha1)
         py = (z + l * alpha1) / (y + l * alpha1)

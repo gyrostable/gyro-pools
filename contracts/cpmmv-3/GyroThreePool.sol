@@ -75,7 +75,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
 
-        // TODO maybe put a stricter bound here, like 0.9999
         _require(root3Alpha < 1, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
         _root3Alpha = root3Alpha;
     }
@@ -625,7 +624,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             address
         )
     {
-        // TODO: Get the fee parameters from GyroConfig
         // Next line needs to be altered in with calling GyroConfig, for now hardcoding something
         return (0, 1e18, address(0), address(0));
     }
