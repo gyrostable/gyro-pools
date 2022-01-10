@@ -215,44 +215,53 @@ library GyroThreeMath {
         //           /            dZ            \                                                    //
         //    dL =  | -------------------------- |                                                   //
         //           \ ( cbrtPxPy - root3Alpha) /                                                    //
-        //                                                                                           //
+        // Note: this calculation holds for reordering of assets {X,Y,Z}                             //
+        // To ensure denominator is well-defined, we reorder to work with assets of largest balance  //
         **********************************************************************************************/
+
+        // this reorders indices so that we know which has max balance
+        // this is needed to ensure that cbrtPxPy - root3Alpha is not close to zero in denominator
+        // we will want to use the largest two assets to represent x and y, smallest to represent z
+        uint8[] memory indices = maxOtherBalances(lastBalances);
 
         // all offsets are L * root3Alpha b/c symmetric, see 3.1.4
         uint256 virtualOffset = lastInvariant.mulDown(root3Alpha);
-        uint256 virtZ = lastBalances[2].add(virtualOffset);
+        uint256 virtZ = lastBalances[indices[0]].add(virtualOffset);
         uint256 cbrtPrice = _calculateCbrtPrice(lastInvariant, virtZ);
         uint256 denominator = cbrtPrice.sub(root3Alpha);
-        uint256 diffInvariant = diffZ.divDown(denominator);
+        uint256 diffInvariant = deltaBalances[indices[0]].divDown(denominator);
         invariant = isIncreaseLiq
             ? lastInvariant.add(diffInvariant)
             : lastInvariant.sub(diffInvariant);
     }
 
-
-    // Ensures balances[i] <= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
-    // comparison.
-    function minOtherBalances(uint256[] memory balances) internal returns (uint8[3] memory indices) {
-        if (balances[0] <= balances[1]) {
-            if (balances[0] <= balances[2]) {
+    // Ensures balances[i] >= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
+    // comparison. In particular, the 0th entry will be the maximum
+    function maxOtherBalances(uint256[] memory balances)
+        internal
+        pure
+        returns (uint8[] memory indices)
+    {
+        indices = new uint8[](3);
+        if (balances[0] >= balances[1]) {
+            if (balances[0] >= balances[2]) {
                 indices[0] = 0;
                 indices[1] = 1;
-                indices[2] = 2;
-            }
-            else {
-                indices[0] = 2;
-                indices[1] = 0;
-                indices[2] = 1;
-            }
-        } else {
-            if (balances[1] <= balances[2]) {
-                indices[0] = 1;
-                indices[1] = 0;
                 indices[2] = 2;
             } else {
                 indices[0] = 2;
                 indices[1] = 0;
                 indices[2] = 1;
+            }
+        } else {
+            if (balances[1] >= balances[2]) {
+                indices[0] = 1;
+                indices[1] = 0;
+                indices[2] = 2;
+            } else {
+                indices[0] = 2;
+                indices[1] = 1;
+                indices[2] = 0;
             }
         }
     }

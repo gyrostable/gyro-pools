@@ -68,7 +68,7 @@ contract GyroThreeMathTesting {
         uint256[] memory lastBalances,
         uint256 root3Alpha,
         uint256 lastInvariant,
-        uint256 incrZ,
+        uint256[] memory amountsIn,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
         return
@@ -76,7 +76,7 @@ contract GyroThreeMathTesting {
                 lastBalances,
                 root3Alpha,
                 lastInvariant,
-                incrZ,
+                amountsIn,
                 isIncreaseLiq
             );
     }
