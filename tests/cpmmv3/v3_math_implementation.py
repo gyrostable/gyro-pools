@@ -1,7 +1,7 @@
 from logging import warning
 from typing import Iterable
-import numpy as np
 
+import numpy as np
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
 _MAX_IN_RATIO = D("0.3")
@@ -117,8 +117,8 @@ def liquidityInvariantUpdate(
     # virtual offsets
     virtualOffset = lastInvariant * root3Alpha
     # cube root of p_x p_y
-    cbrtPxPy = calculateCbrtPrice(lastInvariant, balances[indices[0]] + virtualOffset)
-    diffInvariant = balances[indices[0]] / (cbrtPxPy - root3Alpha)
+    cbrtPxPy = calculateCbrtPrice(lastInvariant, deltaBalances[indices[0]] + virtualOffset)
+    diffInvariant = deltaBalances[indices[0]] / (cbrtPxPy - root3Alpha)
 
     if isIncreaseLiq == True:
         invariant = lastInvariant + diffInvariant
@@ -128,6 +128,7 @@ def liquidityInvariantUpdate(
 
 
 def maxOtherBalances(balances: Iterable[D]) -> Iterable[D]:
+    # May not give exactly the same outputs as the solidity version
     return np.argsort(list(balances))
 
 

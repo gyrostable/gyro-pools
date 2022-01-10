@@ -94,13 +94,14 @@ def test_calculate_cbrt_price(gyro_three_math_testing, invariant, virtual_z):
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     ),
+    delta_balances=st.tuples(
+        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+    ),
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ),
-    diff_z=st.decimals(min_value="100", max_value="1000000000", places=4),
-)
+    ))
 def test_liquidity_invariant_update(
-    gyro_three_math_testing, balances, root_three_alpha, diff_z
+    gyro_three_math_testing, balances, root_three_alpha, delta_balances
 ):
 
     if faulty_params(balances, root_three_alpha):
@@ -114,17 +115,14 @@ def test_liquidity_invariant_update(
         to_decimal(balances),
         to_decimal(root_three_alpha),
         to_decimal(last_invariant),
-        to_decimal(diff_z),
+        to_decimal(delta_balances),
         True,
     )
-
-    # if new_invariant < 0:
-    #     return
     new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
         scale(balances),
         scale(root_three_alpha),
         scale(last_invariant),
-        scale(diff_z),
+        scale(delta_balances),
         True,
     )
 
