@@ -34,6 +34,9 @@ def scale_scalar(x: DecimalLike, decimals: int = 18) -> QuantizedDecimal:
     return (to_decimal(x) * 10 ** decimals).floor()
 
 
+def unscale_scalar(x: DecimalLike, decimals: int = 18) -> QuantizedDecimal:
+    return to_decimal(x) / 10**decimals
+
 @overload
 def scale(
     x: Union[List[DecimalLike], Tuple[DecimalLike, ...]]
@@ -50,6 +53,11 @@ def scale(x, decimals=18):
     if isinstance(x, (list, tuple)):
         return [scale_scalar(v, decimals) for v in x]
     return scale_scalar(x, decimals)
+
+def unscale(x, decimals=18):
+    if isinstance(x, (list, tuple)):
+        return [unscale_scalar(v, decimals) for v in x]
+    return unscale_scalar(x, decimals)
 
 def qdecimals(*args, **kwargs) -> st.SearchStrategy[QuantizedDecimal]:
     return st.decimals(*args, **kwargs).map(QuantizedDecimal)
