@@ -79,11 +79,27 @@ def test_InOut_inverse(gyro_three_math_testing):
     run_test_InOut_inverse(gyro_three_math_testing, [10_000_000, 2_000_000, 10_000_000_000], D('0.9997'), 500_000, 0, 2)
     run_test_InOut_inverse(gyro_three_math_testing, [10_000_000, 2_000_000, 10_000_000_000], D('0.9999'), 200, 1, 0)
 
+@given(
+    balances=gen_balances(),
+    root3Alpha=gen_root3Alpha(),
+    amountIn=qdecimals(min_value=0, max_value=500_000),
+    ixIn=st.integers(0, 2),
+    ixOut=st.integers(0, 2)
+)
+def test_auto_InOut_inverse(gyro_three_math_testing, balances, root3Alpha, amountIn, ixIn, ixOut):
+    # Note: This way of generating samples is basically rejection sampling. Performance is not great. If it becomes a
+    # problem, we could also generate data such that these properties hold automatically, using @composite or data().
+    assume(ixIn != ixOut)
+    assume(amountIn > 0)
+    assume(amountIn <= 0.2 * balances[ixIn])
+    assume(amountIn <= 0.2 * balances[ixOut])
+    run_test_InOut_inverse(gyro_three_math_testing, balances, root3Alpha, amountIn, ixIn, ixOut)
+
 def run_test_calcInGivenOut_pricebounds(gyro_three_math_testing, balances, root3Alpha, amountOut, ixIn, ixOut):
-    invariant = unscale(gyro_three_math_testing._calculateInvariant(scale(balances), scale(root3Alpha)))
+    invariant = unscale(gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha)))
     virtualOffsetInOut = invariant * root3Alpha
 
-    amountIn = unscale(gyro_three_math_testing._calcInGivenOut(
+    amountIn = unscale(gyro_three_math_testing.calcInGivenOut(
         scale(balances[ixIn]), scale(balances[ixOut]), scale(amountOut), scale(virtualOffsetInOut)
     ))
 
@@ -92,10 +108,10 @@ def run_test_calcInGivenOut_pricebounds(gyro_three_math_testing, balances, root3
     assert alpha < amountOut / amountIn < D(1)/alpha
 
 def run_test_calcOutGivenIn_pricebounds(gyro_three_math_testing, balances, root3Alpha, amountIn, ixIn, ixOut):
-    invariant = unscale(gyro_three_math_testing._calculateInvariant(scale(balances), scale(root3Alpha)))
+    invariant = unscale(gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha)))
     virtualOffsetInOut = invariant * root3Alpha
 
-    amountOut = unscale(gyro_three_math_testing._calcOutGivenIn(
+    amountOut = unscale(gyro_three_math_testing.calcOutGivenIn(
         scale(balances[ixIn]), scale(balances[ixOut]), scale(amountIn), scale(virtualOffsetInOut)
     ))
 
@@ -105,19 +121,19 @@ def run_test_calcOutGivenIn_pricebounds(gyro_three_math_testing, balances, root3
 
 
 def run_test_InOut_inverse(gyro_three_math_testing, balances, root3Alpha, amountIn, ixIn, ixOut):
-    invariant = unscale(gyro_three_math_testing._calculateInvariant(scale(balances), scale(root3Alpha)))
+    invariant = unscale(gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha)))
     virtualOffsetInOut = invariant * root3Alpha
 
-    amountOut = unscale(gyro_three_math_testing._calcOutGivenIn(
+    amountOut = unscale(gyro_three_math_testing.calcOutGivenIn(
         scale(balances[ixIn]), scale(balances[ixOut]), scale(amountIn), scale(virtualOffsetInOut)
     ))
-    amountIn1 = unscale(gyro_three_math_testing._calcInGivenOut(
+    amountIn1 = unscale(gyro_three_math_testing.calcInGivenOut(
         scale(balances[ixIn]), scale(balances[ixOut]), scale(amountOut), scale(virtualOffsetInOut)
     ))
 
     assert amountIn1 == to_decimal(amountIn).approxed()
 
-    amountOut1 = unscale(gyro_three_math_testing._calcOutGivenIn(
+    amountOut1 = unscale(gyro_three_math_testing.calcOutGivenIn(
         scale(balances[ixIn]), scale(balances[ixOut]), scale(amountIn1), scale(virtualOffsetInOut)
     ))
 
