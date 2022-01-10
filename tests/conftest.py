@@ -137,8 +137,8 @@ def mock_gyro_two_oracle_math(admin, MockGyroTwoOracleMath):
 
 
 @pytest.fixture(scope="module")
-def pool_factory(admin, GyroTwoPoolFactory):
-    return admin.deploy(GyroTwoPoolFactory, balancer_vault)
+def pool_factory(admin, GyroTwoPoolFactory, gyro_config):
+    return admin.deploy(GyroTwoPoolFactory, balancer_vault, gyro_config.address)
 
 
 @pytest.fixture(autouse=True)

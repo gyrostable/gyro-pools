@@ -17,6 +17,9 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
 
+import "../../libraries/GyroConfigKeys.sol";
+import "../../interfaces/IGyroConfig.sol";
+
 import "./ExtensibleBaseWeightedPool.sol";
 import "./GyroThreeMath.sol";
 import "./GyroThreePoolErrors.sol";
@@ -29,6 +32,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     using WeightedPoolUserDataHelpers for bytes;
 
     uint256 private _root3Alpha;
+
+    IGyroConfig public gyroConfig;
 
     uint256 private constant _MAX_TOKENS = 3;
 
@@ -53,7 +58,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 swapFeePercentage,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
-        address owner
+        address owner,
+        address configAddress
     )
         ExtensibleBaseWeightedPool(
             vault,
@@ -79,6 +85,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         _require(root3Alpha < 1, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
         _root3Alpha = root3Alpha;
+        gyroConfig = IGyroConfig(configAddress);
     }
 
     // We don't support weights at the moment; in other words, all tokens are always weighted equally and thus their
@@ -585,7 +592,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
     function _getFeesMetadata()
         internal
-        pure
+        view
         returns (
             uint256,
             uint256,
@@ -593,7 +600,11 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             address
         )
     {
-        // Next line needs to be altered in with calling GyroConfig, for now hardcoding something
-        return (0, 1e18, address(0), address(0));
+        return (
+            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY),
+            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
+            gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
+            gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
+        );
     }
 }
