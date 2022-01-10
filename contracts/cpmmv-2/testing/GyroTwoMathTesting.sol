@@ -43,7 +43,7 @@ contract GyroTwoMathTesting {
         uint256 sqrtAlpha,
         uint256 sqrtBeta,
         uint256 lastInvariant,
-        uint256 incrY,
+        uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
         return
@@ -52,7 +52,7 @@ contract GyroTwoMathTesting {
                 sqrtAlpha,
                 sqrtBeta,
                 lastInvariant,
-                incrY,
+                deltaBalances,
                 isIncreaseLiq
             );
     }

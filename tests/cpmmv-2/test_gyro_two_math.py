@@ -88,7 +88,10 @@ def test_liquidityInvariant_Update(gyro_two_math_testing):
             sqrtAlpha * 10**18,       # sqrtAlpha   
             sqrtBeta * 10**18 , # sqrtBeta
             lastInvariant,
-            incrY* 10**18,
+            [
+                None,   # Dummy, won't be used.
+                incrY* 10**18,
+            ],
             isIncreaseLiq
          )
         L= lastInvariant / 10**18

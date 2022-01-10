@@ -1,3 +1,4 @@
+from operator import add, sub
 from typing import Iterable
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -55,18 +56,35 @@ def liquidityInvariantUpdate(
     sqrtAlpha: D,
     sqrtBeta: D,
     lastInvariant: D,
-    diffY: D,
+    deltaBalances: Iterable[D],
     isIncreaseLiq: bool,
 ) -> D:
     x, y = balances
+    dx, dy = deltaBalances
     virtualX = x + lastInvariant / sqrtBeta
     sqrtPx = calculateSqrtPrice(lastInvariant, virtualX)
-    diffInvariant = diffY / (sqrtPx - sqrtAlpha)
+    if x <= y:
+        diffInvariant = dy / (sqrtPx - sqrtAlpha)
+    else:
+        diffInvariant = dx / (1/sqrtPx - 1/sqrtBeta)
     if isIncreaseLiq == True:
         invariant = lastInvariant + diffInvariant
     else:
         invariant = lastInvariant - diffInvariant
     return invariant
+
+
+def liquidityInvariantUpdate_fromscratch(
+    balances: Iterable[D],
+    sqrtAlpha: D,
+    sqrtBeta: D,
+    lastInvariant: D,
+    deltaBalances: Iterable[D],
+    isIncreaseLiq: bool,
+) -> D:
+    """Ignore lastInvariant, just recompute everything from scratch. For testing."""
+    op = add if isIncreaseLiq else sub
+    return calculateInvariant(map(op, balances, deltaBalances), sqrtAlpha, sqrtBeta)
 
 
 def calcOutGivenIn(

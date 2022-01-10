@@ -130,7 +130,7 @@ library GyroTwoMath {
     }
 
     /** @dev calculates change in invariant following an add or remove liquidity operation
-     *   This assumes that the liquidity provided was correctly balanced
+     *   This assumes that the liquidity provided was correctly balanced.
      *   Using this instead of _calculateInvariant saves evaluating a square root
      */
     function _liquidityInvariantUpdate(
@@ -138,7 +138,7 @@ library GyroTwoMath {
         uint256 sqrtAlpha,
         uint256 sqrtBeta,
         uint256 lastInvariant,
-        uint256 diffY,
+        uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) internal pure returns (uint256 invariant) {
         /**********************************************************************************************
@@ -148,15 +148,22 @@ library GyroTwoMath {
       // dY = change in Y reserves, absolute value (sign information in isIncreaseLiq)             //
       // sqrtPx = Square root of Price p_x              sqrtPx =  L / x'                           //
       // x' = virtual reserves X (real reserves + offsets)                                         //
-      //                                /              dY             \                            //
-      //                    dL =       |   --------------------------  |                           //
-      //                               \    ( sqrtPx - sqrtAlpha)     /                            //
-      //                                                                                           //
+      //                 /            dY            \       /            dX            \           //
+      //          dL =  | -------------------------- |  =  | -------------------------- |          //
+      //                 \  (sqrtPx - sqrtAlpha)    /       \ (1/sqrtPx - 1/sqrtBeta)  /           //
+      // One of the denominators, but not both, can be 0. We dynamically choose the formula that   //
+      // gives the best numerical stability.                                                       //
       **********************************************************************************************/
         uint256 virtualX = lastBalances[0] + lastInvariant.divUp(sqrtBeta);
         uint256 sqrtPx = _calculateSqrtPrice(lastInvariant, virtualX);
-        uint256 denominator = sqrtPx.sub(sqrtAlpha);
-        uint256 diffInvariant = diffY.divDown(denominator);
+        uint256 diffInvariant;
+        if (lastBalances[0] <= lastBalances[1]) {
+            uint256 denominator = sqrtPx.sub(sqrtAlpha);
+            diffInvariant = deltaBalances[1].divDown(denominator);
+        } else {
+            uint256 denominator = FixedPoint.ONE.divUp(sqrtPx).sub(FixedPoint.ONE.divDown(sqrtBeta));
+            diffInvariant = deltaBalances[0].divDown(denominator);
+        }
         invariant = isIncreaseLiq
             ? lastInvariant.add(diffInvariant)
             : lastInvariant.sub(diffInvariant);

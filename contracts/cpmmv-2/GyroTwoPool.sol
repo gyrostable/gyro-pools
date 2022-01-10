@@ -451,7 +451,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             sqrtParams[0],
             sqrtParams[1],
             invariantBeforeAction,
-            amountsIn[1],
+            amountsIn,
             true
         );
 
@@ -564,7 +564,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
                 sqrtParams[0],
                 sqrtParams[1],
                 invariantBeforeAction,
-                amountsOut[1],
+                amountsOut,
                 false
             );
         } else {
