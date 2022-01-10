@@ -202,7 +202,7 @@ library GyroThreeMath {
         uint256[] memory lastBalances,
         uint256 root3Alpha,
         uint256 lastInvariant,
-        uint256 diffZ,
+        uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) internal pure returns (uint256 invariant) {
         /**********************************************************************************************
@@ -212,10 +212,10 @@ library GyroThreeMath {
         // dZ = change in Z reserves, absolute value (sign information in isIncreaseLiq)             //
         // cbrtPxPy = Square root of (Price p_x * Price p_y)     cbrtPxPy =  z' / L                  //
         // x' = virtual reserves X (real reserves + offsets)                                         //
-        //                                /              dZ             \                            //
-        //                    dL =       |   --------------------------  |                           //
-        //                               \    ( cbrtPxPy - root3Alpha)  /                            //
-        //                                                                                           //
+        //           /            dZ            \                            //
+        //    dL =  | -------------------------- |                           //
+        //           \ ( cbrtPxPy - root3Alpha) /                            //
+        //                                                                           //
         **********************************************************************************************/
 
         // all offsets are L * root3Alpha b/c symmetric, see 3.1.4
