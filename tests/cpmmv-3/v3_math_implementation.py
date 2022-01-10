@@ -1,7 +1,7 @@
-from tests.support.quantized_decimal import QuantizedDecimal as D
-
 from logging import warning
 from typing import Iterable
+
+from tests.support.quantized_decimal import QuantizedDecimal as D
 
 _MAX_IN_RATIO = D("0.3")
 _MAX_OUT_RATIO = D("0.3")
@@ -23,7 +23,7 @@ def calculateCubicTerms(balances: Iterable[D], root3Alpha: D) -> tuple[D, D, D, 
     b = -(x + y + z) * root3Alpha * root3Alpha
     c = -(x * y + y * z + z * x) * root3Alpha
     d = -x * y * z
-    assert a > 0 and b < 0 and c < 0 and d <= 0
+    assert a > 0 and b < 0 and c <= 0 and d <= 0
     return a, -b, -c, -d
 
 

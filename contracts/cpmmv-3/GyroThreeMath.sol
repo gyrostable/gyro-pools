@@ -60,7 +60,7 @@ library GyroThreeMath {
     }
 
     /** @dev Prepares quadratic terms for input to _calculateCubic
-     *  assumes a > 0, b < 0, c < 0, and d <= 0 and returns a, -b, -c, -d
+     *  assumes a > 0, b < 0, c <= 0, and d <= 0 and returns a, -b, -c, -d
      *  terms come from cubic in Section 3.1.1
      *  argument root3Alpha = cube root of alpha
      */
