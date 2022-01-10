@@ -20,6 +20,9 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
+import "../../libraries/GyroConfigKeys.sol";
+import "../../interfaces/IGyroConfig.sol";
+
 import "./ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2PoolErrors.sol";
 import "./GyroTwoMath.sol";
@@ -33,13 +36,15 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     uint256 private _sqrtAlpha;
     uint256 private _sqrtBeta;
 
+    IGyroConfig public gyroConfig;
+
     struct GyroParams {
         NewPoolParams baseParams;
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
     }
 
-    constructor(GyroParams memory params)
+    constructor(GyroParams memory params, address configAddress)
         ExtensibleWeightedPool2Tokens(params.baseParams)
     {
         _require(
@@ -48,6 +53,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         );
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
+
+        gyroConfig = IGyroConfig(configAddress);
     }
 
     // Returns sqrtAlpha and sqrtBeta (square roots of lower and upper price bounds of p_x respectively)
@@ -722,7 +729,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
     function _getFeesMetadata()
         internal
-        pure
+        view
         returns (
             uint256,
             uint256,
@@ -730,9 +737,12 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             address
         )
     {
-        // TODO: Get the fee parameters from GyroConfig
-        // Next line needs to be altered in with calling GyroConfig, for now hardcoding something
-        return (0, 1e18, address(0), address(0));
+        return (
+            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY),
+            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
+            gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
+            gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
+        );
     }
 
     /**
