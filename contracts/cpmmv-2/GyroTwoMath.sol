@@ -79,7 +79,7 @@ library GyroTwoMath {
 
     /** @dev Prepares quadratic terms for input to _calculateQuadratic
      *   works with a special case of quadratic that works nicely w/o negative numbers
-     *   assumes a > 0, b < 0, and c < 0 and returns a, -b, -c
+     *   assumes a > 0, b < 0, and c <= 0 and returns a, -b, -c
      */
     function _calculateQuadraticTerms(
         uint256[] memory balances,

@@ -341,6 +341,8 @@ def test_protocol_fees(gyro_two_math_testing, balances, sqrt_alpha, sqrt_beta, d
 
     old_invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta))
+    
+    print(old_invariant)
 
     new_invariant = math_implementation.liquidityInvariantUpdate(to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta), to_decimal(old_invariant), to_decimal(diff_y), True )
 
