@@ -186,7 +186,7 @@ library GyroTwoMath {
         uint256 virtualParamIn,
         uint256 virtualParamOut,
         uint256 currentInvariant
-    ) internal pure returns (uint256) {
+    ) internal pure returns (uint256 amountOut) {
         /**********************************************************************************************
       // Described for X = `in' asset and Y = `out' asset, but equivalent for the other case       //
       // dX = incrX  = amountIn  > 0                                                               //
@@ -207,7 +207,10 @@ library GyroTwoMath {
         uint256 invSquare = currentInvariant.mulUp(currentInvariant);
         uint256 subtrahend = invSquare.divUp(denominator);
         uint256 virtOut = balanceOut.add(virtualParamOut);
-        return virtOut.sub(subtrahend);
+        amountOut = virtOut.sub(subtrahend);
+
+        // This in particular ensures amountOut < balanceOut.
+        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
 
     // Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
@@ -221,7 +224,7 @@ library GyroTwoMath {
         uint256 virtualParamIn,
         uint256 virtualParamOut,
         uint256 currentInvariant
-    ) internal pure returns (uint256) {
+    ) internal pure returns (uint256 amountIn) {
         /**********************************************************************************************
       // dX = incrX  = amountIn  > 0                                                               //
       // dY = incrY  = amountOut < 0                                                               //
@@ -240,7 +243,9 @@ library GyroTwoMath {
         uint256 invSquare = currentInvariant.mulUp(currentInvariant);
         uint256 term = invSquare.divUp(denominator);
         uint256 virtIn = balanceIn.add(virtualParamIn);
-        return term.sub(virtIn);
+        amountIn = term.sub(virtIn);
+
+        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
     function _calcAllTokensInGivenExactBptOut(
