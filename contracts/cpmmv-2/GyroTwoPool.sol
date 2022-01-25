@@ -336,6 +336,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      * amounts are considered upscaled and will be downscaled (rounding down) before being returned to the Vault.
      *
      * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
+     *
+     * Note that this function does update the oracle. Instead, this is done in `onJoinPool()` (without the '_') which we inherit unmodified. This is different from `onExitPool()` and `_onExitPool()`.
      */
     function _onJoinPool(
         bytes32,
