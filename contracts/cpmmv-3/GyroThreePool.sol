@@ -31,7 +31,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
 
-    uint256 private _root3Alpha;
+    uint256 private immutable _root3Alpha;
 
     IGyroConfig public gyroConfig;
 

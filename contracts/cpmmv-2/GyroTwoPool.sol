@@ -33,8 +33,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
 
-    uint256 private _sqrtAlpha;
-    uint256 private _sqrtBeta;
+    uint256 private immutable _sqrtAlpha;
+    uint256 private immutable _sqrtBeta;
 
     IGyroConfig public gyroConfig;
 
