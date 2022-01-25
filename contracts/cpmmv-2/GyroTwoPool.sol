@@ -71,21 +71,11 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         return parameter0 ? _sqrtAlpha : _sqrtBeta;
     }
 
-    // Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
-
-    function getvirtualParameters() external view returns (uint256[] memory) {
-        return _getVirtualParameters();
-    }
-
-    function _getVirtualParameters() internal view returns (uint256[] memory) {
-        uint256[] memory virtualParameters = new uint256[](2);
-
-        uint256[] memory sqrtParams = _sqrtParameters();
-        uint256 _invariant = _lastInvariant;
-
-        virtualParameters[0] = _virtualParameters(true, sqrtParams[1], _invariant);
-        virtualParameters[1] = _virtualParameters(false, sqrtParams[0], _invariant);
-        return virtualParameters;
+    /// @dev Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
+     function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
+        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
+        (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(balances[0], balances[1], true);
     }
 
     function _getVirtualParameters(uint256[] memory sqrtParams, uint256 invariant)
@@ -142,13 +132,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         balanceTokenIn = _upscale(balanceTokenIn, scalingFactorTokenIn);
         balanceTokenOut = _upscale(balanceTokenOut, scalingFactorTokenOut);
 
-        // Update price oracle with the pre-swap balances
-        _updateOracle(
-            request.lastChangeBlock,
-            tokenInIsToken0 ? balanceTokenIn : balanceTokenOut,
-            tokenInIsToken0 ? balanceTokenOut : balanceTokenIn
-        );
-
         // All the calculations in one function to avoid Error Stack Too Deep
         (
             uint256 currentInvariant,
@@ -156,10 +139,20 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             uint256 virtualParamOut
         ) = _calculateCurrentValues(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
 
+        // Update price oracle with the pre-swap balances
+        _updateOracle(
+            request.lastChangeBlock,
+            tokenInIsToken0 ? balanceTokenIn : balanceTokenOut,
+            tokenInIsToken0 ? balanceTokenOut : balanceTokenIn,
+            tokenInIsToken0 ? virtualParamIn : virtualParamOut,
+            tokenInIsToken0 ? virtualParamOut : virtualParamIn
+        );
+
         if (request.kind == IVault.SwapKind.GIVEN_IN) {
             // Fees are subtracted before scaling, to reduce the complexity of the rounding direction analysis.
             // This is amount - fee amount, so we round up (favoring a higher fee amount).
             uint256 feeAmount = request.amount.mulUp(getSwapFeePercentage());
+            // TODO check this call: why do we need to upscale? Should we downscale??
             request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
             uint256 amountOut = _onSwapGivenIn(
@@ -475,9 +468,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
         if (_isNotPaused()) {
-            // Update price oracle with the pre-exit balances
-            _updateOracle(lastChangeBlock, balances[0], balances[1]);
-
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
@@ -486,6 +476,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
                 sqrtParams[0],
                 sqrtParams[1]
             );
+            uint256[] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
+
+            // Update price oracle with the pre-exit balances
+            _updateOracle(lastChangeBlock, balances[0], balances[1], virtualParam[0], virtualParam[1]);
 
             _distributeFees(invariantBeforeAction);
 
@@ -678,25 +672,24 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     function _updateOracle(
         uint256 lastChangeBlock,
         uint256 balanceToken0,
-        uint256 balanceToken1
-    ) internal override {
+        uint256 balanceToken1,
+        uint256 virtualParam0,
+        uint256 virtualParam1
+    ) internal {
         bytes32 miscData = _miscData;
         if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            uint256[] memory virtualParameters = new uint256[](2);
-            virtualParameters = _getVirtualParameters();
-
             int256 logSpotPrice = GyroTwoOracleMath._calcLogSpotPrice(
                 balanceToken0,
-                virtualParameters[0],
+                virtualParam0,
                 balanceToken1,
-                virtualParameters[1]
+                virtualParam1
             );
 
             int256 logBPTPrice = GyroTwoOracleMath._calcLogBPTPrice(
                 balanceToken0,
-                virtualParameters[0],
+                virtualParam0,
                 balanceToken1,
-                virtualParameters[1],
+                virtualParam1,
                 miscData.logTotalSupply()
             );
 
@@ -718,4 +711,17 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             }
         }
     }
+
+    /**
+     * @dev this function overrides inherited function to make sure it is never used.
+     * We instead use the version of _updateOracle() above, which accepts additional parameters to avoid re-calculation
+     * of the invariant.
+     */
+   function _updateOracle(
+        uint256 lastChangeBlock,
+        uint256 balanceToken0,
+        uint256 balanceToken1
+   ) internal override {
+       revert("Not implemented");
+   }
 }
