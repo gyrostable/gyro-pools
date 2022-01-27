@@ -337,14 +337,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      *
      * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      *
-     * Note that this function does update the oracle. Instead, this is done in `onJoinPool()` (without the '_') which we inherit unmodified. This is different from `onExitPool()` and `_onExitPool()`.
+     * Responsibility for updating the oracle has been moved from `onJoinPool()` (without the underscore) to this function. That is because both this function and `_updateOracle()` need access to the invariant and this way we can share the computation.
      */
     function _onJoinPool(
         bytes32,
         address,
         address,
         uint256[] memory balances,
-        uint256,
+        uint256 lastChangeBlock,
         uint256, //protocolSwapFeePercentage,
         bytes memory userData
     )
@@ -370,6 +370,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             sqrtParams[0],
             sqrtParams[1]
         );
+        uint256[] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
+
+        // Update price oracle with pre-join balances
+        _updateOracle(lastChangeBlock, balances[0], balances[1], virtualParam[0], virtualParam[1]);
 
         _distributeFees(invariantBeforeAction);
 
@@ -715,15 +719,13 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     }
 
     /**
-     * @dev this function overrides inherited function to make sure it is never used.
-     * We instead use the version of _updateOracle() above, which accepts additional parameters to avoid re-calculation
-     * of the invariant.
+     * @dev this variant of the function, called from `onJoinPool()` and `onExitPool()`, which we inherit, is a no-op. We instead have moved responsibility for updating the oracle to `_onJoinPool()` and `_onExitPool()` and the above version is called from there.
      */
    function _updateOracle(
         uint256 lastChangeBlock,
         uint256 balanceToken0,
         uint256 balanceToken1
    ) internal override {
-       revert("Not implemented");
+       // Do nothing.
    }
 }
