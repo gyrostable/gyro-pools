@@ -72,10 +72,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     }
 
     /// @dev Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
-     function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
+    function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
-        (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(balances[0], balances[1], true);
+        (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(
+            balances[0],
+            balances[1],
+            true
+        );
     }
 
     function _getVirtualParameters(uint256[] memory sqrtParams, uint256 invariant)
@@ -482,10 +486,19 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
                 sqrtParams[0],
                 sqrtParams[1]
             );
-            uint256[] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
+            uint256[] memory virtualParam = _getVirtualParameters(
+                sqrtParams,
+                invariantBeforeAction
+            );
 
             // Update price oracle with the pre-exit balances
-            _updateOracle(lastChangeBlock, balances[0], balances[1], virtualParam[0], virtualParam[1]);
+            _updateOracle(
+                lastChangeBlock,
+                balances[0],
+                balances[1],
+                virtualParam[0],
+                virtualParam[1]
+            );
 
             _distributeFees(invariantBeforeAction);
 
@@ -721,11 +734,11 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     /**
      * @dev this variant of the function, called from `onJoinPool()` and `onExitPool()`, which we inherit, is a no-op. We instead have moved responsibility for updating the oracle to `_onJoinPool()` and `_onExitPool()` and the above version is called from there.
      */
-   function _updateOracle(
+    function _updateOracle(
         uint256 lastChangeBlock,
         uint256 balanceToken0,
         uint256 balanceToken1
-   ) internal override {
-       // Do nothing.
-   }
+    ) internal override {
+        // Do nothing.
+    }
 }
