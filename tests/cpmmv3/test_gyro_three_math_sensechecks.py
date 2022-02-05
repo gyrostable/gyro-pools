@@ -247,7 +247,7 @@ def run_test_calcInGivenOut_pricebounds(
         )
     )
 
-    alpha = root3Alpha ** 3
+    alpha = root3Alpha**3
 
     assert alpha < amountOut / amountIn < D(1) / alpha
 
@@ -269,7 +269,7 @@ def run_test_calcOutGivenIn_pricebounds(
         )
     )
 
-    alpha = root3Alpha ** 3
+    alpha = root3Alpha**3
 
     assert alpha < amountOut / amountIn < D(1) / alpha
 
