@@ -22,6 +22,9 @@ def gyro_two_math_testing(admin, GyroTwoMathTesting):
 
 
 @pytest.fixture(scope="module")
+def gyro_cemm_math_testing(admin, GyroCEMMMathTesting):
+    return admin.deploy(GyroCEMMMathTesting)
+@pytest.fixture(scope="module")
 def gyro_three_math_testing(admin, GyroThreeMathTesting):
     return admin.deploy(GyroThreeMathTesting)
 
@@ -130,6 +133,9 @@ def mock_vault_pool(
 def math_testing(admin, MathTesting):
     return admin.deploy(MathTesting)
 
+@pytest.fixture(scope="module")
+def signed_math_testing(admin, SignedMathTesting):
+    return admin.deploy(SignedMathTesting)
 
 @pytest.fixture(scope="module")
 def mock_gyro_two_oracle_math(admin, MockGyroTwoOracleMath):
