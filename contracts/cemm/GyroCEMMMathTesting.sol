@@ -3,7 +3,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "../GyroCEMMMath.sol";
+import "./GyroCEMMMath.sol";
 
 contract GyroCEMMMathTesting {
     function scalarProdUp(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2)

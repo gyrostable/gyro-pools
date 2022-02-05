@@ -23,8 +23,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.so
 import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 
-import "./ExtensibleWeightedPool2Tokens.sol";
-import "./Gyro2PoolErrors.sol";
+import "../cpmmv-2/ExtensibleWeightedPool2Tokens.sol";
 import "./GyroCEMMMath.sol";
 import "./GyroCEMMOracleMath.sol";
 
