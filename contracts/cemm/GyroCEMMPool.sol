@@ -233,71 +233,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             );
     }
 
-    // Join Hook
-    // This function is identical to that in ExtensibleWeightedPool2Tokens, but the _updateOracle call removed
-    // We will instead put this in _onJoinPool
-    function onJoinPool(
-        bytes32 poolId,
-        address sender,
-        address recipient,
-        uint256[] memory balances,
-        uint256 lastChangeBlock,
-        uint256 protocolSwapFeePercentage,
-        bytes memory userData
-    )
-        public
-        virtual
-        override
-        onlyVault(poolId)
-        whenNotPaused
-        returns (uint256[] memory amountsIn, uint256[] memory dueProtocolFeeAmounts)
-    {
-        // All joins, including initializations, are disabled while the contract is paused.
-
-        uint256 bptAmountOut;
-        if (totalSupply() == 0) {
-            (bptAmountOut, amountsIn) = _onInitializePool(poolId, sender, recipient, userData);
-
-            // On initialization, we lock _MINIMUM_BPT by minting it for the zero address. This BPT acts as a minimum
-            // as it will never be burned, which reduces potential issues with rounding, and also prevents the Pool from
-            // ever being fully drained.
-            _require(bptAmountOut >= _MINIMUM_BPT, Errors.MINIMUM_BPT);
-            _mintPoolTokens(address(0), _MINIMUM_BPT);
-            _mintPoolTokens(recipient, bptAmountOut - _MINIMUM_BPT);
-
-            // amountsIn are amounts entering the Pool, so we round up.
-            _downscaleUpArray(amountsIn);
-
-            // There are no due protocol fee amounts during initialization
-            dueProtocolFeeAmounts = new uint256[](2);
-        } else {
-            _upscaleArray(balances);
-
-            (bptAmountOut, amountsIn, dueProtocolFeeAmounts) = _onJoinPool(
-                poolId,
-                sender,
-                recipient,
-                balances,
-                lastChangeBlock,
-                protocolSwapFeePercentage,
-                userData
-            );
-
-            // Note we no longer use `balances` after calling `_onJoinPool`, which may mutate it.
-
-            _mintPoolTokens(recipient, bptAmountOut);
-
-            // amountsIn are amounts entering the Pool, so we round up.
-            _downscaleUpArray(amountsIn);
-            // dueProtocolFeeAmounts are amounts exiting the Pool, so we round down.
-            _downscaleDownArray(dueProtocolFeeAmounts);
-        }
-
-        // Update cached total supply and invariant using the results after the join that will be used for future
-        // oracle updates.
-        _cacheInvariantAndSupply();
-    }
-
     //Note: is public visibility ok for the following function?
 
     /**
@@ -781,11 +716,11 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     }
 
     // Override unused inherited function
+    // this intentionally does not revert so that it will be bypassed on onJoinPool inherited from ExtensibleWeightedPool2Tokens
+    // the above overloading implementation of _updateOracle takes different arguments and processes the oracle update in a different place
     function _updateOracle(
         uint256,
         uint256,
         uint256
-    ) internal pure override {
-        revert("Not implemented");
-    }
+    ) internal pure override {}
 }
