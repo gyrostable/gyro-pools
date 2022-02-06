@@ -243,7 +243,7 @@ def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
     cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
 
     y = cemm._compute_y_for_x(x)
-    assume(y is not None)
+    assume(y is not None)  # O/w out of bounds for this invariant
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(scale(x), scale(params), derived_sol, scale(cemm.r))
     assert to_decimal(y_sol) == scale(y).approxed_scaled()
@@ -264,7 +264,7 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
     cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
 
     x = cemm._compute_x_for_y(y)
-    assume(y is not None)
+    assume(x is not None)  # O/w out of bounds for this invariant
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(scale(y), scale(params), derived_sol, scale(cemm.r))
     assert to_decimal(x_sol) == scale(x).approxed_scaled()
