@@ -18,8 +18,8 @@ pragma solidity ^0.7.0;
 
 library GyroCEMMPoolErrors {
     // Math
-    uint256 internal constant PRICE_BOUNDS_WRONG = 0;
-    uint256 internal constant ROTATION_VECTOR_WRONG = 1;
-    uint256 internal constant ROTATION_VECTOR_NOT_NORMALIZED = 2;
-    uint256 internal constant ASSET_BOUNDS_EXCEEDED = 3;
+    uint256 internal constant PRICE_BOUNDS_WRONG = 354;
+    uint256 internal constant ROTATION_VECTOR_WRONG = 355;
+    uint256 internal constant ROTATION_VECTOR_NOT_NORMALIZED = 356;
+    uint256 internal constant ASSET_BOUNDS_EXCEEDED = 357;
 }
