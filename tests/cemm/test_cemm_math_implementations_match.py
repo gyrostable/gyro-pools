@@ -53,9 +53,9 @@ def gen_balances_vector():
 # Sry monkey patching...
 # Default absolute tolerance is 1e-12 but we're scaled by 1e18, so we actually want 1e6.
 # Note that the relative threshold should *not* be scaled, but it still needs to be mentioned, o/w it's assumed to be equal to 0.
-# For most calculations, we choose slightly laxer bounds of abs=1e-10 (scaled: 1e8) and rel=1e-6.
+# For some calculations, we choose laxer bounds of abs=1e-3 (scaled: 1e15) and rel=1e-6.
 D.approxed_scaled = lambda self: self.approxed(abs=D('1E6'), rel=D('1E-6'))
-D.our_approxed_scaled = lambda self: self.approxed(abs=D('1E8'), rel=D('1E-6'))
+D.our_approxed_scaled = lambda self: self.approxed(abs=D('1E15'), rel=D('1E-6'))
 
 # Sry monkey patching...
 ApproxDecimal.__le__ = lambda self, other: self.expected <= other.expected or self == other
@@ -307,7 +307,7 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0, gyro_cemm_m
         scale(balances), scale(amountIn), tokenInIsToken0, scale(params), derived_sol, scale(r)
     )
 
-    assert to_decimal(amountOut_sol) == scale(amountOut).approxed_scaled()
+    assert to_decimal(amountOut_sol) == scale(amountOut).our_approxed_scaled()
 
 
 @given(
