@@ -292,9 +292,15 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0, gyro_cemm_m
     f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
 
     mamountOut = f_trade(amountIn) # This changes the state of the cemm but whatever
-    if mamountOut is None or -mamountOut > to_decimal('0.3') * balances[ixOut]:
-        # max-out threshold was hit. Make sure the same happens in solidity.
-        with reverts("BAL#357"):  # ASSET_BOUNDS_EXCEEDED
+
+    revertCode = None
+    if mamountOut is None:
+        revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif -mamountOut > to_decimal('0.3') * balances[ixOut]:
+        revertCode = "BAL#305"  # MAX_OUT_RATIO
+
+    if revertCode is not None:
+        with reverts(revertCode):
             gyro_cemm_math_testing.calcOutGivenIn(
                 scale(balances), scale(amountIn), tokenInIsToken0, scale(params), derived_sol, scale(r)
             )
@@ -332,9 +338,15 @@ def test_calcInGivenOut(params, balances, amountOut, tokenInIsToken0, gyro_cemm_
     f_trade = cemm.trade_y if tokenInIsToken0 else cemm.trade_x
 
     amountIn = f_trade(-amountOut)  # This changes the state of the cemm but whatever
-    if amountIn is None or amountIn > to_decimal('0.3') * balances[ixIn]:
-        # max-out threshold was hit. Make sure the same happens in solidity.
-        with reverts("BAL#357"):  # ASSET_BOUNDS_EXCEEDED
+
+    revertCode = None
+    if amountIn is None:
+        revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif amountIn > to_decimal('0.3') * balances[ixIn]:
+        revertCode = "BAL#304"  # MAX_IN_RATIO
+
+    if revertCode is not None:
+        with reverts(revertCode):
             gyro_cemm_math_testing.calcInGivenOut(
                 scale(balances), scale(amountOut), tokenInIsToken0, scale(params), derived_sol, scale(r)
             )
@@ -346,7 +358,7 @@ def test_calcInGivenOut(params, balances, amountOut, tokenInIsToken0, gyro_cemm_
         scale(balances), scale(amountOut), tokenInIsToken0, scale(params), derived_sol, scale(r)
     )
 
-    assert to_decimal(amountIn_sol) == scale(amountIn).approxed_scaled()
+    assert to_decimal(amountIn_sol) == scale(amountIn).our_approxed_scaled()
 
 
 @given(
