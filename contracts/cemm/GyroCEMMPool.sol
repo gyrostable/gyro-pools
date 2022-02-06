@@ -22,6 +22,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.so
 
 import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
+import "../../libraries/GyroPoolMath.sol";
 
 import "../cpmmv-2/ExtensibleWeightedPool2Tokens.sol";
 import "./GyroCEMMMath.sol";
@@ -385,7 +386,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
         // Note that there is no maximum amountsIn parameter: this is handled by `IVault.joinPool`.
 
-        uint256[] memory amountsIn = GyroCEMMMath._calcAllTokensInGivenExactBptOut(
+        uint256[] memory amountsIn = GyroPoolMath._calcAllTokensInGivenExactBptOut(
             balances,
             bptAmountOut,
             totalSupply()
@@ -525,7 +526,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 bptAmountIn = userData.exactBptInForTokensOut();
         // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
 
-        uint256[] memory amountsOut = GyroCEMMMath._calcTokensOutGivenExactBptIn(
+        uint256[] memory amountsOut = GyroPoolMath._calcTokensOutGivenExactBptIn(
             balances,
             bptAmountIn,
             totalSupply()
@@ -547,117 +548,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             balances[0] = balanceTokenOut;
             balances[1] = balanceTokenIn;
         }
-    }
-
-    // Fee helpers. These are exactly the same as in the GyroTwoPool.
-    // TODO prob about time to make a base class.
-
-    /**
-     * @dev Computes and distributes fees between the Balancer and the Gyro treasury
-     * The fees are computed and distributed in BPT rather than using the
-     * Balancer regular distribution mechanism which would pay these in underlying
-     */
-
-    function _distributeFees(uint256 invariantBeforeAction) internal {
-        // calculate Protocol fees in BPT
-        // lastInvariant is the invariant logged at the end of the last liquidity update
-        // protocol fees are calculated on swap fees earned between liquidity updates
-        (
-            uint256 gyroFees,
-            uint256 balancerFees,
-            address gyroTreasury,
-            address balTreasury
-        ) = _getDueProtocolFeeAmounts(_lastInvariant, invariantBeforeAction);
-
-        // Pay fees in BPT
-        _payFeesBpt(gyroFees, balancerFees, gyroTreasury, balTreasury);
-    }
-
-    /**
-     * @dev this function overrides inherited function to make sure it is never used
-     */
-    function _getDueProtocolFeeAmounts(
-        uint256[] memory, // balances,
-        uint256[] memory, // normalizedWeights,
-        uint256, // previousInvariant,
-        uint256, // currentInvariant,
-        uint256 // protocolSwapFeePercentage
-    ) internal pure override returns (uint256[] memory) {
-        revert("Not implemented");
-    }
-
-    /**
-     * @dev Calculates protocol fee amounts in BPT terms
-     * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
-     * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
-     * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
-     */
-    function _getDueProtocolFeeAmounts(uint256 previousInvariant, uint256 currentInvariant)
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            address,
-            address
-        )
-    {
-        (
-            uint256 protocolSwapFeePerc,
-            uint256 protocolFeeGyroPortion,
-            address gyroTreasury,
-            address balTreasury
-        ) = _getFeesMetadata();
-
-        // Early return if the protocol swap fee percentage is zero, saving gas.
-        if (protocolSwapFeePerc == 0) {
-            return (0, 0, gyroTreasury, balTreasury);
-        }
-
-        // Calculate fees in BPT
-        (uint256 gyroFees, uint256 balancerFees) = GyroCEMMMath._calcProtocolFees(
-            previousInvariant,
-            currentInvariant,
-            totalSupply(),
-            protocolSwapFeePerc,
-            protocolFeeGyroPortion
-        );
-
-        return (gyroFees, balancerFees, gyroTreasury, balTreasury);
-    }
-
-    function _payFeesBpt(
-        uint256 gyroFees,
-        uint256 balancerFees,
-        address gyroTreasury,
-        address balTreasury
-    ) internal {
-        // Pay fees in BPT to gyro treasury
-        if (gyroFees > 0) {
-            _mintPoolTokens(gyroTreasury, gyroFees);
-        }
-        // Pay fees in BPT to bal treasury
-        if (balancerFees > 0) {
-            _mintPoolTokens(balTreasury, balancerFees);
-        }
-    }
-
-    function _getFeesMetadata()
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            address,
-            address
-        )
-    {
-        return (
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY),
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
-            gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
-            gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
-        );
     }
 
     /**
@@ -718,9 +608,128 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     // Override unused inherited function
     // this intentionally does not revert so that it will be bypassed on onJoinPool inherited from ExtensibleWeightedPool2Tokens
     // the above overloading implementation of _updateOracle takes different arguments and processes the oracle update in a different place
+    // Note: this is identical to the handling in GyroTwoPool.sol
     function _updateOracle(
         uint256,
         uint256,
         uint256
-    ) internal pure override {}
+    ) internal pure override {
+        // Do nothing.
+    }
+
+    // Fee helpers. These are exactly the same as in the GyroTwoPool.
+    // TODO prob about time to make a base class.
+
+    /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
+     * @dev Computes and distributes fees between the Balancer and the Gyro treasury
+     * The fees are computed and distributed in BPT rather than using the
+     * Balancer regular distribution mechanism which would pay these in underlying
+     */
+
+    function _distributeFees(uint256 invariantBeforeAction) internal {
+        // calculate Protocol fees in BPT
+        // lastInvariant is the invariant logged at the end of the last liquidity update
+        // protocol fees are calculated on swap fees earned between liquidity updates
+        (
+            uint256 gyroFees,
+            uint256 balancerFees,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getDueProtocolFeeAmounts(_lastInvariant, invariantBeforeAction);
+
+        // Pay fees in BPT
+        _payFeesBpt(gyroFees, balancerFees, gyroTreasury, balTreasury);
+    }
+
+    /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
+     * @dev this function overrides inherited function to make sure it is never used
+     */
+    function _getDueProtocolFeeAmounts(
+        uint256[] memory, // balances,
+        uint256[] memory, // normalizedWeights,
+        uint256, // previousInvariant,
+        uint256, // currentInvariant,
+        uint256 // protocolSwapFeePercentage
+    ) internal pure override returns (uint256[] memory) {
+        revert("Not implemented");
+    }
+
+    /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
+     * @dev Calculates protocol fee amounts in BPT terms
+     * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
+     * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
+     * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
+     */
+    function _getDueProtocolFeeAmounts(uint256 previousInvariant, uint256 currentInvariant)
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            address,
+            address
+        )
+    {
+        (
+            uint256 protocolSwapFeePerc,
+            uint256 protocolFeeGyroPortion,
+            address gyroTreasury,
+            address balTreasury
+        ) = _getFeesMetadata();
+
+        // Early return if the protocol swap fee percentage is zero, saving gas.
+        if (protocolSwapFeePerc == 0) {
+            return (0, 0, gyroTreasury, balTreasury);
+        }
+
+        // Calculate fees in BPT
+        (uint256 gyroFees, uint256 balancerFees) = GyroPoolMath._calcProtocolFees(
+            previousInvariant,
+            currentInvariant,
+            totalSupply(),
+            protocolSwapFeePerc,
+            protocolFeeGyroPortion
+        );
+
+        return (gyroFees, balancerFees, gyroTreasury, balTreasury);
+    }
+
+    // Note: This function is identical to that used in GyroTwoPool.sol
+    function _payFeesBpt(
+        uint256 gyroFees,
+        uint256 balancerFees,
+        address gyroTreasury,
+        address balTreasury
+    ) internal {
+        // Pay fees in BPT to gyro treasury
+        if (gyroFees > 0) {
+            _mintPoolTokens(gyroTreasury, gyroFees);
+        }
+        // Pay fees in BPT to bal treasury
+        if (balancerFees > 0) {
+            _mintPoolTokens(balTreasury, balancerFees);
+        }
+    }
+
+    // Note: This function is identical to that used in GyroTwoPool.sol
+    function _getFeesMetadata()
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            address,
+            address
+        )
+    {
+        return (
+            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY),
+            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
+            gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
+            gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
+        );
+    }
 }

@@ -22,6 +22,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.so
 
 import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
+import "../../libraries/GyroPoolMath.sol";
 
 import "./ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2PoolErrors.sol";
@@ -425,7 +426,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
         // Note that there is no maximum amountsIn parameter: this is handled by `IVault.joinPool`.
 
-        uint256[] memory amountsIn = GyroTwoMath._calcAllTokensInGivenExactBptOut(
+        uint256[] memory amountsIn = GyroPoolMath._calcAllTokensInGivenExactBptOut(
             balances,
             bptAmountOut,
             totalSupply()
@@ -565,7 +566,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256 bptAmountIn = userData.exactBptInForTokensOut();
         // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
 
-        uint256[] memory amountsOut = GyroTwoMath._calcTokensOutGivenExactBptIn(
+        uint256[] memory amountsOut = GyroPoolMath._calcTokensOutGivenExactBptIn(
             balances,
             bptAmountIn,
             totalSupply()
@@ -638,7 +639,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         }
 
         // Calculate fees in BPT
-        (uint256 gyroFees, uint256 balancerFees) = GyroTwoMath._calcProtocolFees(
+        (uint256 gyroFees, uint256 balancerFees) = GyroPoolMath._calcProtocolFees(
             previousInvariant,
             currentInvariant,
             totalSupply(),

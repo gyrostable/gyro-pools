@@ -4,6 +4,7 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "../GyroCEMMMath.sol";
+import "../../../libraries/GyroPoolMath.sol";
 
 contract GyroCEMMMathTesting {
     function scalarProdUp(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2)
@@ -227,7 +228,7 @@ contract GyroCEMMMathTesting {
         uint256 bptAmountOut,
         uint256 totalBPT
     ) external pure returns (uint256[] memory) {
-        return GyroCEMMMath._calcAllTokensInGivenExactBptOut(balances, bptAmountOut, totalBPT);
+        return GyroPoolMath._calcAllTokensInGivenExactBptOut(balances, bptAmountOut, totalBPT);
     }
 
     function _calcTokensOutGivenExactBptIn(
@@ -235,7 +236,7 @@ contract GyroCEMMMathTesting {
         uint256 bptAmountIn,
         uint256 totalBPT
     ) external pure returns (uint256[] memory) {
-        return GyroCEMMMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalBPT);
+        return GyroPoolMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalBPT);
     }
 
     function _calcProtocolFees(
@@ -246,7 +247,7 @@ contract GyroCEMMMathTesting {
         uint256 protocolFeeGyroPortion
     ) external pure returns (uint256, uint256) {
         return
-            GyroCEMMMath._calcProtocolFees(
+            GyroPoolMath._calcProtocolFees(
                 previousInvariant,
                 currentInvariant,
                 currentBptSupply,
