@@ -294,7 +294,7 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0, gyro_cemm_m
     mamountOut = f_trade(amountIn) # This changes the state of the cemm but whatever
     if mamountOut is None or -mamountOut > to_decimal('0.3') * balances[ixOut]:
         # max-out threshold was hit. Make sure the same happens in solidity.
-        with reverts("BAL#305"):  # MAX_OUT_RATIO
+        with reverts("BAL#357"):  # ASSET_BOUNDS_EXCEEDED
             gyro_cemm_math_testing.calcOutGivenIn(
                 scale(balances), scale(amountIn), tokenInIsToken0, scale(params), derived_sol, scale(r)
             )
@@ -334,7 +334,7 @@ def test_calcInGivenOut(params, balances, amountOut, tokenInIsToken0, gyro_cemm_
     amountIn = f_trade(-amountOut)  # This changes the state of the cemm but whatever
     if amountIn is None or amountIn > to_decimal('0.3') * balances[ixIn]:
         # max-out threshold was hit. Make sure the same happens in solidity.
-        with reverts("BAL#304"):  # MAX_IN_RATIO
+        with reverts("BAL#357"):  # ASSET_BOUNDS_EXCEEDED
             gyro_cemm_math_testing.calcInGivenOut(
                 scale(balances), scale(amountOut), tokenInIsToken0, scale(params), derived_sol, scale(r)
             )
