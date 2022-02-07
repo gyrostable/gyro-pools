@@ -54,7 +54,7 @@ def calculateInvariantNewton(
     #         to_decimal(invariant))
     x, y, z = balances
 
-    lmin = -b / (a * 3) + (b ** 2 - a * c * 3).sqrt() / (
+    lmin = -b / (a * 3) + (b**2 - a * c * 3).sqrt() / (
         a * 3
     )  # Sqrt is not gonna make a problem b/c all summands are positive.
     # ^ Local minimum, and also the global minimum of f among l > 0; towards a starting point
@@ -68,11 +68,11 @@ def calculateInvariantNewton(
 
     while True:
         # delta = f(l)/f'(l)
-        f_l = a * l ** 3 + b * l ** 2 + c * l + d
+        f_l = a * l**3 + b * l**2 + c * l + d
 
         # Compute derived values for comparison:
         # TESTING only; could base the exit condition on this if I really wanted
-        gamma = l ** 2 / ((x + l * alpha1) * (y + l * alpha1))  # 3√(px py)
+        gamma = l**2 / ((x + l * alpha1) * (y + l * alpha1))  # 3√(px py)
         px = (z + l * alpha1) / (x + l * alpha1)
         py = (z + l * alpha1) / (y + l * alpha1)
         x1 = l * (gamma / px - alpha1)
@@ -88,7 +88,7 @@ def calculateInvariantNewton(
             and abs(z - z1) < prec_convergence
         ):
             return l, log
-        df_l = a * 3 * l ** 2 + b * 2 * l + c
+        df_l = a * 3 * l**2 + b * 2 * l + c
         delta = f_l / df_l
 
         # delta==0 can happen with poor numerical precision! In this case, this is all we can get.
