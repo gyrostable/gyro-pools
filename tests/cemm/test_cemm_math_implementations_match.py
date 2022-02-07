@@ -38,9 +38,7 @@ def gen_params(draw):
     phi = phi_degrees / 360 * 2 * pi
     s = sin(phi)
     c = cos(phi)
-    # TODO also test this when we allow l < 1. Didn't face any problems so far except maybe in calculateInvariant.
     l = draw(qdecimals("1", "10"))
-    # TODO also test price bounds that don't include 1. (generate a minimum separation)
     alpha = draw(qdecimals("0.05", "0.995"))
     beta = draw(qdecimals("1.005", "20.0"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
@@ -111,8 +109,6 @@ def test_zeta(params_px, gyro_cemm_math_testing):
 
 # NOTE: We have NO separate test for eta right now b/c it's kinda complicated to get right bounds for pxc.
 # But test_tau() below also tests eta.
-#
-# TODO test the calculation of that square root thing?
 
 
 @given(params_px=gen_params_px())
@@ -502,8 +498,6 @@ def test_liquidityInvariantUpdateEquivalence(
     # To try it out even
     assert dx == (dinvariant / r * cemm.x).approxed(abs=1e-5)
     assert dy == (dinvariant / r * cemm.y).approxed(abs=1e-5)
-
-    # This would also make the other direction, liquidityInvariantUpdate, trivial.
 
 
 # BPT token and protocol fee calculations are not tested b/c they're exactly the same as for the other pools.
