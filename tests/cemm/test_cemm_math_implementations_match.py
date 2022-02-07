@@ -140,7 +140,7 @@ def test_mkDerivedParams(params, gyro_cemm_math_testing):
 
 def gen_synthetic_invariant():
     """Generate invariant for cases where it *doesn't* have to match any balances."""
-    return qdecimals(0, 100_000_000_000)
+    return qdecimals(1, 100_000_000_000)
 
 
 @given(params=gen_params(), invariant=gen_synthetic_invariant())
