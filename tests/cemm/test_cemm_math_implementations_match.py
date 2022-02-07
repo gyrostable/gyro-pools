@@ -471,9 +471,6 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     assume(cemm.x != 0 or cemm.y != 0)
 
     balances = [cemm.x, cemm.y]
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
-    )
     deltaBalances = cemm.update_liquidity(dinvariant, mock=True)
     deltaBalances = (
         abs(deltaBalances[0]),
@@ -483,8 +480,6 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     rnew = cemm.r + dinvariant
     rnew_sol = gyro_cemm_math_testing.liquidityInvariantUpdate(
         scale(balances),
-        scale(params),
-        derived_sol,
         scale(cemm.r),
         scale(deltaBalances),
         (dinvariant >= 0),
