@@ -207,16 +207,12 @@ contract GyroCEMMMathTesting {
 
     function liquidityInvariantUpdate(
         uint256[] memory balances,
-        GyroCEMMMath.Params memory params,
-        GyroCEMMMath.DerivedParams memory derived,
         uint256 uinvariant,
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) external pure returns (uint256 unewInvariant) {
         unewInvariant = GyroCEMMMath.liquidityInvariantUpdate(
             balances,
-            params,
-            derived,
             uinvariant,
             deltaBalances,
             isIncreaseLiq
