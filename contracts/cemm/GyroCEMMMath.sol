@@ -475,7 +475,6 @@ library GyroCEMMMath {
      * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
      * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
      */
-    // TODO can't we just use ratios?! Like uinvariant * (balances[0] + deltaBalances[0])/balances[0]. Why wouldn't that work?!?
     function liquidityInvariantUpdate(
         uint256[] memory balances,
         Params memory params,
@@ -484,23 +483,7 @@ library GyroCEMMMath {
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) internal pure returns (uint256 unewInvariant) {
-        int256 px = calculatePrice(balances, params, derived, uinvariant.toInt256()).toInt256();
-        int256 value = calculateSqrtOnePlusZetaSquared(
-            balances,
-            params,
-            derived,
-            uinvariant.toInt256()
-        );
-        Vector2 memory tauPx = tau(params, px, value);
-
-        // deltaInv = (matrix calcs.x)/deltaX
-        // repurpase 'value' variable to do the matrix calculations
-        value = mulAinv(params, derived.tauBeta).x;
-        value = value.sub(mulAinv(params, tauPx).x);
-
-        // do the invariant update in uints
-        uint256 uvalue = value >= 0 ? value.toUint256() : (-value).toUint256();
-        uint256 deltaInv = uvalue.divDown(deltaBalances[0]);
-        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInv) : uinvariant.sub(deltaInv);
+        uint256 deltaInvariant = deltaBalances[0].divDown(balances[0]).mulDown(uinvariant);
+        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
 }
