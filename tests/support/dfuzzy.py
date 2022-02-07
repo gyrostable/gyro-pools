@@ -10,11 +10,13 @@ prec_sanity_check = D(
     "1E-8"
 )  # when checking mathematical properties that span long calculations
 
+
 def soft_clamp(x: D, a: D, b: D, prec=prec_internal):
     """Clamp x into the interval [a, b] if it's almost in it. Otherwise raise an error."""
     assert a - prec <= x
     assert x <= b + prec
     return max(a, min(b, x))
+
 
 def isclose(x: D, y: D, prec: D) -> bool:
     return abs(x - y) <= prec

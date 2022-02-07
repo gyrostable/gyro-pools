@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 # noinspection PyPep8Naming
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from functools import cached_property
@@ -8,9 +9,17 @@ from math import cos, sin, pi
 # from dfuzzy import isle, isge
 from typing import Optional
 
-from tests.support.dfuzzy import isclose, prec_sanity_check, soft_clamp, sqrt, prec_input
+from tests.support.dfuzzy import (
+    isclose,
+    prec_sanity_check,
+    soft_clamp,
+    sqrt,
+    prec_input,
+)
 
-Vector = tuple[D, D]  # Purely a shorthand. We don't use any vector math libraries in this code!
+Vector = tuple[
+    D, D
+]  # Purely a shorthand. We don't use any vector math libraries in this code!
 
 pi_d = D(pi)
 
@@ -18,6 +27,7 @@ pi_d = D(pi)
 def angle2rotationpoint(phi: D):
     # You can use this for rx and ry in Params.
     return D(cos(phi)), D(sin(phi))
+
 
 def eta(pxc: D) -> Vector:
     """Calculates from a price _pxc wrt. the untransformed circle a point t'' wrt. the untransformed circle,
@@ -29,8 +39,9 @@ def eta(pxc: D) -> Vector:
 
     Lemma 4."""
     # TODO rename to make clearer
-    z = sqrt(D(1) + pxc**2)
+    z = sqrt(D(1) + pxc ** 2)
     return pxc / z, D(1) / z
+
 
 @dataclass
 class Params:
@@ -70,7 +81,7 @@ class Params:
 
     @cached_property
     def li(self):  # lambda^{-1}
-        return 1/self.l
+        return 1 / self.l
 
     def zeta(self, px: D):
         """Transform a price px of the transformed circle (i.e., the ellipse) into a price _pxc of the untransformed
@@ -83,9 +94,9 @@ class Params:
         # todo maybe refactor:
         # d, n = self.A_times(D(-1), px)
         # return - n / d
-        n = - self.s + px * self.c
-        d = - self.c * self.li - px * self.s * self.li
-        return - n / d
+        n = -self.s + px * self.c
+        d = -self.c * self.li - px * self.s * self.li
+        return -n / d
 
     def tau(self, px: D) -> Vector:
         """-r * tau(px) is the point on the untransformed circle corresponding to price px on the transformed circle."""
@@ -111,6 +122,7 @@ class Params:
     # x and y coordinates of the above. These could be inlined in the final implementation.
     def Ainv_times_x(self, x: D, y: D) -> D:
         return self.c * self.l * x + self.s * y
+
     def Ainv_times_y(self, x: D, y: D) -> D:
         return -self.s * self.l * x + self.c * y
 
@@ -123,17 +135,19 @@ class Params:
     # x and y coordinates
     def A_times_x(self, x: D, y: D) -> D:
         return self.c * self.li * x - self.s * self.li * y
+
     def A_times_y(self, x: D, y: D) -> D:
         return self.s * x + self.c * y
 
 
 # For testing
-myparams1 = Params.from_angle_degrees(D('0.8'), D(1)/D('0.8'), D('-45'), D('2'))
-myparams2_circle = Params.from_angle_degrees(D('0.8'), D(1)/D('0.8'), D(0), D(1))
+myparams1 = Params.from_angle_degrees(D("0.8"), D(1) / D("0.8"), D("-45"), D("2"))
+myparams2_circle = Params.from_angle_degrees(D("0.8"), D(1) / D("0.8"), D(0), D(1))
 
 
 def scalarprod(x1: D, y1: D, x2: D, y2: D) -> D:
     return x1 * x2 + y1 * y2
+
 
 @dataclass  # Mainly to get automatic repr()
 class CEMM:
@@ -160,16 +174,18 @@ class CEMM:
         ret.y = y
         at: Vector = params.A_times(x, y)
         # NOTE: What are currently arguments to A_times() will probably be completely cached in the future.
-        achi: Vector = params.A_times(params.Ainv_times_x(*params.tau_beta),
-                                      params.Ainv_times_y(*params.tau_alpha))
+        achi: Vector = params.A_times(
+            params.Ainv_times_x(*params.tau_beta),
+            params.Ainv_times_y(*params.tau_alpha),
+        )
         a = scalarprod(*achi, *achi) - D(1)
         b = scalarprod(*at, *achi)
         c = scalarprod(*at, *at)
-        d = b**2 - a * c
+        d = b ** 2 - a * c
         dr = sqrt(d)
         ret.r = (b + dr) / a
         return ret
-        
+
     @staticmethod
     def from_px_r(px: D, r: D, params: Params):
         """Proposition 8"""
@@ -181,9 +197,15 @@ class CEMM:
 
         ret = CEMM(params)
         ret.r = r
-        taupx: Vector = params.tau(px)  # Compute these in one step b/c then we only need one square root.
-        ret.x = r * (params.Ainv_times_x(*params.tau_beta) - params.Ainv_times_x(*taupx))
-        ret.y = r * (params.Ainv_times_y(*params.tau_alpha) - params.Ainv_times_y(*taupx))
+        taupx: Vector = params.tau(
+            px
+        )  # Compute these in one step b/c then we only need one square root.
+        ret.x = r * (
+            params.Ainv_times_x(*params.tau_beta) - params.Ainv_times_x(*taupx)
+        )
+        ret.y = r * (
+            params.Ainv_times_y(*params.tau_alpha) - params.Ainv_times_y(*taupx)
+        )
         return ret
 
     @staticmethod
@@ -209,6 +231,7 @@ class CEMM:
     @property
     def a(self):
         return self.r * self.params.Ainv_times_x(*self.params.tau_beta)
+
     @property
     def b(self):
         return self.r * self.params.Ainv_times_y(*self.params.tau_alpha)
@@ -217,6 +240,7 @@ class CEMM:
     @property
     def xmax(self):
         return self.a - self.r * self.params.Ainv_times_x(*self.params.tau_alpha)
+
     @property
     def ymax(self):
         return self.b - self.r * self.params.Ainv_times_y(*self.params.tau_beta)
@@ -233,7 +257,7 @@ class CEMM:
         """Uses 2.1.7 equation 7 to calculate sqrt(1+zeta(px)^2) without having to calculate this formula explicitly."""
         xp, yp = self.x - self.a, self.y - self.b
         xpp, ypp = self.params.A_times(xp, yp)
-        return - self.r / ypp
+        return -self.r / ypp
 
     @property
     def px(self):
@@ -248,21 +272,25 @@ class CEMM:
         """tau(px) where px is the price offered by the AMM at the current state.
 
         Definition of tau and eta together with the comment on computing sqrt(1 + _pxc^2) in section 2.1.5."""
-        pxcz = - self.r / self.params.A_times_y(self.x - self.a, self.y - self.b)
+        pxcz = -self.r / self.params.A_times_y(self.x - self.a, self.y - self.b)
         return self._pxc / pxcz, 1 / pxcz
 
     @property
     def pf_value(self):
         """Portfolio value. Proposition 10."""
         taupx = self._tau_px
-        nx = self.params.Ainv_times_x(*self.params.tau_beta) - self.params.Ainv_times_x(*taupx)
-        ny = self.params.Ainv_times_y(*self.params.tau_alpha) - self.params.Ainv_times_y(*taupx)
+        nx = self.params.Ainv_times_x(*self.params.tau_beta) - self.params.Ainv_times_x(
+            *taupx
+        )
+        ny = self.params.Ainv_times_y(
+            *self.params.tau_alpha
+        ) - self.params.Ainv_times_y(*taupx)
         return self.r * (self.px * nx + ny)
 
     def show_invariant_r(self):
         """For testing. Calculate the LHS, RHS of the invariant based on r. These should be equal."""
         xpp, ypp = self.params.A_times(self.x - self.a, self.y - self.b)
-        return xpp**2 + ypp**2, self.r**2
+        return xpp ** 2 + ypp ** 2, self.r ** 2
 
     def trade_x(self, dx: D) -> Optional[D]:
         """Proposition 11. Trade a given amount of x for y.
@@ -305,15 +333,15 @@ class CEMM:
 
         xp = x - self.a
 
-        ls = 1 - self.params.li**2  # λ underlined in the prop.
+        ls = 1 - self.params.li ** 2  # λ underlined in the prop.
         s = self.params.s
         c = self.params.c
 
-        d = s**2 * c**2 * ls**2 * xp**2 - (1 - ls * s**2) * (
-            (1 - ls * c**2) * xp**2 - self.r**2
+        d = s ** 2 * c ** 2 * ls ** 2 * xp ** 2 - (1 - ls * s ** 2) * (
+            (1 - ls * c ** 2) * xp ** 2 - self.r ** 2
         )
         dr = sqrt(d)
-        yp = (-s * c * ls * xp - dr) / (1 - ls * s**2)
+        yp = (-s * c * ls * xp - dr) / (1 - ls * s ** 2)
 
         y = yp + self.b
 
@@ -331,17 +359,17 @@ class CEMM:
         if not nomaxvals and y > self.ymax:
             return None
 
-        ls = 1 - self.params.li**2  # λ underlined in the prop.
+        ls = 1 - self.params.li ** 2  # λ underlined in the prop.
         s = self.params.s
         c = self.params.c
 
         yp = y - self.b
 
-        d = s**2 * c**2 * ls**2 * yp**2 - (1-ls * c**2) * (
-            (1 - ls * s**2) * yp**2 - self.r**2
+        d = s ** 2 * c ** 2 * ls ** 2 * yp ** 2 - (1 - ls * c ** 2) * (
+            (1 - ls * s ** 2) * yp ** 2 - self.r ** 2
         )
         dr = sqrt(d)
-        xp = (-s * c * ls * yp - dr) / (1 - ls * c**2)
+        xp = (-s * c * ls * yp - dr) / (1 - ls * c ** 2)
 
         x = xp + self.a
 
@@ -376,7 +404,11 @@ class CEMM:
         return dx, dy
 
     def assert_isclose_to(self, mm, prec: D):  # mm: CEMM
-        assert isclose(self.x, mm.x, prec) and isclose(self.y, mm.y, prec) and isclose(self.r, mm.r, prec)
+        assert (
+            isclose(self.x, mm.x, prec)
+            and isclose(self.y, mm.y, prec)
+            and isclose(self.r, mm.r, prec)
+        )
 
 
 def mtest_rebuild_r(mm: CEMM):

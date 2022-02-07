@@ -359,12 +359,14 @@ def test_calcOutGivenIn(
         scale(r),
     )
 
-    assert to_decimal(amountOut_sol) == scale(amountOut).our_approxed_scaled() or \
-        to_decimal(amountOut_sol) == scale(amountOut).approxed(abs=D('1E6')*balances[ixOut])
+    assert to_decimal(amountOut_sol) == scale(
+        amountOut
+    ).our_approxed_scaled() or to_decimal(amountOut_sol) == scale(amountOut).approxed(
+        abs=D("1E6") * balances[ixOut]
+    )
     # ^ The second case catches some pathological test cases where an error on the order of 1e-3 occurs in
     # an extremely unbalanced pool with reserves on the order of (100M, 1).
     # Differences smaller than 1e-12 * balances are ignored.
-
 
 
 @given(
@@ -423,8 +425,12 @@ def test_calcInGivenOut(
         scale(r),
     )
 
-    assert to_decimal(amountIn_sol) == scale(amountIn).our_approxed_scaled() or \
-            to_decimal(amountIn_sol) == scale(amountIn).approxed(abs=D('1E6') * balances[ixOut])
+    assert to_decimal(amountIn_sol) == scale(
+        amountIn
+    ).our_approxed_scaled() or to_decimal(amountIn_sol) == scale(amountIn).approxed(
+        abs=D("1E6") * balances[ixOut]
+    )
+
 
 @given(
     params=gen_params(),

@@ -467,6 +467,8 @@ library GyroCEMMMath {
         bool isIncreaseLiq
     ) internal pure returns (uint256 unewInvariant) {
         uint256 deltaInvariant = deltaBalances[0].divDown(balances[0]).mulDown(uinvariant);
-        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
+        unewInvariant = isIncreaseLiq
+            ? uinvariant.add(deltaInvariant)
+            : uinvariant.sub(deltaInvariant);
     }
 }
