@@ -16,25 +16,17 @@ import "@openzeppelin/contracts/utils/SafeCast.sol";
 library GyroCEMMMath {
     uint256 internal constant ONEHALF = 0.5e18;
 
-    // TODO test what is needed or acceptable here. Dep/ on the source of c and
-    // s, too. And if this should be checked in the contract at all.
     int256 internal constant VALIDATION_PRECISION_CS_NORM = 100; // 1e-16
 
     using SignedFixedPoint for int256;
     using FixedPoint for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
-    // TODO replace manual calls
-
-    // TODO decide if we wanna use underscores to mark internals or not. Also dep/ if we wanna do `using...for Params`.
-    // TODO Copy comments and thm references from the python implementation.
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
-    // TODO SOMEDAY we may wanna make this storage for gas efficiency. Depends on how much we actually wanna store vs recompute.
-    // TODO SOMEDAY we may wanna tune the width of these params; see PAMM
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are
     // the functions that are used by the contract b/c there the values are stored unsigned.
@@ -54,7 +46,6 @@ library GyroCEMMMath {
 
     function validateParams(Params memory params) internal pure {
         // Perhaps this should go into the GyroCEMMMath?
-        // TODO test if we need alpha < 1 < beta
         _require(params.alpha > 0, GyroCEMMPoolErrors.PRICE_BOUNDS_WRONG);
         _require(params.beta > params.alpha, GyroCEMMPoolErrors.PRICE_BOUNDS_WRONG);
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
@@ -70,13 +61,10 @@ library GyroCEMMMath {
     }
 
     struct DerivedParams {
-        // TODO SOMEDAY these could be cached. It's probably not worth it though. Could also be compressed so that only
-        // the sqrt is stored.
         Vector2 tauAlpha;
         Vector2 tauBeta;
     }
 
-    // TODO MAYBE make this just an array actually
     struct Vector2 {
         int256 x;
         int256 y;
@@ -125,14 +113,16 @@ library GyroCEMMMath {
     }
 
     /** @dev Given price px on the transformed ellipse, get the untransformed price pxc on the circle
-     *  px = price of asset x in terms of asset y */
+     *  px = price of asset x in terms of asset y.
+     *  See Definition 1 in Section 2.1.1 */
     function zeta(Params memory params, int256 px) internal pure returns (int256 pxc) {
         Vector2 memory nd = mulA(params, Vector2(-SignedFixedPoint.ONE, px));
         return -nd.y.divDown(nd.x);
     }
 
     /** @dev Given price px on the transformed ellipse, maps to the corresponding point on the untransformed normalized circle
-     *  px = price of asset x in terms of asset y */
+     *  px = price of asset x in terms of asset y.
+     *  See Definition 3 in Section 2.1.1 */
     function tau(Params memory params, int256 px) internal pure returns (Vector2 memory tpp) {
         return eta(zeta(params, px));
     }
@@ -148,7 +138,6 @@ library GyroCEMMMath {
         return eta(zeta(params, px), sqrt);
     }
 
-    // TODO this should only be computed once at deployment and stored as immutable
     function mkDerivedParams(Params memory params)
         internal
         pure
@@ -160,7 +149,8 @@ library GyroCEMMMath {
 
     /** @dev Given price on a circle, gives the normalized corresponding point on the circle centered at the origin
      *  pxc = price of asset x in terms of asset y (measured on the circle)
-     *  Notice that the eta function does not depend on Params */
+     *  Notice that the eta function does not depend on Params.
+     *  See Definition 2 in Section 2.1.1 */
     function eta(int256 pxc) internal pure returns (Vector2 memory tpp) {
         int256 z = FixedPoint
             .powDown(FixedPoint.ONE.add(uint256(pxc.mulDown(pxc))), ONEHALF)
@@ -179,14 +169,11 @@ library GyroCEMMMath {
      *   Note that, in contrast to virtual reserve offsets in CPMM, these are *subtracted* from the real
      *  reserves, moving the curve to the upper-right. They can be positive or negative, but not both can be negative.
      */
-    // TODO For gas efficiency, we may want to put these, up to the r factor, into DerivedParams.
     function virtualOffsets(
         Params memory params,
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (Vector2 memory ab) {
-        // TODO MAYBE gas optimization: Make specialized functions that only return the .x and .y components of
-        // mulAinv(). We're throwing away half of that calculation right now.
         ab.x = invariant.mulDown(mulAinv(params, derived.tauBeta).x); // virtual offset a
         ab.y = invariant.mulDown(mulAinv(params, derived.tauAlpha).y); // virtual offset b
     }
@@ -237,7 +224,6 @@ library GyroCEMMMath {
      *  Reverts if the equation has no solution or is actually linear (i.e., a==0) */
     function solveQuadraticPlus(QParams memory qparams) internal pure returns (int256 x) {
         int256 sqrt = qparams.b.mulDown(qparams.b).sub(
-            // TODO ONE.mulUp unnecessary?
             4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c)
         );
         sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
@@ -278,8 +264,6 @@ library GyroCEMMMath {
         Vector2 memory vecAChi = mulA(params, chi(params, derived));
         QParams memory qparams;
         // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        // TODO (Steffen) Make sure a is never 0 (where the equation is linear). I think it's not, but double check!
-        // (o/w the following call reverts with zero division)
         qparams.a = (scalarProdUp(vecAChi, vecAChi).sub(SignedFixedPoint.ONE)).divUp(
             2 * SignedFixedPoint.ONE
         );
@@ -474,6 +458,7 @@ library GyroCEMMMath {
     /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
      * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
      * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
+     * See the writeup, Corollary 3 in Section 2.1.5.
      */
     function liquidityInvariantUpdate(
         uint256[] memory balances,
