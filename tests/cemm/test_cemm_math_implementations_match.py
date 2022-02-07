@@ -457,7 +457,7 @@ def gen_params_cemm_dinvariant(draw):
     dinvariant = draw(
         qdecimals(-cemm.r.raw, 2 * cemm.r.raw)
     )  # Upper bound kinda arbitrary
-    assume(abs(dinvariant) > D("1E-12"))  # Only relevant updates
+    assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
     return params, cemm, dinvariant
 
 
