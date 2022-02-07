@@ -351,8 +351,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         // protocol fee factor.
         _lastInvariant = GyroCEMMMath.liquidityInvariantUpdate(
             balances,
-            cemmParams,
-            derivedCEMMParams,
             invariantBeforeAction,
             amountsIn,
             true
@@ -470,8 +468,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             // protocol fee factor.
             _lastInvariant = GyroCEMMMath.liquidityInvariantUpdate(
                 balances,
-                cemmParams,
-                derivedCEMMParams,
                 invariantBeforeAction,
                 amountsOut,
                 false

@@ -462,8 +462,6 @@ library GyroCEMMMath {
      */
     function liquidityInvariantUpdate(
         uint256[] memory balances,
-        Params memory params,
-        DerivedParams memory derived,
         uint256 uinvariant,
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
