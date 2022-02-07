@@ -16,7 +16,10 @@ pragma solidity ^0.7.0;
 
 // solhint-disable
 
-library Gyro2PoolErrors {
+library GyroCEMMPoolErrors {
     // Math
-    uint256 internal constant SQRT_PARAMS_WRONG = 350;
+    uint256 internal constant PRICE_BOUNDS_WRONG = 354;
+    uint256 internal constant ROTATION_VECTOR_WRONG = 355;
+    uint256 internal constant ROTATION_VECTOR_NOT_NORMALIZED = 356;
+    uint256 internal constant ASSET_BOUNDS_EXCEEDED = 357;
 }

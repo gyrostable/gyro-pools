@@ -24,102 +24,94 @@ import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
-import "./ExtensibleWeightedPool2Tokens.sol";
-import "./Gyro2PoolErrors.sol";
-import "./GyroTwoMath.sol";
-import "./GyroTwoOracleMath.sol";
+import "../cpmmv-2/ExtensibleWeightedPool2Tokens.sol";
+import "./GyroCEMMMath.sol";
+import "./GyroCEMMOracleMath.sol";
 
-contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
+contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
+    using SafeCast for int256;
+    using SafeCast for uint256;
 
-    uint256 private immutable _sqrtAlpha;
-    uint256 private immutable _sqrtBeta;
+    uint256 private constant _MINIMUM_BPT = 1e6;
+
+    /// @notice Parameters of the CEMM pool
+    int256 public immutable _paramsAlpha;
+    int256 public immutable _paramsBeta;
+    int256 public immutable _paramsC;
+    int256 public immutable _paramsS;
+    int256 public immutable _paramsLambda;
+    int256 public immutable _tauAlphaX;
+    int256 public immutable _tauAlphaY;
+    int256 public immutable _tauBetaX;
+    int256 public immutable _tauBetaY;
 
     IGyroConfig public gyroConfig;
 
     struct GyroParams {
         NewPoolParams baseParams;
-        uint256 sqrtAlpha; // A: Should already be upscaled
-        uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
+        GyroCEMMMath.Params cemmParams;
     }
 
     constructor(GyroParams memory params, address configAddress)
         ExtensibleWeightedPool2Tokens(params.baseParams)
     {
-        _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);
-        _sqrtAlpha = params.sqrtAlpha;
-        _sqrtBeta = params.sqrtBeta;
+        GyroCEMMMath.validateParams(params.cemmParams);
+        (_paramsAlpha, _paramsBeta, _paramsC, _paramsS, _paramsLambda) = (
+            params.cemmParams.alpha,
+            params.cemmParams.beta,
+            params.cemmParams.c,
+            params.cemmParams.s,
+            params.cemmParams.lambda
+        );
+
+        GyroCEMMMath.DerivedParams memory derived = GyroCEMMMath.mkDerivedParams(params.cemmParams);
+        (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY) = (
+            derived.tauAlpha.x,
+            derived.tauAlpha.y,
+            derived.tauBeta.x,
+            derived.tauBeta.y
+        );
 
         gyroConfig = IGyroConfig(configAddress);
     }
 
-    // Returns sqrtAlpha and sqrtBeta (square roots of lower and upper price bounds of p_x respectively)
-
-    function getSqrtParameters() external view returns (uint256[] memory) {
-        return _sqrtParameters();
-    }
-
-    function _sqrtParameters() internal view virtual returns (uint256[] memory) {
-        uint256[] memory virtualParameters = new uint256[](2);
-        virtualParameters[0] = _sqrtParameters(true);
-        virtualParameters[1] = _sqrtParameters(false);
-        return virtualParameters;
-    }
-
-    function _sqrtParameters(bool parameter0) internal view virtual returns (uint256) {
-        return parameter0 ? _sqrtAlpha : _sqrtBeta;
-    }
-
-    /// @dev Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
-    function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
-        (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(
-            balances[0],
-            balances[1],
-            true
-        );
-    }
-
-    function _getVirtualParameters(uint256[] memory sqrtParams, uint256 invariant)
+    /** @dev reconstructs CEMM params structs from immutable arrays */
+    function reconstructCEMMParams()
         internal
         view
-        virtual
-        returns (uint256[] memory)
+        returns (GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory derived)
     {
-        uint256[] memory virtualParameters = new uint256[](2);
-
-        virtualParameters[0] = _virtualParameters(true, sqrtParams[1], invariant);
-        virtualParameters[1] = _virtualParameters(false, sqrtParams[0], invariant);
-        return virtualParameters;
-    }
-
-    function _virtualParameters(
-        bool parameter0,
-        uint256 sqrtParam,
-        uint256 invariant
-    ) internal view virtual returns (uint256) {
-        return
-            parameter0
-                ? (GyroTwoMath._calculateVirtualParameter0(invariant, sqrtParam))
-                : (GyroTwoMath._calculateVirtualParameter1(invariant, sqrtParam));
+        (params.alpha, params.beta, params.c, params.s, params.lambda) = (
+            _paramsAlpha,
+            _paramsBeta,
+            _paramsC,
+            _paramsS,
+            _paramsLambda
+        );
+        (derived.tauAlpha.x, derived.tauAlpha.y, derived.tauBeta.x, derived.tauBeta.y) = (
+            _tauAlphaX,
+            _tauAlphaY,
+            _tauBetaX,
+            _tauBetaY
+        );
     }
 
     /**
      * @dev Returns the current value of the invariant.
      */
-    function getInvariant() public view override returns (uint256) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        uint256[] memory sqrtParams = _sqrtParameters();
-
-        // Since the Pool hooks always work with upscaled balances, we manually
-        // upscale here for consistency
-        _upscaleArray(balances);
-
-        return GyroTwoMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
-    }
+    // TODO WIP killing this routine to pipe DerivedParams through differently.
+    //    function getInvariant() public view override returns (int256) {
+    //        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+    //
+    //        // Since the Pool hooks always work with upscaled balances, we manually
+    //        // upscale here for consistency
+    //        _upscaleArray(balances);
+    //
+    //        return GyroCEMMMath.calculateInvariant(balances, cemmParams, derived);
+    //    }
 
     // Swap Hooks
 
@@ -137,35 +129,45 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         balanceTokenIn = _upscale(balanceTokenIn, scalingFactorTokenIn);
         balanceTokenOut = _upscale(balanceTokenOut, scalingFactorTokenOut);
 
-        // All the calculations in one function to avoid Error Stack Too Deep
-        (
-            uint256 currentInvariant,
-            uint256 virtualParamIn,
-            uint256 virtualParamOut
-        ) = _calculateCurrentValues(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
+        // We "undo" the pre-processing that the caller of onSwap() did: In contrast to other pools, we don't exploit
+        // symmetry here, and we identify the two tokens explicitly.
+        uint256[] memory balances = _balancesFromTokenInOut(
+            balanceTokenIn,
+            balanceTokenOut,
+            tokenInIsToken0
+        );
 
-        // Update price oracle with the pre-swap balances
+        (
+            GyroCEMMMath.Params memory cemmParams,
+            GyroCEMMMath.DerivedParams memory derivedCEMMParams
+        ) = reconstructCEMMParams();
+        uint256 currentInvariant = GyroCEMMMath.calculateInvariant(
+            balances,
+            cemmParams,
+            derivedCEMMParams
+        );
+
+        // Update price oracle with the pre-swap balances. Vs other pools, we need to do this after invariant is calculated
         _updateOracle(
             request.lastChangeBlock,
-            tokenInIsToken0 ? balanceTokenIn : balanceTokenOut,
-            tokenInIsToken0 ? balanceTokenOut : balanceTokenIn,
-            tokenInIsToken0 ? virtualParamIn : virtualParamOut,
-            tokenInIsToken0 ? virtualParamOut : virtualParamIn
+            balances,
+            currentInvariant,
+            cemmParams,
+            derivedCEMMParams
         );
 
         if (request.kind == IVault.SwapKind.GIVEN_IN) {
             // Fees are subtracted before scaling, to reduce the complexity of the rounding direction analysis.
             // This is amount - fee amount, so we round up (favoring a higher fee amount).
             uint256 feeAmount = request.amount.mulUp(getSwapFeePercentage());
-            // TODO check this call: why do we need to upscale? Should we downscale??
             request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
             uint256 amountOut = _onSwapGivenIn(
                 request,
-                balanceTokenIn,
-                balanceTokenOut,
-                virtualParamIn,
-                virtualParamOut,
+                balances,
+                tokenInIsToken0,
+                cemmParams,
+                derivedCEMMParams,
                 currentInvariant
             );
 
@@ -176,10 +178,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
             uint256 amountIn = _onSwapGivenOut(
                 request,
-                balanceTokenIn,
-                balanceTokenOut,
-                virtualParamIn,
-                virtualParamOut,
+                balances,
+                tokenInIsToken0,
+                cemmParams,
+                derivedCEMMParams,
                 currentInvariant
             );
 
@@ -194,87 +196,42 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
 
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
-        uint256 currentBalanceTokenIn,
-        uint256 currentBalanceTokenOut,
-        uint256 virtualParamIn,
-        uint256 virtualParamOut,
+        uint256[] memory balances,
+        bool tokenInIsToken0,
+        GyroCEMMMath.Params memory cemmParams,
+        GyroCEMMMath.DerivedParams memory derivedCEMMParams,
         uint256 invariant
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return
-            GyroTwoMath._calcOutGivenIn(
-                currentBalanceTokenIn,
-                currentBalanceTokenOut,
+            GyroCEMMMath.calcInGivenOut(
+                balances,
                 swapRequest.amount,
-                virtualParamIn,
-                virtualParamOut,
+                tokenInIsToken0,
+                cemmParams,
+                derivedCEMMParams,
                 invariant
             );
     }
 
     function _onSwapGivenOut(
         SwapRequest memory swapRequest,
-        uint256 currentBalanceTokenIn,
-        uint256 currentBalanceTokenOut,
-        uint256 virtualParamIn,
-        uint256 virtualParamOut,
+        uint256[] memory balances,
+        bool tokenInIsToken0,
+        GyroCEMMMath.Params memory cemmParams,
+        GyroCEMMMath.DerivedParams memory derivedCEMMParams,
         uint256 invariant
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return
-            GyroTwoMath._calcInGivenOut(
-                currentBalanceTokenIn,
-                currentBalanceTokenOut,
+            GyroCEMMMath.calcOutGivenIn(
+                balances,
                 swapRequest.amount,
-                virtualParamIn,
-                virtualParamOut,
+                tokenInIsToken0,
+                cemmParams,
+                derivedCEMMParams,
                 invariant
             );
-    }
-
-    function calculateCurrentValues(
-        uint256 balanceTokenIn,
-        uint256 balanceTokenOut,
-        bool tokenInIsToken0
-    )
-        public
-        view
-        returns (
-            uint256 currentInvariant,
-            uint256 virtualParamIn,
-            uint256 virtualParamOut
-        )
-    {
-        return _calculateCurrentValues(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
-    }
-
-    function _calculateCurrentValues(
-        uint256 balanceTokenIn,
-        uint256 balanceTokenOut,
-        bool tokenInIsToken0
-    )
-        internal
-        view
-        returns (
-            uint256 currentInvariant,
-            uint256 virtualParamIn,
-            uint256 virtualParamOut
-        )
-    {
-        // if we have more tokens we might need to get the balances from the Vault
-        uint256[] memory balances = new uint256[](2);
-        balances[0] = tokenInIsToken0 ? balanceTokenIn : balanceTokenOut;
-        balances[1] = tokenInIsToken0 ? balanceTokenOut : balanceTokenIn;
-
-        uint256[] memory sqrtParams = _sqrtParameters();
-
-        currentInvariant = GyroTwoMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
-
-        uint256[] memory virtualParam = new uint256[](2);
-        virtualParam = _getVirtualParameters(sqrtParams, currentInvariant);
-
-        virtualParamIn = tokenInIsToken0 ? virtualParam[0] : virtualParam[1];
-        virtualParamOut = tokenInIsToken0 ? virtualParam[1] : virtualParam[0];
     }
 
     //Note: is public visibility ok for the following function?
@@ -305,12 +262,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         InputHelpers.ensureInputLengthMatch(amountsIn.length, 2);
         _upscaleArray(amountsIn);
 
-        uint256[] memory sqrtParams = _sqrtParameters();
-
-        uint256 invariantAfterJoin = GyroTwoMath._calculateInvariant(
+        (
+            GyroCEMMMath.Params memory cemmParams,
+            GyroCEMMMath.DerivedParams memory derivedCEMMParams
+        ) = reconstructCEMMParams();
+        uint256 invariantAfterJoin = GyroCEMMMath.calculateInvariant(
             amountsIn,
-            sqrtParams[0],
-            sqrtParams[1]
+            cemmParams,
+            derivedCEMMParams
         );
 
         // Set the initial BPT to the value of the invariant times the number of tokens. This makes BPT supply more
@@ -341,8 +300,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
      * amounts are considered upscaled and will be downscaled (rounding down) before being returned to the Vault.
      *
      * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
-     *
-     * Responsibility for updating the oracle has been moved from `onJoinPool()` (without the underscore) to this function. That is because both this function and `_updateOracle()` need access to the invariant and this way we can share the computation.
      */
     function _onJoinPool(
         bytes32,
@@ -364,21 +321,24 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous join
         // or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids spending gas
         // computing them on each individual swap
-
-        uint256[] memory sqrtParams = _sqrtParameters();
-
-        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
-        // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
-        // spending gas calculating the fees on each individual swap.
-        uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+        (
+            GyroCEMMMath.Params memory cemmParams,
+            GyroCEMMMath.DerivedParams memory derivedCEMMParams
+        ) = reconstructCEMMParams();
+        uint256 invariantBeforeAction = GyroCEMMMath.calculateInvariant(
             balances,
-            sqrtParams[0],
-            sqrtParams[1]
+            cemmParams,
+            derivedCEMMParams
         );
-        uint256[] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
 
-        // Update price oracle with pre-join balances
-        _updateOracle(lastChangeBlock, balances[0], balances[1], virtualParam[0], virtualParam[1]);
+        // Update price oracle with the pre-exit balances. Vs other pools, we need to do this after invariant is calculated
+        _updateOracle(
+            lastChangeBlock,
+            balances,
+            invariantBeforeAction,
+            cemmParams,
+            derivedCEMMParams
+        );
 
         _distributeFees(invariantBeforeAction);
 
@@ -389,10 +349,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         // re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
-        _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
+        _lastInvariant = GyroCEMMMath.liquidityInvariantUpdate(
             balances,
-            sqrtParams[0],
-            sqrtParams[1],
             invariantBeforeAction,
             amountsIn,
             true
@@ -473,8 +431,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     {
         // Exits are not completely disabled while the contract is paused: proportional exits (exact BPT in for tokens
         // out) remain functional.
-
-        uint256[] memory sqrtParams = _sqrtParameters();
+        (
+            GyroCEMMMath.Params memory cemmParams,
+            GyroCEMMMath.DerivedParams memory derivedCEMMParams
+        ) = reconstructCEMMParams();
 
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
@@ -482,23 +442,19 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            uint256 invariantBeforeAction = GyroTwoMath._calculateInvariant(
+            uint256 invariantBeforeAction = GyroCEMMMath.calculateInvariant(
                 balances,
-                sqrtParams[0],
-                sqrtParams[1]
-            );
-            uint256[] memory virtualParam = _getVirtualParameters(
-                sqrtParams,
-                invariantBeforeAction
+                cemmParams,
+                derivedCEMMParams
             );
 
-            // Update price oracle with the pre-exit balances
+            // Update price oracle with the pre-exit balances. Vs other pools, we need to do this after invariant is calculated
             _updateOracle(
                 lastChangeBlock,
-                balances[0],
-                balances[1],
-                virtualParam[0],
-                virtualParam[1]
+                balances,
+                invariantBeforeAction,
+                cemmParams,
+                derivedCEMMParams
             );
 
             _distributeFees(invariantBeforeAction);
@@ -510,10 +466,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             // re-computation.
             // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
             // protocol fee factor.
-            _lastInvariant = GyroTwoMath._liquidityInvariantUpdate(
+            _lastInvariant = GyroCEMMMath.liquidityInvariantUpdate(
                 balances,
-                sqrtParams[0],
-                sqrtParams[1],
                 invariantBeforeAction,
                 amountsOut,
                 false
@@ -524,11 +478,13 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
             // We need to re-calculate the invariant with the updated balances from scratch in this case.
+            // TODO review if calculating the invariant is critical enough to just not do it, like in the 3-pool.
+            // (actually, should we always do it like that in any case? Any advantage to how we do it here?)
             _mutateAmounts(balances, amountsOut, FixedPoint.sub);
-            _lastInvariant = GyroTwoMath._calculateInvariant(
+            _lastInvariant = GyroCEMMMath.calculateInvariant(
                 balances,
-                sqrtParams[0],
-                sqrtParams[1]
+                cemmParams,
+                derivedCEMMParams
             );
         }
 
@@ -574,9 +530,94 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         return (bptAmountIn, amountsOut);
     }
 
-    // Helpers
+    // Helpers.
+
+    function _balancesFromTokenInOut(
+        uint256 balanceTokenIn,
+        uint256 balanceTokenOut,
+        bool tokenInIsToken0
+    ) internal pure returns (uint256[] memory balances) {
+        if (tokenInIsToken0) {
+            balances[0] = balanceTokenIn;
+            balances[1] = balanceTokenOut;
+        } else {
+            balances[0] = balanceTokenOut;
+            balances[1] = balanceTokenIn;
+        }
+    }
 
     /**
+     * @dev Updates the Price Oracle based on the Pool's current state (balances, BPT supply and invariant). Must be
+     * called on *all* state-changing functions with the balances *before* the state change happens, and with
+     * `lastChangeBlock` as the number of the block in which any of the balances last changed.
+     */
+    function _updateOracle(
+        uint256 lastChangeBlock,
+        uint256[] memory balances,
+        uint256 invariant,
+        GyroCEMMMath.Params memory cemmParams,
+        GyroCEMMMath.DerivedParams memory derivedCEMMParams
+    ) internal {
+        bytes32 miscData = _miscData;
+        if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
+            uint256 spotPrice = GyroCEMMMath.calculatePrice(
+                balances,
+                cemmParams,
+                derivedCEMMParams,
+                invariant.toInt256()
+            );
+
+            int256 logSpotPrice = GyroCEMMOracleMath._calcLogSpotPrice(spotPrice);
+
+            // // can optionally log BPT spot price using this code. Instead, we log L/S
+            // int256 logBPTPrice = GyroCEMMOracleMath._calcLogBPTPrice(
+            //     balances[0],
+            //     balances[1],
+            //     spotPrice,
+            //     miscData.logTotalSupply()
+            // );
+
+            int256 logInvariantDivSupply = GyroCEMMOracleMath._calcLogInvariantDivSupply(
+                invariant,
+                miscData.logTotalSupply()
+            );
+
+            uint256 oracleCurrentIndex = miscData.oracleIndex();
+            uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
+            uint256 oracleUpdatedIndex = _processPriceData(
+                oracleCurrentSampleInitialTimestamp,
+                oracleCurrentIndex,
+                logSpotPrice,
+                logInvariantDivSupply, // replaces logBPTPrice
+                miscData.logInvariant()
+            );
+
+            if (oracleCurrentIndex != oracleUpdatedIndex) {
+                // solhint-disable not-rely-on-time
+                miscData = miscData.setOracleIndex(oracleUpdatedIndex);
+                miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
+                _miscData = miscData;
+            }
+        }
+    }
+
+    // Override unused inherited function
+    // this intentionally does not revert so that it will be bypassed on onJoinPool inherited from ExtensibleWeightedPool2Tokens
+    // the above overloading implementation of _updateOracle takes different arguments and processes the oracle update in a different place
+    // Note: this is identical to the handling in GyroTwoPool.sol
+    function _updateOracle(
+        uint256,
+        uint256,
+        uint256
+    ) internal pure override {
+        // Do nothing.
+    }
+
+    // Fee helpers. These are exactly the same as in the GyroTwoPool.
+    // TODO prob about time to make a base class.
+
+    /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
      * @dev Computes and distributes fees between the Balancer and the Gyro treasury
      * The fees are computed and distributed in BPT rather than using the
      * Balancer regular distribution mechanism which would pay these in underlying
@@ -598,6 +639,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     }
 
     /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
      * @dev this function overrides inherited function to make sure it is never used
      */
     function _getDueProtocolFeeAmounts(
@@ -611,6 +653,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     }
 
     /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
      * @dev Calculates protocol fee amounts in BPT terms
      * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
      * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
@@ -650,6 +693,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         return (gyroFees, balancerFees, gyroTreasury, balTreasury);
     }
 
+    // Note: This function is identical to that used in GyroTwoPool.sol
     function _payFeesBpt(
         uint256 gyroFees,
         uint256 balancerFees,
@@ -666,6 +710,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         }
     }
 
+    // Note: This function is identical to that used in GyroTwoPool.sol
     function _getFeesMetadata()
         internal
         view
@@ -682,64 +727,5 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );
-    }
-
-    /**
-     * @dev Updates the Price Oracle based on the Pool's current state (balances, BPT supply and invariant). Must be
-     * called on *all* state-changing functions with the balances *before* the state change happens, and with
-     * `lastChangeBlock` as the number of the block in which any of the balances last changed.
-     */
-    function _updateOracle(
-        uint256 lastChangeBlock,
-        uint256 balanceToken0,
-        uint256 balanceToken1,
-        uint256 virtualParam0,
-        uint256 virtualParam1
-    ) internal {
-        bytes32 miscData = _miscData;
-        if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            int256 logSpotPrice = GyroTwoOracleMath._calcLogSpotPrice(
-                balanceToken0,
-                virtualParam0,
-                balanceToken1,
-                virtualParam1
-            );
-
-            int256 logBPTPrice = GyroTwoOracleMath._calcLogBPTPrice(
-                balanceToken0,
-                virtualParam0,
-                balanceToken1,
-                virtualParam1,
-                miscData.logTotalSupply()
-            );
-
-            uint256 oracleCurrentIndex = miscData.oracleIndex();
-            uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
-            uint256 oracleUpdatedIndex = _processPriceData(
-                oracleCurrentSampleInitialTimestamp,
-                oracleCurrentIndex,
-                logSpotPrice,
-                logBPTPrice,
-                miscData.logInvariant()
-            );
-
-            if (oracleCurrentIndex != oracleUpdatedIndex) {
-                // solhint-disable not-rely-on-time
-                miscData = miscData.setOracleIndex(oracleUpdatedIndex);
-                miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
-                _miscData = miscData;
-            }
-        }
-    }
-
-    /**
-     * @dev this variant of the function, called from `onJoinPool()` and `onExitPool()`, which we inherit, is a no-op. We instead have moved responsibility for updating the oracle to `_onJoinPool()` and `_onExitPool()` and the above version is called from there.
-     */
-    function _updateOracle(
-        uint256 lastChangeBlock,
-        uint256 balanceToken0,
-        uint256 balanceToken1
-    ) internal override {
-        // Do nothing.
     }
 }
