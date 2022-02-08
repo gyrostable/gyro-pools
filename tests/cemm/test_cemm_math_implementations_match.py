@@ -67,16 +67,16 @@ ApproxDecimal.__ge__ = (
     lambda self, other: self.expected >= other.expected or self == other
 )
 
-
 @given(params=gen_params(), t=gen_balances_vector())
 def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     mparams = params2MathParams(params)
     res_sol = gyro_cemm_math_testing.mulAinv(scale(params), scale(t))
     res_math = mparams.Ainv_times(t.x, t.y)
     # For some reason we need to convert here, o/w the test fails even when they are equal.
-    assert int(res_sol[0]) == scale(res_math[0]).approxed()
-    assert int(res_sol[1]) == scale(res_math[1]).approxed()
-
+    # Note: This is scaled, so tolerance 10 means the previous to last decimal must match, the last one can differ.
+    # There's no relative tolerance.
+    assert int(res_sol[0]) == scale(res_math[0])
+    assert int(res_sol[1]) == scale(res_math[1])
 
 @given(params=gen_params(), t=gen_balances_vector())
 def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
@@ -84,8 +84,8 @@ def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     res_sol = gyro_cemm_math_testing.mulA(scale(params), scale(t))
     res_math = mparams.A_times(t.x, t.y)
     # For some reason we need to convert here, o/w the test fails even when they are equal.
-    assert int(res_sol[0]) == scale(res_math[0]).approxed()
-    assert int(res_sol[1]) == scale(res_math[1]).approxed()
+    assert int(res_sol[0]) == scale(res_math[0])
+    assert int(res_sol[1]) == scale(res_math[1])
 
 
 @st.composite

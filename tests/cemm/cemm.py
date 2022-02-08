@@ -79,10 +79,6 @@ class Params:
     def s(self):
         return -self.ry
 
-    @cached_property
-    def li(self):  # lambda^{-1}
-        return 1 / self.l
-
     def zeta(self, px: D):
         """Transform a price px of the transformed circle (i.e., the ellipse) into a price _pxc of the untransformed
         circle s.t. we have price px at a point of the transformed circle iff we have price _pxc at the corresponding
@@ -95,7 +91,7 @@ class Params:
         # d, n = self.A_times(D(-1), px)
         # return - n / d
         n = -self.s + px * self.c
-        d = -self.c * self.li - px * self.s * self.li
+        d = -self.c / self.l - px * self.s / self.l
         return -n / d
 
     def tau(self, px: D) -> Vector:
@@ -128,13 +124,13 @@ class Params:
 
     def A_times(self, x: D, y: D) -> Vector:
         """A . (x, y)."""
-        retx = self.c * self.li * x - self.s * self.li * y
+        retx = self.c / self.l * x - self.s / self.l * y
         rety = self.s * x + self.c * y
         return retx, rety
 
     # x and y coordinates
     def A_times_x(self, x: D, y: D) -> D:
-        return self.c * self.li * x - self.s * self.li * y
+        return self.c / self.l * x - self.s / self.l * y
 
     def A_times_y(self, x: D, y: D) -> D:
         return self.s * x + self.c * y
@@ -333,7 +329,7 @@ class CEMM:
 
         xp = x - self.a
 
-        ls = 1 - self.params.li**2  # λ underlined in the prop.
+        ls = 1 - 1/self.params.l**2  # λ underlined in the prop.
         s = self.params.s
         c = self.params.c
 
@@ -359,7 +355,7 @@ class CEMM:
         if not nomaxvals and y > self.ymax:
             return None
 
-        ls = 1 - self.params.li**2  # λ underlined in the prop.
+        ls = 1 - 1/self.params.l**2  # λ underlined in the prop.
         s = self.params.s
         c = self.params.c
 
