@@ -104,7 +104,7 @@ def test_zeta(params_px, gyro_cemm_math_testing):
     mparams = params2MathParams(params)
     res_sol = gyro_cemm_math_testing.zeta(scale(params), scale(px))
     res_math = mparams.zeta(px)
-    assert int(res_sol) == scale(res_math).approxed()
+    assert int(res_sol) == scale(res_math)
 
 
 # NOTE: We have NO separate test for eta right now b/c it's kinda complicated to get right bounds for pxc.

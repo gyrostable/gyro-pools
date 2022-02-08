@@ -88,11 +88,11 @@ class Params:
 
         Proposition 5 instantiated to what A is for us."""
         # todo maybe refactor:
-        # d, n = self.A_times(D(-1), px)
-        # return - n / d
-        n = -self.s + px * self.c
-        d = -self.c / self.l - px * self.s / self.l
-        return -n / d
+        d, n = self.A_times(D(-1), px)
+        return - n / d
+        # n = -self.s + px * self.c
+        # d = -self.c / self.l - px * self.s / self.l
+        # return -n / d
 
     def tau(self, px: D) -> Vector:
         """-r * tau(px) is the point on the untransformed circle corresponding to price px on the transformed circle."""
