@@ -94,7 +94,6 @@ def gen_params_px(draw):
     px = draw(qdecimals(params.alpha.raw, params.beta.raw))
     return params, px
 
-
 @given(params_px=gen_params_px())
 def test_zeta(params_px, gyro_cemm_math_testing):
     (
@@ -106,28 +105,35 @@ def test_zeta(params_px, gyro_cemm_math_testing):
     res_math = mparams.zeta(px)
     assert int(res_sol) == scale(res_math)
 
-
-# NOTE: We have NO separate test for eta right now b/c it's kinda complicated to get right bounds for pxc.
-# But test_tau() below also tests eta.
-
+@given(pxc=qdecimals('-1E16', '1E16'))
+def test_eta(pxc, gyro_cemm_math_testing):
+    # eta is very precise in the grand scheme of things, but of course we can't be more precise than sqrt() across the range of values we care about.
+    # Note that eta does *not* depend on params.
+    res_sol = gyro_cemm_math_testing.eta(scale(pxc))
+    res_math = mimpl.eta(pxc)
+    assert int(res_sol[0]) == scale(res_math[0]).approxed(abs=D('1e5'), rel=D('1e-16'))
+    assert int(res_sol[1]) == scale(res_math[1]).approxed(abs=D('1e5'), rel=D('1e-16'))
 
 @given(params_px=gen_params_px())
 def test_tau(params_px, gyro_cemm_math_testing):
+    # tau is as precise as eta.
     params, px = params_px
     mparams = params2MathParams(params)
     res_sol = gyro_cemm_math_testing.tau(scale(params), scale(px))
     res_math = mparams.tau(px)
-    assert int(res_sol[0]) == scale(res_math[0]).approxed()
-    assert int(res_sol[1]) == scale(res_math[1]).approxed()
+    assert int(res_sol[0]) == scale(res_math[0]).approxed(abs=D('1e5'), rel=D('1e-16'))
+    assert int(res_sol[1]) == scale(res_math[1]).approxed(abs=D('1e5'), rel=D('1e-16'))
 
 
 def mk_CEMMMathDerivedParams_from_brownie(args):
     apair, bpair = args
     return CEMMMathDerivedParams(Vector2(*apair), Vector2(*bpair))
 
+# TODO WIP: Continue with the other functions
 
 @given(params=gen_params())
 def test_mkDerivedParams(params, gyro_cemm_math_testing):
+    # Accuracy of the derived params is that of tau.
     mparams = params2MathParams(params)
     derived_sol = mk_CEMMMathDerivedParams_from_brownie(
         gyro_cemm_math_testing.mkDerivedParams(scale(params))
