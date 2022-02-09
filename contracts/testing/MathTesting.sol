@@ -22,4 +22,9 @@ contract MathTesting {
     function truediv(uint256 a, uint256 b) external pure returns (uint256) {
         return a.divDown(b);
     }
+
+    function sqrt(uint256 a) external pure returns (uint256) {
+//        return a.powDown(FixedPoint.ONE / 2);
+        return a.powUp(FixedPoint.ONE / 2);
+    }
 }
