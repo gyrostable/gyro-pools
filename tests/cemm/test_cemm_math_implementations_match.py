@@ -7,11 +7,12 @@ import hypothesis.strategies as st
 from _pytest.python_api import ApproxDecimal
 from brownie.test import given
 from brownie import reverts
-from hypothesis import assume, settings
+from hypothesis import assume, settings, example
 from tests.cemm import cemm as mimpl
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal import QuantizedDecimal as Decimal
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
@@ -24,6 +25,11 @@ def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
     """The python math implementation is a bit older and uses its own data structures. This function converts."""
     return mimpl.Params(params.alpha, params.beta, params.c, -params.s, params.l)
 
+def mathParams2DerivedParams(mparams: mimpl.Params) -> CEMMMathDerivedParams:
+    return CEMMMathDerivedParams(
+        tauAlpha=Vector2(*mparams.tau_alpha),
+        tauBeta=Vector2(*mparams.tau_beta)
+    )
 
 def faulty_params(balances, params: CEMMMathParams):
     balances = [to_decimal(b) for b in balances]
@@ -129,8 +135,6 @@ def mk_CEMMMathDerivedParams_from_brownie(args):
     apair, bpair = args
     return CEMMMathDerivedParams(Vector2(*apair), Vector2(*bpair))
 
-# TODO WIP: Continue with the other functions
-
 @given(params=gen_params())
 def test_mkDerivedParams(params, gyro_cemm_math_testing):
     # Accuracy of the derived params is that of tau.
@@ -138,34 +142,60 @@ def test_mkDerivedParams(params, gyro_cemm_math_testing):
     derived_sol = mk_CEMMMathDerivedParams_from_brownie(
         gyro_cemm_math_testing.mkDerivedParams(scale(params))
     )
-    assert int(derived_sol.tauAlpha.x) == scale(mparams.tau_alpha[0]).approxed()
-    assert int(derived_sol.tauAlpha.y) == scale(mparams.tau_alpha[1]).approxed()
-    assert int(derived_sol.tauBeta.x) == scale(mparams.tau_beta[0]).approxed()
-    assert int(derived_sol.tauBeta.y) == scale(mparams.tau_beta[1]).approxed()
+    assert int(derived_sol.tauAlpha.x) == scale(mparams.tau_alpha[0]).approxed(abs=D('1e5'), rel=D('1e-16'))
+    assert int(derived_sol.tauAlpha.y) == scale(mparams.tau_alpha[1]).approxed(abs=D('1e5'), rel=D('1e-16'))
+    assert int(derived_sol.tauBeta.x) == scale(mparams.tau_beta[0]).approxed(abs=D('1e5'), rel=D('1e-16'))
+    assert int(derived_sol.tauBeta.y) == scale(mparams.tau_beta[1]).approxed(abs=D('1e5'), rel=D('1e-16'))
+
+
+### Virtual Offsets and Max Balances ###
 
 
 def gen_synthetic_invariant():
     """Generate invariant for cases where it *doesn't* have to match any balances."""
     return qdecimals(1, 100_000_000_000)
 
-
 @given(params=gen_params(), invariant=gen_synthetic_invariant())
-def test_virtualOffsets(params, invariant, gyro_cemm_math_testing):
-    mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
+@example(
+    params=CEMMMathParams(alpha=Decimal('0.302137159231720000'), beta=Decimal('1.005000000000000000'),
+                          c=Decimal('0.836049436859842232'), s=Decimal('0.548654116111727208'),
+                          l=Decimal('2.960000000000000000')),
+    invariant=Decimal('32034653686.598895308700000000'),
+)
+def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
+    """Test Calculation of just the virtual offsets, not including the derived params calculation. This is exact."""
+    derived_scaled = scale(mathParams2DerivedParams(params2MathParams(params)))
+    return gtest_virtualOffsets(params, invariant, derived_scaled, gyro_cemm_math_testing, 0, 0)
+
+@settings(max_examples=1_000)
+@given(params=gen_params(), invariant=gen_synthetic_invariant())
+@example(
+    params=CEMMMathParams(alpha=Decimal('0.302137159231720000'), beta=Decimal('1.005000000000000000'),
+                          c=Decimal('0.836049436859842232'), s=Decimal('0.548654116111727208'),
+                          l=Decimal('2.960000000000000000')),
+    invariant=Decimal('32034653686.598895308700000000'),
+)
+def test_virtualOffsets_with_derived(params, invariant, gyro_cemm_math_testing):
+    """Test Calculation of just the virtual offsets, not including the derived params calculation. This is exact."""
+    derived_scaled = mk_CEMMMathDerivedParams_from_brownie(
         gyro_cemm_math_testing.mkDerivedParams(scale(params))
     )
+    return gtest_virtualOffsets(params, invariant, derived_scaled, gyro_cemm_math_testing,
+                                D('1e5'), D('1e-16'))
+
+def gtest_virtualOffsets(params, invariant, derived_scaled, gyro_cemm_math_testing, abs, rel):
+    mparams = params2MathParams(params)
     ab_sol = gyro_cemm_math_testing.virtualOffsets(
-        scale(params), derived_sol, scale(invariant)
+        scale(params), derived_scaled, scale(invariant)
     )
 
     # The python implementation has this function part of the pool structure even though it only needs the invariant.
     cemm = mimpl.CEMM.from_px_r(D(1), invariant, mparams)
 
-    assert int(ab_sol[0]) == scale(cemm.a).approxed()
-    assert int(ab_sol[1]) == scale(cemm.b).approxed()
+    assert int(ab_sol[0]) == scale(cemm.a).approxed(abs=abs, rel=rel)
+    assert int(ab_sol[1]) == scale(cemm.b).approxed(abs=abs, rel=rel)
 
-
+@settings(max_examples=1_000)
 @given(params=gen_params(), invariant=gen_synthetic_invariant())
 def test_maxBalances(params, invariant, gyro_cemm_math_testing):
     mparams = params2MathParams(params)
@@ -217,7 +247,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
 #     assert int(xplus_sol) == scale(xplus).approxed(abs=1e15)
 #     assert int(xminus_sol) == scale(xminus).approxed(abs=1e15)
 
-
+@settings(max_examples=1_000)
 @given(params=gen_params(), balances=gen_balances())
 def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
     mparams = params2MathParams(params)
@@ -236,7 +266,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
         abs=1e15, rel=to_decimal("1E-6")
     )
 
-
+@settings(max_examples=1_000)
 @given(params=gen_params(), balances=gen_balances())
 def test_calculatePrice(params, balances, gyro_cemm_math_testing):
     assume(balances != (0, 0))
@@ -257,7 +287,7 @@ def test_calculatePrice(params, balances, gyro_cemm_math_testing):
 
 # checkAssetBounds() not tested.
 
-
+@settings(max_examples=1_000)
 @given(
     params=gen_params(),
     x=qdecimals(0, 100_000_000_000),
@@ -282,7 +312,7 @@ def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
     )
     assert to_decimal(y_sol) == scale(y).approxed_scaled()
 
-
+@settings(max_examples=1_000)
 @given(
     params=gen_params(),
     y=qdecimals(0, 100_000_000_000),
@@ -307,7 +337,7 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
     )
     assert to_decimal(x_sol) == scale(x).approxed_scaled()
 
-
+@settings(max_examples=1_000)
 @given(
     params=gen_params(),
     balances=gen_balances(),
@@ -374,7 +404,7 @@ def test_calcOutGivenIn(
     # an extremely unbalanced pool with reserves on the order of (100M, 1).
     # Differences smaller than 1e-12 * balances are ignored.
 
-
+@settings(max_examples=1_000)
 @given(
     params=gen_params(),
     balances=gen_balances(),
@@ -437,7 +467,7 @@ def test_calcInGivenOut(
         abs=D("1E6") * balances[ixOut]
     )
 
-
+@settings(max_examples=1_000)
 @given(
     params=gen_params(),
     balances=gen_balances(),
@@ -477,7 +507,7 @@ def gen_params_cemm_dinvariant(draw):
     assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
     return params, cemm, dinvariant
 
-
+@settings(max_examples=1_000)
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     params, cemm, dinvariant = params_cemm_dinvariant
@@ -500,7 +530,7 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
 
     assert unscale(to_decimal(rnew_sol)) == rnew.approxed()
 
-
+@settings(max_examples=1_000)
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdateEquivalence(
     params_cemm_dinvariant, gyro_cemm_math_testing
