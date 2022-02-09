@@ -175,6 +175,13 @@ class QuantizedDecimal:
     def __str__(self):
         return str(self._value)
 
+    def __format__(self, format_spec: str):
+        # This fixes a bug where .approxed() cannot be displayed when tolerances are given in QuantizedDecimal (as they should be!).
+        if format_spec.endswith("e"):
+            return format(float(self), format_spec)
+        else:
+            return format(self._value, format_spec)
+
     def approxed(self, **kwargs):
         return pytest.approx(self.raw, **kwargs)
 
