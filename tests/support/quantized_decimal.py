@@ -13,20 +13,24 @@ from typing import Any, Optional, Union
 
 import pytest
 
-DECIMAL_PRECISION = 18
 # v Total number of decimal places. This matches uint256, to the degree possible (max uint256 ≈ 1.16e+77).
 MAX_PREC_VALUE = 78
-
-QUANTIZED_EXP = decimal.Decimal(1) / decimal.Decimal(10**DECIMAL_PRECISION)
-
-# 1.000000... multiplier to increase the precision to the required level by multiplying
-DECIMAL_MULT = QUANTIZED_EXP * decimal.Decimal(10**DECIMAL_PRECISION)
 
 # Workaround a brownie issue:
 # - In Brownie, prec is already set to 78 and you can't set it. (through vyper for some reason)
 # - Outside brownie, prec is lower than that and you should set it.
 if decimal.getcontext().prec != MAX_PREC_VALUE:
     decimal.getcontext().prec = MAX_PREC_VALUE
+
+def set_decimals(ndecimals: int):
+    global DECIMAL_PRECISION, DECIMAL_MULT, QUANTIZED_EXP
+    DECIMAL_PRECISION = ndecimals
+    QUANTIZED_EXP = decimal.Decimal(1) / decimal.Decimal(10 ** DECIMAL_PRECISION)
+    # 1.000000... multiplier to increase the precision to the required level by multiplying
+    DECIMAL_MULT = QUANTIZED_EXP * decimal.Decimal(10 ** DECIMAL_PRECISION)
+
+
+set_decimals(18)
 
 
 @total_ordering
