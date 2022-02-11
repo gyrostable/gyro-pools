@@ -1,61 +1,25 @@
-import functools
-from decimal import Decimal
-from math import pi, sin, cos
-from typing import Tuple
-
 import hypothesis.strategies as st
 from _pytest.python_api import ApproxDecimal
 from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example
 from tests.cemm import cemm as mimpl
+from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal import QuantizedDecimal as Decimal
-
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
 # this is a multiplicative separation
 # This is consistent with tightest price range of beta - alpha >= MIN_PRICE_SEPARATION
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
 
 
-def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
-    """The python math implementation is a bit older and uses its own data structures. This function converts."""
-    return mimpl.Params(params.alpha, params.beta, params.c, -params.s, params.l)
-
-def mathParams2DerivedParams(mparams: mimpl.Params) -> CEMMMathDerivedParams:
-    return CEMMMathDerivedParams(
-        tauAlpha=Vector2(*mparams.tau_alpha),
-        tauBeta=Vector2(*mparams.tau_beta)
-    )
-
 def faulty_params(balances, params: CEMMMathParams):
     balances = [to_decimal(b) for b in balances]
     if balances[0] == 0 and balances[1] == 0:
         return True
     return 0 >= params.beta - params.alpha >= MIN_PRICE_SEPARATION
-
-
-@st.composite
-def gen_params(draw):
-    phi_degrees = draw(st.floats(10, 80))
-    phi = phi_degrees / 360 * 2 * pi
-    s = sin(phi)
-    c = cos(phi)
-    l = draw(qdecimals("1", "10"))
-    alpha = draw(qdecimals("0.05", "0.995"))
-    beta = draw(qdecimals("1.005", "20.0"))
-    return CEMMMathParams(alpha, beta, D(c), D(s), l)
-
-
-def gen_balances():
-    return st.tuples(billion_balance_strategy, billion_balance_strategy)
-
-
-def gen_balances_vector():
-    return gen_balances().map(lambda args: Vector2(*args))
 
 
 # Sry monkey patching...
