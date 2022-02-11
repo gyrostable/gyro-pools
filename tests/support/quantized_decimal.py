@@ -190,6 +190,17 @@ class QuantizedDecimal:
         return pytest.approx(self.raw, **kwargs)
 
 
+# Sry monkey patching...
+from _pytest.python_api import ApproxDecimal
+
+ApproxDecimal.__le__ = (
+    lambda self, other: self.expected <= other.expected or self == other
+)
+ApproxDecimal.__ge__ = (
+    lambda self, other: self.expected >= other.expected or self == other
+)
+
+
 DecimalLike = Union[int, str, decimal.Decimal, QuantizedDecimal]
 
 

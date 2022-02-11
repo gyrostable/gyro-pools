@@ -65,13 +65,6 @@ def gen_balances_vector():
 D.approxed_scaled = lambda self: self.approxed(abs=D("1E6"), rel=D("1E-6"))
 D.our_approxed_scaled = lambda self: self.approxed(abs=D("1E15"), rel=D("1E-6"))
 
-# Sry monkey patching...
-ApproxDecimal.__le__ = (
-    lambda self, other: self.expected <= other.expected or self == other
-)
-ApproxDecimal.__ge__ = (
-    lambda self, other: self.expected >= other.expected or self == other
-)
 
 @given(params=gen_params(), t=gen_balances_vector())
 def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
