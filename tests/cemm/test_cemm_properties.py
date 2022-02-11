@@ -112,7 +112,7 @@ def test_invariant_across_calcOutGivenIn(
         balances[0] < balances[1] * MIN_BALANCE_RATIO
         or balances[1] < balances[0] * MIN_BALANCE_RATIO
     ):
-        return
+        assume(False)
 
     amountOut = -mamountOut
 
@@ -140,7 +140,7 @@ def test_invariant_across_calcOutGivenIn(
         new_balances[0] < new_balances[1] * MIN_BALANCE_RATIO
         or new_balances[1] < new_balances[0] * MIN_BALANCE_RATIO
     ):
-        return
+        assume(False)
 
     cemm = mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)
     invariant_after = cemm.r
