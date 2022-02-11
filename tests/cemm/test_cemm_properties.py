@@ -7,7 +7,7 @@ import hypothesis.strategies as st
 from _pytest.python_api import ApproxDecimal
 from brownie.test import given
 from brownie import reverts
-from hypothesis import assume, settings
+from hypothesis import assume, settings, event, example
 from tests.cemm import cemm as mimpl
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
@@ -61,11 +61,19 @@ def gen_balances_vector():
 
 ################################################################################
 ### test calcOutGivenIn for invariant change
+@settings(max_examples=1_000)
 @given(
     params=gen_params(),
     balances=gen_balances(),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
+)
+@example(
+    # Failure with error 1 in invariant. (relative error very small!)
+    params=CEMMMathParams(alpha=D('5.941451855790000000'), beta=D('9.178966500000000000'), c=D('0.944428837436701696'), s=D('0.328715942749907009'), l=D('8.304036210000000000')),
+    balances=(3352648952, 49042),
+    amountIn=D('1.017200000000000000'),
+    tokenInIsToken0=False
 )
 def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
@@ -147,6 +155,9 @@ def test_invariant_across_calcOutGivenIn(
     invariant_sol_after = gyro_cemm_math_testing.calculateInvariant(
         scale(new_balances), scale(params), scale(derived)
     )
+
+    # Event to tell these apart from (checked) error cases.
+    event("full check")
 
     assert invariant_after >= invariant_before
     assert invariant_sol_after >= invariant_sol
