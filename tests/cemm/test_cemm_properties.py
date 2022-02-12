@@ -64,7 +64,6 @@ def calculate_loss(delta_invariant, invariant, balances):
     tokenInIsToken0=st.booleans(),
 )
 @example(
-    # Failure with error 1 in invariant. (relative error very small!)
     params=CEMMMathParams(
         alpha=D("5.941451855790000000"),
         beta=D("9.178966500000000000"),
@@ -75,6 +74,14 @@ def calculate_loss(delta_invariant, invariant, balances):
     balances=(3352648952, 49042),
     amountIn=D("1.017200000000000000"),
     tokenInIsToken0=False,
+)
+@example(
+    params=CEMMMathParams(alpha=D('5.464501975666209520'), beta=D('17.477072877102500000'),
+                          c=D('0.837352697985946248'), s=D('0.546663021591598741'),
+                          l=D('8.712244999970857054')),
+    balances=(2198037986, 860945182),
+    amountIn=D('1.021500000000000000'),
+    tokenInIsToken0=True,
 )
 def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
