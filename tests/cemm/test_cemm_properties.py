@@ -11,6 +11,7 @@ from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, event, example
 from tests.cemm import cemm as mimpl
+from tests.cemm.util import gen_params, gen_params_cemm_dinvariant
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -37,20 +38,6 @@ def faulty_params(balances, params: CEMMMathParams):
     if balances[0] == 0 and balances[1] == 0:
         return True
     return 0 >= params.beta - params.alpha >= MIN_PRICE_SEPARATION
-
-
-@st.composite
-def gen_params(draw):
-    phi_degrees = draw(st.floats(10, 80))
-    phi = phi_degrees / 360 * 2 * pi
-    s = sin(phi)
-    c = cos(phi)
-    l = draw(qdecimals("1", "10"))
-    alpha = draw(qdecimals("0.05", "0.995"))
-    beta = draw(qdecimals("1.005", "20.0"))
-    # factor = D(1)
-    factor = draw(qdecimals("0.2", "20.0"))
-    return CEMMMathParams(factor * alpha, factor * beta, D(c), D(s), l)
 
 
 def gen_balances():
@@ -278,18 +265,6 @@ def test_invariant_across_calcInGivenOut(
 
 ################################################################################
 ### test liquidityInvariantUpdate for L change
-@st.composite
-def gen_params_cemm_dinvariant(draw):
-    params = draw(gen_params())
-    mparams = params2MathParams(params)
-    balances = draw(gen_balances())
-    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
-    dinvariant = draw(
-        qdecimals(-cemm.r.raw, 2 * cemm.r.raw)
-    )  # Upper bound kinda arbitrary
-    assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
-    return params, cemm, dinvariant
-
 
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_invariant_across_liquidityInvariantUpdate(

@@ -1,10 +1,10 @@
 import hypothesis.strategies as st
-from _pytest.python_api import ApproxDecimal
 from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example
 from tests.cemm import cemm as mimpl
-from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector
+from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector, \
+    gen_params_cemm_dinvariant
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -451,18 +451,6 @@ def test_calculateSqrtOnePlusZetaSquared(params, balances, gyro_cemm_math_testin
     )  # Tests math / the python implementation
     assert to_decimal(val_sol) == scale(val_implicit).approxed_scaled()
 
-
-@st.composite
-def gen_params_cemm_dinvariant(draw):
-    params = draw(gen_params())
-    mparams = params2MathParams(params)
-    balances = draw(gen_balances())
-    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
-    dinvariant = draw(
-        qdecimals(-cemm.r.raw, 2 * cemm.r.raw)
-    )  # Upper bound kinda arbitrary
-    assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
-    return params, cemm, dinvariant
 
 @settings(max_examples=1_000)
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
