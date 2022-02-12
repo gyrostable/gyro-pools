@@ -1,8 +1,11 @@
 
 # We test how the python implementation reacts to an increase in precision.
 # Can be run without brownie.
-# NOTE: Because of brownie insanity,
+# NOTE: Because of brownie insanity, we can't run just this file with pytest and without loading ganache. But you can
+# run it with python and then
+# It will collect some diagnostics data (this is a hack).
 
+import pandas as pd
 from hypothesis import given, settings, assume, example
 from hypothesis import strategies as st
 
@@ -16,10 +19,21 @@ import cemm as mimpl
 import cemm_float as mimpl_float
 
 MIN_BALANCE_RATIO = D("1E-5")
-MIN_FEE = D("0.0001")
+MIN_FEE = D("0.0000")
+
+# Ad-hoc hack to collect error values while running tests. Should be refactored somehow at some point.
+error_values = None
 
 # MIN_BALANCE_RATIO = D(0)
 # MIN_FEE = D(0)
+
+def calculate_loss(delta_invariant, invariant, balances):
+    """Loss ito. lost balances for LPs when invariant decreases by delta_invariant because of a calculation error.
+
+    Loss = negative; gain = positive"""
+    # delta_balance_A = delta_invariant / invariant * balance_A
+    factor = delta_invariant / invariant
+    return balances[0] * factor, balances[1] * factor
 
 @settings(max_examples=10_000)
 @given(params=gen_params())
@@ -128,9 +142,18 @@ def test_invariant_across_calcOutGivenIn(
     cemm = mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)
     invariant_after = cemm.r
 
+    # Losses can be negative or positive; negative means an actual loss.
+    losses = calculate_loss(invariant_after - invariant_before, invariant_before, balances)
+    loss_ub = -mparams.beta * losses[0] - losses[1]
+    max_loss = D('1E-2')
+    assert loss_ub <= max_loss
+
+    global error_values
+    error_values.append(loss_ub)
+
     # We need to approx this to 1e-18 at least, not to create an unfair comparison for higher precision.
-    abserr = D('1E-18')
-    assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
+    # abserr = D('1E-18')
+    # assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
 
 ### Float version ###
 
@@ -190,9 +213,14 @@ def test_invariant_across_calcOutGivenIn_float(
     cemm = mimpl_float.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)
     invariant_after = cemm.r
 
+    losses = calculate_loss(invariant_after - invariant_before, invariant_after, new_balances)
+    loss_ub = -mparams.beta * losses[0] - losses[1]
+    max_loss = float('1E-2')
+    assert loss_ub <= max_loss
+
     # We need to approx this to 1e-18 at least, not to create an unfair comparison for higher precision.
-    abserr = float('1E-18')
-    assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
+    # abserr = float('1E-18')
+    # assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
 
 @given(x=st.booleans())
 def test_dummy_fails(x):
@@ -220,4 +248,7 @@ def debug(use_pdb=True):
 
 if __name__ == "__main__":
     with debug():
-        test_invariant_across_calcOutGivenIn_float()
+        error_values = []
+        test_invariant_across_calcOutGivenIn()
+        df = pd.DataFrame({'error': list(map(float, error_values))})
+        df.to_feather("data/errors_double_decimal.feather")
