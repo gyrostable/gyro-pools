@@ -13,6 +13,7 @@ from tests.support.types import CEMMMathParams
 from tests.support.utils import qdecimals
 
 import cemm as mimpl
+import cemm_float as mimpl_float
 
 MIN_BALANCE_RATIO = D("1E-5")
 MIN_FEE = D("0.0001")
@@ -93,7 +94,7 @@ def test_invariant_across_calcOutGivenIn(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    # quantized_decimal.set_decimals(18 * 2)
+    quantized_decimal.set_decimals(18 * 2)
 
     mparams = params2MathParams(params)
     derived = mathParams2DerivedParams(params2MathParams(params))
@@ -130,3 +131,93 @@ def test_invariant_across_calcOutGivenIn(
     # We need to approx this to 1e-18 at least, not to create an unfair comparison for higher precision.
     abserr = D('1E-18')
     assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
+
+### Float version ###
+
+def mparams2float(params: mimpl.Params) -> mimpl_float.Params:
+    return mimpl_float.Params(*map(float, (params.alpha, params.beta, params.rx, params.ry, params.l)))
+
+@settings(max_examples=1_000)
+@given(
+    params=gen_params(),
+    balances=gen_balances(),
+    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    tokenInIsToken0=st.booleans(),
+)
+@example(
+    params=CEMMMathParams(alpha=D('0.050000000000000000'), beta=D('1.005000000000000000'), c=D('0.984807753012208020'), s=D('0.173648177666930331'), l=D('1.000000000000000000')),
+    balances=(2, 1),
+    amountIn=D('1.000000000000000000'),
+    tokenInIsToken0=False,
+)
+def test_invariant_across_calcOutGivenIn_float(
+    params, balances, amountIn, tokenInIsToken0
+):
+    ixIn = 0 if tokenInIsToken0 else 1
+    ixOut = 1 - ixIn
+
+    balances = tuple(map(float, balances))
+    amountIn = float(amountIn)
+
+    mparams = mparams2float(params2MathParams(params))
+    cemm = mimpl_float.CEMM.from_x_y(balances[0], balances[1], mparams)
+    invariant_before = cemm.r
+    f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
+
+    fees = float(MIN_FEE) * amountIn
+    amountIn -= fees
+
+    mamountOut = f_trade(amountIn)  # This changes the state of the cemm but whatever
+
+    assume(mamountOut is not None)
+
+    assume(
+        balances[0] >= balances[1] * float(MIN_BALANCE_RATIO) and
+        balances[1] >= balances[0] * float(MIN_BALANCE_RATIO)
+    )
+
+    amountOut = -mamountOut
+
+    new_balances = list(balances)
+    new_balances[ixIn] += amountIn + fees
+    new_balances[ixOut] -= amountOut
+
+    assume(
+        new_balances[0] >= new_balances[1] * float(MIN_BALANCE_RATIO) and
+        new_balances[1] >= new_balances[0] * float(MIN_BALANCE_RATIO)
+    )
+
+    cemm = mimpl_float.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)
+    invariant_after = cemm.r
+
+    # We need to approx this to 1e-18 at least, not to create an unfair comparison for higher precision.
+    abserr = float('1E-18')
+    assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
+
+@given(x=st.booleans())
+def test_dummy_fails(x):
+    assert x
+
+
+### Main, when used without pytest ###
+
+from contextlib import contextmanager
+
+@contextmanager
+def debug(use_pdb=True):
+    """When use_pdb is True, enter the debugger if an exception is raised."""
+    try:
+        yield
+    except Exception as e:
+        if not use_pdb:
+            raise
+        import sys
+        import traceback
+        import pdb
+        info = sys.exc_info()
+        traceback.print_exception(*info)
+        pdb.post_mortem(info[2])
+
+if __name__ == "__main__":
+    with debug():
+        test_invariant_across_calcOutGivenIn_float()
