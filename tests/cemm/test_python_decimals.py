@@ -149,7 +149,8 @@ def test_invariant_across_calcOutGivenIn(
     assert loss_ub <= max_loss
 
     global error_values
-    error_values.append(loss_ub)
+    if error_values is not None:
+        error_values.append(loss_ub)
 
     # We need to approx this to 1e-18 at least, not to create an unfair comparison for higher precision.
     # abserr = D('1E-18')
