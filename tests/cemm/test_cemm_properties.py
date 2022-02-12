@@ -91,6 +91,9 @@ def test_invariant_across_calcOutGivenIn(
 
     assume(amountIn <= to_decimal("0.3") * balances[ixIn])
 
+    fees = float(MIN_FEE) * amountIn
+    amountIn -= fees
+
     mparams = params2MathParams(params)
     derived = CEMMMathDerivedParams(
         Vector2(mparams.tau_alpha[0], mparams.tau_alpha[1]),
@@ -143,13 +146,13 @@ def test_invariant_across_calcOutGivenIn(
 
     if tokenInIsToken0:
         new_balances = (
-            balances[0] + amountIn,
-            balances[1] - unscale(to_decimal(amountOut_sol)) * (D(1) - MIN_FEE),
+            balances[0] + amountIn + fees,
+            balances[1] - unscale(to_decimal(amountOut_sol)),
         )
     else:
         new_balances = (
-            balances[0] - unscale(to_decimal(amountOut_sol)) * (D(1) - MIN_FEE),
-            balances[1] + amountIn,
+            balances[0] - unscale(to_decimal(amountOut_sol)),
+            balances[1] + amountIn + fees,
         )
 
     if (
