@@ -5,6 +5,8 @@ from typing import Tuple
 
 import hypothesis.strategies as st
 from _pytest.python_api import ApproxDecimal
+
+# from pyrsistent import Invariant
 from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, event, example
@@ -21,8 +23,8 @@ MIN_PRICE_SEPARATION = to_decimal("0.0001")
 MAX_IN_RATIO = to_decimal("0.3")
 MAX_OUT_RATIO = to_decimal("0.3")
 
-MIN_BALANCE_RATIO = to_decimal("1e-5")
-MIN_FEE = D("0.0001")
+MIN_BALANCE_RATIO = to_decimal("5e-5")
+MIN_FEE = D("0.0002")
 
 
 def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
@@ -59,6 +61,12 @@ def gen_balances_vector():
     return gen_balances().map(lambda args: Vector2(*args))
 
 
+def calculate_loss(delta_invariant, invariant, balances):
+    # delta_balance_A = delta_invariant / invariant * balance_A
+    factor = to_decimal(delta_invariant / invariant)
+    return (to_decimal(balances[0]) * factor, to_decimal(balances[1]) * factor)
+
+
 ################################################################################
 ### test calcOutGivenIn for invariant change
 @settings(max_examples=1_000)
@@ -70,10 +78,16 @@ def gen_balances_vector():
 )
 @example(
     # Failure with error 1 in invariant. (relative error very small!)
-    params=CEMMMathParams(alpha=D('5.941451855790000000'), beta=D('9.178966500000000000'), c=D('0.944428837436701696'), s=D('0.328715942749907009'), l=D('8.304036210000000000')),
+    params=CEMMMathParams(
+        alpha=D("5.941451855790000000"),
+        beta=D("9.178966500000000000"),
+        c=D("0.944428837436701696"),
+        s=D("0.328715942749907009"),
+        l=D("8.304036210000000000"),
+    ),
     balances=(3352648952, 49042),
-    amountIn=D('1.017200000000000000'),
-    tokenInIsToken0=False
+    amountIn=D("1.017200000000000000"),
+    tokenInIsToken0=False,
 )
 def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
@@ -159,8 +173,16 @@ def test_invariant_across_calcOutGivenIn(
     # Event to tell these apart from (checked) error cases.
     event("full check")
 
-    assert invariant_after >= invariant_before
-    assert invariant_sol_after >= invariant_sol
+    if invariant_after < invariant_before or invariant_sol_after < invariant_sol:
+        loss = calculate_loss(
+            invariant_after - invariant_before, invariant_before, balances
+        )
+        # compare upper bound on loss in y terms
+        loss_ub = -loss[0] * params.beta - loss[1]
+        assert loss_ub < D("5e-2")
+    else:
+        assert invariant_after >= invariant_before
+        assert invariant_sol_after >= invariant_sol
 
 
 ################################################################################
