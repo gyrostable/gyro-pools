@@ -9,7 +9,7 @@ import pandas as pd
 from hypothesis import given, settings, assume, example
 from hypothesis import strategies as st
 
-from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances
+from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, debug_postmortem_on_exc
 from tests.support import quantized_decimal
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams
@@ -223,34 +223,12 @@ def test_invariant_across_calcOutGivenIn_float(
     # abserr = float('1E-18')
     # assert invariant_after.approxed(abs=abserr) >= invariant_before.approxed(abs=abserr)
 
-@given(x=st.booleans())
-def test_dummy_fails(x):
-    assert x
-
-
 ### Main, when used without pytest ###
-
-from contextlib import contextmanager
-
-@contextmanager
-def debug(use_pdb=True):
-    """When use_pdb is True, enter the debugger if an exception is raised."""
-    try:
-        yield
-    except Exception as e:
-        if not use_pdb:
-            raise
-        import sys
-        import traceback
-        import pdb
-        info = sys.exc_info()
-        traceback.print_exception(*info)
-        pdb.post_mortem(info[2])
 
 if __name__ == "__main__":
     # When run directly, run this with python from the `vaults/` toplevel dir.
     # (also works with pytest, then this is ignored)
-    with debug():
+    with debug_postmortem_on_exc():
         error_values = []
         test_invariant_across_calcOutGivenIn()
         df = pd.DataFrame({'error': list(map(float, error_values))})

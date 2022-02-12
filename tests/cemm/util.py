@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from math import pi, sin, cos, tan
 
 from hypothesis import strategies as st, assume
@@ -432,3 +433,19 @@ def mtest_liquidityInvariantUpdateEquivalence(
     # To try it out even
     assert dx == (dinvariant / r * cemm.x).approxed(abs=1e-5)
     assert dy == (dinvariant / r * cemm.y).approxed(abs=1e-5)
+
+
+@contextmanager
+def debug_postmortem_on_exc(use_pdb=True):
+    """When use_pdb is True, enter the debugger if an exception is raised."""
+    try:
+        yield
+    except Exception as e:
+        if not use_pdb:
+            raise
+        import sys
+        import traceback
+        import pdb
+        info = sys.exc_info()
+        traceback.print_exception(*info)
+        pdb.post_mortem(info[2])
