@@ -16,6 +16,9 @@ from tests.support.quantized_decimal import QuantizedDecimal as Decimal
 # This is consistent with tightest price range of beta - alpha >= MIN_PRICE_SEPARATION
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
 
+# this determines whether derivedParameters are calculated in solidity or not
+DP_IN_SOL = True
+
 
 def faulty_params(balances, params: CEMMMathParams):
     balances = [to_decimal(b) for b in balances]
@@ -153,7 +156,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
 @given(params=util.gen_params(), balances=util.gen_balances())
 def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
     invariant_py, invariant_sol = util.mtest_calcualteInvariant(
-        params, balances, gyro_cemm_math_testing
+        params, balances, DP_IN_SOL, gyro_cemm_math_testing
     )
 
     # We now require that the invariant is underestimated and allow ourselves a bit of slack in the other direction.
@@ -168,7 +171,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
 def test_calculatePrice(params, balances, gyro_cemm_math_testing):
     assume(balances != (0, 0))
     price_py, price_sol = util.mtest_calculatePrice(
-        params, balances, gyro_cemm_math_testing
+        params, balances, DP_IN_SOL, gyro_cemm_math_testing
     )
 
     assert price_sol == scale(price_py).approxed_scaled()
@@ -184,7 +187,9 @@ def test_calculatePrice(params, balances, gyro_cemm_math_testing):
     invariant=util.gen_synthetic_invariant(),
 )
 def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
-    y_py, y_sol = util.mtest_calcYGivenX(params, x, invariant, gyro_cemm_math_testing)
+    y_py, y_sol = util.mtest_calcYGivenX(
+        params, x, invariant, DP_IN_SOL, gyro_cemm_math_testing
+    )
     assert y_sol == scale(y_py).approxed_scaled()
 
 
@@ -195,7 +200,9 @@ def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
     invariant=util.gen_synthetic_invariant(),
 )
 def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
-    x_py, x_sol = util.test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing)
+    x_py, x_sol = util.test_calcXGivenY(
+        params, y, invariant, DP_IN_SOL, gyro_cemm_math_testing
+    )
     assert x_sol == scale(x_py).approxed_scaled()
 
 
@@ -212,7 +219,7 @@ def test_calcOutGivenIn(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
     amount_out_py, amount_out_sol = util.mtest_calcOutGivenIn(
-        params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
+        params, balances, amountIn, tokenInIsToken0, DP_IN_SOL, gyro_cemm_math_testing
     )
 
     assert amount_out_sol == scale(
@@ -239,7 +246,7 @@ def test_calcInGivenOut(
     ixOut = 1 - ixIn
 
     amount_in_py, amount_in_sol = util.mtest_calcInGivenOut(
-        params, balances, amountOut, tokenInIsToken0, gyro_cemm_math_testing
+        params, balances, amountOut, tokenInIsToken0, DP_IN_SOL, gyro_cemm_math_testing
     )
 
     assert amount_in_sol == scale(
@@ -254,7 +261,9 @@ def test_calcInGivenOut(
     params=util.gen_params(),
     balances=util.gen_balances(),
 )
-def test_calculateSqrtOnePlusZetaSquared(params, balances, gyro_cemm_math_testing):
+def test_calculateSqrtOnePlusZetaSquared(
+    params, balances, DP_IN_SOL, gyro_cemm_math_testing
+):
     val_py, val_sol = util.mtest_calculateSqrtOnePlusZetaSquared(
         params, balances, gyro_cemm_math_testing
     )

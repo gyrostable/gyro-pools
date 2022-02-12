@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 from math import pi, sin, cos, tan
+from unicodedata import decimal
 
-from hypothesis import strategies as st, assume
+from hypothesis import strategies as st, assume, event
 
 from brownie import reverts
 
@@ -22,6 +23,17 @@ def mathParams2DerivedParams(mparams: mimpl.Params) -> CEMMMathDerivedParams:
     return CEMMMathDerivedParams(
         tauAlpha=Vector2(*mparams.tau_alpha), tauBeta=Vector2(*mparams.tau_beta)
     )
+
+
+class Basic_Pool_Parameters:
+    def __init__(
+        self, mps: decimal, mir: decimal, mor: decimal, mbr: decimal, mf: decimal
+    ):
+        self.min_price_separation = mps
+        self.max_in_ratio = mir
+        self.max_out_ratio = mor
+        self.min_balance_ratio = mbr
+        self.min_fee = mf
 
 
 @st.composite
@@ -63,6 +75,21 @@ def gen_params_cemm_dinvariant(draw):
     )  # Upper bound kinda arbitrary
     assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
     return params, cemm, dinvariant
+
+
+def get_derived_parameters(params, is_solidity: bool, gyro_cemm_math_testing):
+    if is_solidity:
+        derived_sol = mk_CEMMMathDerivedParams_from_brownie(
+            gyro_cemm_math_testing.mkDerivedParams(scale(params))
+        )
+        return derived_sol
+    else:
+        mparams = params2MathParams(params)
+        derived = CEMMMathDerivedParams(
+            Vector2(mparams.tau_alpha[0], mparams.tau_alpha[1]),
+            Vector2(mparams.tau_beta[0], mparams.tau_beta[1]),
+        )
+        return scale(derived)
 
 
 #####################################################################
@@ -149,7 +176,7 @@ def gtest_virtualOffsets(
     )
 
     # The python implementation has this function part of the pool structure even though it only needs the invariant.
-    midprice = (mparams.alpha + mparams.beta)  / D(2)
+    midprice = (mparams.alpha + mparams.beta) / D(2)
     cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)
 
     assert int(ab_sol[0]) == scale(cemm.a).approxed(abs=abs, rel=rel)
@@ -184,7 +211,7 @@ def mtest_maxBalances(params, invariant, gyro_cemm_math_testing):
     )
 
     # The python implementation has this function part of the pool structure even though it only needs the invariant.
-    midprice = (mparams.alpha + mparams.beta)  / D(2)
+    midprice = (mparams.alpha + mparams.beta) / D(2)
     cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)
 
     assert int(xy_sol[0]) == scale(cemm.xmax).approxed()
@@ -195,13 +222,16 @@ def mtest_maxBalances(params, invariant, gyro_cemm_math_testing):
 ### for testing the main math library functions
 
 
-def mtest_calculateInvariant(params, balances, gyro_cemm_math_testing):
+def mtest_calculateInvariant(
+    params, balances, derivedparams_is_sol: bool, gyro_cemm_math_testing
+):
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
+
     uinvariant_sol = gyro_cemm_math_testing.calculateInvariant(
-        scale(balances), scale(params), derived_sol
+        scale(balances), scale(params), derived
     )
 
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
@@ -212,29 +242,33 @@ def mtest_calculateInvariant(params, balances, gyro_cemm_math_testing):
     )
 
 
-def mtest_calculatePrice(params, balances, gyro_cemm_math_testing):
+def mtest_calculatePrice(
+    params, balances, derivedparams_is_sol: bool, gyro_cemm_math_testing
+):
     assume(balances != (0, 0))
 
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
 
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
 
     price_sol = gyro_cemm_math_testing.calculatePrice(
-        scale(balances), scale(params), derived_sol, scale(cemm.r)
+        scale(balances), scale(params), derived, scale(cemm.r)
     )
 
     return cemm.px, to_decimal(price_sol)
 
 
-def mtest_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
+def mtest_calcYGivenX(
+    params, x, invariant, derivedparams_is_sol: bool, gyro_cemm_math_testing
+):
     assume(x == 0 if invariant == 0 else True)
 
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
 
     midprice = (params.alpha + params.beta) / 2
@@ -244,17 +278,19 @@ def mtest_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
     assume(y is not None)  # O/w out of bounds for this invariant
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(x), scale(params), derived_sol, scale(cemm.r)
+        scale(x), scale(params), derived, scale(cemm.r)
     )
     return y, to_decimal(y_sol)
 
 
-def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
+def test_calcXGivenY(
+    params, y, invariant, derivedparams_is_sol: bool, gyro_cemm_math_testing
+):
     assume(y == 0 if invariant == 0 else True)
 
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
 
     midprice = (params.alpha + params.beta) / 2
@@ -264,13 +300,18 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
     assume(x is not None)  # O/w out of bounds for this invariant
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(y), scale(params), derived_sol, scale(cemm.r)
+        scale(y), scale(params), derived, scale(cemm.r)
     )
     return x, to_decimal(x_sol)
 
 
 def test_calcOutGivenIn(
-    params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
+    params,
+    balances,
+    amountIn,
+    tokenInIsToken0,
+    derivedparams_is_sol: bool,
+    gyro_cemm_math_testing,
 ):
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
@@ -278,8 +319,8 @@ def test_calcOutGivenIn(
     assume(amountIn <= to_decimal("0.3") * balances[ixIn])
 
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
 
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
@@ -303,7 +344,7 @@ def test_calcOutGivenIn(
                 scale(amountIn),
                 tokenInIsToken0,
                 scale(params),
-                derived_sol,
+                derived,
                 scale(r),
             )
         return
@@ -316,7 +357,7 @@ def test_calcOutGivenIn(
         scale(amountIn),
         tokenInIsToken0,
         scale(params),
-        derived_sol,
+        derived,
         scale(r),
     )
 
@@ -324,7 +365,12 @@ def test_calcOutGivenIn(
 
 
 def mtest_calcInGivenOut(
-    params, balances, amountOut, tokenInIsToken0, gyro_cemm_math_testing
+    params,
+    balances,
+    amountOut,
+    tokenInIsToken0,
+    derivedparams_is_sol: bool,
+    gyro_cemm_math_testing,
 ):
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
@@ -332,8 +378,8 @@ def mtest_calcInGivenOut(
     assume(amountOut <= to_decimal("0.3") * balances[ixOut])
 
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
 
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
@@ -357,7 +403,7 @@ def mtest_calcInGivenOut(
                 scale(amountOut),
                 tokenInIsToken0,
                 scale(params),
-                derived_sol,
+                derived,
                 scale(r),
             )
         return
@@ -369,27 +415,29 @@ def mtest_calcInGivenOut(
         scale(amountOut),
         tokenInIsToken0,
         scale(params),
-        derived_sol,
+        derived,
         scale(r),
     )
     return amountIn, to_decimal(amountIn_sol)
 
 
-def mtest_calculateSqrtOnePlusZetaSquared(params, balances, gyro_cemm_math_testing):
+def mtest_calculateSqrtOnePlusZetaSquared(
+    params, balances, derivedparams_is_sol: bool, gyro_cemm_math_testing
+):
     # This is a comparison test that also tests the basic math behind this: The solidity code doesn't actually
     # calculate the square root!
     assume(balances != (0, 0))
 
     mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
     )
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
 
     val_explicit = (D(1) + mparams.zeta(cemm.px) ** 2).sqrt()
     val_implicit = cemm._sqrtOnePlusZetaSquared
     val_sol = gyro_cemm_math_testing.calculateSqrtOnePlusZetaSquared(
-        scale(balances), scale(params), derived_sol, scale(cemm.r)
+        scale(balances), scale(params), derived, scale(cemm.r)
     )
 
     assert (
@@ -446,6 +494,293 @@ def debug_postmortem_on_exc(use_pdb=True):
         import sys
         import traceback
         import pdb
+
         info = sys.exc_info()
         traceback.print_exception(*info)
         pdb.post_mortem(info[2])
+
+
+#####################################################################
+### for testing invariant changes across swaps
+
+
+def faulty_params(
+    balances, params: CEMMMathParams, bpool_params: Basic_Pool_Parameters
+):
+    balances = [to_decimal(b) for b in balances]
+    if balances[0] == 0 and balances[1] == 0:
+        return True
+    return 0 >= params.beta - params.alpha >= bpool_params.min_price_separation
+
+
+def calculate_loss(delta_invariant, invariant, balances):
+    # delta_balance_A = delta_invariant / invariant * balance_A
+    factor = to_decimal(delta_invariant / invariant)
+    return (to_decimal(balances[0]) * factor, to_decimal(balances[1]) * factor)
+
+
+def mtest_invariant_across_calcOutGivenIn(
+    params,
+    balances,
+    amountIn,
+    tokenInIsToken0,
+    derivedparams_is_sol: bool,
+    bpool_params,
+    gyro_cemm_math_testing,
+):
+    ixIn = 0 if tokenInIsToken0 else 1
+    ixOut = 1 - ixIn
+
+    assume(amountIn <= to_decimal("0.3") * balances[ixIn])
+
+    fees = float(bpool_params.min_fee) * amountIn
+    amountIn -= fees
+
+    mparams = params2MathParams(params)
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
+    )
+
+    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
+    invariant_before = cemm.r
+    invariant_sol = gyro_cemm_math_testing.calculateInvariant(
+        scale(balances), scale(params), derived
+    )
+
+    f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
+    mamountOut = f_trade(amountIn)  # This changes the state of the cemm but whatever
+
+    revertCode = None
+    if mamountOut is None:
+        revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif -mamountOut > to_decimal("0.3") * balances[ixOut]:
+        revertCode = "BAL#305"  # MAX_OUT_RATIO
+
+    if revertCode is not None:
+        with reverts(revertCode):
+            gyro_cemm_math_testing.calcOutGivenIn(
+                scale(balances),
+                scale(amountIn),
+                tokenInIsToken0,
+                scale(params),
+                derived,
+                invariant_sol,
+            )
+        return
+
+    if (
+        balances[0] < balances[1] * bpool_params.min_balance_ratio
+        or balances[1] < balances[0] * bpool_params.min_balance_ratio
+    ):
+        assume(False)
+
+    amountOut = -mamountOut
+
+    amountOut_sol = gyro_cemm_math_testing.calcOutGivenIn(
+        scale(balances),
+        scale(amountIn),
+        tokenInIsToken0,
+        scale(params),
+        derived,
+        invariant_sol,
+    )
+
+    if tokenInIsToken0:
+        new_balances = (
+            balances[0] + amountIn + fees,
+            balances[1] - unscale(to_decimal(amountOut_sol)),
+        )
+    else:
+        new_balances = (
+            balances[0] - unscale(to_decimal(amountOut_sol)),
+            balances[1] + amountIn + fees,
+        )
+
+    if (
+        new_balances[0] < new_balances[1] * bpool_params.min_balance_ratio
+        or new_balances[1] < new_balances[0] * bpool_params.min_balance_ratio
+    ):
+        assume(False)
+
+    cemm = mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)
+    invariant_after = cemm.r
+    invariant_sol_after = gyro_cemm_math_testing.calculateInvariant(
+        scale(new_balances), scale(params), derived
+    )
+
+    # Event to tell these apart from (checked) error cases.
+    event("full check")
+
+    if invariant_after < invariant_before:
+        loss = calculate_loss(
+            invariant_after - invariant_before, invariant_before, balances
+        )
+        # compare upper bound on loss in y terms
+        loss_ub = -loss[0] * params.beta - loss[1]
+    else:
+        loss_ub = D(0)
+
+    if invariant_sol_after < invariant_sol:
+        loss = calculate_loss(
+            unscale(invariant_sol_after - invariant_sol),
+            unscale(invariant_sol),
+            balances,
+        )
+        # compare upper bound on loss in y terms
+        loss_ub_sol = -loss[0] * params.beta - loss[1]
+    else:
+        loss_ub_sol = D(0)
+
+    return loss_ub, loss_ub_sol
+
+
+def mtest_invariant_across_calcInGivenOut(
+    params,
+    balances,
+    amountOut,
+    tokenInIsToken0,
+    derivedparams_is_sol: bool,
+    bpool_params: Basic_Pool_Parameters,
+    gyro_cemm_math_testing,
+):
+    ixIn = 0 if tokenInIsToken0 else 1
+    ixOut = 1 - ixIn
+
+    assume(amountOut <= to_decimal("0.3") * balances[ixOut])
+
+    mparams = params2MathParams(params)
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
+    )
+
+    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
+    invariant_before = cemm.r
+    invariant_sol = gyro_cemm_math_testing.calculateInvariant(
+        scale(balances), scale(params), derived
+    )
+
+    f_trade = cemm.trade_y if tokenInIsToken0 else cemm.trade_x
+    amountIn = f_trade(-amountOut)  # This changes the state of the cemm but whatever
+
+    revertCode = None
+    if amountIn is None:
+        revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif amountIn > to_decimal("0.3") * balances[ixIn]:
+        revertCode = "BAL#304"  # MAX_IN_RATIO
+
+    if revertCode is not None:
+        with reverts(revertCode):
+            gyro_cemm_math_testing.calcInGivenOut(
+                scale(balances),
+                scale(amountOut),
+                tokenInIsToken0,
+                scale(params),
+                derived,
+                invariant_sol,
+            )
+        return
+
+    if (
+        balances[0] < balances[1] * bpool_params.min_balance_ratio
+        or balances[1] < balances[0] * bpool_params.min_balance_ratio
+    ):
+        return
+
+    amountIn_sol = gyro_cemm_math_testing.calcInGivenOut(
+        scale(balances),
+        scale(amountOut),
+        tokenInIsToken0,
+        scale(params),
+        derived,
+        invariant_sol,
+    )
+
+    if tokenInIsToken0:
+        new_balances = (
+            balances[0]
+            + unscale(to_decimal(amountIn_sol)) * (D(1) + bpool_params.min_fee),
+            balances[1] - amountOut,
+        )
+    else:
+        new_balances = (
+            balances[0] - amountOut,
+            balances[1]
+            + unscale(to_decimal(amountIn_sol)) * (D(1) + bpool_params.min_fee),
+        )
+
+    cemm = mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)
+    invariant_after = cemm.r
+    invariant_sol_after = gyro_cemm_math_testing.calculateInvariant(
+        scale(new_balances), scale(params), derived
+    )
+
+    if (
+        new_balances[0] < new_balances[1] * bpool_params.min_balance_ratio
+        or new_balances[1] < new_balances[0] * bpool_params.min_balance_ratio
+    ):
+        return
+
+    if invariant_after < invariant_before:
+        loss = calculate_loss(
+            invariant_after - invariant_before, invariant_before, balances
+        )
+        # compare upper bound on loss in y terms
+        loss_ub = -loss[0] * params.beta - loss[1]
+    else:
+        loss_ub = D(0)
+
+    if invariant_sol_after < invariant_sol:
+        loss = calculate_loss(
+            unscale(invariant_sol_after - invariant_sol),
+            unscale(invariant_sol),
+            balances,
+        )
+        # compare upper bound on loss in y terms
+        loss_ub_sol = -loss[0] * params.beta - loss[1]
+    else:
+        loss_ub_sol = D(0)
+
+    return loss_ub, loss_ub_sol
+
+
+def mtest_invariant_across_liquidityInvariantUpdate(
+    gyro_cemm_math_testing, params_cemm_dinvariant, derivedparams_is_sol: bool
+):
+    params, cemm, dinvariant = params_cemm_dinvariant
+    assume(cemm.x != 0 or cemm.y != 0)
+
+    mparams = params2MathParams(params)
+    derived = get_derived_parameters(
+        params, derivedparams_is_sol, gyro_cemm_math_testing
+    )
+
+    balances = [cemm.x, cemm.y]
+    deltaBalances = cemm.update_liquidity(dinvariant, mock=True)
+    deltaBalances = (
+        abs(deltaBalances[0]),
+        abs(deltaBalances[1]),
+    )  # b/c solidity function takes uint inputs for this
+
+    rnew = cemm.r + dinvariant
+    rnew_sol = gyro_cemm_math_testing.liquidityInvariantUpdate(
+        scale(balances),
+        scale(cemm.r),
+        scale(deltaBalances),
+        (dinvariant >= 0),
+    )
+
+    if dinvariant >= 0:
+        new_balances = (balances[0] + deltaBalances[0], balances[1] + deltaBalances[1])
+    else:
+        new_balances = (balances[0] - deltaBalances[0], balances[1] - deltaBalances[1])
+
+    rnew_sol2 = gyro_cemm_math_testing.calculateInvariant(
+        scale(new_balances), scale(params), derived
+    )
+
+    rnew2 = (mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)).r
+
+    assert rnew >= rnew2
+    assert rnew_sol >= rnew_sol2
+    # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
+    # assert rnew_sol2 >= rnew_sol
