@@ -108,7 +108,7 @@ def test_invariant_across_calcOutGivenIn(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    quantized_decimal.set_decimals(18 * 2)
+    # quantized_decimal.set_decimals(18 * 2)
 
     mparams = params2MathParams(params)
     derived = mathParams2DerivedParams(params2MathParams(params))
@@ -247,8 +247,10 @@ def debug(use_pdb=True):
         pdb.post_mortem(info[2])
 
 if __name__ == "__main__":
+    # When run directly, run this with python from the `vaults/` toplevel dir.
+    # (also works with pytest, then this is ignored)
     with debug():
         error_values = []
         test_invariant_across_calcOutGivenIn()
         df = pd.DataFrame({'error': list(map(float, error_values))})
-        df.to_feather("data/errors_double_decimal.feather")
+        df.to_feather("data/errors_single_decimal.feather")
