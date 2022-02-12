@@ -5,6 +5,8 @@ from tests.support.types import TwoPoolBaseParams, TwoPoolParams
 
 TOKENS_PER_USER = 1000 * 10 ** 18
 
+# This will provide assertion introspection for common test functions defined in this module.
+pytest.register_assert_rewrite("tests.cemm.util")
 
 @pytest.fixture(scope="module")
 def admin(accounts):

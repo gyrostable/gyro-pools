@@ -51,7 +51,7 @@ def gen_params_px(draw):
 
 @given(params_px=gen_params_px())
 def test_zeta(params_px, gyro_cemm_math_testing):
-    util.mtest_zzeta(params_px, gyro_cemm_math_testing)
+    util.mtest_zeta(params_px, gyro_cemm_math_testing)
 
 
 @given(pxc=qdecimals("-1E16", "1E16"))
@@ -89,7 +89,7 @@ def test_mkDerivedParams(params, gyro_cemm_math_testing):
     invariant=Decimal("32034653686.598895308700000000"),
 )
 def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
-    util.mtest_virtualoffsets_noderived(params, invariant, gyro_cemm_math_testing)
+    util.mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing)
 
 
 @settings(max_examples=1_000)
