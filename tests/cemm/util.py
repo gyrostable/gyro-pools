@@ -35,7 +35,7 @@ def gen_params(draw):
     alpha_high = peg * D("1.3")
     beta_low = peg * D("0.7")
     alpha = draw(qdecimals("0.05", alpha_high.raw))
-    beta = draw(qdecimals(beta_low, "20.0"))
+    beta = draw(qdecimals(beta_low.raw, "20.0"))
 
     s = sin(phi)
     c = cos(phi)
