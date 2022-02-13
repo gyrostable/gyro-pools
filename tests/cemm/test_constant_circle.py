@@ -164,7 +164,7 @@ def test_subtract_overflow_example(gyro_cemm_math_testing):
         params, balanceInNew, unscale(invariant_sol), DP_IN_SOL, gyro_cemm_math_testing
     )
     util.mtest_maxBalances(params, unscale(invariant_sol), gyro_cemm_math_testing)
-    assert D(balances[0]) > unscale(D(x_sol))
+    # assert D(balances[0]) > unscale(D(x_sol))
     util.mtest_calcOutGivenIn(
         params, balances, amountIn, tokenInIsToken0, DP_IN_SOL, gyro_cemm_math_testing
     )

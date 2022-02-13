@@ -26,6 +26,7 @@ library GyroCEMMMath {
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
+    uint256 internal constant _MIN_BAL_RATIO = 1e13; // 1e-5
 
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are
@@ -306,14 +307,15 @@ library GyroCEMMMath {
         Params memory params,
         DerivedParams memory derived,
         int256 invariant,
-        int256 newBalance,
+        int256 newBal,
         uint8 assetIndex
     ) internal pure {
         Vector2 memory xyPlus = maxBalances(params, derived, invariant);
+        int256 factor = SignedFixedPoint.ONE.sub(_MIN_BAL_RATIO.toInt256());
         if (assetIndex == 0) {
-            _require(newBalance < xyPlus.x, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(newBal < xyPlus.x.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
-            _require(newBalance < xyPlus.y, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(newBal < xyPlus.y.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
     }
 
@@ -341,10 +343,17 @@ library GyroCEMMMath {
         }
 
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
-        int256 balanceInNew = balances[ixIn].add(amountIn).toInt256();
-        checkAssetBounds(params, derived, uinvariant.toInt256(), balanceInNew, ixIn);
-        int256 balanceOutNew = calcGiven(balanceInNew, params, derived, uinvariant.toInt256());
-        amountOut = balances[ixOut].sub(balanceOutNew.toUint256()); // calcGiven guarantees that this is safe.
+        int256 balInNew = balances[ixIn].add(amountIn).toInt256();
+        checkAssetBounds(params, derived, uinvariant.toInt256(), balInNew, ixIn);
+        int256 balOutNew = calcGiven(balInNew, params, derived, uinvariant.toInt256());
+        uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
+        _require(balOutNew.toUint256() < balances[ixOut], assetBoundError);
+        if (balOutNew >= balInNew) {
+            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
+        } else {
+            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
+        }
+        amountOut = balances[ixOut].sub(balOutNew.toUint256());
         _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
 
@@ -372,10 +381,17 @@ library GyroCEMMMath {
         }
 
         _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
-        int256 balanceOutNew = balances[ixOut].sub(amountOut).toInt256();
-        int256 balanceInNew = calcGiven(balanceOutNew, params, derived, uinvariant.toInt256());
-        checkAssetBounds(params, derived, uinvariant.toInt256(), balanceInNew, ixIn);
-        amountIn = balanceInNew.toUint256().sub(balances[ixIn]); // calcGiven guarantees that this is safe.
+        int256 balOutNew = balances[ixOut].sub(amountOut).toInt256();
+        int256 balInNew = calcGiven(balOutNew, params, derived, uinvariant.toInt256());
+        uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
+        _require(balInNew.toUint256() > balances[ixIn], assetBoundError);
+        checkAssetBounds(params, derived, uinvariant.toInt256(), balInNew, ixIn);
+        if (balOutNew >= balInNew) {
+            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
+        } else {
+            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
+        }
+        amountIn = balInNew.toUint256().sub(balances[ixIn]);
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
