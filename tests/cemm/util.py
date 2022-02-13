@@ -566,7 +566,7 @@ def mtest_invariant_across_calcOutGivenIn(
                 derived,
                 invariant_sol,
             )
-        return
+        return 0, 0
 
     if (
         balances[0] < balances[1] * bpool_params.min_balance_ratio
@@ -678,13 +678,13 @@ def mtest_invariant_across_calcInGivenOut(
                 derived,
                 invariant_sol,
             )
-        return
+        return 0, 0
 
     if (
         balances[0] < balances[1] * bpool_params.min_balance_ratio
         or balances[1] < balances[0] * bpool_params.min_balance_ratio
     ):
-        return
+        assume(False)
 
     amountIn_sol = gyro_cemm_math_testing.calcInGivenOut(
         scale(balances),
@@ -718,7 +718,7 @@ def mtest_invariant_across_calcInGivenOut(
         new_balances[0] < new_balances[1] * bpool_params.min_balance_ratio
         or new_balances[1] < new_balances[0] * bpool_params.min_balance_ratio
     ):
-        return
+        assume(False)
 
     if invariant_after < invariant_before:
         loss = calculate_loss(
