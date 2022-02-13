@@ -222,7 +222,8 @@ library GyroCEMMMath {
 
     /** Solve quadratic equation for the 'plus sqrt' solution
      *  qparams contains a,b,c coefficients defining the quadratic.
-     *  Reverts if the equation has no solution or is actually linear (i.e., a==0) */
+     *  Reverts if the equation has no solution or is actually linear (i.e., a==0)
+     *  This is used in invariant calculation for an underestimate */
     function solveQuadraticPlus(QParams memory qparams) internal pure returns (int256 x) {
         int256 sqrt = qparams.b.mulDown(qparams.b).sub(
             4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c)
@@ -232,7 +233,9 @@ library GyroCEMMMath {
     }
 
     /** Solve quadratic equation for the 'minus sqrt' solution
-     *   qparams contains a,b,c coefficients defining the quadratic */
+     *  qparams contains a,b,c coefficients defining the quadratic
+     *  This is used in swap calculations, where we want to underestimate the square root b/c we want to
+     *  overestimate new reserve balances (and so underestimate the swap out amount) */
     function solveQuadraticMinus(QParams memory qparams) internal pure returns (int256 x) {
         int256 sqrt = qparams.b.mulDown(qparams.b).sub(
             4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c)
