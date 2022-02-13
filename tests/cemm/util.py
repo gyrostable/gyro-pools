@@ -11,7 +11,7 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams, CEMMMathDerivedParams, Vector2
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
-MIN_PRICE_SEPARATION = D('0.0001')
+MIN_PRICE_SEPARATION = D("0.0001")
 
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
@@ -51,7 +51,9 @@ def gen_params(draw):
     alpha_high = peg * D("1.3")
     beta_low = peg * D("0.7")
     alpha = draw(qdecimals("0.05", alpha_high.raw))
-    beta = draw(qdecimals(max(beta_low.raw, (alpha + MIN_PRICE_SEPARATION).raw), "20.0"))
+    beta = draw(
+        qdecimals(max(beta_low.raw, (alpha + MIN_PRICE_SEPARATION).raw), "20.0")
+    )
 
     s = sin(phi)
     c = cos(phi)
@@ -334,9 +336,39 @@ def mtest_calcOutGivenIn(
 
     mamountOut = f_trade(amountIn)  # This changes the state of the cemm but whatever
 
+    # calculate balanceOut after swap to determine if a revert could happen
+    if ixOut == 0:
+        x, balOutNew_sol = mtest_calcXGivenY(
+            params,
+            balances[ixIn] + amountIn,
+            r,
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+    else:
+        y, balOutNew_sol = mtest_calcYGivenX(
+            params,
+            balances[ixIn] + amountIn,
+            r,
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+
     revertCode = None
     if mamountOut is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif amountIn + balances[ixIn] > (
+        cemm.xmax * (D(1) - D("1e-5"))
+        if tokenInIsToken0
+        else cemm.ymax * (D(1) - D("1e-5"))
+    ):
+        revertCode = "BAL#357"
+    elif balOutNew_sol > balances[ixOut]:
+        revertCode = "BAL#357"
+    elif (balances[ixIn] + amountIn) / (balances[ixOut] + mamountOut) < D("1e-5"):
+        revertCode = "BAL#357"
+    elif (balances[ixOut] + mamountOut) / (balances[ixIn] + amountIn) < D("1e-5"):
+        revertCode = "BAL#357"
     elif -mamountOut > to_decimal("0.3") * balances[ixOut]:
         revertCode = "BAL#305"  # MAX_OUT_RATIO
 
@@ -393,9 +425,39 @@ def mtest_calcInGivenOut(
 
     amountIn = f_trade(-amountOut)  # This changes the state of the cemm but whatever
 
+    # calculate balanceIn after swap to determine if a revert could happen
+    if ixIn == 0:
+        x, balInNew_sol = mtest_calcXGivenY(
+            params,
+            balances[ixOut] - amountOut,
+            r,
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+    else:
+        y, balInNew_sol = mtest_calcYGivenX(
+            params,
+            balances[ixOut] - amountOut,
+            r,
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+
     revertCode = None
     if amountIn is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif amountIn + balances[ixIn] > (
+        cemm.xmax * (D(1) - D("1e-5"))
+        if tokenInIsToken0
+        else cemm.ymax * (D(1) - D("1e-5"))
+    ):
+        revertCode = "BAL#357"
+    elif balInNew_sol < balances[ixIn]:
+        revertCode = "BAL#357"
+    elif (balances[ixIn] + amountIn) / (balances[ixOut] - amountOut) < D("1e-5"):
+        revertCode = "BAL#357"
+    elif (balances[ixOut] - amountOut) / (balances[ixIn] + amountIn) < D("1e-5"):
+        revertCode = "BAL#357"
     elif amountIn > to_decimal("0.3") * balances[ixIn]:
         revertCode = "BAL#304"  # MAX_IN_RATIO
 
@@ -553,9 +615,43 @@ def mtest_invariant_across_calcOutGivenIn(
     f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
     mamountOut = f_trade(amountIn)  # This changes the state of the cemm but whatever
 
+    # calculate balanceOut after swap to determine if a revert could happen
+    if ixOut == 0:
+        x, balOutNew_sol = mtest_calcXGivenY(
+            params,
+            balances[ixIn] + amountIn,
+            unscale(invariant_sol),
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+    else:
+        y, balOutNew_sol = mtest_calcYGivenX(
+            params,
+            balances[ixIn] + amountIn,
+            unscale(invariant_sol),
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+
     revertCode = None
     if mamountOut is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif amountIn + balances[ixIn] > (
+        cemm.xmax * (D(1) - bpool_params.min_balance_ratio)
+        if tokenInIsToken0
+        else cemm.ymax * (D(1) - bpool_params.min_balance_ratio)
+    ):
+        revertCode = "BAL#357"
+    elif balOutNew_sol > balances[ixOut]:
+        revertCode = "BAL#357"
+    elif (balances[ixIn] + amountIn) / (
+        balances[ixOut] + mamountOut
+    ) < bpool_params.min_balance_ratio:
+        revertCode = "BAL#357"
+    elif (balances[ixOut] + mamountOut) / (
+        balances[ixIn] + amountIn
+    ) < bpool_params.min_balances_ratio:
+        revertCode = "BAL#357"
     elif -mamountOut > to_decimal("0.3") * balances[ixOut]:
         revertCode = "BAL#305"  # MAX_OUT_RATIO
 
@@ -665,9 +761,43 @@ def mtest_invariant_across_calcInGivenOut(
     f_trade = cemm.trade_y if tokenInIsToken0 else cemm.trade_x
     amountIn = f_trade(-amountOut)  # This changes the state of the cemm but whatever
 
+    # calculate balanceIn after swap to determine if a revert could happen
+    if ixIn == 0:
+        x, balInNew_sol = mtest_calcXGivenY(
+            params,
+            balances[ixOut] - amountOut,
+            unscale(invariant_sol),
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+    else:
+        y, balInNew_sol = mtest_calcYGivenX(
+            params,
+            balances[ixOut] - amountOut,
+            unscale(invariant_sol),
+            derivedparams_is_sol,
+            gyro_cemm_math_testing,
+        )
+
     revertCode = None
     if amountIn is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
+    elif amountIn + balances[ixIn] > (
+        cemm.xmax * (D(1) - bpool_params.min_balance_ratio)
+        if tokenInIsToken0
+        else cemm.ymax * (D(1) - bpool_params.min_balance_ratio)
+    ):
+        revertCode = "BAL#357"
+    elif balInNew_sol < balances[ixIn]:
+        revertCode = "BAL#357"
+    elif (balances[ixIn] + amountIn) / (
+        balances[ixOut] - amountOut
+    ) < bpool_params.min_balance_ratio:
+        revertCode = "BAL#357"
+    elif (balances[ixOut] - amountOut) / (
+        balances[ixIn] + amountIn
+    ) < bpool_params.min_balances_ratio:
+        revertCode = "BAL#357"
     elif amountIn > to_decimal("0.3") * balances[ixIn]:
         revertCode = "BAL#304"  # MAX_IN_RATIO
 
