@@ -176,7 +176,7 @@ def mtest_validateParamsAll(params, gyro_cemm_math_testing):
     gyro_cemm_math_testing.validateParams(scale(params))
 
     # Revert for distorted values: Params
-    offset = D('2E-8')
+    offset = D("2E-8")
     bad_params = params._replace(c=params.c + offset)
     with reverts("BAL#356"):
         gyro_cemm_math_testing.validateParams(scale(bad_params))
@@ -189,7 +189,7 @@ def mtest_validateParamsAll(params, gyro_cemm_math_testing):
     )
     with reverts("BAL#358"):
         gyro_cemm_math_testing.validateDerivedParams(scale(params), scale(bad_derived))
-        
+
     bad_derived = CEMMMathDerivedParams(
         derived.tauAlpha,
         Vector2(derived.tauBeta.x + offset, derived.tauBeta.y + offset),
@@ -431,7 +431,7 @@ def mtest_calcOutGivenIn(
                 derived,
                 scale(r),
             )
-        return
+        return 0, 0
 
     amountOut = -mamountOut
     assert r == cemm.r  # just to be sure
@@ -520,7 +520,7 @@ def mtest_calcInGivenOut(
                 derived,
                 scale(r),
             )
-        return
+        return 0, 0
 
     assert r == cemm.r  # just to be sure
 
@@ -699,7 +699,7 @@ def mtest_invariant_across_calcOutGivenIn(
         revertCode = "BAL#357"
     elif (
         unscale(balOutNew_sol) / (balances[ixIn] + amountIn)
-        < bpool_params.min_balances_ratio
+        < bpool_params.min_balance_ratio
     ):
         revertCode = "BAL#357"
     elif balances[ixOut] - unscale(balOutNew_sol) > to_decimal("0.3") * balances[ixOut]:
@@ -847,7 +847,7 @@ def mtest_invariant_across_calcInGivenOut(
         revertCode = "BAL#357"
     elif (balances[ixOut] - amountOut) / unscale(
         balInNew_sol
-    ) < bpool_params.min_balances_ratio:
+    ) < bpool_params.min_balance_ratio:
         revertCode = "BAL#357"
     elif unscale(balInNew_sol) - balances[ixIn] > to_decimal("0.3") * balances[ixIn]:
         revertCode = "BAL#304"  # MAX_IN_RATIO
@@ -964,6 +964,8 @@ def mtest_invariant_across_liquidityInvariantUpdate(
 
     rnew2 = (mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)).r
 
-    assert rnew >= rnew2
+    assert D(rnew).approxed(abs=D("1e-14")) >= D(rnew2).approxed(abs=D("1e-14"))
     # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
-    assert rnew_sol >= rnew_sol2
+    assert unscale(D(rnew_sol)).approxed(abs=D("1e-14"), rel=D("1e-13")) >= unscale(
+        D(rnew_sol2)
+    ).approxed(abs=D("1e-14"), rel=D("1e-13"))

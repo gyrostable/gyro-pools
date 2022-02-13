@@ -76,6 +76,7 @@ def test_tau(params_px, gyro_cemm_math_testing):
 def test_mkDerivedParams(params, gyro_cemm_math_testing):
     util.mtest_mkDerivedParams(params, gyro_cemm_math_testing)
 
+
 @given(params=util.gen_params())
 def test_validateParamsAll(params, gyro_cemm_math_testing):
     util.mtest_validateParamsAll(params, gyro_cemm_math_testing)
@@ -159,7 +160,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
 @settings(max_examples=1_000)
 @given(params=util.gen_params(), balances=util.gen_balances())
 def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
-    invariant_py, invariant_sol = util.mtest_calcualteInvariant(
+    invariant_py, invariant_sol = util.mtest_calculateInvariant(
         params, balances, DP_IN_SOL, gyro_cemm_math_testing
     )
 

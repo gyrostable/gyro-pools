@@ -58,6 +58,7 @@ def gen_params_cemm_dinvariant(draw):
     params = draw(gen_params())
     mparams = util.params2MathParams(params)
     balances = draw(util.gen_balances())
+    assume(balances[0] > 0 and balances[1] > 0)
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     dinvariant = draw(
         qdecimals(-cemm.r.raw, 2 * cemm.r.raw)
@@ -68,7 +69,7 @@ def gen_params_cemm_dinvariant(draw):
 
 ################################################################################
 ### test calcOutGivenIn for invariant change
-@settings(max_examples=1_000)
+# @settings(max_examples=1_000)
 @given(
     params=gen_params(),
     balances=util.gen_balances(),
@@ -101,8 +102,8 @@ def test_invariant_across_calcOutGivenIn(
         gyro_cemm_math_testing,
     )
 
-    assert loss_ub < D("5e-2")
-    assert loss_ub_sol < D("5e-2")
+    assert loss_ub < D("5e-4")
+    assert loss_ub_sol < D("5e-4")
 
 
 ################################################################################
@@ -127,8 +128,8 @@ def test_invariant_across_calcInGivenOut(
         gyro_cemm_math_testing,
     )
 
-    assert loss_ub < D("5e-2")
-    assert loss_ub_sol < D("5e-2")
+    assert loss_ub < D("5e-4")
+    assert loss_ub_sol < D("5e-4")
 
 
 ################################################################################
