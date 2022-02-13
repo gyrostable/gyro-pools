@@ -11,6 +11,9 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams, CEMMMathDerivedParams, Vector2
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
+MIN_PRICE_SEPARATION = D('0.0001')
+
+
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
 
@@ -48,7 +51,7 @@ def gen_params(draw):
     alpha_high = peg * D("1.3")
     beta_low = peg * D("0.7")
     alpha = draw(qdecimals("0.05", alpha_high.raw))
-    beta = draw(qdecimals(max(beta_low.raw, alpha.raw), "20.0"))
+    beta = draw(qdecimals(max(beta_low.raw, (alpha + MIN_PRICE_SEPARATION).raw), "20.0"))
 
     s = sin(phi)
     c = cos(phi)
