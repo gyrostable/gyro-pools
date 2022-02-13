@@ -47,13 +47,17 @@ D.our_approxed_scaled = lambda self: self.approxed(abs=D("1E15"), rel=D("1E-9"))
 
 @st.composite
 def gen_params(draw):
-    phi = 0
-    alpha = draw(qdecimals("0.05", "19.0"))
-    beta = draw(qdecimals(alpha.raw, "20.0"))
-    assume(beta.raw - alpha.raw >= MIN_PRICE_SEPARATION)
+    phi_degrees = 45
+    phi = phi_degrees / 360 * 2 * pi
+
+    # Price bounds. Choose s.t. the 'peg' lies approximately within the bounds (within 30%).
+    # It'd be nonsensical if this was not the case: Why are we using an ellipse then?!
+    peg = D(1)  # = price where the flattest point of the ellipse lies.
+    alpha = draw(qdecimals("0.05", "0.999"))
+    beta = D(1) / D(alpha)
     s = sin(phi)
     c = cos(phi)
-    l = D(1)
+    l = draw(qdecimals("50", "1000"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 

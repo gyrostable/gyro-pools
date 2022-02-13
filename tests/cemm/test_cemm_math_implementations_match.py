@@ -266,11 +266,9 @@ def test_calcInGivenOut(
     params=util.gen_params(),
     balances=util.gen_balances(),
 )
-def test_calculateSqrtOnePlusZetaSquared(
-    params, balances, DP_IN_SOL, gyro_cemm_math_testing
-):
+def test_calculateSqrtOnePlusZetaSquared(params, balances, gyro_cemm_math_testing):
     val_py, val_sol = util.mtest_calculateSqrtOnePlusZetaSquared(
-        params, balances, gyro_cemm_math_testing
+        params, balances, DP_IN_SOL, gyro_cemm_math_testing
     )
     assert to_decimal(val_sol) == scale(val_py).approxed_scaled()
 

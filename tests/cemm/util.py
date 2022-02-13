@@ -964,8 +964,10 @@ def mtest_invariant_across_liquidityInvariantUpdate(
 
     rnew2 = (mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)).r
 
-    assert D(rnew).approxed(abs=D("1e-14")) >= D(rnew2).approxed(abs=D("1e-14"))
+    assert D(rnew).approxed(abs=D("1e-10"), rel=D("1e-10")) >= D(rnew2).approxed(
+        abs=D("1e-10"), rel=D("1e-10")
+    )
     # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
-    assert unscale(D(rnew_sol)).approxed(abs=D("1e-14"), rel=D("1e-13")) >= unscale(
+    assert unscale(D(rnew_sol)).approxed(abs=D("1e-10"), rel=D("1e-10")) >= unscale(
         D(rnew_sol2)
-    ).approxed(abs=D("1e-14"), rel=D("1e-13"))
+    ).approxed(abs=D("1e-10"), rel=D("1e-10"))
