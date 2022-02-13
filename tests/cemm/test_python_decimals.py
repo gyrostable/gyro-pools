@@ -24,7 +24,7 @@ import cemm as mimpl
 import cemm_float as mimpl_float
 
 MIN_BALANCE_RATIO = D("1E-5")
-MIN_FEE = D("0.0000")
+MIN_FEE = D("0.0001")
 
 # Ad-hoc hack to collect error values while running tests. Should be refactored somehow at some point.
 error_values = None
@@ -113,8 +113,26 @@ def test_calcOutGivenIn(
     amountIn=D('1.000000000000000000'),
     tokenInIsToken0=False,
 )
+@example(
+    params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'), l=D('1.000000000000000000')),
+    balances=(327937, 501870798),
+    amountIn=D('1.000000000000000000'),
+    tokenInIsToken0=False,
+)
+@example(
+    params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('0.302739565961017365'), s=D('0.953073320999877183'), l=D('1.000000000000000000')),
+    balances=(327937, 501870798),
+    amountIn=D('1.000000000000000000'),
+    tokenInIsToken0=False,
+)
 def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0
+):
+    return mtest_invariant_across_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0)
+
+
+def mtest_invariant_across_calcOutGivenIn(
+        params, balances, amountIn, tokenInIsToken0
 ):
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
@@ -162,6 +180,8 @@ def test_invariant_across_calcOutGivenIn(
     global error_values
     if error_values is not None:
         error_values.append(loss_ub)
+
+    return loss_ub  # Convenient sometimes and irrelevant in tests.
 
     # We need to approx this to 1e-18 at least, not to create an unfair comparison for higher precision.
     # abserr = D('1E-18')
@@ -247,6 +267,23 @@ if __name__ == "__main__":
     # (also works with pytest, then this is ignored)
     with debug_postmortem_on_exc():
         error_values = []
-        test_invariant_across_calcOutGivenIn()
+        # test_invariant_across_calcOutGivenIn()
+        err = mtest_invariant_across_calcOutGivenIn(
+            params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'),
+                                  l=D('1.000000000000000000')),
+            balances=(327937, 501870798),
+            amountIn=D('1.000000000000000000'),
+            tokenInIsToken0=False,
+        )  # Passes
+        print(err)
+        err = mtest_invariant_across_calcOutGivenIn(
+            params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'),
+                                  c=D('0.302739565961017365'), s=D('0.953073320999877183'),
+                                  l=D('1.000000000000000000')),
+            balances=(327937, 501870798),
+            amountIn=D('1.000000000000000000'),
+            tokenInIsToken0=False,
+        )  # Fails
+        print(err)
         df = pd.DataFrame({'error': list(map(float, error_values))})
         df.to_feather("data/errors_single_decimal.feather")
