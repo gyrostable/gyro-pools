@@ -286,7 +286,7 @@ def mtest_calcYGivenX(
     return y, to_decimal(y_sol)
 
 
-def test_calcXGivenY(
+def mtest_calcXGivenY(
     params, y, invariant, derivedparams_is_sol: bool, gyro_cemm_math_testing
 ):
     assume(y == 0 if invariant == 0 else True)
@@ -303,12 +303,12 @@ def test_calcXGivenY(
     assume(x is not None)  # O/w out of bounds for this invariant
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(y), scale(params), derived, scale(cemm.r)
+        scale(y), scale(params), derived, scale(invariant)  # scale(cemm.r)
     )
     return x, to_decimal(x_sol)
 
 
-def test_calcOutGivenIn(
+def mtest_calcOutGivenIn(
     params,
     balances,
     amountIn,
@@ -784,6 +784,5 @@ def mtest_invariant_across_liquidityInvariantUpdate(
     rnew2 = (mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)).r
 
     assert rnew >= rnew2
-    assert rnew_sol >= rnew_sol2
     # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
-    # assert rnew_sol2 >= rnew_sol
+    assert rnew_sol >= rnew_sol2

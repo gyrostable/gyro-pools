@@ -200,7 +200,7 @@ def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
     invariant=util.gen_synthetic_invariant(),
 )
 def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
-    x_py, x_sol = util.test_calcXGivenY(
+    x_py, x_sol = util.mtest_calcXGivenY(
         params, y, invariant, DP_IN_SOL, gyro_cemm_math_testing
     )
     assert x_sol == scale(x_py).approxed_scaled()
