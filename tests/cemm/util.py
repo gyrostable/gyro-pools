@@ -363,13 +363,13 @@ def mtest_calcOutGivenIn(
         else cemm.ymax * (D(1) - D("1e-5"))
     ):
         revertCode = "BAL#357"
-    elif balOutNew_sol > balances[ixOut]:
+    elif unscale(balOutNew_sol) > balances[ixOut]:
         revertCode = "BAL#357"
-    elif (balances[ixIn] + amountIn) / (balances[ixOut] + mamountOut) < D("1e-5"):
+    elif (balances[ixIn] + amountIn) / unscale(balOutNew_sol) < D("1e-5"):
         revertCode = "BAL#357"
-    elif (balances[ixOut] + mamountOut) / (balances[ixIn] + amountIn) < D("1e-5"):
+    elif unscale(balOutNew_sol) / (balances[ixIn] + amountIn) < D("1e-5"):
         revertCode = "BAL#357"
-    elif -mamountOut > to_decimal("0.3") * balances[ixOut]:
+    elif balances[ixOut] - unscale(balOutNew_sol) > to_decimal("0.3") * balances[ixOut]:
         revertCode = "BAL#305"  # MAX_OUT_RATIO
 
     if revertCode is not None:
@@ -446,19 +446,19 @@ def mtest_calcInGivenOut(
     revertCode = None
     if amountIn is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
-    elif amountIn + balances[ixIn] > (
+    elif unscale(balInNew_sol) > (
         cemm.xmax * (D(1) - D("1e-5"))
         if tokenInIsToken0
         else cemm.ymax * (D(1) - D("1e-5"))
     ):
         revertCode = "BAL#357"
-    elif balInNew_sol < balances[ixIn]:
+    elif unscale(balInNew_sol) < balances[ixIn]:
         revertCode = "BAL#357"
-    elif (balances[ixIn] + amountIn) / (balances[ixOut] - amountOut) < D("1e-5"):
+    elif unscale(balInNew_sol) / (balances[ixOut] - amountOut) < D("1e-5"):
         revertCode = "BAL#357"
-    elif (balances[ixOut] - amountOut) / (balances[ixIn] + amountIn) < D("1e-5"):
+    elif (balances[ixOut] - amountOut) / unscale(balInNew_sol) < D("1e-5"):
         revertCode = "BAL#357"
-    elif amountIn > to_decimal("0.3") * balances[ixIn]:
+    elif unscale(balInNew_sol) - balances[ixIn] > to_decimal("0.3") * balances[ixIn]:
         revertCode = "BAL#304"  # MAX_IN_RATIO
 
     if revertCode is not None:
@@ -642,17 +642,18 @@ def mtest_invariant_across_calcOutGivenIn(
         else cemm.ymax * (D(1) - bpool_params.min_balance_ratio)
     ):
         revertCode = "BAL#357"
-    elif balOutNew_sol > balances[ixOut]:
+    elif unscale(balOutNew_sol) > balances[ixOut]:
         revertCode = "BAL#357"
-    elif (balances[ixIn] + amountIn) / (
-        balances[ixOut] + mamountOut
+    elif (balances[ixIn] + amountIn) / unscale(
+        balOutNew_sol
     ) < bpool_params.min_balance_ratio:
         revertCode = "BAL#357"
-    elif (balances[ixOut] + mamountOut) / (
-        balances[ixIn] + amountIn
-    ) < bpool_params.min_balances_ratio:
+    elif (
+        unscale(balOutNew_sol) / (balances[ixIn] + amountIn)
+        < bpool_params.min_balances_ratio
+    ):
         revertCode = "BAL#357"
-    elif -mamountOut > to_decimal("0.3") * balances[ixOut]:
+    elif balances[ixOut] - unscale(balOutNew_sol) > to_decimal("0.3") * balances[ixOut]:
         revertCode = "BAL#305"  # MAX_OUT_RATIO
 
     if revertCode is not None:
@@ -782,23 +783,24 @@ def mtest_invariant_across_calcInGivenOut(
     revertCode = None
     if amountIn is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
-    elif amountIn + balances[ixIn] > (
+    elif unscale(balInNew_sol) > (
         cemm.xmax * (D(1) - bpool_params.min_balance_ratio)
         if tokenInIsToken0
         else cemm.ymax * (D(1) - bpool_params.min_balance_ratio)
     ):
         revertCode = "BAL#357"
-    elif balInNew_sol < balances[ixIn]:
+    elif unscale(balInNew_sol) < balances[ixIn]:
         revertCode = "BAL#357"
-    elif (balances[ixIn] + amountIn) / (
-        balances[ixOut] - amountOut
-    ) < bpool_params.min_balance_ratio:
+    elif (
+        unscale(balInNew_sol) / (balances[ixOut] - amountOut)
+        < bpool_params.min_balance_ratio
+    ):
         revertCode = "BAL#357"
-    elif (balances[ixOut] - amountOut) / (
-        balances[ixIn] + amountIn
+    elif (balances[ixOut] - amountOut) / unscale(
+        balInNew_sol
     ) < bpool_params.min_balances_ratio:
         revertCode = "BAL#357"
-    elif amountIn > to_decimal("0.3") * balances[ixIn]:
+    elif unscale(balInNew_sol) - balances[ixIn] > to_decimal("0.3") * balances[ixIn]:
         revertCode = "BAL#304"  # MAX_IN_RATIO
 
     if revertCode is not None:
