@@ -29,7 +29,7 @@ MIN_BALANCE_RATIO = to_decimal("5e-5")
 MIN_FEE = D("0.0002")
 
 # this determines whether derivedParameters are calculated in solidity or not
-DP_IN_SOL = True
+DP_IN_SOL = False
 
 
 bpool_params = util.Basic_Pool_Parameters(

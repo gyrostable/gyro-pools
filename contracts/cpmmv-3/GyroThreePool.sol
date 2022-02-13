@@ -536,6 +536,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     }
 
     /**
+     * Note: This function is identical to that used in GyroTwoPool.sol
      * @dev Calculates protocol fee amounts in BPT terms
      * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
      * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
@@ -575,6 +576,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         return (gyroFees, balancerFees, gyroTreasury, balTreasury);
     }
 
+    // Note: This function is identical to that used in GyroTwoPool.sol
     function _payFeesBpt(
         uint256 gyroFees,
         uint256 balancerFees,
@@ -591,6 +593,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         }
     }
 
+    // Note: This function is identical to that used in GyroTwoPool.sol
     function _getFeesMetadata()
         internal
         view

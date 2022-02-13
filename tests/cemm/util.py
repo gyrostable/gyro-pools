@@ -533,7 +533,7 @@ def mtest_invariant_across_calcOutGivenIn(
 
     assume(amountIn <= to_decimal("0.3") * balances[ixIn])
 
-    fees = float(bpool_params.min_fee) * amountIn
+    fees = bpool_params.min_fee * amountIn
     amountIn -= fees
 
     mparams = params2MathParams(params)
@@ -640,7 +640,7 @@ def mtest_invariant_across_calcInGivenOut(
     amountOut,
     tokenInIsToken0,
     derivedparams_is_sol: bool,
-    bpool_params: Basic_Pool_Parameters,
+    bpool_params,
     gyro_cemm_math_testing,
 ):
     ixIn = 0 if tokenInIsToken0 else 1
