@@ -76,6 +76,10 @@ def test_tau(params_px, gyro_cemm_math_testing):
 def test_mkDerivedParams(params, gyro_cemm_math_testing):
     util.mtest_mkDerivedParams(params, gyro_cemm_math_testing)
 
+@given(params=util.gen_params())
+def test_validateParamsAll(params, gyro_cemm_math_testing):
+    util.mtest_validateParamsAll(params, gyro_cemm_math_testing)
+
 
 ### Virtual Offsets and Max Balances ###
 

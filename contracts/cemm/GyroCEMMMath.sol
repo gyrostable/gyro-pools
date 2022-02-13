@@ -16,7 +16,8 @@ import "@openzeppelin/contracts/utils/SafeCast.sol";
 library GyroCEMMMath {
     uint256 internal constant ONEHALF = 0.5e18;
 
-    int256 internal constant VALIDATION_PRECISION_CS_NORM = 100; // 1e-16
+    int256 internal constant VALIDATION_PRECISION_NORMED_INPUT = 500; // 5e-16
+    int256 internal constant VALIDATION_PRECISION_ZETA = 500; // 5e-16
 
     using SignedFixedPoint for int256;
     using FixedPoint for uint256;
@@ -46,19 +47,12 @@ library GyroCEMMMath {
     }
 
     function validateParams(Params memory params) internal pure {
-        // Perhaps this should go into the GyroCEMMMath?
         _require(params.alpha > 0, GyroCEMMPoolErrors.PRICE_BOUNDS_WRONG);
         _require(params.beta > params.alpha, GyroCEMMPoolErrors.PRICE_BOUNDS_WRONG);
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
-
-        int256 norm = params.c.mulDown(params.c);
-        norm = norm.add(params.s.mulDown(params.s));
-        _require(
-            SignedFixedPoint.ONE - VALIDATION_PRECISION_CS_NORM <= norm &&
-                norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_CS_NORM,
-            GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED
-        );
+        _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
+        validateNormed(Vector2(params.c, params.s), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
 
     struct DerivedParams {
@@ -69,6 +63,38 @@ library GyroCEMMMath {
     struct Vector2 {
         int256 x;
         int256 y;
+    }
+
+    /// @dev Ensures that `v` is approximately normed (i.e., lies on the unit circle).
+    function validateNormed(Vector2 memory v, uint256 error_code) internal pure {
+        int256 norm = v.x.mulDown(v.x);
+        norm = norm.add(v.y.mulDown(v.y));
+        _require(
+            SignedFixedPoint.ONE - VALIDATION_PRECISION_NORMED_INPUT <= norm &&
+                norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_NORMED_INPUT,
+            error_code
+        );
+    }
+
+    /** @dev Ensures `derived ~ mkDerivedParams(params)`, without having to compute a square root.
+      * This is useful mainly for numerical precision. */
+    function validateDerivedParams(Params memory params, DerivedParams memory derived) internal pure {
+        // tau vectors need to be normed b/c they're points on the unit circle.
+        // This ensures that the tau value is = tau(px) for *some* px.
+        validateNormed(derived.tauAlpha, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
+        validateNormed(derived.tauBeta, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
+
+        // It is easy to see that from the definition of eta that the underlying pxc value can be extracted as .x/.y.
+        // This should be equal to the corresponding zeta value. We can compare for actual equality.
+        int256 pxc = derived.tauAlpha.x.divUp(derived.tauAlpha.y);
+        int256 pxc_computed = zeta(params, params.alpha);
+        _require(pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
+            GyroCEMMPoolErrors.DERIVED_ZETA_WRONG);
+        
+        pxc = derived.tauBeta.x.divUp(derived.tauBeta.y);
+        pxc_computed = zeta(params, params.beta);
+        _require(pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
+            GyroCEMMPoolErrors.DERIVED_ZETA_WRONG);
     }
 
     // Scalar product of Vector2 objects

@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from math import pi, sin, cos, tan
+from math import pi, sin, cos, tan, acos
 from unicodedata import decimal
 
 from hypothesis import strategies as st, assume, event
@@ -165,6 +165,55 @@ def mtest_mkDerivedParams(params, gyro_cemm_math_testing):
     assert int(derived_sol.tauBeta.y) == scale(mparams.tau_beta[1]).approxed(
         abs=D("1e5"), rel=D("1e-16")
     )
+
+
+def mtest_validateParamsAll(params, gyro_cemm_math_testing):
+    mparams = params2MathParams(params)
+    derived = mathParams2DerivedParams(mparams)
+
+    # Don't revert on the values computed by python
+    gyro_cemm_math_testing.validateDerivedParams(scale(params), scale(derived))
+    gyro_cemm_math_testing.validateParams(scale(params))
+
+    # Revert for distorted values: Params
+    offset = D('2E-8')
+    bad_params = params._replace(c=params.c + offset)
+    with reverts("BAL#356"):
+        gyro_cemm_math_testing.validateParams(scale(bad_params))
+
+    # Revert for distorted values: Derived params
+    # Non-normed:
+    bad_derived = CEMMMathDerivedParams(
+        Vector2(derived.tauAlpha.x + offset, derived.tauAlpha.y + offset),
+        derived.tauBeta,
+    )
+    with reverts("BAL#358"):
+        gyro_cemm_math_testing.validateDerivedParams(scale(params), scale(bad_derived))
+        
+    bad_derived = CEMMMathDerivedParams(
+        derived.tauAlpha,
+        Vector2(derived.tauBeta.x + offset, derived.tauBeta.y + offset),
+    )
+    with reverts("BAL#358"):
+        gyro_cemm_math_testing.validateDerivedParams(scale(params), scale(bad_derived))
+
+    # Normed but zeta doesn't match
+    angle = acos(float(derived.tauAlpha.x))
+    offset = 1e-6
+    bad_derived = CEMMMathDerivedParams(
+        Vector2(D(cos(angle + offset)), D(sin(angle + offset))),
+        derived.tauBeta,
+    )
+    with reverts("BAL#359"):
+        gyro_cemm_math_testing.validateDerivedParams(scale(params), scale(bad_derived))
+
+    angle = acos(float(derived.tauBeta.x))
+    bad_derived = CEMMMathDerivedParams(
+        derived.tauAlpha,
+        Vector2(D(cos(angle + offset)), D(sin(angle + offset))),
+    )
+    with reverts("BAL#359"):
+        gyro_cemm_math_testing.validateDerivedParams(scale(params), scale(bad_derived))
 
 
 def gen_synthetic_invariant():
