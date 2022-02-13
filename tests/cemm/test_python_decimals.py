@@ -5,6 +5,11 @@
 # run it with python and then
 # It will collect some diagnostics data (this is a hack).
 
+if __name__ == "__main__":
+    # Hack to prevent imports from failing: brownie.reverts is only available when this is run via brownie test. -.-
+    import brownie
+    brownie.reverts = None
+
 import pandas as pd
 from hypothesis import given, settings, assume, example
 from hypothesis import strategies as st
