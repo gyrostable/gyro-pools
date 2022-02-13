@@ -53,6 +53,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     struct GyroParams {
         NewPoolParams baseParams;
         GyroCEMMMath.Params cemmParams;
+        GyroCEMMMath.DerivedParams derivedCemmParams;
     }
 
     constructor(GyroParams memory params, address configAddress)
@@ -67,12 +68,12 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             params.cemmParams.lambda
         );
 
-        GyroCEMMMath.DerivedParams memory derived = GyroCEMMMath.mkDerivedParams(params.cemmParams);
+        GyroCEMMMath.validateDerivedParams(params.cemmParams, params.derivedCemmParams);
         (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY) = (
-            derived.tauAlpha.x,
-            derived.tauAlpha.y,
-            derived.tauBeta.x,
-            derived.tauBeta.y
+            params.derivedCemmParams.tauAlpha.x,
+            params.derivedCemmParams.tauAlpha.y,
+            params.derivedCemmParams.tauBeta.x,
+            params.derivedCemmParams.tauBeta.y
         );
 
         gyroConfig = IGyroConfig(configAddress);
