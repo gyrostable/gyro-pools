@@ -288,7 +288,7 @@ class CEMM:
         xpp, ypp = self.params.A_times(self.x - self.a, self.y - self.b)
         return xpp**2 + ypp**2, self.r**2
 
-    def trade_x(self, dx: D) -> Optional[D]:
+    def trade_x(self, dx: D, mock: bool = False) -> Optional[D]:
         """Proposition 11. Trade a given amount of x for y.
 
         Returns: amount dy redeemed / to be paid. Without fees.
@@ -300,20 +300,26 @@ class CEMM:
         ynew = self._compute_y_for_x(xnew)
         if ynew is None:
             return None
-        self.x = xnew
-        yold = self.y
-        self.y = ynew
+        if not mock:
+            self.x = xnew
+            yold = self.y
+            self.y = ynew
+        else:
+            yold = self.y
         return ynew - yold
 
-    def trade_y(self, dy: D) -> Optional[D]:
+    def trade_y(self, dy: D, mock: bool = False) -> Optional[D]:
         """Proposition 11. Trade a given amount of y for x. Analogous to `trade_y()`."""
         ynew = self.y + dy
         xnew = self._compute_x_for_y(ynew)
         if xnew is None:
             return None
-        self.y = ynew
-        xold = self.x
-        self.x = xnew
+        if not mock:
+            self.y = ynew
+            xold = self.x
+            self.x = xnew
+        else:
+            xold = self.x
         return xnew - xold
 
     def _compute_y_for_x(self, x: D, nomaxvals: bool = False) -> Optional[D]:
