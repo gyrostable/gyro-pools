@@ -221,6 +221,7 @@ def test_calcInGivenOut(
         abs=D("1E6") * balances[ixOut]
     )
 
+
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     rnew_py, rnew_sol = util.mtest_liquidityInvariantUpdate(

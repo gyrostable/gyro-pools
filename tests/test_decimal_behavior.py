@@ -10,11 +10,11 @@ from tests.support.utils import scale, qdecimals
 
 operators = ["add", "sub", "mul", "truediv"]
 
-MAX_UINT = 2 ** 256 - 1
+MAX_UINT = 2**256 - 1
 
 
 def unscale(x, decimals=18):
-    return x / 10 ** decimals
+    return x / 10**decimals
 
 
 @given(

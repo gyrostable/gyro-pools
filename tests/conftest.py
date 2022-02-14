@@ -3,7 +3,7 @@ import pytest
 
 from tests.support.types import TwoPoolBaseParams, TwoPoolParams
 
-TOKENS_PER_USER = 1000 * 10 ** 18
+TOKENS_PER_USER = 1000 * 10**18
 
 # This will provide assertion introspection for common test functions defined in this module.
 pytest.register_assert_rewrite("tests.cemm.util")
@@ -94,16 +94,16 @@ def balancer_vault_pool(
             symbol="GTP",  # string
             token0=gyro_erc20_funded[0].address,  # IERC20
             token1=gyro_erc20_funded[1].address,  # IERC20
-            normalizedWeight0=D("0.6") * 10 ** 18,  # uint256
-            normalizedWeight1=D("0.4") * 10 ** 18,  # uint256
-            swapFeePercentage=1 * 10 ** 15,  # 0.5%
+            normalizedWeight0=D("0.6") * 10**18,  # uint256
+            normalizedWeight1=D("0.4") * 10**18,  # uint256
+            swapFeePercentage=1 * 10**15,  # 0.5%
             pauseWindowDuration=0,  # uint256
             bufferPeriodDuration=0,  # uint256
             oracleEnabled=False,  # bool
             owner=admin,  # address
         ),
-        sqrtAlpha=D("0.97") * 10 ** 18,  # uint256
-        sqrtBeta=D("1.02") * 10 ** 18,  # uint256
+        sqrtAlpha=D("0.97") * 10**18,  # uint256
+        sqrtBeta=D("1.02") * 10**18,  # uint256
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
@@ -120,16 +120,16 @@ def mock_vault_pool(
             symbol="GTP",  # string
             token0=gyro_erc20_funded[0].address,  # IERC20
             token1=gyro_erc20_funded[1].address,  # IERC20
-            normalizedWeight0=D("0.6") * 10 ** 18,  # uint256
-            normalizedWeight1=D("0.4") * 10 ** 18,  # uint256
-            swapFeePercentage=D(1) * 10 ** 15,  # 0.5%
+            normalizedWeight0=D("0.6") * 10**18,  # uint256
+            normalizedWeight1=D("0.4") * 10**18,  # uint256
+            swapFeePercentage=D(1) * 10**15,  # 0.5%
             pauseWindowDuration=0,  # uint256
             bufferPeriodDuration=0,  # uint256
             oracleEnabled=False,  # bool
             owner=admin,  # address
         ),
-        sqrtAlpha=D("0.97") * 10 ** 18,  # uint256
-        sqrtBeta=D("1.02") * 10 ** 18,  # uint256
+        sqrtAlpha=D("0.97") * 10**18,  # uint256
+        sqrtBeta=D("1.02") * 10**18,  # uint256
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
