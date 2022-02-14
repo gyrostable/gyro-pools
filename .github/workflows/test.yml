@@ -40,4 +40,4 @@ jobs:
       - name: Compile contracts
         run: brownie compile
       - name: Run Unit Tests
-        run: brownie test --coverage
+        run: brownie test --coverage --hypothesis-seed=42 --failfast
