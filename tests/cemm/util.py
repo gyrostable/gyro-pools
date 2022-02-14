@@ -61,8 +61,17 @@ def gen_params(draw):
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
-def gen_balances():
+def gen_balances_raw():
     return st.tuples(billion_balance_strategy, billion_balance_strategy)
+
+
+@st.composite
+def gen_balances(draw):
+    balances = draw(gen_balances_raw())
+    assume(balances[0] > 0 and balances[1] > 0)
+    assume(balances[0] / balances[1] > 1e-5)
+    assume(balances[1] / balances[0] > 1e-5)
+    return balances
 
 
 def gen_balances_vector():
@@ -330,6 +339,9 @@ def mtest_calcYGivenX(
 
     y = cemm._compute_y_for_x(x)
     assume(y is not None)  # O/w out of bounds for this invariant
+    assume(x > 0 and y > 0)
+    assume(x / y > D("1e-5"))
+    assume(y / x > D("1e-5"))
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
         scale(x), scale(params), derived, scale(cemm.r)
@@ -352,6 +364,9 @@ def mtest_calcXGivenY(
 
     x = cemm._compute_x_for_y(y)
     assume(x is not None)  # O/w out of bounds for this invariant
+    assume(x > 0 and y > 0)
+    assume(x / y > D("1e-5"))
+    assume(y / x > D("1e-5"))
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
         scale(y), scale(params), derived, scale(invariant)  # scale(cemm.r)
@@ -715,7 +730,7 @@ def mtest_invariant_across_calcOutGivenIn(
                 derived,
                 invariant_sol,
             )
-        return 0, 0
+        return (0, 0), (0, 0)
 
     if (
         balances[0] < balances[1] * bpool_params.min_balance_ratio
@@ -761,26 +776,22 @@ def mtest_invariant_across_calcOutGivenIn(
     event("full check")
 
     if invariant_after < invariant_before:
-        loss = calculate_loss(
+        loss_py = calculate_loss(
             invariant_after - invariant_before, invariant_before, balances
         )
-        # compare upper bound on loss in y terms
-        loss_ub = -loss[0] * params.beta - loss[1]
     else:
-        loss_ub = D(0)
+        loss_py = (D(0), D(0))
 
     if invariant_sol_after < invariant_sol:
-        loss = calculate_loss(
+        loss_sol = calculate_loss(
             unscale(invariant_sol_after - invariant_sol),
             unscale(invariant_sol),
             balances,
         )
-        # compare upper bound on loss in y terms
-        loss_ub_sol = -loss[0] * params.beta - loss[1]
     else:
-        loss_ub_sol = D(0)
+        loss_sol = (D(0), D(0))
 
-    return loss_ub, loss_ub_sol
+    return loss_py, loss_sol
 
 
 def mtest_invariant_across_calcInGivenOut(
@@ -862,7 +873,7 @@ def mtest_invariant_across_calcInGivenOut(
                 derived,
                 invariant_sol,
             )
-        return 0, 0
+        return (0, 0), (0, 0)
 
     if (
         balances[0] < balances[1] * bpool_params.min_balance_ratio
@@ -905,26 +916,22 @@ def mtest_invariant_across_calcInGivenOut(
         assume(False)
 
     if invariant_after < invariant_before:
-        loss = calculate_loss(
+        loss_py = calculate_loss(
             invariant_after - invariant_before, invariant_before, balances
         )
-        # compare upper bound on loss in y terms
-        loss_ub = -loss[0] * params.beta - loss[1]
     else:
-        loss_ub = D(0)
+        loss_py = (D(0), D(0))
 
     if invariant_sol_after < invariant_sol:
-        loss = calculate_loss(
+        loss_sol = calculate_loss(
             unscale(invariant_sol_after - invariant_sol),
             unscale(invariant_sol),
             balances,
         )
-        # compare upper bound on loss in y terms
-        loss_ub_sol = -loss[0] * params.beta - loss[1]
     else:
-        loss_ub_sol = D(0)
+        loss_sol = (D(0), D(0))
 
-    return loss_ub, loss_ub_sol
+    return loss_py, loss_sol
 
 
 def mtest_invariant_across_liquidityInvariantUpdate(
@@ -964,10 +971,10 @@ def mtest_invariant_across_liquidityInvariantUpdate(
 
     rnew2 = (mimpl.CEMM.from_x_y(new_balances[0], new_balances[1], mparams)).r
 
-    assert D(rnew).approxed(abs=D("1e-10"), rel=D("1e-10")) >= D(rnew2).approxed(
-        abs=D("1e-10"), rel=D("1e-10")
+    assert D(rnew).approxed(abs=D("1e-8"), rel=D("1e-8")) >= D(rnew2).approxed(
+        abs=D("1e-8"), rel=D("1e-8")
     )
     # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
-    assert unscale(D(rnew_sol)).approxed(abs=D("1e-10"), rel=D("1e-10")) >= unscale(
+    assert unscale(D(rnew_sol)).approxed(abs=D("1e-8"), rel=D("1e-8")) >= unscale(
         D(rnew_sol2)
-    ).approxed(abs=D("1e-10"), rel=D("1e-10"))
+    ).approxed(abs=D("1e-8"), rel=D("1e-8"))

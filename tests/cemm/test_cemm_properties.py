@@ -74,7 +74,7 @@ def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
 ):
     # the difference is whether invariant is calculated in python or solidity, but swap calculation still in solidity
-    loss_ub, loss_ub_sol = util.mtest_invariant_across_calcOutGivenIn(
+    loss_py, loss_sol = util.mtest_invariant_across_calcOutGivenIn(
         params,
         balances,
         amountIn,
@@ -84,8 +84,11 @@ def test_invariant_across_calcOutGivenIn(
         gyro_cemm_math_testing,
     )
 
-    assert loss_ub < D("5e-2")
-    assert loss_ub_sol < D("5e-2")
+    # compare upper bound on loss in y terms
+    loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
+    loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
+    assert loss_py_ub < D("5e-2")
+    assert loss_sol_ub < D("5e-2")
 
 
 ################################################################################
@@ -100,7 +103,7 @@ def test_invariant_across_calcInGivenOut(
     params, balances, amountOut, tokenInIsToken0, gyro_cemm_math_testing
 ):
     # the difference is whether invariant is calculated in python or solidity, but swap calculation still in solidity
-    loss_ub, loss_ub_sol = util.mtest_invariant_across_calcInGivenOut(
+    loss_py, loss_sol = util.mtest_invariant_across_calcInGivenOut(
         params,
         balances,
         amountOut,
@@ -110,8 +113,11 @@ def test_invariant_across_calcInGivenOut(
         gyro_cemm_math_testing,
     )
 
-    assert loss_ub < D("5e-2")
-    assert loss_ub_sol < D("5e-2")
+    # compare upper bound on loss in y terms
+    loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
+    loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
+    assert loss_py_ub < D("5e-2")
+    assert loss_sol_ub < D("5e-2")
 
 
 ################################################################################

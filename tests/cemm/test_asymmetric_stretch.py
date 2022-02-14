@@ -43,17 +43,17 @@ bpool_params = util.Basic_Pool_Parameters(
 
 @st.composite
 def gen_params(draw):
-    phi_degrees = 45
+    phi_degrees = draw(st.floats(45, 50))
     phi = phi_degrees / 360 * 2 * pi
 
     # Price bounds. Choose s.t. the 'peg' lies approximately within the bounds (within 30%).
     # It'd be nonsensical if this was not the case: Why are we using an ellipse then?!
     peg = D(1)  # = price where the flattest point of the ellipse lies.
     alpha = draw(qdecimals("0.05", "0.999"))
-    beta = D(1) / D(alpha)
+    beta = draw(qdecimals("1.001", "1.1"))
     s = sin(phi)
     c = cos(phi)
-    l = draw(qdecimals("50", "1000"))
+    l = draw(qdecimals("5", "700"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
