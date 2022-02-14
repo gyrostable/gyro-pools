@@ -11,10 +11,12 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.validateParams(params);
     }
 
-    function validateDerivedParams(GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory derived) external pure {
+    function validateDerivedParams(
+        GyroCEMMMath.Params memory params,
+        GyroCEMMMath.DerivedParams memory derived
+    ) external pure {
         GyroCEMMMath.validateDerivedParams(params, derived);
     }
-
 
     function scalarProdUp(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2)
         external

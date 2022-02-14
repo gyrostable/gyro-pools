@@ -52,7 +52,10 @@ library GyroCEMMMath {
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
-        validateNormed(Vector2(params.c, params.s), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
+        validateNormed(
+            Vector2(params.c, params.s),
+            GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED
+        );
     }
 
     struct DerivedParams {
@@ -77,8 +80,11 @@ library GyroCEMMMath {
     }
 
     /** @dev Ensures `derived ~ mkDerivedParams(params)`, without having to compute a square root.
-      * This is useful mainly for numerical precision. */
-    function validateDerivedParams(Params memory params, DerivedParams memory derived) internal pure {
+     * This is useful mainly for numerical precision. */
+    function validateDerivedParams(Params memory params, DerivedParams memory derived)
+        internal
+        pure
+    {
         // tau vectors need to be normed b/c they're points on the unit circle.
         // This ensures that the tau value is = tau(px) for *some* px.
         validateNormed(derived.tauAlpha, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
@@ -88,13 +94,19 @@ library GyroCEMMMath {
         // This should be equal to the corresponding zeta value. We can compare for actual equality.
         int256 pxc = derived.tauAlpha.x.divUp(derived.tauAlpha.y);
         int256 pxc_computed = zeta(params, params.alpha);
-        _require(pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
-            GyroCEMMPoolErrors.DERIVED_ZETA_WRONG);
-        
+        _require(
+            pxc - VALIDATION_PRECISION_ZETA <= pxc_computed &&
+                pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
+            GyroCEMMPoolErrors.DERIVED_ZETA_WRONG
+        );
+
         pxc = derived.tauBeta.x.divUp(derived.tauBeta.y);
         pxc_computed = zeta(params, params.beta);
-        _require(pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
-            GyroCEMMPoolErrors.DERIVED_ZETA_WRONG);
+        _require(
+            pxc - VALIDATION_PRECISION_ZETA <= pxc_computed &&
+                pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
+            GyroCEMMPoolErrors.DERIVED_ZETA_WRONG
+        );
     }
 
     // Scalar product of Vector2 objects
@@ -511,9 +523,9 @@ library GyroCEMMMath {
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) internal pure returns (uint256 unewInvariant) {
-        uint256 deltaInvariant = balances[0] > 0 ?
-            deltaBalances[0].divDown(balances[0]).mulDown(uinvariant) :
-            deltaBalances[1].divDown(balances[1]).mulDown(uinvariant);
+        uint256 deltaInvariant = balances[0] > 0
+            ? deltaBalances[0].divDown(balances[0]).mulDown(uinvariant)
+            : deltaBalances[1].divDown(balances[1]).mulDown(uinvariant);
         unewInvariant = isIncreaseLiq
             ? uinvariant.add(deltaInvariant)
             : uinvariant.sub(deltaInvariant);
