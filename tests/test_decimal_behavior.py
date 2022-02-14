@@ -10,11 +10,11 @@ from tests.support.utils import scale, qdecimals
 
 operators = ["add", "sub", "mul", "truediv"]
 
-MAX_UINT = 2**256 - 1
+MAX_UINT = 2 ** 256 - 1
 
 
 def unscale(x, decimals=18):
-    return x / 10**decimals
+    return x / 10 ** decimals
 
 
 @given(
@@ -44,6 +44,7 @@ def test_decimal_behavior(math_testing, a, b, ops):
         a, b = b, op(a, b)
         assert scale(b) == solidity_b
 
+
 @given(a=qdecimals(0))
 @example(a=D(1))
 def test_sqrt(math_testing, a):
@@ -51,4 +52,4 @@ def test_sqrt(math_testing, a):
     res_math = a.sqrt()
     res_sol = math_testing.sqrt(scale(a))
     # Absolute error tolerated in the last decimal + the default relative error.
-    assert int(res_sol) == scale(res_math).approxed(abs=D('1e5'), rel=D('1e-12'))
+    assert int(res_sol) == scale(res_math).approxed(abs=D("1e5"), rel=D("1e-12"))

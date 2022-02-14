@@ -22,6 +22,7 @@ MAX_PREC_VALUE = 78
 if decimal.getcontext().prec != MAX_PREC_VALUE:
     decimal.getcontext().prec = MAX_PREC_VALUE
 
+
 def set_decimals(ndecimals: int):
     global DECIMAL_PRECISION, DECIMAL_MULT, QUANTIZED_EXP
     DECIMAL_PRECISION = ndecimals

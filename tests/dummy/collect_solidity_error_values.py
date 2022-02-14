@@ -1,4 +1,3 @@
-
 # DO NOT RUN these as tests. They (most likely) won't fail. These are only for data collection and are marked as tests
 # b/c o/w it's really hard to use the test infrastructure -.-
 #
@@ -23,10 +22,12 @@ from tests.support.utils import qdecimals
 error_values: Union[None, list[dict]]  # None means disabled.
 error_values = None
 
+
 def push_error_values(row: dict):
     global error_values
     if error_values is not None:
         error_values.append(row)
+
 
 @settings(max_examples=1_000)
 @given(
@@ -36,14 +37,24 @@ def push_error_values(row: dict):
     tokenInIsToken0=st.booleans(),
 )
 @example(
-    params=CEMMMathParams(alpha=D('0.978987854300000000'), beta=D('1.005000000000000000'), c=D('0.984807753012208020'), s=D('0.173648177666930331'), l=D('9.165121265207703869')),
-    balances=(402159729,
-              579734344),
-    amountIn=D('1.000000000000000000'),
-    tokenInIsToken0=True)
-def my_test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing):
+    params=CEMMMathParams(
+        alpha=D("0.978987854300000000"),
+        beta=D("1.005000000000000000"),
+        c=D("0.984807753012208020"),
+        s=D("0.173648177666930331"),
+        l=D("9.165121265207703869"),
+    ),
+    balances=(402159729, 579734344),
+    amountIn=D("1.000000000000000000"),
+    tokenInIsToken0=True,
+)
+def my_test_calcOutGivenIn(
+    params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
+):
     bpool_params = copy(test_cemm_properties.bpool_params)
-    bpool_params.min_fee = D(0)  # For comparability with the other data, from `tests/cemm/test_python_decimals.py`
+    bpool_params.min_fee = D(
+        0
+    )  # For comparability with the other data, from `tests/cemm/test_python_decimals.py`
     loss_ub, loss_ub_sol = util.mtest_invariant_across_calcOutGivenIn(
         params,
         balances,
@@ -55,6 +66,7 @@ def my_test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0, gyro_cem
     )
     push_error_values(dict(loss_ub=float(loss_ub), loss_ub_sol=float(loss_ub_sol)))
     # Test always passes unless there's an issue with reverts
+
 
 def test_main(gyro_cemm_math_testing):
     global error_values
