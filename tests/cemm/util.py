@@ -550,31 +550,6 @@ def mtest_calcInGivenOut(
     return amountIn, to_decimal(amountIn_sol)
 
 
-def mtest_calculateSqrtOnePlusZetaSquared(
-    params, balances, derivedparams_is_sol: bool, gyro_cemm_math_testing
-):
-    # This is a comparison test that also tests the basic math behind this: The solidity code doesn't actually
-    # calculate the square root!
-    assume(balances != (0, 0))
-
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
-    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
-
-    val_explicit = (D(1) + mparams.zeta(cemm.px) ** 2).sqrt()
-    val_implicit = cemm._sqrtOnePlusZetaSquared
-    val_sol = gyro_cemm_math_testing.calculateSqrtOnePlusZetaSquared(
-        scale(balances), scale(params), derived, scale(cemm.r)
-    )
-
-    assert (
-        val_explicit == val_implicit.approxed()
-    )  # Tests math / the python implementation
-    return val_implicit, to_decimal(val_sol)
-
-
 def mtest_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     params, cemm, dinvariant = params_cemm_dinvariant
     assume(cemm.x != 0 or cemm.y != 0)

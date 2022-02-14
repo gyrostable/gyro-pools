@@ -206,17 +206,6 @@ def test_calcInGivenOut(
     )
 
 
-@given(
-    params=gen_params(),
-    balances=util.gen_balances(),
-)
-def test_calculateSqrtOnePlusZetaSquared(params, balances, gyro_cemm_math_testing):
-    val_py, val_sol = util.mtest_calculateSqrtOnePlusZetaSquared(
-        params, balances, DP_IN_SOL, gyro_cemm_math_testing
-    )
-    assert to_decimal(val_sol) == scale(val_py).approxed_scaled()
-
-
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     rnew_py, rnew_sol = util.mtest_liquidityInvariantUpdate(

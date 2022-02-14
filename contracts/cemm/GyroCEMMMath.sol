@@ -492,26 +492,6 @@ library GyroCEMMMath {
         x = x.add(ab.x);
     }
 
-    /** @dev calculate sqrt(1+zeta(px)^2) by taking advantage of Equation 7 in 2.1.7
-     *  This can be used in liquidity updates to save gas */
-    // SOMEDAY we might want to use the formula for the larger of the two balances to improve numerical accuracy.
-    function calculateSqrtOnePlusZetaSquared(
-        uint256[] memory balances,
-        Params memory params,
-        DerivedParams memory derived,
-        int256 invariant
-    ) internal pure returns (int256 sqrt) {
-        Vector2 memory ab = virtualOffsets(params, derived, invariant);
-        // shift by virtual offsets
-        Vector2 memory vt;
-        vt.x = balances[0].toInt256().sub(ab.x);
-        vt.y = balances[1].toInt256().sub(ab.y);
-        // transform by A
-        vt = mulA(params, vt);
-        // sqrt(1+zeta(px)^2) = - r / (Av(t).y). See Equation 7 in 2.1.7
-        sqrt = -invariant.divUp(vt.y);
-    }
-
     /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
      * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
      * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
