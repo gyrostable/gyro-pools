@@ -11,7 +11,7 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams, CEMMMathDerivedParams, Vector2
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
-MIN_PRICE_SEPARATION = D("0.0001")
+MIN_PRICE_SEPARATION = D("0.001")
 
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
