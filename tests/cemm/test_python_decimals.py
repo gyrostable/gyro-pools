@@ -11,7 +11,7 @@ if __name__ == "__main__":
     brownie.reverts = None
 
 import pandas as pd
-from hypothesis import given, settings, assume, example
+from hypothesis import given, settings, assume, example, HealthCheck
 from hypothesis import strategies as st
 
 from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, debug_postmortem_on_exc
@@ -100,31 +100,32 @@ def test_calcOutGivenIn(
     assert mamountOut_single == D(mamountOut_double).approxed(abs=D('1E-3'))
 
 # Internal test for invariant changes:
-@settings(max_examples=1_000)
+@settings(max_examples=10_000,
+          suppress_health_check=[HealthCheck.return_value])
 @given(
     params=gen_params(),
     balances=gen_balances(),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
-@example(
-    params=CEMMMathParams(alpha=D('10.591992670000000000'), beta=D('10.593727349591836734'), c=D('1.000000000000000000'), s=D('0E-18'), l=D('1.000000000000000000')),
-    balances=(13849421, 1022),
-    amountIn=D('1.000000000000000000'),
-    tokenInIsToken0=False,
-)
-@example(
-    params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'), l=D('1.000000000000000000')),
-    balances=(327937, 501870798),
-    amountIn=D('1.000000000000000000'),
-    tokenInIsToken0=False,
-)
-@example(
-    params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('0.302739565961017365'), s=D('0.953073320999877183'), l=D('1.000000000000000000')),
-    balances=(327937, 501870798),
-    amountIn=D('1.000000000000000000'),
-    tokenInIsToken0=False,
-)
+# @example(
+#     params=CEMMMathParams(alpha=D('10.591992670000000000'), beta=D('10.593727349591836734'), c=D('1.000000000000000000'), s=D('0E-18'), l=D('1.000000000000000000')),
+#     balances=(13849421, 1022),
+#     amountIn=D('1.000000000000000000'),
+#     tokenInIsToken0=False,
+# )
+# @example(
+#     params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'), l=D('1.000000000000000000')),
+#     balances=(327937, 501870798),
+#     amountIn=D('1.000000000000000000'),
+#     tokenInIsToken0=False,
+# )
+# @example(
+#     params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('0.302739565961017365'), s=D('0.953073320999877183'), l=D('1.000000000000000000')),
+#     balances=(327937, 501870798),
+#     amountIn=D('1.000000000000000000'),
+#     tokenInIsToken0=False,
+# )
 def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0
 ):
@@ -192,25 +193,26 @@ def mtest_invariant_across_calcOutGivenIn(
 def mparams2float(params: mimpl.Params) -> mimpl_float.Params:
     return mimpl_float.Params(*map(float, (params.alpha, params.beta, params.rx, params.ry, params.l)))
 
-@settings(max_examples=1_000)
+@settings(max_examples=10_000,
+          suppress_health_check=[HealthCheck.return_value])
 @given(
     params=gen_params(),
     balances=gen_balances(),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
-@example(
-    params=CEMMMathParams(alpha=D('0.050000000000000000'), beta=D('1.005000000000000000'), c=D('0.984807753012208020'), s=D('0.173648177666930331'), l=D('1.000000000000000000')),
-    balances=(2, 1),
-    amountIn=D('1.000000000000000000'),
-    tokenInIsToken0=False,
-)
-@example(
-    params=CEMMMathParams(alpha=D('10.591992670000000000'), beta=D('10.593727349591836734'), c=D('1.000000000000000000'), s=D('0E-18'), l=D('1.000000000000000000')),
-    balances=(13849421, 1022),
-    amountIn=D('1.000000000000000000'),
-    tokenInIsToken0=False,
-)
+# @example(
+#     params=CEMMMathParams(alpha=D('0.050000000000000000'), beta=D('1.005000000000000000'), c=D('0.984807753012208020'), s=D('0.173648177666930331'), l=D('1.000000000000000000')),
+#     balances=(2, 1),
+#     amountIn=D('1.000000000000000000'),
+#     tokenInIsToken0=False,
+# )
+# @example(
+#     params=CEMMMathParams(alpha=D('10.591992670000000000'), beta=D('10.593727349591836734'), c=D('1.000000000000000000'), s=D('0E-18'), l=D('1.000000000000000000')),
+#     balances=(13849421, 1022),
+#     amountIn=D('1.000000000000000000'),
+#     tokenInIsToken0=False,
+# )
 def test_invariant_across_calcOutGivenIn_float(
     params, balances, amountIn, tokenInIsToken0
 ):
@@ -267,23 +269,23 @@ if __name__ == "__main__":
     # (also works with pytest, then this is ignored)
     with debug_postmortem_on_exc():
         error_values = []
-        # test_invariant_across_calcOutGivenIn()
-        err = mtest_invariant_across_calcOutGivenIn(
-            params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'),
-                                  l=D('1.000000000000000000')),
-            balances=(327937, 501870798),
-            amountIn=D('1.000000000000000000'),
-            tokenInIsToken0=False,
-        )  # Passes
-        print(err)
-        err = mtest_invariant_across_calcOutGivenIn(
-            params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'),
-                                  c=D('0.302739565961017365'), s=D('0.953073320999877183'),
-                                  l=D('1.000000000000000000')),
-            balances=(327937, 501870798),
-            amountIn=D('1.000000000000000000'),
-            tokenInIsToken0=False,
-        )  # Fails
-        print(err)
+        test_invariant_across_calcOutGivenIn()
+        # err = mtest_invariant_across_calcOutGivenIn(
+        #     params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'),
+        #                           l=D('1.000000000000000000')),
+        #     balances=(327937, 501870798),
+        #     amountIn=D('1.000000000000000000'),
+        #     tokenInIsToken0=False,
+        # )  # Passes
+        # print(err)
+        # err = mtest_invariant_across_calcOutGivenIn(
+        #     params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'),
+        #                           c=D('0.302739565961017365'), s=D('0.953073320999877183'),
+        #                           l=D('1.000000000000000000')),
+        #     balances=(327937, 501870798),
+        #     amountIn=D('1.000000000000000000'),
+        #     tokenInIsToken0=False,
+        # )  # Fails
+        # print(err)
         df = pd.DataFrame({'error': list(map(float, error_values))})
         df.to_feather("data/errors_single_decimal.feather")
