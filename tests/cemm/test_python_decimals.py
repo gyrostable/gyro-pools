@@ -269,6 +269,7 @@ if __name__ == "__main__":
     # (also works with pytest, then this is ignored)
     with debug_postmortem_on_exc():
         error_values = []
+        # quantized_decimal.set_decimals(2 * 18)
         test_invariant_across_calcOutGivenIn()
         # err = mtest_invariant_across_calcOutGivenIn(
         #     params=CEMMMathParams(alpha=D('3.044920011516668204'), beta=D('3.045020011516668204'), c=D('1'), s=D('0'),
