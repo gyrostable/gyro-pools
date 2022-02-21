@@ -18,6 +18,8 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
+import "./Gyro2PoolErrors.sol";
+
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
@@ -37,6 +39,8 @@ library GyroTwoMath {
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
+
+    uint256 internal constant _MIN_BAL_RATIO = 1e13; // 1e-5
 
     // Invariant growth limit: non-proportional joins cannot cause the invariant to increase by more than this ratio.
     uint256 internal constant _MAX_INVARIANT_RATIO = 3e18;
@@ -69,11 +73,7 @@ library GyroTwoMath {
         //                                          2 * a                               //
         //                                                                              //
         **********************************************************************************************/
-        (uint256 a, uint256 mb, uint256 mc) = _calculateQuadraticTerms(
-            balances,
-            sqrtAlpha,
-            sqrtBeta
-        );
+        (uint256 a, uint256 mb, uint256 mc) = _calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta);
         return _calculateQuadratic(a, mb, mc);
     }
 
@@ -161,14 +161,10 @@ library GyroTwoMath {
             uint256 denominator = sqrtPx.sub(sqrtAlpha);
             diffInvariant = deltaBalances[1].divDown(denominator);
         } else {
-            uint256 denominator = FixedPoint.ONE.divUp(sqrtPx).sub(
-                FixedPoint.ONE.divDown(sqrtBeta)
-            );
+            uint256 denominator = FixedPoint.ONE.divUp(sqrtPx).sub(FixedPoint.ONE.divDown(sqrtBeta));
             diffInvariant = deltaBalances[0].divDown(denominator);
         }
-        invariant = isIncreaseLiq
-            ? lastInvariant.add(diffInvariant)
-            : lastInvariant.sub(diffInvariant);
+        invariant = isIncreaseLiq ? lastInvariant.add(diffInvariant) : lastInvariant.sub(diffInvariant);
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances
@@ -202,12 +198,22 @@ library GyroTwoMath {
       **********************************************************************************************/
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
-        uint256 virtIn = balanceIn.add(virtualParamIn);
-        uint256 denominator = virtIn.add(amountIn);
-        uint256 invSquare = currentInvariant.mulUp(currentInvariant);
-        uint256 subtrahend = invSquare.divUp(denominator);
-        uint256 virtOut = balanceOut.add(virtualParamOut);
-        amountOut = virtOut.sub(subtrahend);
+        {
+            uint256 virtIn = balanceIn.add(virtualParamIn);
+            uint256 denominator = virtIn.add(amountIn);
+            uint256 invSquare = currentInvariant.mulUp(currentInvariant);
+            uint256 subtrahend = invSquare.divUp(denominator);
+            uint256 virtOut = balanceOut.add(virtualParamOut);
+            amountOut = virtOut.sub(subtrahend);
+        }
+
+        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
+
+        if (balOutNew >= balInNew) {
+            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
+        } else {
+            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
+        }
 
         // This in particular ensures amountOut < balanceOut.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
@@ -238,44 +244,42 @@ library GyroTwoMath {
       // Note that dy < 0 < dx.                                                                    //
       **********************************************************************************************/
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
-        uint256 virtOut = balanceOut.add(virtualParamOut);
-        uint256 denominator = virtOut.sub(amountOut);
-        uint256 invSquare = currentInvariant.mulUp(currentInvariant);
-        uint256 term = invSquare.divUp(denominator);
-        uint256 virtIn = balanceIn.add(virtualParamIn);
-        amountIn = term.sub(virtIn);
+        {
+            uint256 virtOut = balanceOut.add(virtualParamOut);
+            uint256 denominator = virtOut.sub(amountOut);
+            uint256 invSquare = currentInvariant.mulUp(currentInvariant);
+            uint256 term = invSquare.divUp(denominator);
+            uint256 virtIn = balanceIn.add(virtualParamIn);
+            amountIn = term.sub(virtIn);
+        }
+
+        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
+
+        if (balOutNew >= balInNew) {
+            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
+        } else {
+            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
+        }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
     /** @dev calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2
      */
-    function _calculateVirtualParameter0(uint256 invariant, uint256 _sqrtBeta)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateVirtualParameter0(uint256 invariant, uint256 _sqrtBeta) internal pure returns (uint256) {
         return invariant.divDown(_sqrtBeta);
     }
 
     /** @dev calculate virtual offset b for reserves y, as in (x+a)*(y+b)=L^2
      */
-    function _calculateVirtualParameter1(uint256 invariant, uint256 _sqrtAlpha)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateVirtualParameter1(uint256 invariant, uint256 _sqrtAlpha) internal pure returns (uint256) {
         return invariant.mulDown(_sqrtAlpha);
     }
 
     /** @dev calculate square root price of asset X in terms of asset Y
      *   derived from relation p_x * (x+a)^2 = L^2
      */
-    function _calculateSqrtPrice(uint256 invariant, uint256 virtualX)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateSqrtPrice(uint256 invariant, uint256 virtualX) internal pure returns (uint256) {
         /*********************************************************************************
       /*  sqrtPrice =  L / x'
       *********************************************************************************/

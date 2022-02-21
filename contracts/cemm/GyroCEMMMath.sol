@@ -52,10 +52,7 @@ library GyroCEMMMath {
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
-        validateNormed(
-            Vector2(params.c, params.s),
-            GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED
-        );
+        validateNormed(Vector2(params.c, params.s), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
 
     struct DerivedParams {
@@ -73,18 +70,14 @@ library GyroCEMMMath {
         int256 norm = v.x.mulDown(v.x);
         norm = norm.add(v.y.mulDown(v.y));
         _require(
-            SignedFixedPoint.ONE - VALIDATION_PRECISION_NORMED_INPUT <= norm &&
-                norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_NORMED_INPUT,
+            SignedFixedPoint.ONE - VALIDATION_PRECISION_NORMED_INPUT <= norm && norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_NORMED_INPUT,
             error_code
         );
     }
 
     /** @dev Ensures `derived ~ mkDerivedParams(params)`, without having to compute a square root.
      * This is useful mainly for numerical precision. */
-    function validateDerivedParams(Params memory params, DerivedParams memory derived)
-        internal
-        pure
-    {
+    function validateDerivedParams(Params memory params, DerivedParams memory derived) internal pure {
         // tau vectors need to be normed b/c they're points on the unit circle.
         // This ensures that the tau value is = tau(px) for *some* px.
         validateNormed(derived.tauAlpha, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
@@ -95,16 +88,14 @@ library GyroCEMMMath {
         int256 pxc = derived.tauAlpha.x.divUp(derived.tauAlpha.y);
         int256 pxc_computed = zeta(params, params.alpha);
         _require(
-            pxc - VALIDATION_PRECISION_ZETA <= pxc_computed &&
-                pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
+            pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
             GyroCEMMPoolErrors.DERIVED_ZETA_WRONG
         );
 
         pxc = derived.tauBeta.x.divUp(derived.tauBeta.y);
         pxc_computed = zeta(params, params.beta);
         _require(
-            pxc - VALIDATION_PRECISION_ZETA <= pxc_computed &&
-                pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
+            pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
             GyroCEMMPoolErrors.DERIVED_ZETA_WRONG
         );
     }
@@ -114,11 +105,7 @@ library GyroCEMMMath {
         ret = t1.x.mulUp(t2.x).add(t1.y.mulUp(t2.y));
     }
 
-    function scalarProdDown(Vector2 memory t1, Vector2 memory t2)
-        internal
-        pure
-        returns (int256 ret)
-    {
+    function scalarProdDown(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
         ret = t1.x.mulDown(t2.x).add(t1.y.mulDown(t2.y));
     }
 
@@ -127,11 +114,7 @@ library GyroCEMMMath {
 
     /** @dev Calculate A^{-1}t where A^{-1} is given in Section 2.2
      *  This is rotating and scaling the circle into the ellipse */
-    function mulAinv(Params memory params, Vector2 memory t)
-        internal
-        pure
-        returns (Vector2 memory tp)
-    {
+    function mulAinv(Params memory params, Vector2 memory t) internal pure returns (Vector2 memory tp) {
         tp.x = params.c.mulDown(params.lambda).mulDown(t.x);
         tp.x = tp.x.add(params.s.mulDown(t.y));
         tp.y = (-params.s).mulDown(params.lambda).mulDown(t.x);
@@ -140,11 +123,7 @@ library GyroCEMMMath {
 
     /** @dev Calculate A t where A is given in Section 2.2
      *  This is reversing rotation and scaling of the ellipse (mapping back to circle) */
-    function mulA(Params memory params, Vector2 memory tp)
-        internal
-        pure
-        returns (Vector2 memory t)
-    {
+    function mulA(Params memory params, Vector2 memory tp) internal pure returns (Vector2 memory t) {
         t.x = params.c.divDown(params.lambda).mulDown(tp.x);
         t.x = t.x.sub(params.s.divDown(params.lambda).mulDown(tp.y));
         t.y = params.s.mulDown(tp.x);
@@ -177,11 +156,7 @@ library GyroCEMMMath {
         return eta(zeta(params, px), sqrt);
     }
 
-    function mkDerivedParams(Params memory params)
-        internal
-        pure
-        returns (DerivedParams memory derived)
-    {
+    function mkDerivedParams(Params memory params) internal pure returns (DerivedParams memory derived) {
         derived.tauAlpha = tau(params, params.alpha);
         derived.tauBeta = tau(params, params.beta);
     }
@@ -191,9 +166,7 @@ library GyroCEMMMath {
      *  Notice that the eta function does not depend on Params.
      *  See Definition 2 in Section 2.1.1 */
     function eta(int256 pxc) internal pure returns (Vector2 memory tpp) {
-        int256 z = FixedPoint
-            .powDown(FixedPoint.ONE.add(uint256(pxc.mulDown(pxc))), ONEHALF)
-            .toInt256();
+        int256 z = FixedPoint.powDown(FixedPoint.ONE.add(uint256(pxc.mulDown(pxc))), ONEHALF).toInt256();
         tpp = eta(pxc, z);
     }
 
@@ -243,11 +216,7 @@ library GyroCEMMMath {
 
     /** @dev Calculate normalized offsets chi = (a,b)/r without having computed the invariant r
      *   see Prop 8 in 2.1.3 Initialization from real reserves */
-    function chi(Params memory params, DerivedParams memory derived)
-        internal
-        pure
-        returns (Vector2 memory ret)
-    {
+    function chi(Params memory params, DerivedParams memory derived) internal pure returns (Vector2 memory ret) {
         ret.x = mulAinv(params, derived.tauBeta).x;
         ret.y = mulAinv(params, derived.tauAlpha).y;
     }
@@ -263,9 +232,7 @@ library GyroCEMMMath {
      *  Reverts if the equation has no solution or is actually linear (i.e., a==0)
      *  This is used in invariant calculation for an underestimate */
     function solveQuadraticPlus(QParams memory qparams) internal pure returns (int256 x) {
-        int256 sqrt = qparams.b.mulDown(qparams.b).sub(
-            4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c)
-        );
+        int256 sqrt = qparams.b.mulDown(qparams.b).sub(4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c));
         sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
         x = (-qparams.b).add(sqrt).divDown(2 * SignedFixedPoint.ONE.mulUp(qparams.a));
     }
@@ -275,9 +242,7 @@ library GyroCEMMMath {
      *  This is used in swap calculations, where we want to underestimate the square root b/c we want to
      *  overestimate new reserve balances (and so underestimate the swap out amount) */
     function solveQuadraticMinus(QParams memory qparams) internal pure returns (int256 x) {
-        int256 sqrt = qparams.b.mulDown(qparams.b).sub(
-            4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c)
-        );
+        int256 sqrt = qparams.b.mulDown(qparams.b).sub(4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c));
         sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
         x = (-qparams.b).sub(sqrt).divDown(2 * SignedFixedPoint.ONE.mulUp(qparams.a));
     }
@@ -306,9 +271,7 @@ library GyroCEMMMath {
         Vector2 memory vecAChi = mulA(params, chi(params, derived));
         QParams memory qparams;
         // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = (scalarProdUp(vecAChi, vecAChi).sub(SignedFixedPoint.ONE)).divUp(
-            2 * SignedFixedPoint.ONE
-        );
+        qparams.a = (scalarProdUp(vecAChi, vecAChi).sub(SignedFixedPoint.ONE)).divUp(2 * SignedFixedPoint.ONE);
         qparams.b = -scalarProdDown(vecAt, vecAChi);
         qparams.c = scalarProdUp(vecAt, vecAt).divUp(2 * SignedFixedPoint.ONE);
         invariant = solveQuadraticPlus(qparams);
@@ -368,9 +331,7 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         uint256 uinvariant
     ) internal pure returns (uint256 amountOut) {
-        function(int256, Params memory, DerivedParams memory, int256)
-            pure
-            returns (int256) calcGiven;
+        function(int256, Params memory, DerivedParams memory, int256) pure returns (int256) calcGiven;
         uint8 ixIn;
         uint8 ixOut;
         if (tokenInIsToken0) {
@@ -406,9 +367,7 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         uint256 uinvariant
     ) internal pure returns (uint256 amountIn) {
-        function(int256, Params memory, DerivedParams memory, int256)
-            pure
-            returns (int256) calcGiven;
+        function(int256, Params memory, DerivedParams memory, int256) pure returns (int256) calcGiven;
         uint8 ixIn;
         uint8 ixOut;
         if (tokenInIsToken0) {
@@ -448,13 +407,10 @@ library GyroCEMMMath {
         Vector2 memory ab = virtualOffsets(params, derived, invariant);
         // shift by the virtual offsets
         x = x.sub(ab.x);
-        int256 lamBar = SignedFixedPoint.ONE -
-            SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
+        int256 lamBar = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
 
         // Convert Prop 14 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = (SignedFixedPoint.ONE.sub(lamBar.mulDown(params.s).mulDown(params.s))).divUp(
-            2 * SignedFixedPoint.ONE
-        );
+        qparams.a = (SignedFixedPoint.ONE.sub(lamBar.mulDown(params.s).mulDown(params.s))).divUp(2 * SignedFixedPoint.ONE);
         qparams.b = params.s.mulUp(params.c).mulUp(lamBar).mulUp(x);
         qparams.c = SignedFixedPoint.ONE.sub(lamBar.mulUp(params.c).mulUp(params.c));
         qparams.c = (qparams.c.mulDown(x).mulDown(x)).sub(invariant.mulDown(invariant));
@@ -475,13 +431,10 @@ library GyroCEMMMath {
         Vector2 memory ab = virtualOffsets(params, derived, invariant);
         // shift by the virtual offsets
         y = y.sub(ab.y);
-        int256 lamBar = SignedFixedPoint.ONE -
-            SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
+        int256 lamBar = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
 
         // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = (SignedFixedPoint.ONE.sub(lamBar.mulDown(params.c).mulDown(params.c))).divUp(
-            2 * SignedFixedPoint.ONE
-        );
+        qparams.a = (SignedFixedPoint.ONE.sub(lamBar.mulDown(params.c).mulDown(params.c))).divUp(2 * SignedFixedPoint.ONE);
         qparams.b = params.s.mulUp(params.c).mulUp(lamBar).mulUp(y);
         qparams.c = SignedFixedPoint.ONE.sub(lamBar.mulUp(params.s).mulUp(params.s));
         qparams.c = (qparams.c.mulDown(y).mulDown(y)).sub(invariant.mulDown(invariant));
@@ -506,8 +459,6 @@ library GyroCEMMMath {
         uint256 deltaInvariant = balances[0] > 0
             ? deltaBalances[0].divDown(balances[0]).mulDown(uinvariant)
             : deltaBalances[1].divDown(balances[1]).mulDown(uinvariant);
-        unewInvariant = isIncreaseLiq
-            ? uinvariant.add(deltaInvariant)
-            : uinvariant.sub(deltaInvariant);
+        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
 }

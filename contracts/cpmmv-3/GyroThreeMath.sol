@@ -32,6 +32,7 @@ library GyroThreeMath {
     // it's <= ONE)
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
+    uint256 internal constant _MIN_BAL_RATIO = 1e13; // 1e-5
 
     // Stopping criterion for the Newton iteration that computes the invariant:
     // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
@@ -45,11 +46,7 @@ library GyroThreeMath {
     // and, because there is a minimum BPT, we round down the invariant.
     // Argument root3Alpha = cube root of the lower price bound (symmetric across assets)
     // Note: all price bounds for the pool are alpha and 1/alpha
-    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256) {
         /**********************************************************************************************
         // Calculate root of cubic:
         // (1-alpha)L^3 - (x+y+z) * alpha^(2/3) * L^2 - (x*y + y*z + x*z) * alpha^(1/3) * L - x*y*z = 0
@@ -57,10 +54,7 @@ library GyroThreeMath {
         // here, a > 0, b < 0, c < 0, and d < 0
         // taking mb = -b and mc = -c
         /**********************************************************************************************/
-        (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(
-            balances,
-            root3Alpha
-        );
+        (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md);
     }
 
@@ -84,9 +78,7 @@ library GyroThreeMath {
         a = FixedPoint.ONE.sub(alpha);
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
         mb = bterm.mulDown(alpha23);
-        uint256 cterm = (balances[0].mulDown(balances[1]))
-            .add(balances[1].mulDown(balances[2]))
-            .add(balances[2].mulDown(balances[0]));
+        uint256 cterm = (balances[0].mulDown(balances[1])).add(balances[1].mulDown(balances[2])).add(balances[2].mulDown(balances[0]));
         mc = cterm.mulDown(root3Alpha);
         md = balances[0].mulDown(balances[1]).mulDown(balances[2]);
     }
@@ -144,10 +136,7 @@ library GyroThreeMath {
             if (deltaAbs == 0 || (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos))
                 // Iteration literally stopped or numerical error dominates
                 return rootEst;
-            if (
-                iteration >= _INVARIANT_MIN_ITERATIONS &&
-                deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP
-            ) {
+            if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {
                 // stalled
                 // Move one more step to the left to ensure we're underestimating, rather than overestimating, L
                 return rootEst - deltaAbs;
@@ -219,18 +208,12 @@ library GyroThreeMath {
         uint256 cbrtPrice = _calculateCbrtPrice(lastInvariant, virtZ);
         uint256 denominator = cbrtPrice.sub(root3Alpha);
         uint256 diffInvariant = deltaBalances[indices[0]].divDown(denominator);
-        invariant = isIncreaseLiq
-            ? lastInvariant.add(diffInvariant)
-            : lastInvariant.sub(diffInvariant);
+        invariant = isIncreaseLiq ? lastInvariant.add(diffInvariant) : lastInvariant.sub(diffInvariant);
     }
 
     // Ensures balances[i] >= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
     // comparison. In particular, the 0th entry will be the maximum
-    function maxOtherBalances(uint256[] memory balances)
-        internal
-        pure
-        returns (uint8[] memory indices)
-    {
+    function maxOtherBalances(uint256[] memory balances) internal pure returns (uint8[] memory indices) {
         indices = new uint8[](3);
         if (balances[0] >= balances[1]) {
             if (balances[0] >= balances[2]) {
@@ -280,11 +263,21 @@ library GyroThreeMath {
         **********************************************************************************************/
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
 
-        uint256 virtIn = balanceIn.add(virtualOffsetInOut);
-        uint256 virtOut = balanceOut.add(virtualOffsetInOut);
-        uint256 denominator = virtIn.add(amountIn);
-        uint256 subtrahend = virtIn.mulDown(virtOut).divDown(denominator);
-        amountOut = virtOut.sub(subtrahend);
+        {
+            uint256 virtIn = balanceIn.add(virtualOffsetInOut);
+            uint256 virtOut = balanceOut.add(virtualOffsetInOut);
+            uint256 denominator = virtIn.add(amountIn);
+            uint256 subtrahend = virtIn.mulDown(virtOut).divDown(denominator);
+            amountOut = virtOut.sub(subtrahend);
+        }
+
+        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
+
+        if (balOutNew >= balInNew) {
+            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+        } else {
+            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+        }
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
@@ -318,22 +311,28 @@ library GyroThreeMath {
         // the pool than is in it.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
 
-        uint256 virtIn = balanceIn.add(virtualOffsetInOut);
-        uint256 virtOut = balanceOut.add(virtualOffsetInOut);
-        uint256 denominator = virtOut.sub(amountOut);
-        uint256 minuend = virtIn.mulDown(virtOut).divDown(denominator);
-        amountIn = minuend.sub(virtIn);
+        {
+            uint256 virtIn = balanceIn.add(virtualOffsetInOut);
+            uint256 virtOut = balanceOut.add(virtualOffsetInOut);
+            uint256 denominator = virtOut.sub(amountOut);
+            uint256 minuend = virtIn.mulDown(virtOut).divDown(denominator);
+            amountIn = minuend.sub(virtIn);
+        }
+
+        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
+
+        if (balOutNew >= balInNew) {
+            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+        } else {
+            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+        }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
     /** @dev Cube root of the product of the prices of x and y (priced in z). Helper value.
      *   See pf to Prop 8 in 3.1.2, similarly see Lemma 6 in 3.3 */
-    function _calculateCbrtPrice(uint256 invariant, uint256 virtualZ)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateCbrtPrice(uint256 invariant, uint256 virtualZ) internal pure returns (uint256) {
         /*********************************************************************************
          *  cbrtPrice =  z' / L
          ********************************************************************************/
