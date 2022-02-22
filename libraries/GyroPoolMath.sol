@@ -139,7 +139,7 @@ library GyroPoolMath {
             }
         }
 
-        uint256 deltaInvariant = deltaBalances[largestBalanceIndex].divDown(balances[largestBalanceIndex]).mulDown(uinvariant);
+        uint256 deltaInvariant = uinvariant.mulDown(deltaBalances[largestBalanceIndex]).divDown(balances[largestBalanceIndex]);
         unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
 }
