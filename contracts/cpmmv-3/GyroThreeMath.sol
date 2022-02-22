@@ -171,46 +171,6 @@ library GyroThreeMath {
         deltaAbs = (deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus);
     }
 
-    /** @dev New invariant assuming that the balances increase from 'lastBalances', where the invariant was
-     * 'lastInvariant', to some new value, where the 'z' component (asset index 2) changes by 'deltaZ' and the other
-     * assets change, too, in such a way that the prices stay the same. 'isIncreaseLiq' captures the sign of the change
-     * (true meaning positive).
-     * We apply Proposition 10 from the writeup. */
-    function _liquidityInvariantUpdate(
-        uint256[] memory lastBalances,
-        uint256 root3Alpha,
-        uint256 lastInvariant,
-        uint256[] memory deltaBalances,
-        bool isIncreaseLiq
-    ) internal pure returns (uint256 invariant) {
-        /**********************************************************************************************
-        // From Prop. 10 in Section 3.1.3 Liquidity Update                                           //
-        // Assumed that the  liquidity provided is correctly balanced                                //
-        // dL = change in L invariant, absolute value (sign information in isIncreaseLiq)            //
-        // dZ = change in Z reserves, absolute value (sign information in isIncreaseLiq)             //
-        // cbrtPxPy = Square root of (Price p_x * Price p_y)     cbrtPxPy =  z' / L                  //
-        // x' = virtual reserves X (real reserves + offsets)                                         //
-        //           /            dZ            \                                                    //
-        //    dL =  | -------------------------- |                                                   //
-        //           \ ( cbrtPxPy - root3Alpha) /                                                    //
-        // Note: this calculation holds for reordering of assets {X,Y,Z}                             //
-        // To ensure denominator is well-defined, we reorder to work with assets of largest balance  //
-        **********************************************************************************************/
-
-        // this reorders indices so that we know which has max balance
-        // this is needed to ensure that cbrtPxPy - root3Alpha is not close to zero in denominator
-        // we will want to use the largest two assets to represent x and y, smallest to represent z
-        uint8[] memory indices = maxOtherBalances(lastBalances);
-
-        // all offsets are L * root3Alpha b/c symmetric, see 3.1.4
-        uint256 virtualOffset = lastInvariant.mulDown(root3Alpha);
-        uint256 virtZ = lastBalances[indices[0]].add(virtualOffset);
-        uint256 cbrtPrice = _calculateCbrtPrice(lastInvariant, virtZ);
-        uint256 denominator = cbrtPrice.sub(root3Alpha);
-        uint256 diffInvariant = deltaBalances[indices[0]].divDown(denominator);
-        invariant = isIncreaseLiq ? lastInvariant.add(diffInvariant) : lastInvariant.sub(diffInvariant);
-    }
-
     // Ensures balances[i] >= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
     // comparison. In particular, the 0th entry will be the maximum
     function maxOtherBalances(uint256[] memory balances) internal pure returns (uint8[] memory indices) {

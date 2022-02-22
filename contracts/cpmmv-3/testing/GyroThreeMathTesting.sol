@@ -8,11 +8,7 @@ import "./GyroThreeMathDebug.sol";
 import "../../../libraries/GyroPoolMath.sol";
 
 contract GyroThreeMathTesting {
-    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha)
-        external
-        pure
-        returns (uint256)
-    {
+    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
         return GyroThreeMath._calculateInvariant(balances, root3Alpha);
     }
 
@@ -74,14 +70,7 @@ contract GyroThreeMathTesting {
         uint256[] memory amountsIn,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
-        return
-            GyroThreeMath._liquidityInvariantUpdate(
-                lastBalances,
-                root3Alpha,
-                lastInvariant,
-                amountsIn,
-                isIncreaseLiq
-            );
+        return GyroPoolMath.liquidityInvariantUpdate(lastBalances, lastInvariant, amountsIn, isIncreaseLiq);
     }
 
     function calcOutGivenIn(
@@ -118,11 +107,7 @@ contract GyroThreeMathTesting {
         return GyroPoolMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalBPT);
     }
 
-    function calculateCbrtPrice(uint256 invariant, uint256 virtualZ)
-        external
-        pure
-        returns (uint256)
-    {
+    function calculateCbrtPrice(uint256 invariant, uint256 virtualZ) external pure returns (uint256) {
         return GyroThreeMath._calculateCbrtPrice(invariant, virtualZ);
     }
 
@@ -133,14 +118,7 @@ contract GyroThreeMathTesting {
         uint256 protocolSwapFeePerc,
         uint256 protocolFeeGyroPortion
     ) external pure returns (uint256, uint256) {
-        return
-            GyroPoolMath._calcProtocolFees(
-                previousInvariant,
-                currentInvariant,
-                currentBptSupply,
-                protocolSwapFeePerc,
-                protocolFeeGyroPortion
-            );
+        return GyroPoolMath._calcProtocolFees(previousInvariant, currentInvariant, currentBptSupply, protocolSwapFeePerc, protocolFeeGyroPortion);
     }
 
     // DEBUG
@@ -148,11 +126,7 @@ contract GyroThreeMathTesting {
     // solhint-disable-next-line use-forbidden-name
     event NewtonStep(bool high, uint256 delta, uint256 l);
 
-    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha)
-        external
-        pure
-        returns (uint256)
-    {
+    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
         return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
     }
 

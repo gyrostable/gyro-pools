@@ -56,29 +56,6 @@ def calculateQuadraticSpecial(a: D, mb: D, b_square: D, mc: D) -> D:
     return calculateQuadratic(a, -mb, b_square, -mc)
 
 
-def liquidityInvariantUpdate(
-    balances: Iterable[D],
-    sqrtAlpha: D,
-    sqrtBeta: D,
-    lastInvariant: D,
-    deltaBalances: Iterable[D],
-    isIncreaseLiq: bool,
-) -> D:
-    x, y = balances
-    dx, dy = deltaBalances
-    virtualX = x + lastInvariant / sqrtBeta
-    sqrtPx = calculateSqrtPrice(lastInvariant, virtualX)
-    if x <= y:
-        diffInvariant = dy / (sqrtPx - sqrtAlpha)
-    else:
-        diffInvariant = dx / (1 / sqrtPx - 1 / sqrtBeta)
-    if isIncreaseLiq == True:
-        invariant = lastInvariant + diffInvariant
-    else:
-        invariant = lastInvariant - diffInvariant
-    return invariant
-
-
 def liquidityInvariantUpdate_fromscratch(
     balances: Iterable[D],
     sqrtAlpha: D,
