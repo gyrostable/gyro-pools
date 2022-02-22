@@ -315,7 +315,7 @@ library GyroThreeMath {
             uint256 virtIn = balanceIn.add(virtualOffsetInOut);
             uint256 virtOut = balanceOut.add(virtualOffsetInOut);
             uint256 denominator = virtOut.sub(amountOut);
-            uint256 minuend = virtIn.mulDown(virtOut).divDown(denominator);
+            uint256 minuend = virtIn.mulUp(virtOut).divUp(denominator);
             amountIn = minuend.sub(virtIn);
         }
 
