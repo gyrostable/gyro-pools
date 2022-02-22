@@ -100,27 +100,6 @@ def calculateInvariantNewton(
         delta_pre = delta
 
 
-def liquidityInvariantUpdate(
-    balances: List[D],
-    root3Alpha: D,
-    lastInvariant: D,
-    deltaBalances: List[D],
-    isIncreaseLiq: bool,
-) -> D:
-    indices = maxOtherBalances(balances)
-    # virtual offsets
-    virtualOffset = lastInvariant * root3Alpha
-    # cube root of p_x p_y
-    cbrtPxPy = calculateCbrtPrice(lastInvariant, balances[indices[0]] + virtualOffset)
-    diffInvariant = deltaBalances[indices[0]] / (cbrtPxPy - root3Alpha)
-
-    if isIncreaseLiq == True:
-        invariant = lastInvariant + diffInvariant
-    else:
-        invariant = lastInvariant - diffInvariant
-    return invariant
-
-
 def maxOtherBalances(balances: List[D]) -> List[int]:
     indices = [0, 0, 0]
     if balances[0] >= balances[1]:

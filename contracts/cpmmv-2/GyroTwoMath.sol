@@ -182,8 +182,6 @@ library GyroTwoMath {
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
-        revert("MAKE IT HERE");
-
         if (balOutNew >= balInNew) {
             _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {

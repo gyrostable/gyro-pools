@@ -1,12 +1,11 @@
 from operator import add, sub
 from typing import Iterable
-import pytest
 
+import pytest
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
 _MAX_IN_RATIO = D("0.3")
 _MAX_OUT_RATIO = D("0.3")
-_MIN_BAL_RATIO = D("0.00001")
 
 prec_convergence = D("1E-18")
 
@@ -78,29 +77,10 @@ def calcOutGivenIn(
     virtualParamOut: D,
     currentInvariant: D,
 ) -> D:
-    if not (amountIn <= balanceIn * _MAX_IN_RATIO):
-        return "304"
-
+    assert amountIn <= balanceIn * _MAX_IN_RATIO
     virtIn = balanceIn + virtualParamIn
-    denominator = virtIn + amountIn
-    subtrahend = currentInvariant * currentInvariant / denominator
     virtOut = balanceOut + virtualParamOut
-    amountOut = virtOut - subtrahend
-
-    balOutNew = balanceOut - amountOut
-    balInNew = balanceIn + amountIn
-
-    if balOutNew >= balInNew:
-        if not (balInNew > _MIN_BAL_RATIO):
-            return "357"
-    else:
-        if not (balOutNew > _MIN_BAL_RATIO):
-            return "357"
-
-    if not (amountOut <= balanceOut * _MAX_OUT_RATIO):
-        return "304"
-
-    return amountOut
+    return virtOut - currentInvariant * currentInvariant / (virtIn + amountIn)
 
 
 def calcInGivenOut(
