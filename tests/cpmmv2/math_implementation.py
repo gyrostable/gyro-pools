@@ -1,7 +1,7 @@
 from operator import add, sub
 from typing import Iterable
-import pytest
 
+import pytest
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
 _MAX_IN_RATIO = D("0.3")
@@ -54,29 +54,6 @@ def calculateQuadratic(a: D, b: D, b_square: D, c: D) -> D:
 def calculateQuadraticSpecial(a: D, mb: D, b_square: D, mc: D) -> D:
     assert a > 0 and mb > 0 and mc >= 0
     return calculateQuadratic(a, -mb, b_square, -mc)
-
-
-def liquidityInvariantUpdate(
-    balances: Iterable[D],
-    sqrtAlpha: D,
-    sqrtBeta: D,
-    lastInvariant: D,
-    deltaBalances: Iterable[D],
-    isIncreaseLiq: bool,
-) -> D:
-    x, y = balances
-    dx, dy = deltaBalances
-    virtualX = x + lastInvariant / sqrtBeta
-    sqrtPx = calculateSqrtPrice(lastInvariant, virtualX)
-    if x <= y:
-        diffInvariant = dy / (sqrtPx - sqrtAlpha)
-    else:
-        diffInvariant = dx / (1 / sqrtPx - 1 / sqrtBeta)
-    if isIncreaseLiq == True:
-        invariant = lastInvariant + diffInvariant
-    else:
-        invariant = lastInvariant - diffInvariant
-    return invariant
 
 
 def liquidityInvariantUpdate_fromscratch(

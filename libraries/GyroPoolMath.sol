@@ -107,9 +107,7 @@ library GyroPoolMath {
         // We round down to prevent issues in the Pool's accounting, even if it means paying slightly less in protocol
         // fees to the Vault.
         // For the numerator, we need to round down delta L. Also for the denominator b/c subtracted
-        uint256 diffInvariant = protocolSwapFeePerc.mulDown(
-            currentInvariant.sub(previousInvariant)
-        );
+        uint256 diffInvariant = protocolSwapFeePerc.mulDown(currentInvariant.sub(previousInvariant));
         uint256 numerator = diffInvariant.mulDown(currentBptSupply);
         uint256 denominator = currentInvariant.sub(diffInvariant);
         uint256 deltaS = numerator.divDown(denominator);
@@ -119,5 +117,29 @@ library GyroPoolMath {
         uint256 balancerFees = deltaS.sub(gyroFees);
 
         return (gyroFees, balancerFees);
+    }
+
+    /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
+     * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
+     * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
+     * See the writeup, Corollary 3 in Section 2.1.5.
+     */
+    function liquidityInvariantUpdate(
+        uint256[] memory balances,
+        uint256 uinvariant,
+        uint256[] memory deltaBalances,
+        bool isIncreaseLiq
+    ) internal pure returns (uint256 unewInvariant) {
+        uint256 largestBalanceIndex;
+        uint256 largestBalance;
+        for (uint256 i = 0; i < balances.length; i++) {
+            if (balances[i] > largestBalance) {
+                largestBalance = balances[i];
+                largestBalanceIndex = i;
+            }
+        }
+
+        uint256 deltaInvariant = uinvariant.mulDown(deltaBalances[largestBalanceIndex]).divDown(balances[largestBalanceIndex]);
+        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
 }

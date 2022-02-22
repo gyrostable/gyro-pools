@@ -42,13 +42,11 @@ contract GyroTwoMathTesting {
 
     function liquidityInvariantUpdate(
         uint256[] memory balances,
-        uint256 sqrtAlpha,
-        uint256 sqrtBeta,
         uint256 lastInvariant,
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
-        return GyroTwoMath._liquidityInvariantUpdate(balances, sqrtAlpha, sqrtBeta, lastInvariant, deltaBalances, isIncreaseLiq);
+        return GyroPoolMath.liquidityInvariantUpdate(balances, lastInvariant, deltaBalances, isIncreaseLiq);
     }
 
     function calcOutGivenIn(
@@ -79,10 +77,6 @@ contract GyroTwoMathTesting {
 
     function calculateVirtualParameter1(uint256 invariant, uint256 sqrtAlpha) external pure returns (uint256) {
         return GyroTwoMath._calculateVirtualParameter1(invariant, sqrtAlpha);
-    }
-
-    function calculateSqrtPrice(uint256 invariant, uint256 virtualX) external pure returns (uint256) {
-        return GyroTwoMath._calculateSqrtPrice(invariant, virtualX);
     }
 
     function sqrt(uint256 input) external pure returns (uint256) {

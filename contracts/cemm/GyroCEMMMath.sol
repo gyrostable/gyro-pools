@@ -444,21 +444,4 @@ library GyroCEMMMath {
         // shift back by the virtual offsets
         x = x.add(ab.x);
     }
-
-    /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
-     * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
-     * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
-     * See the writeup, Corollary 3 in Section 2.1.5.
-     */
-    function liquidityInvariantUpdate(
-        uint256[] memory balances,
-        uint256 uinvariant,
-        uint256[] memory deltaBalances,
-        bool isIncreaseLiq
-    ) internal pure returns (uint256 unewInvariant) {
-        uint256 deltaInvariant = balances[0] > 0
-            ? deltaBalances[0].divDown(balances[0]).mulDown(uinvariant)
-            : deltaBalances[1].divDown(balances[1]).mulDown(uinvariant);
-        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
-    }
 }

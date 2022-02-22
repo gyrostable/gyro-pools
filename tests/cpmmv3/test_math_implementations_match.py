@@ -73,23 +73,6 @@ def test_calculate_cubic_terms(
 
 
 @given(
-    invariant=st.decimals(min_value="100", max_value="100000000", places=4),
-    virtual_z=st.decimals(min_value="100", max_value="1000000000", places=4),
-)
-def test_calculate_cbrt_price(gyro_three_math_testing, invariant, virtual_z):
-
-    cbrt_price = math_implementation.calculateCbrtPrice(
-        to_decimal(invariant), to_decimal(virtual_z)
-    )
-
-    cbrt_price_sol = gyro_three_math_testing.calculateCbrtPrice(
-        scale(invariant), scale(virtual_z)
-    )
-
-    assert to_decimal(cbrt_price_sol) == scale(cbrt_price).approxed()
-
-
-@given(
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     )
@@ -101,50 +84,6 @@ def test_max_other_balances(gyro_three_math_testing, balances: Tuple[int, int, i
     array_sol = gyro_three_math_testing.maxOtherBalances(scale(balances))
 
     assert to_decimal(array_sol[0]) == array[0]
-
-
-# Delta balances are supposed to be proportional; here they are just random
-@given(
-    balances=st.tuples(
-        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-    ),
-    delta_balances=st.tuples(
-        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-    ),
-    root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ),
-)
-def test_liquidity_invariant_update(
-    gyro_three_math_testing,
-    balances: Tuple[int, int, int],
-    root_three_alpha,
-    delta_balances: Tuple[int, int, int],
-):
-
-    if faulty_params(balances, root_three_alpha):
-        return
-
-    last_invariant = math_implementation.calculateInvariant(
-        to_decimal(balances), to_decimal(root_three_alpha)
-    )
-
-    new_invariant = math_implementation.liquidityInvariantUpdate(
-        to_decimal(balances),
-        to_decimal(root_three_alpha),
-        to_decimal(last_invariant),
-        to_decimal(delta_balances),
-        True,
-    )
-    new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
-        scale(balances),
-        scale(root_three_alpha),
-        scale(last_invariant),
-        scale(delta_balances),
-        True,
-    )
-
-    assert to_decimal(new_invariant_sol) == scale(new_invariant).approxed()
 
 
 @given(
