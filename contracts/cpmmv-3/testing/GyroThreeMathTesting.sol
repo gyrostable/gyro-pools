@@ -107,10 +107,6 @@ contract GyroThreeMathTesting {
         return GyroPoolMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalBPT);
     }
 
-    function calculateCbrtPrice(uint256 invariant, uint256 virtualZ) external pure returns (uint256) {
-        return GyroThreeMath._calculateCbrtPrice(invariant, virtualZ);
-    }
-
     function calcProtocolFees(
         uint256 previousInvariant,
         uint256 currentInvariant,

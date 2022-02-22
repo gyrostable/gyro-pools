@@ -165,23 +165,6 @@ def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invari
     assert to_decimal(virtual_parameter_sol) == scale(virtual_parameter).approxed()
 
 
-@given(
-    invariant=st.decimals(min_value="100", max_value="100000000", places=4),
-    virtual_x=st.decimals(min_value="100", max_value="1000000000", places=4),
-)
-def test_calculate_sqrt_price(gyro_two_math_testing, invariant, virtual_x):
-
-    sqrt_price = math_implementation.calculateSqrtPrice(
-        to_decimal(invariant), to_decimal(virtual_x)
-    )
-
-    sqrt_price_sol = gyro_two_math_testing.calculateSqrtPrice(
-        scale(invariant), scale(virtual_x)
-    )
-
-    assert to_decimal(sqrt_price_sol) == scale(sqrt_price).approxed()
-
-
 @given(input=st.decimals(min_value="0", max_value="100000000", places=4))
 def test_calculate_sqrt(gyro_two_math_testing, input):
 

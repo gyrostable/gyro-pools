@@ -73,23 +73,6 @@ def test_calculate_cubic_terms(
 
 
 @given(
-    invariant=st.decimals(min_value="100", max_value="100000000", places=4),
-    virtual_z=st.decimals(min_value="100", max_value="1000000000", places=4),
-)
-def test_calculate_cbrt_price(gyro_three_math_testing, invariant, virtual_z):
-
-    cbrt_price = math_implementation.calculateCbrtPrice(
-        to_decimal(invariant), to_decimal(virtual_z)
-    )
-
-    cbrt_price_sol = gyro_three_math_testing.calculateCbrtPrice(
-        scale(invariant), scale(virtual_z)
-    )
-
-    assert to_decimal(cbrt_price_sol) == scale(cbrt_price).approxed()
-
-
-@given(
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     )
