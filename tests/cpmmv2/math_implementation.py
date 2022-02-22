@@ -117,7 +117,9 @@ def calcInGivenOut(
     assert amountOut <= balanceOut * _MAX_OUT_RATIO
     virtOut = balanceOut + virtualParamOut
     virtIn = balanceIn + virtualParamIn
-    return currentInvariant * currentInvariant / (virtOut - amountOut) - virtIn
+    return (
+        currentInvariant.mul_up(currentInvariant).div_up(virtOut - amountOut) - virtIn
+    )
 
 
 def calcAllTokensInGivenExactBptOut(
