@@ -6,6 +6,7 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 
 _MAX_IN_RATIO = D("0.3")
 _MAX_OUT_RATIO = D("0.3")
+_MIN_BAL_RATIO = D("0.00001")
 
 prec_convergence = D("1E-18")
 
@@ -77,10 +78,29 @@ def calcOutGivenIn(
     virtualParamOut: D,
     currentInvariant: D,
 ) -> D:
-    assert amountIn <= balanceIn * _MAX_IN_RATIO
+    if not (amountIn <= balanceIn * _MAX_IN_RATIO):
+        return "304"
+
     virtIn = balanceIn + virtualParamIn
+    denominator = virtIn + amountIn
+    subtrahend = currentInvariant * currentInvariant / denominator
     virtOut = balanceOut + virtualParamOut
-    return virtOut - currentInvariant * currentInvariant / (virtIn + amountIn)
+    amountOut = virtOut - subtrahend
+
+    balOutNew = balanceOut - amountOut
+    balInNew = balanceIn + amountIn
+
+    if balOutNew >= balInNew:
+        if not (balInNew > _MIN_BAL_RATIO):
+            return "357"
+    else:
+        if not (balOutNew > _MIN_BAL_RATIO):
+            return "357"
+
+    if not (amountOut <= balanceOut * _MAX_OUT_RATIO):
+        return "304"
+
+    return amountOut
 
 
 def calcInGivenOut(
