@@ -1,5 +1,6 @@
 from operator import add, sub
 from typing import Iterable
+import pytest
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
@@ -14,29 +15,35 @@ def squareRoot(input: D):
 
 
 def calculateInvariant(balances: Iterable[D], sqrtAlpha: D, sqrtBeta: D) -> D:
-    (a, mb, mc) = calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta)
-    return calculateQuadraticSpecial(a, mb, mc)
+    (a, mb, b_square, mc) = calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta)
+    return calculateQuadraticSpecial(a, mb, b_square, mc)
 
 
 def calculateQuadraticTerms(
     balances: Iterable[D], sqrtAlpha: D, sqrtBeta: D
-) -> tuple[D, D, D]:
+) -> tuple[D, D, D, D]:
     x, y = balances
     a = 1 - sqrtAlpha / sqrtBeta
     b = -(y / sqrtBeta + x * sqrtAlpha)
     c = -x * y
-    return a, -b, -c
+    b_square = (
+        (x * x) * sqrtAlpha * sqrtAlpha
+        + (x * y) * 2 * sqrtAlpha / sqrtBeta
+        + (y * y) / (sqrtBeta.mul_up(sqrtBeta))
+    )
+    return a, -b, b_square, -c
 
 
-def calculateQuadratic(a: D, b: D, c: D) -> D:
+def calculateQuadratic(a: D, b: D, b_square: D, c: D) -> D:
     """
     This function is not a complete match to _calculateQuadratic in GyroTwoMath.sol, this is just general quadratic formula
     This function should match _calculateQuadratic in GyroTwoMath.sol in both inputs and outputs
     when a > 0, b < 0, and c < 0
     """
-    assert b * b - 4 * a * c >= 0
-    numerator = -b + (b * b - 4 * a * c).sqrt()
-    denominator = a * 2
+    assert float(b * b) == pytest.approx(float(b_square))
+    assert b_square - c * 4 * a >= 0
+    numerator = -b + (b_square - c * 4 * a).sqrt()
+    denominator = a.mul_up(D(2))
     return numerator / denominator
 
 
@@ -44,9 +51,9 @@ def calculateQuadratic(a: D, b: D, c: D) -> D:
 # when a > 0, b < 0, and c < 0
 
 
-def calculateQuadraticSpecial(a: D, mb: D, mc: D) -> D:
+def calculateQuadraticSpecial(a: D, mb: D, b_square: D, mc: D) -> D:
     assert a > 0 and mb > 0 and mc >= 0
-    return calculateQuadratic(a, -mb, -mc)
+    return calculateQuadratic(a, -mb, b_square, -mc)
 
 
 def liquidityInvariantUpdate(

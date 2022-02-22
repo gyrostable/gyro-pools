@@ -13,6 +13,7 @@ billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 # this is a multiplicative separation
 # This is consistent with tightest price range of 0.9999 - 1.0001
 MIN_SQRTPARAM_SEPARATION = to_decimal("1.0001")
+MIN_BAL_RATIO = to_decimal("1e-5")
 
 
 def faulty_params(balances, sqrt_alpha, sqrt_beta):
@@ -36,16 +37,22 @@ def test_calculate_quadratic_terms(
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
 
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+    (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    (a_sol, mb_sol, mc_sol) = gyro_two_math_testing.calculateQuadraticTerms(
+    (
+        a_sol,
+        mb_sol,
+        b_square_sol,
+        mc_sol,
+    ) = gyro_two_math_testing.calculateQuadraticTerms(
         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
     )
 
     assert a_sol == scale(a)
     assert mb_sol == scale(mb)
+    assert b_square_sol == scale(b_square)
     assert mc_sol == scale(mc)
 
 
@@ -60,15 +67,17 @@ def test_calculate_quadratic(
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
 
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+    (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
     assert not any(v < 0 for v in [a, mb, mc])
 
-    root = math_implementation.calculateQuadratic(a, -mb, -mc)
+    root = math_implementation.calculateQuadratic(a, -mb, b_square, -mc)
 
-    root_sol = gyro_two_math_testing.calculateQuadratic(scale(a), scale(mb), scale(mc))
+    root_sol = gyro_two_math_testing.calculateQuadratic(
+        scale(a), scale(mb), scale(b_square), scale(mc)
+    )
 
     assert int(root_sol) == scale(root).approxed()
 
@@ -85,13 +94,15 @@ def test_calculate_quadratic_special(
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
 
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
+    (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    root = math_implementation.calculateQuadraticSpecial(a, mb, mc)
+    root = math_implementation.calculateQuadraticSpecial(a, mb, b_square, mc)
 
-    root_sol = gyro_two_math_testing.calculateQuadratic(scale(a), scale(mb), scale(mc))
+    root_sol = gyro_two_math_testing.calculateQuadratic(
+        scale(a), scale(mb), scale(b_square), scale(mc)
+    )
 
     assert int(root_sol) == scale(root).approxed()
 
@@ -107,10 +118,6 @@ def test_calculate_invariant(
 
     if faulty_params(balances, sqrt_alpha, sqrt_beta):
         return
-
-    (a, mb, mc) = math_implementation.calculateQuadraticTerms(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
-    )
 
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
@@ -239,6 +246,7 @@ def test_calc_in_given_out(
     gyro_two_math_testing, amount_out, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
     assume(amount_out <= to_decimal("0.3") * (balances[1]))
+    assume(balances[0] > 0 and balances[1] > 0)
 
     assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
@@ -263,7 +271,13 @@ def test_calc_in_given_out(
         to_decimal(invariant),
     )
 
-    if in_amount <= to_decimal("0.3") * balances[0]:
+    bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
+    if bal_out_new > bal_in_new:
+        within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
+    else:
+        within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
+
+    if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
         in_amount_sol = gyro_two_math_testing.calcInGivenOut(
             scale(balances[0]),
             scale(balances[1]),
@@ -272,6 +286,17 @@ def test_calc_in_given_out(
             scale(virtual_param_out),
             scale(invariant),
         )
+    elif not within_bal_ratio:
+        with reverts("BAL#357"):  # MIN_BAL_RATIO
+            gyro_two_math_testing.calcInGivenOut(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_out),
+                scale(virtual_param_in),
+                scale(virtual_param_out),
+                scale(invariant),
+            )
+        return
     else:
         with reverts("BAL#304"):  # MAX_IN_RATIO
             gyro_two_math_testing.calcInGivenOut(
@@ -297,6 +322,7 @@ def test_calc_out_given_in(
     gyro_two_math_testing, amount_in, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
     assume(amount_in <= to_decimal("0.3") * (balances[0]))
+    assume(balances[0] > 0 and balances[1] > 0)
 
     assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
@@ -321,7 +347,13 @@ def test_calc_out_given_in(
         to_decimal(invariant),
     )
 
-    if out_amount <= to_decimal("0.3") * balances[1]:
+    bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
+    if bal_out_new > bal_in_new:
+        within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
+    else:
+        within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
+
+    if out_amount <= to_decimal("0.3") * balances[1] and within_bal_ratio:
         out_amount_sol = gyro_two_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
@@ -330,6 +362,17 @@ def test_calc_out_given_in(
             scale(virtual_param_out),
             scale(invariant),
         )
+    elif not within_bal_ratio:
+        with reverts("BAL#357"):  # MIN_BAL_RATIO
+            gyro_two_math_testing.calcOutGivenIn(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_in),
+                scale(virtual_param_in),
+                scale(virtual_param_out),
+                scale(invariant),
+            )
+        return
     else:
         with reverts("BAL#305"):  # MAX_OUT_RATIO
             gyro_two_math_testing.calcOutGivenIn(

@@ -9,9 +9,10 @@ contract GyroTwoMathTesting {
     function calculateQuadratic(
         uint256 a,
         uint256 b,
+        uint256 bSquare,
         uint256 c
     ) external pure returns (uint256) {
-        return GyroTwoMath._calculateQuadratic(a, b, c);
+        return GyroTwoMath._calculateQuadratic(a, b, bSquare, c);
     }
 
     function calculateQuadraticTerms(
@@ -22,6 +23,7 @@ contract GyroTwoMathTesting {
         external
         pure
         returns (
+            uint256,
             uint256,
             uint256,
             uint256
@@ -46,15 +48,7 @@ contract GyroTwoMathTesting {
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
-        return
-            GyroTwoMath._liquidityInvariantUpdate(
-                balances,
-                sqrtAlpha,
-                sqrtBeta,
-                lastInvariant,
-                deltaBalances,
-                isIncreaseLiq
-            );
+        return GyroTwoMath._liquidityInvariantUpdate(balances, sqrtAlpha, sqrtBeta, lastInvariant, deltaBalances, isIncreaseLiq);
     }
 
     function calcOutGivenIn(
@@ -65,15 +59,7 @@ contract GyroTwoMathTesting {
         uint256 virtualParamOut,
         uint256 currentInvariant
     ) external pure returns (uint256) {
-        return
-            GyroTwoMath._calcOutGivenIn(
-                balanceIn,
-                balanceOut,
-                amountIn,
-                virtualParamIn,
-                virtualParamOut,
-                currentInvariant
-            );
+        return GyroTwoMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualParamIn, virtualParamOut, currentInvariant);
     }
 
     function calcInGivenOut(
@@ -84,38 +70,18 @@ contract GyroTwoMathTesting {
         uint256 virtualParamOut,
         uint256 currentInvariant
     ) external pure returns (uint256) {
-        return
-            GyroTwoMath._calcInGivenOut(
-                balanceIn,
-                balanceOut,
-                amountOut,
-                virtualParamIn,
-                virtualParamOut,
-                currentInvariant
-            );
+        return GyroTwoMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualParamIn, virtualParamOut, currentInvariant);
     }
 
-    function calculateVirtualParameter0(uint256 invariant, uint256 sqrtBeta)
-        external
-        pure
-        returns (uint256)
-    {
+    function calculateVirtualParameter0(uint256 invariant, uint256 sqrtBeta) external pure returns (uint256) {
         return GyroTwoMath._calculateVirtualParameter0(invariant, sqrtBeta);
     }
 
-    function calculateVirtualParameter1(uint256 invariant, uint256 sqrtAlpha)
-        external
-        pure
-        returns (uint256)
-    {
+    function calculateVirtualParameter1(uint256 invariant, uint256 sqrtAlpha) external pure returns (uint256) {
         return GyroTwoMath._calculateVirtualParameter1(invariant, sqrtAlpha);
     }
 
-    function calculateSqrtPrice(uint256 invariant, uint256 virtualX)
-        external
-        pure
-        returns (uint256)
-    {
+    function calculateSqrtPrice(uint256 invariant, uint256 virtualX) external pure returns (uint256) {
         return GyroTwoMath._calculateSqrtPrice(invariant, virtualX);
     }
 
@@ -146,13 +112,6 @@ contract GyroTwoMathTesting {
         uint256 protocolSwapFeePerc,
         uint256 protocolFeeGyroPortion
     ) external pure returns (uint256, uint256) {
-        return
-            GyroPoolMath._calcProtocolFees(
-                previousInvariant,
-                currentInvariant,
-                currentBptSupply,
-                protocolSwapFeePerc,
-                protocolFeeGyroPortion
-            );
+        return GyroPoolMath._calcProtocolFees(previousInvariant, currentInvariant, currentBptSupply, protocolSwapFeePerc, protocolFeeGyroPortion);
     }
 }

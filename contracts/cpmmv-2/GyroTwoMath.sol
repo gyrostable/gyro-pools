@@ -73,8 +73,8 @@ library GyroTwoMath {
         //                                          2 * a                               //
         //                                                                              //
         **********************************************************************************************/
-        (uint256 a, uint256 mb, uint256 mc) = _calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta);
-        return _calculateQuadratic(a, mb, mc);
+        (uint256 a, uint256 mb, uint256 bSquare, uint256 mc) = _calculateQuadraticTerms(balances, sqrtAlpha, sqrtBeta);
+        return _calculateQuadratic(a, mb, bSquare, mc);
     }
 
     /** @dev Prepares quadratic terms for input to _calculateQuadratic
@@ -91,14 +91,23 @@ library GyroTwoMath {
         returns (
             uint256 a,
             uint256 mb,
+            uint256 bSquare,
             uint256 mc
         )
     {
-        a = FixedPoint.ONE.sub(sqrtAlpha.divDown(sqrtBeta));
-        uint256 bterm0 = balances[1].divDown(sqrtBeta);
-        uint256 bterm1 = balances[0].mulDown(sqrtAlpha);
-        mb = bterm0.add(bterm1);
-        mc = balances[0].mulDown(balances[1]);
+        {
+            a = FixedPoint.ONE.sub(sqrtAlpha.divDown(sqrtBeta));
+            uint256 bterm0 = balances[1].divDown(sqrtBeta);
+            uint256 bterm1 = balances[0].mulDown(sqrtAlpha);
+            mb = bterm0.add(bterm1);
+            mc = balances[0].mulDown(balances[1]);
+        }
+        // For better fixed point precision, calculate in expanded form w/ re-ordering of multiplications
+        // b^2 = x^2 * alpha + x*y*2*sqrt(alpha/beta) + y^2 / beta
+        bSquare = (balances[0].mulDown(balances[0])).mulDown(sqrtAlpha).mulDown(sqrtAlpha);
+        uint256 bSq2 = (balances[0].mulDown(balances[1])).mulDown(2 * FixedPoint.ONE).mulDown(sqrtAlpha).divDown(sqrtBeta);
+        uint256 bSq3 = (balances[1].mulDown(balances[1])).divDown(sqrtBeta.mulUp(sqrtBeta));
+        bSquare = bSquare.add(bSq2).add(bSq3);
     }
 
     /** @dev Calculates quadratic root for a special case of quadratic
@@ -108,15 +117,17 @@ library GyroTwoMath {
      *           c = -x*y
      *   The special case works nicely w/o negative numbers.
      *   The args use the notation "mb" to represent -b, and "mc" to represent -c
+     *   Note that this calculates an underestimate of the solution
      */
     function _calculateQuadratic(
         uint256 a,
         uint256 mb,
+        uint256 bSquare, // b^2 can be calculated separately with more precision
         uint256 mc
     ) internal pure returns (uint256 invariant) {
         uint256 denominator = a.mulUp(2 * FixedPoint.ONE);
-        uint256 bSquare = mb.mulDown(mb);
-        uint256 addTerm = a.mulDown(mc.mulDown(4 * FixedPoint.ONE));
+        // order multiplications for fixed point precision
+        uint256 addTerm = (mc.mulDown(4 * FixedPoint.ONE)).mulDown(a);
         // The minus sign in the radicand cancels out in this special case, so we add
         uint256 radicand = bSquare.add(addTerm);
         uint256 sqrResult = _squareRoot(radicand);
@@ -206,6 +217,7 @@ library GyroTwoMath {
             amountOut = virtOut.sub(subtrahend);
         }
 
+        _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
         if (balOutNew >= balInNew) {
@@ -242,6 +254,7 @@ library GyroTwoMath {
       // y' = virtOut                                                                              //
       // Note that dy < 0 < dx.                                                                    //
       **********************************************************************************************/
+        _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         {
             uint256 virtOut = balanceOut.add(virtualParamOut);
