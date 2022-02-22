@@ -255,7 +255,7 @@ library GyroThreeMath {
         // x = balanceIn             x' = x +  virtualOffset                                         //
         // z = balanceOut            z' = z +  virtualOffset                                         //
         // L  = inv.Liq                   /            x' * z'          \                            //
-        //                   - dZ = z' - |   --------------------------  |                           //
+        //                   |dZ| = z' - |   --------------------------  |                           //
         //  x' = virtIn                   \          ( x' + dX)         /                            //
         //  z' = virtOut                                                                             //
         // Note that -dz > 0 is what the trader receives.                                            //
@@ -267,7 +267,7 @@ library GyroThreeMath {
             uint256 virtIn = balanceIn.add(virtualOffsetInOut);
             uint256 virtOut = balanceOut.add(virtualOffsetInOut);
             uint256 denominator = virtIn.add(amountIn);
-            uint256 subtrahend = virtIn.mulDown(virtOut).divDown(denominator);
+            uint256 subtrahend = virtIn.mulUp(virtOut).divUp(denominator);
             amountOut = virtOut.sub(subtrahend);
         }
 

@@ -190,7 +190,7 @@ library GyroTwoMath {
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
       // L  = inv.Liq                   /              L^2            \                            //
-      //                   - dy = y' - |   --------------------------  |                           //
+      //                   |dy| = y' - |   --------------------------  |                           //
       //  x' = virtIn                   \          ( x' + dX)         /                            //
       //  y' = virtOut                                                                             //
       // Note that -dy > 0 is what the trader receives.                                            //
@@ -201,7 +201,7 @@ library GyroTwoMath {
         {
             uint256 virtIn = balanceIn.add(virtualParamIn);
             uint256 denominator = virtIn.add(amountIn);
-            uint256 subtrahend = currentInvariant.mulDown(currentInvariant).divDown(denominator);
+            uint256 subtrahend = currentInvariant.mulUp(currentInvariant).divUp(denominator);
             uint256 virtOut = balanceOut.add(virtualParamOut);
             amountOut = virtOut.sub(subtrahend);
         }
