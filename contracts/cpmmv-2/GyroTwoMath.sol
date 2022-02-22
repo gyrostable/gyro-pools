@@ -64,7 +64,7 @@ library GyroTwoMath {
     ) internal pure returns (uint256) {
         /**********************************************************************************************
         // Calculate with quadratic formula
-        // 0 = (1-sqrt(alhpa/beta)*L^2 - (y/sqrt(beta)+x*sqrt(alpha))*L - x*y)
+        // 0 = (1-sqrt(alpha/beta)*L^2 - (y/sqrt(beta)+x*sqrt(alpha))*L - x*y)
         // 0 = a*L^2 + b*L + c
         // here a > 0, b < 0, and c < 0, which is a special case that works well w/o negative numbers
         // taking mb = -b and mc = -c:                            (1/2)
@@ -114,7 +114,7 @@ library GyroTwoMath {
         uint256 mb,
         uint256 mc
     ) internal pure returns (uint256 invariant) {
-        uint256 denominator = a.mulDown(2 * FixedPoint.ONE);
+        uint256 denominator = a.mulUp(2 * FixedPoint.ONE);
         uint256 bSquare = mb.mulDown(mb);
         uint256 addTerm = a.mulDown(mc.mulDown(4 * FixedPoint.ONE));
         // The minus sign in the radicand cancels out in this special case, so we add
@@ -190,7 +190,7 @@ library GyroTwoMath {
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
       // L  = inv.Liq                   /              L^2            \                            //
-      //                   - dy = y' - |   --------------------------  |                           //
+      //                   |dy| = y' - |   --------------------------  |                           //
       //  x' = virtIn                   \          ( x' + dX)         /                            //
       //  y' = virtOut                                                                             //
       // Note that -dy > 0 is what the trader receives.                                            //
@@ -201,8 +201,7 @@ library GyroTwoMath {
         {
             uint256 virtIn = balanceIn.add(virtualParamIn);
             uint256 denominator = virtIn.add(amountIn);
-            uint256 invSquare = currentInvariant.mulUp(currentInvariant);
-            uint256 subtrahend = invSquare.divUp(denominator);
+            uint256 subtrahend = currentInvariant.mulUp(currentInvariant).divUp(denominator);
             uint256 virtOut = balanceOut.add(virtualParamOut);
             amountOut = virtOut.sub(subtrahend);
         }
@@ -247,8 +246,7 @@ library GyroTwoMath {
         {
             uint256 virtOut = balanceOut.add(virtualParamOut);
             uint256 denominator = virtOut.sub(amountOut);
-            uint256 invSquare = currentInvariant.mulUp(currentInvariant);
-            uint256 term = invSquare.divUp(denominator);
+            uint256 term = currentInvariant.mulUp(currentInvariant).divUp(denominator);
             uint256 virtIn = balanceIn.add(virtualParamIn);
             amountIn = term.sub(virtIn);
         }
