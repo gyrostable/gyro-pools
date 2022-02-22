@@ -289,13 +289,4 @@ library GyroThreeMath {
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
-
-    /** @dev Cube root of the product of the prices of x and y (priced in z). Helper value.
-     *   See pf to Prop 8 in 3.1.2, similarly see Lemma 6 in 3.3 */
-    function _calculateCbrtPrice(uint256 invariant, uint256 virtualZ) internal pure returns (uint256) {
-        /*********************************************************************************
-         *  cbrtPrice =  z' / L
-         ********************************************************************************/
-        return virtualZ.divDown(invariant);
-    }
 }

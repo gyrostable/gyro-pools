@@ -248,14 +248,4 @@ library GyroTwoMath {
     function _calculateVirtualParameter1(uint256 invariant, uint256 _sqrtAlpha) internal pure returns (uint256) {
         return invariant.mulDown(_sqrtAlpha);
     }
-
-    /** @dev calculate square root price of asset X in terms of asset Y
-     *   derived from relation p_x * (x+a)^2 = L^2
-     */
-    function _calculateSqrtPrice(uint256 invariant, uint256 virtualX) internal pure returns (uint256) {
-        /*********************************************************************************
-      /*  sqrtPrice =  L / x'
-      *********************************************************************************/
-        return invariant.divDown(virtualX);
-    }
 }
