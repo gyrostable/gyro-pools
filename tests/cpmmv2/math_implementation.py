@@ -80,7 +80,7 @@ def calcOutGivenIn(
     assert amountIn <= balanceIn * _MAX_IN_RATIO
     virtIn = balanceIn + virtualParamIn
     virtOut = balanceOut + virtualParamOut
-    return virtOut - currentInvariant * currentInvariant / (virtIn + amountIn)
+    return virtOut - currentInvariant.mul_up(currentInvariant).div_up(virtIn + amountIn)
 
 
 def calcInGivenOut(
@@ -99,52 +99,9 @@ def calcInGivenOut(
     )
 
 
-def calcAllTokensInGivenExactBptOut(
-    balances: Iterable[D], bptAmountOut: D, totalBPT: D
-) -> tuple[D, D]:
-    bptRatio = bptAmountOut / totalBPT
-    x, y = balances
-    return x * bptRatio, y * bptRatio
-
-
-def calcTokensOutGivenExactBptIn(
-    balances: Iterable[D], bptAmountIn: D, totalBPT: D
-) -> tuple[D, D]:
-    bptRatio = bptAmountIn / totalBPT
-    x, y = balances
-    return x * bptRatio, y * bptRatio
-
-
-def calcProtocolFees(
-    previousInvariant: D,
-    currentInvariant: D,
-    currentBptSupply: D,
-    protocolSwapFeePerc: D,
-    protocolFeeGyroPortion: D,
-) -> tuple[D, D]:
-    if currentInvariant <= previousInvariant:
-        return D(0), D(0)
-
-    if protocolSwapFeePerc == 0:
-        return D(0), D(0)
-
-    diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
-    numerator = diffInvariant * currentBptSupply
-    denominator = currentInvariant - diffInvariant
-    deltaS = numerator / denominator
-
-    gyroFees = protocolFeeGyroPortion * deltaS
-    balancerFees = deltaS - gyroFees
-    return gyroFees, balancerFees
-
-
 def calculateVirtualParameter0(invariant: D, sqrtBeta: D) -> D:
     return invariant / sqrtBeta
 
 
 def calculateVirtualParameter1(invariant: D, sqrtAlpha: D) -> D:
     return invariant * sqrtAlpha
-
-
-def calculateSqrtPrice(invariant: D, virtualX: D) -> D:
-    return invariant / virtualX

@@ -26,3 +26,44 @@ def liquidityInvariantUpdate(
     else:
         invariant = lastInvariant - delta_invariant
     return invariant
+
+
+def calcAllTokensInGivenExactBptOut(
+    balances: Iterable[D], bptAmountOut: D, totalBPT: D
+) -> Iterable[D]:
+    bptRatio = bptAmountOut.div_up(totalBPT)
+    amounts_in = [b.mul_up(bptRatio) for b in balances]
+    return tuple(amounts_in)
+
+
+def calcTokensOutGivenExactBptIn(
+    balances: Iterable[D], bptAmountIn: D, totalBPT: D
+) -> Iterable[D]:
+    bptRatio = bptAmountIn / totalBPT
+    amounts_out = [b * bptRatio for b in balances]
+    return tuple(amounts_out)
+
+
+def calcProtocolFees(
+    previousInvariant: D,
+    currentInvariant: D,
+    currentBptSupply: D,
+    protocolSwapFeePerc: D,
+    protocolFeeGyroPortion: D,
+) -> Iterable[D]:
+    if currentInvariant <= previousInvariant:
+        return D(0), D(0)
+
+    if protocolSwapFeePerc == 0:
+        return D(0), D(0)
+
+    numerator = (
+        currentBptSupply * (currentInvariant - previousInvariant)
+    ) * protocolSwapFeePerc
+    diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
+    denominator = currentInvariant - diffInvariant
+    deltaS = numerator / denominator
+
+    gyroFees = protocolFeeGyroPortion * deltaS
+    balancerFees = deltaS - gyroFees
+    return gyroFees, balancerFees

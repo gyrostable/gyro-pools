@@ -32,9 +32,25 @@ def faulty_params(balances, sqrt_alpha, sqrt_beta):
 
 @st.composite
 def gen_params(draw):
-    sqrt_alpha = draw(qdecimals("0.05", "19.0"))
+    sqrt_alpha = draw(qdecimals("0.05", "19"))
     sqrt_beta = draw(qdecimals(sqrt_alpha.raw, "20.0"))
-    assume(sqrt_beta.raw - sqrt_alpha.raw >= MIN_SQRTPARAM_SEPARATION)
+    assume(sqrt_beta.raw >= sqrt_alpha.raw * D("1.001"))
+    return (sqrt_alpha, sqrt_beta)
+
+
+@st.composite
+def gen_params_stable(draw):
+    sqrt_alpha = draw(qdecimals("0.9", "1.0"))
+    sqrt_beta = draw(qdecimals(sqrt_alpha.raw, "1.1"))
+    assume(sqrt_beta.raw >= sqrt_alpha.raw * MIN_SQRTPARAM_SEPARATION)
+    return (sqrt_alpha, sqrt_beta)
+
+
+@st.composite
+def gen_params_eth_btc(draw):
+    sqrt_alpha = draw(qdecimals("0.1", "0.31"))  # alpha in [0.01, 0.1]
+    sqrt_beta = draw(qdecimals(sqrt_alpha.raw, "0.45"))  # beta in [alpha, 0.2]
+    assume(sqrt_beta.raw >= sqrt_alpha.raw * D("1.1"))
     return (sqrt_alpha, sqrt_beta)
 
 
@@ -52,7 +68,7 @@ def gen_balances(draw):
 
 
 @st.composite
-def gen_params_cemm_dinvariant(draw):
+def gen_params_dinvariant(draw):
     sqrt_alpha, sqrt_beta = draw(gen_params())
     balances = draw(gen_balances())
     assume(balances[0] > 0 and balances[1] > 0)
@@ -65,16 +81,186 @@ def gen_params_cemm_dinvariant(draw):
 
 
 ################################################################################
+### test invariant underestimated
+@given(
+    balances=gen_balances(),
+    params=gen_params(),
+)
+def test_invariant_underestimated(gyro_two_math_testing, balances, params):
+    sqrt_alpha, sqrt_beta = params
+    mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing,
+        balances,
+        sqrt_alpha,
+        sqrt_beta,
+    )
+
+
+@given(
+    balances=gen_balances(),
+    params=gen_params_stable(),
+)
+def test_invariant_underestimated_stable(gyro_two_math_testing, balances, params):
+    sqrt_alpha, sqrt_beta = params
+    mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing,
+        balances,
+        sqrt_alpha,
+        sqrt_beta,
+    )
+
+
+@given(
+    balances=gen_balances(),
+    params=gen_params_eth_btc(),
+)
+def test_invariant_underestimated_eth_btc(gyro_two_math_testing, balances, params):
+    sqrt_alpha, sqrt_beta = params
+    mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing,
+        balances,
+        sqrt_alpha,
+        sqrt_beta,
+    )
+
+
+################################################################################
 ### test calcInGivenOut for invariant change
 # @settings(max_examples=1_000)
 @given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+    balances=gen_balances(),
     amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
-    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.99995", places=4),
-    sqrt_beta=st.decimals(min_value="1.00005", max_value="1.8", places=4),
+    params=gen_params(),
 )
 def test_invariant_across_calcInGivenOut(
-    gyro_two_math_testing, amount_out, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
+    gyro_two_math_testing, amount_out, balances: Tuple[int, int], params
+):
+    sqrt_alpha, sqrt_beta = params
+    # check_sol_inv set to false, which is ok as long as the 'truer' invariant calculated in python doesn't decrease
+    invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
+        gyro_two_math_testing, amount_out, balances, sqrt_alpha, sqrt_beta, False
+    )
+    assert invariant_after >= invariant - D("1e-6")
+
+
+######
+@given(
+    balances=gen_balances(),
+    amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+    params=gen_params_stable(),
+)
+def test_invariant_across_calcInGivenOut_stable(
+    gyro_two_math_testing, amount_out, balances: Tuple[int, int], params
+):
+    sqrt_alpha, sqrt_beta = params
+    invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
+        gyro_two_math_testing, amount_out, balances, sqrt_alpha, sqrt_beta, False
+    )
+    assert invariant_after >= invariant
+
+
+######
+@given(
+    balances=gen_balances(),
+    amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+    params=gen_params_eth_btc(),
+)
+def test_invariant_across_calcInGivenOut_eth_btc(
+    gyro_two_math_testing, amount_out, balances: Tuple[int, int], params
+):
+    sqrt_alpha, sqrt_beta = params
+    amount_out_1 = amount_out * (sqrt_beta ** 2 + sqrt_alpha ** 2) / 2
+    invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
+        gyro_two_math_testing, amount_out_1, balances, sqrt_alpha, sqrt_beta, False
+    )
+    assert invariant_after >= invariant
+
+    # test the transpose case also
+    sqrt_alpha_t, sqrt_beta_t = (D(1) / sqrt_beta, D(1) / sqrt_alpha)
+    amount_out_2 = amount_out * (sqrt_beta_t ** 2 + sqrt_alpha_t ** 2) / 2
+    invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
+        gyro_two_math_testing, amount_out_2, balances, sqrt_alpha_t, sqrt_beta_t, False
+    )
+    assert invariant_after >= invariant
+
+
+################################################################################
+### test calcOutGivenIn for invariant change
+
+
+# @given(
+@given(
+    balances=gen_balances(),
+    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    params=gen_params(),
+)
+def test_invariant_across_calcOutGivenIn(
+    gyro_two_math_testing, amount_in, balances: Tuple[int, int], params
+):
+    sqrt_alpha, sqrt_beta = params
+    # check_sol_inv set to false, which is ok as long as the 'truer' invariant calculated in python doesn't decrease
+    invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing, amount_in, balances, sqrt_alpha, sqrt_beta, False
+    )
+    assert invariant_after >= invariant
+
+
+######
+@given(
+    balances=gen_balances(),
+    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    params=gen_params_stable(),
+)
+def test_invariant_across_calcOutGivenIn_stable(
+    gyro_two_math_testing, amount_in, balances: Tuple[int, int], params
+):
+    sqrt_alpha, sqrt_beta = params
+    invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing, amount_in, balances, sqrt_alpha, sqrt_beta, False
+    )
+    assert invariant_after >= invariant
+
+
+######
+@given(
+    balances=gen_balances(),
+    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    params=gen_params_eth_btc(),
+)
+def test_invariant_across_calcOutGivenIn_eth_btc(
+    gyro_two_math_testing, amount_in, balances: Tuple[int, int], params
+):
+    sqrt_alpha, sqrt_beta = params
+    amount_in_1 = amount_in * (sqrt_beta ** 2 + sqrt_beta ** 2) / 2
+    invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing, amount_in_1, balances, sqrt_alpha, sqrt_beta, False
+    )
+    assert invariant_after >= invariant
+
+    # test the transpose case also
+    sqrt_alpha_t, sqrt_beta_t = (D(1) / sqrt_beta, D(1) / sqrt_alpha)
+    amount_in_2 = amount_in * (sqrt_beta_t ** 2 + sqrt_alpha_t ** 2) / 2
+    invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
+        gyro_two_math_testing, amount_in_2, balances, sqrt_alpha_t, sqrt_beta_t, False
+    )
+    assert invariant_after >= invariant - D("1e-6")
+
+
+################################################################################
+### test liquidity invariant update for invariant change
+
+
+################################################################################
+### mtests
+
+
+def mtest_invariant_across_calcInGivenOut(
+    gyro_two_math_testing,
+    amount_out,
+    balances: Tuple[int, int],
+    sqrt_alpha,
+    sqrt_beta,
+    check_sol_inv: bool,
 ):
     assume(amount_out <= to_decimal("0.3") * (balances[1]))
     assume(balances[0] > 0 and balances[1] > 0)
@@ -89,12 +275,14 @@ def test_invariant_across_calcInGivenOut(
         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
     )
 
+    # assert unscale(D(invariant_sol)) <= invariant
+
     virtual_param_in = math_implementation.calculateVirtualParameter0(
-        to_decimal(invariant), to_decimal(sqrt_beta)
+        unscale(D(invariant_sol)), to_decimal(sqrt_beta)
     )
 
     virtual_param_out = math_implementation.calculateVirtualParameter1(
-        to_decimal(invariant), to_decimal(sqrt_alpha)
+        unscale(D(invariant_sol)), to_decimal(sqrt_alpha)
     )
 
     in_amount = math_implementation.calcInGivenOut(
@@ -103,7 +291,7 @@ def test_invariant_across_calcInGivenOut(
         to_decimal(amount_out),
         to_decimal(virtual_param_in),
         to_decimal(virtual_param_out),
-        to_decimal(invariant),
+        unscale(D(invariant_sol)),
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -119,7 +307,7 @@ def test_invariant_across_calcInGivenOut(
             scale(amount_out),
             scale(virtual_param_in),
             scale(virtual_param_out),
-            scale(invariant),
+            invariant_sol,
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -129,9 +317,9 @@ def test_invariant_across_calcInGivenOut(
                 scale(amount_out),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                scale(invariant),
+                invariant_sol,
             )
-        return
+        return 0, 0
     else:
         with reverts("BAL#304"):  # MAX_IN_RATIO
             gyro_two_math_testing.calcInGivenOut(
@@ -140,11 +328,12 @@ def test_invariant_across_calcInGivenOut(
                 scale(amount_out),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                scale(invariant),
+                invariant_sol,
             )
-        return
+        return 0, 0
 
-    assert to_decimal(in_amount_sol) >= scale(in_amount)
+    # assert to_decimal(in_amount_sol) >= scale(in_amount)
+    assert to_decimal(in_amount_sol) == scale(in_amount)
 
     balances_after = (
         balances[0] + unscale(in_amount_sol) * (1 + MIN_FEE),
@@ -154,26 +343,25 @@ def test_invariant_across_calcInGivenOut(
         to_decimal(balances_after), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    invariant_sol_after = gyro_two_math_testing.calculateInvariant(
-        scale(balances_after), scale(sqrt_alpha), scale(sqrt_beta)
-    )
+    if check_sol_inv:
+        invariant_sol_after = gyro_two_math_testing.calculateInvariant(
+            scale(balances_after), scale(sqrt_alpha), scale(sqrt_beta)
+        )
 
-    assert invariant_after >= invariant
-    assert invariant_sol_after >= invariant_sol
+    # assert invariant_after >= invariant
+    if check_sol_inv:
+        assert invariant_sol_after >= invariant_sol
+
+    return invariant_after, invariant
 
 
-################################################################################
-### test calcOutGivenIn for invariant change
-
-
-@given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
-    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.99995", places=4),
-    sqrt_beta=st.decimals(min_value="1.00005", max_value="1.8", places=4),
-)
-def test_invariant_across_calcOutGivenIn(
-    gyro_two_math_testing, amount_in, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
+def mtest_invariant_across_calcOutGivenIn(
+    gyro_two_math_testing,
+    amount_in,
+    balances: Tuple[int, int],
+    sqrt_alpha,
+    sqrt_beta,
+    check_sol_inv: bool,
 ):
     assume(amount_in <= to_decimal("0.3") * (balances[0]))
     assume(balances[0] > 0 and balances[1] > 0)
@@ -191,12 +379,14 @@ def test_invariant_across_calcOutGivenIn(
         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
     )
 
+    # assert unscale(D(invariant_sol)) <= invariant
+
     virtual_param_in = math_implementation.calculateVirtualParameter0(
-        to_decimal(invariant), to_decimal(sqrt_beta)
+        unscale(D(invariant_sol)), to_decimal(sqrt_beta)
     )
 
     virtual_param_out = math_implementation.calculateVirtualParameter1(
-        to_decimal(invariant), to_decimal(sqrt_alpha)
+        unscale(D(invariant_sol)), to_decimal(sqrt_alpha)
     )
 
     out_amount = math_implementation.calcOutGivenIn(
@@ -205,7 +395,7 @@ def test_invariant_across_calcOutGivenIn(
         to_decimal(amount_in),
         to_decimal(virtual_param_in),
         to_decimal(virtual_param_out),
-        to_decimal(invariant),
+        unscale(D(invariant_sol)),
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
@@ -221,7 +411,7 @@ def test_invariant_across_calcOutGivenIn(
             scale(amount_in),
             scale(virtual_param_in),
             scale(virtual_param_out),
-            scale(invariant),
+            invariant_sol,
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -231,9 +421,9 @@ def test_invariant_across_calcOutGivenIn(
                 scale(amount_in),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                scale(invariant),
+                invariant_sol,
             )
-        return
+        return 0, 0
     else:
         with reverts("BAL#305"):  # MAX_OUT_RATIO
             gyro_two_math_testing.calcOutGivenIn(
@@ -242,11 +432,12 @@ def test_invariant_across_calcOutGivenIn(
                 scale(amount_in),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                scale(invariant),
+                invariant_sol,
             )
-        return
+        return 0, 0
 
-    assert to_decimal(out_amount_sol) <= scale(out_amount)
+    # assert to_decimal(out_amount_sol) <= scale(out_amount)
+    assert to_decimal(out_amount_sol) == scale(out_amount)
 
     balances_after = (
         balances[0] + amount_in + fees,
@@ -256,13 +447,32 @@ def test_invariant_across_calcOutGivenIn(
         to_decimal(balances_after), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    invariant_sol_after = gyro_two_math_testing.calculateInvariant(
-        scale(balances_after), scale(sqrt_alpha), scale(sqrt_beta)
+    if check_sol_inv:
+        invariant_sol_after = gyro_two_math_testing.calculateInvariant(
+            scale(balances_after), scale(sqrt_alpha), scale(sqrt_beta)
+        )
+
+    # assert invariant_after >= invariant
+    if check_sol_inv:
+        assert invariant_sol_after >= invariant_sol
+
+    return invariant_after, invariant
+
+
+def mtest_invariant_across_calcOutGivenIn(
+    gyro_two_math_testing,
+    balances: Tuple[int, int],
+    sqrt_alpha,
+    sqrt_beta,
+):
+    assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
+
+    invariant = math_implementation.calculateInvariant(
+        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
     )
 
-    assert invariant_after >= invariant
-    assert invariant_sol_after >= invariant_sol
+    invariant_sol = gyro_two_math_testing.calculateInvariant(
+        scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
+    )
 
-
-################################################################################
-### test liquidity invariant update for invariant change
+    assert unscale(D(invariant_sol)) <= invariant

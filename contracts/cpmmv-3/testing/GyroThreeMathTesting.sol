@@ -65,7 +65,6 @@ contract GyroThreeMathTesting {
 
     function liquidityInvariantUpdate(
         uint256[] memory lastBalances,
-        uint256 root3Alpha,
         uint256 lastInvariant,
         uint256[] memory amountsIn,
         bool isIncreaseLiq

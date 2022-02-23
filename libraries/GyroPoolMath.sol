@@ -107,8 +107,9 @@ library GyroPoolMath {
         // We round down to prevent issues in the Pool's accounting, even if it means paying slightly less in protocol
         // fees to the Vault.
         // For the numerator, we need to round down delta L. Also for the denominator b/c subtracted
+        // Ordering multiplications for best fixed point precision considering that S and currentInvariant-previousInvariant could be large
+        uint256 numerator = (currentBptSupply.mulDown(currentInvariant.sub(previousInvariant))).mulDown(protocolSwapFeePerc);
         uint256 diffInvariant = protocolSwapFeePerc.mulDown(currentInvariant.sub(previousInvariant));
-        uint256 numerator = diffInvariant.mulDown(currentBptSupply);
         uint256 denominator = currentInvariant.sub(diffInvariant);
         uint256 deltaS = numerator.divDown(denominator);
 

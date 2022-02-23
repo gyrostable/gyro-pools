@@ -9,6 +9,8 @@ from tests.cpmmv2 import math_implementation
 from tests.libraries import pool_math_implementation
 from tests.support.utils import scale, to_decimal
 
+from tests.support.quantized_decimal import QuantizedDecimal as D
+
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
 # this is a multiplicative separation
@@ -35,8 +37,7 @@ def test_calculate_quadratic_terms(
     sqrt_alpha: Decimal,
     sqrt_beta: Decimal,
 ):
-    if faulty_params(balances, sqrt_alpha, sqrt_beta):
-        return
+    assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
     (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
@@ -65,8 +66,7 @@ def test_calculate_quadratic_terms(
 def test_calculate_quadratic(
     gyro_two_math_testing, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
-    if faulty_params(balances, sqrt_alpha, sqrt_beta):
-        return
+    assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
     (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
@@ -92,8 +92,7 @@ def test_calculate_quadratic_special(
     gyro_two_math_testing, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
 
-    if faulty_params(balances, sqrt_alpha, sqrt_beta):
-        return
+    assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
     (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
@@ -117,8 +116,7 @@ def test_calculate_invariant(
     gyro_two_math_testing, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
 
-    if faulty_params(balances, sqrt_alpha, sqrt_beta):
-        return
+    assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
@@ -128,7 +126,8 @@ def test_calculate_invariant(
         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
     )
 
-    assert to_decimal(invariant_sol) == scale(invariant).approxed(abs=1e15)
+    assert D(invariant_sol) <= scale(invariant)
+    assert D(invariant_sol) == scale(invariant).approxed(rel=D("1e-13"))
 
 
 @given(
@@ -145,7 +144,7 @@ def test_calculate_virtual_parameter_0(gyro_two_math_testing, sqrt_beta, invaria
         scale(invariant), scale(sqrt_beta)
     )
 
-    assert to_decimal(virtual_parameter_sol) == scale(virtual_parameter).approxed()
+    assert to_decimal(virtual_parameter_sol) == scale(virtual_parameter)
 
 
 @given(
@@ -162,7 +161,7 @@ def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invari
         scale(invariant), scale(sqrt_alpha)
     )
 
-    assert to_decimal(virtual_parameter_sol) == scale(virtual_parameter).approxed()
+    assert to_decimal(virtual_parameter_sol) == scale(virtual_parameter)
 
 
 @given(input=st.decimals(min_value="0", max_value="100000000", places=4))
@@ -248,7 +247,7 @@ def test_calc_in_given_out(
             )
         return
 
-    assert to_decimal(in_amount_sol) == scale(in_amount).approxed()
+    assert to_decimal(in_amount_sol) == scale(in_amount)
 
 
 @given(
@@ -324,114 +323,4 @@ def test_calc_out_given_in(
             )
         return
 
-    assert to_decimal(out_amount_sol) == scale(out_amount).approxed()
-
-
-@given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    bpt_amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
-    total_bpt=st.decimals(min_value="1", max_value="1000000", places=4),
-)
-def test_all_tokens_in_given_exact_bpt_out(
-    gyro_two_math_testing, balances: Tuple[int, int], bpt_amount_out, total_bpt
-):
-
-    if total_bpt < bpt_amount_out:
-        return
-
-    amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
-        to_decimal(balances), to_decimal(bpt_amount_out), to_decimal(total_bpt)
-    )
-
-    amounts_in_sol = gyro_two_math_testing.calcAllTokensInGivenExactBptOut(
-        scale(balances), scale(bpt_amount_out), scale(total_bpt)
-    )
-
-    if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
-        return
-
-    assert to_decimal(amounts_in_sol[0]) == scale(amounts_in[0]).approxed()
-    assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
-
-
-@given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    bpt_amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
-    total_bpt=st.decimals(min_value="1", max_value="1000000", places=4),
-)
-def test_tokens_out_given_exact_bpt_in(
-    gyro_two_math_testing, balances: Tuple[int, int], bpt_amount_in, total_bpt
-):
-
-    if total_bpt < bpt_amount_in:
-        return
-
-    amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
-        to_decimal(balances), to_decimal(bpt_amount_in), to_decimal(total_bpt)
-    )
-
-    amounts_in_sol = gyro_two_math_testing.calcAllTokensInGivenExactBptOut(
-        scale(balances), scale(bpt_amount_in), scale(total_bpt)
-    )
-
-    if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
-        return
-
-    assert to_decimal(amounts_in_sol[0]) == scale(amounts_in[0]).approxed()
-    assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
-
-
-@given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_alpha=st.decimals(min_value="0.02", max_value="0.99995", places=4),
-    delta_balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_beta=st.decimals(min_value="1.00005", max_value="1.8", places=4),
-    current_bpt_supply=st.decimals(min_value="1", max_value="1000000", places=4),
-    protocol_fee_gyro_portion=st.decimals(min_value="0.00", max_value="0.5", places=4),
-    protocol_swap_fee_percentage=st.decimals(
-        min_value="0.0", max_value="0.4", places=4
-    ),
-)
-def test_protocol_fees(
-    gyro_two_math_testing,
-    balances: Tuple[int, int],
-    sqrt_alpha,
-    sqrt_beta,
-    delta_balances: Tuple[int, int],
-    current_bpt_supply,
-    protocol_swap_fee_percentage,
-    protocol_fee_gyro_portion,
-):
-
-    if faulty_params(balances, sqrt_alpha, sqrt_beta):
-        return
-
-    old_invariant = math_implementation.calculateInvariant(
-        to_decimal(balances), to_decimal(sqrt_alpha), to_decimal(sqrt_beta)
-    )
-
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate(
-        to_decimal(balances),
-        to_decimal(old_invariant),
-        to_decimal(delta_balances),
-        True,
-    )
-
-    protocol_fees = math_implementation.calcProtocolFees(
-        to_decimal(old_invariant),
-        to_decimal(new_invariant),
-        to_decimal(current_bpt_supply),
-        to_decimal(protocol_swap_fee_percentage),
-        to_decimal(protocol_fee_gyro_portion),
-    )
-
-    protocol_fees_sol = gyro_two_math_testing.calcProtocolFees(
-        scale(old_invariant),
-        scale(new_invariant),
-        scale(current_bpt_supply),
-        scale(protocol_swap_fee_percentage),
-        scale(protocol_fee_gyro_portion),
-    )
-
-    assert to_decimal(protocol_fees_sol[0]) == scale(protocol_fees[0])
-    assert to_decimal(protocol_fees_sol[1]) == scale(protocol_fees[1])
+    assert to_decimal(out_amount_sol) == scale(out_amount)
