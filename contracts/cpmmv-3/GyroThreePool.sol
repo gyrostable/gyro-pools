@@ -89,6 +89,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         gyroConfig = IGyroConfig(configAddress);
     }
 
+    function getRoot3Alpha() external view returns (uint256) {
+        return _root3Alpha;
+    }
+
     // We don't support weights at the moment; in other words, all tokens are always weighted equally and thus their
     // normalized weights are all 1/3. This is what the functions return.
 
