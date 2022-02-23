@@ -120,7 +120,7 @@ contract MockVault is IPoolSwapStructs {
     }
 
     struct CallJoinPoolGyroParams {
-        IBasePool gyroTwoPool;
+        IBasePool pool;
         bytes32 poolId;
         address sender;
         address recipient;
@@ -131,26 +131,38 @@ contract MockVault is IPoolSwapStructs {
         uint256 bptOut;
     }
 
+    // Join pool.
+    // NOTE:
+    // - CallJoinPoolGyroParams.amountIn is only used upon initialization.
+    // - CallJoinPoolGyroParams.bptOut is only used out of initialization.
+    // This is an unfortunate accident and should in principle be refactored.
     function callJoinPoolGyro(CallJoinPoolGyroParams memory params)
         public
         returns (uint256[] memory amountsIn, uint256[] memory dueProtocolFeeAmounts)
     {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
-        uint256[] memory amountsInStr = new uint256[](2);
-        amountsInStr[0] = params.amountIn;
-        amountsInStr[1] = params.amountIn;
+
+        uint256[] memory amountsInStr = new uint256[](params.currentBalances.length);
+        for (uint256 i = 0; i < params.currentBalances.length; ++i)
+            amountsInStr[i] = params.amountIn;
 
         WeightedPoolUserData.JoinKind kind;
         bytes memory userData;
-        if (params.currentBalances[0] == 0 && params.currentBalances[1] == 0) {
-            kind = WeightedPoolUserData.JoinKind.INIT;
-            userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
-        } else {
-            kind = WeightedPoolUserData.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT;
-            userData = abi.encode(kind, params.bptOut); // bptOut
+
+        {
+            bool isEmptyPool = true;
+            for (uint256 i = 0; i < params.currentBalances.length; ++i)
+                isEmptyPool = isEmptyPool && (params.currentBalances[i] == 0);
+            if (isEmptyPool) {
+                kind = WeightedPoolUserData.JoinKind.INIT;
+                userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
+            } else {
+                kind = WeightedPoolUserData.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT;
+                userData = abi.encode(kind, params.bptOut); // bptOut
+            }
         }
 
-        (amountsIn, dueProtocolFeeAmounts) = params.gyroTwoPool.onJoinPool(
+        (amountsIn, dueProtocolFeeAmounts) = params.pool.onJoinPool(
             params.poolId,
             params.sender,
             params.recipient,
@@ -182,7 +194,7 @@ contract MockVault is IPoolSwapStructs {
     }
 
     function callExitPoolGyro(
-        IBasePool gyroTwoPool,
+        IBasePool pool,
         bytes32 poolId,
         address sender,
         address recipient,
@@ -199,7 +211,7 @@ contract MockVault is IPoolSwapStructs {
 
         bytes memory userData = abi.encode(kind, bptAmountIn);
 
-        (amountsOut, dueProtocolFeeAmounts) = gyroTwoPool.onExitPool(
+        (amountsOut, dueProtocolFeeAmounts) = pool.onExitPool(
             poolId,
             sender,
             recipient,
