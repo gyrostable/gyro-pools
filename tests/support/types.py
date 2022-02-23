@@ -55,6 +55,20 @@ class TwoPoolParams(NamedTuple):
     sqrtBeta: DecimalLike  # Should already be upscaled
 
 
+class ThreePoolParams(NamedTuple):
+    vault: str
+    name: str
+    symbol: str
+    tokens: list[str]
+    root3Alpha: DecimalLike
+    assetManagers: list[str]  # Usually all zero addresses
+    swapFeePercentage: DecimalLike
+    pauseWindowDuration: DecimalLike
+    bufferPeriodDuration: DecimalLike
+    owner: str
+    # configAddress listed separately
+
+
 class CEMMMathParams(NamedTuple):
     alpha: DecimalLike
     beta: DecimalLike
