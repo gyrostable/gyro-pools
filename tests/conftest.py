@@ -38,13 +38,12 @@ def gyro_three_math_testing(admin, GyroThreeMathTesting):
 def mock_gyro_config(admin, MockGyroConfig):
     return admin.deploy(MockGyroConfig)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def gyro_erc20_empty(admin, SimpleERC20):
     return (admin.deploy(SimpleERC20), admin.deploy(SimpleERC20))
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def gyro_erc20_funded(admin, SimpleERC20, users):
     gyro_erc20_0 = admin.deploy(SimpleERC20)
     gyro_erc20_1 = admin.deploy(SimpleERC20)
@@ -65,19 +64,16 @@ def gyro_erc20_funded(admin, SimpleERC20, users):
 def authorizer(admin, Authorizer):
     return admin.deploy(Authorizer, admin)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def mock_vault(admin, MockVault, authorizer):
     return admin.deploy(MockVault, authorizer)
-
 
 @pytest.fixture(scope="module")
 def balancer_vault(admin, BalancerVault, SimpleERC20, authorizer):
     weth9 = admin.deploy(SimpleERC20)
     return admin.deploy(BalancerVault, authorizer.address, weth9.address, 0, 0)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def balancer_vault_pool(
     admin,
     GyroTwoPool,
@@ -107,8 +103,7 @@ def balancer_vault_pool(
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def mock_vault_pool(
     admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProcessor, mock_gyro_config
 ):
