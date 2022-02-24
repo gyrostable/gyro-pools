@@ -205,8 +205,7 @@ def test_calc_in_given_out(
         to_decimal(balances[1]),
         to_decimal(amount_out),
         to_decimal(virtual_param_in),
-        to_decimal(virtual_param_out),
-        to_decimal(invariant),
+        to_decimal(virtual_param_out)
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -221,8 +220,7 @@ def test_calc_in_given_out(
             scale(balances[1]),
             scale(amount_out),
             scale(virtual_param_in),
-            scale(virtual_param_out),
-            scale(invariant),
+            scale(virtual_param_out)
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -231,8 +229,7 @@ def test_calc_in_given_out(
                 scale(balances[1]),
                 scale(amount_out),
                 scale(virtual_param_in),
-                scale(virtual_param_out),
-                scale(invariant),
+                scale(virtual_param_out)
             )
         return
     else:
@@ -242,8 +239,7 @@ def test_calc_in_given_out(
                 scale(balances[1]),
                 scale(amount_out),
                 scale(virtual_param_in),
-                scale(virtual_param_out),
-                scale(invariant),
+                scale(virtual_param_out)
             )
         return
 
@@ -281,8 +277,7 @@ def test_calc_out_given_in(
         to_decimal(balances[1]),
         to_decimal(amount_in),
         to_decimal(virtual_param_in),
-        to_decimal(virtual_param_out),
-        to_decimal(invariant),
+        to_decimal(virtual_param_out)
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
@@ -297,8 +292,7 @@ def test_calc_out_given_in(
             scale(balances[1]),
             scale(amount_in),
             scale(virtual_param_in),
-            scale(virtual_param_out),
-            scale(invariant),
+            scale(virtual_param_out)
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -307,8 +301,7 @@ def test_calc_out_given_in(
                 scale(balances[1]),
                 scale(amount_in),
                 scale(virtual_param_in),
-                scale(virtual_param_out),
-                scale(invariant),
+                scale(virtual_param_out)
             )
         return
     else:
@@ -318,8 +311,7 @@ def test_calc_out_given_in(
                 scale(balances[1]),
                 scale(amount_in),
                 scale(virtual_param_in),
-                scale(virtual_param_out),
-                scale(invariant),
+                scale(virtual_param_out)
             )
         return
 

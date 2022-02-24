@@ -153,8 +153,7 @@ library GyroTwoMath {
         uint256 balanceOut,
         uint256 amountIn,
         uint256 virtualParamIn,
-        uint256 virtualParamOut,
-        uint256 currentInvariant
+        uint256 virtualParamOut
     ) internal pure returns (uint256 amountOut) {
         /**********************************************************************************************
       // Described for X = `in' asset and Y = `out' asset, but equivalent for the other case       //
@@ -162,20 +161,21 @@ library GyroTwoMath {
       // dY = incrY = amountOut < 0                                                                //
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
-      // L  = inv.Liq                   /              L^2            \                            //
+      // L  = inv.Liq                   /            x' * y'          \                            //
       //                   |dy| = y' - |   --------------------------  |                           //
       //  x' = virtIn                   \          ( x' + dX)         /                            //
       //  y' = virtOut                                                                             //
       // Note that -dy > 0 is what the trader receives.                                            //
       // We exploit the fact that this formula is symmetric up to virtualParam{X,Y}.               //
+      // Note since L is an underestimate, x'*y' is used instead of L^2 to remove error            //
       **********************************************************************************************/
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         {
             uint256 virtIn = balanceIn.add(virtualParamIn);
-            uint256 denominator = virtIn.add(amountIn);
-            uint256 subtrahend = currentInvariant.mulUp(currentInvariant).divUp(denominator);
             uint256 virtOut = balanceOut.add(virtualParamOut);
+            uint256 denominator = virtIn.add(amountIn);
+            uint256 subtrahend = virtIn.mulUp(virtOut).divUp(denominator);
             amountOut = virtOut.sub(subtrahend);
         }
 
@@ -201,8 +201,7 @@ library GyroTwoMath {
         uint256 balanceOut,
         uint256 amountOut,
         uint256 virtualParamIn,
-        uint256 virtualParamOut,
-        uint256 currentInvariant
+        uint256 virtualParamOut
     ) internal pure returns (uint256 amountIn) {
         /**********************************************************************************************
       // dX = incrX  = amountIn  > 0                                                               //
@@ -210,19 +209,20 @@ library GyroTwoMath {
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
       // x = balanceIn                                                                             //
-      // L  = inv.Liq                /              L^2             \                              //
+      // L  = inv.Liq                /            x' * y'          \                               //
       //                     dx =   |   --------------------------  |  -  x'                       //
-      // x' = virtIn                \         ( y' + dy)           /                               //
+      // x' = virtIn                \           ( y' + dy)         /                               //
       // y' = virtOut                                                                              //
       // Note that dy < 0 < dx.                                                                    //
+      // Note since L is an underestimate, x'*y' is used instead of L^2 to remove error            //
       **********************************************************************************************/
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         {
+            uint256 virtIn = balanceIn.add(virtualParamIn);
             uint256 virtOut = balanceOut.add(virtualParamOut);
             uint256 denominator = virtOut.sub(amountOut);
-            uint256 term = currentInvariant.mulUp(currentInvariant).divUp(denominator);
-            uint256 virtIn = balanceIn.add(virtualParamIn);
+            uint256 term = virtIn.mulUp(virtOut).divUp(denominator);
             amountIn = term.sub(virtIn);
         }
 

@@ -54,10 +54,9 @@ contract GyroTwoMathTesting {
         uint256 balanceOut,
         uint256 amountIn,
         uint256 virtualParamIn,
-        uint256 virtualParamOut,
-        uint256 currentInvariant
+        uint256 virtualParamOut
     ) external pure returns (uint256) {
-        return GyroTwoMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualParamIn, virtualParamOut, currentInvariant);
+        return GyroTwoMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualParamIn, virtualParamOut);
     }
 
     function calcInGivenOut(
@@ -65,10 +64,9 @@ contract GyroTwoMathTesting {
         uint256 balanceOut,
         uint256 amountOut,
         uint256 virtualParamIn,
-        uint256 virtualParamOut,
-        uint256 currentInvariant
+        uint256 virtualParamOut
     ) external pure returns (uint256) {
-        return GyroTwoMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualParamIn, virtualParamOut, currentInvariant);
+        return GyroTwoMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualParamIn, virtualParamOut);
     }
 
     function calculateVirtualParameter0(uint256 invariant, uint256 sqrtBeta) external pure returns (uint256) {

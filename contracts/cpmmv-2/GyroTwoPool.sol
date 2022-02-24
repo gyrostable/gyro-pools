@@ -173,18 +173,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256 currentBalanceTokenOut,
         uint256 virtualParamIn,
         uint256 virtualParamOut,
-        uint256 invariant
+        uint256 // not used but avoids collision with inherited private fn
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
-        return
-            GyroTwoMath._calcOutGivenIn(
-                currentBalanceTokenIn,
-                currentBalanceTokenOut,
-                swapRequest.amount,
-                virtualParamIn,
-                virtualParamOut,
-                invariant
-            );
+        return GyroTwoMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualParamIn, virtualParamOut);
     }
 
     function _onSwapGivenOut(
@@ -193,18 +185,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256 currentBalanceTokenOut,
         uint256 virtualParamIn,
         uint256 virtualParamOut,
-        uint256 invariant
+        uint256 // not used but avoids collision with inherited private fn
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
-        return
-            GyroTwoMath._calcInGivenOut(
-                currentBalanceTokenIn,
-                currentBalanceTokenOut,
-                swapRequest.amount,
-                virtualParamIn,
-                virtualParamOut,
-                invariant
-            );
+        return GyroTwoMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualParamIn, virtualParamOut);
     }
 
     function calculateCurrentValues(

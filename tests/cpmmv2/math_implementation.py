@@ -70,33 +70,21 @@ def liquidityInvariantUpdate_fromscratch(
 
 
 def calcOutGivenIn(
-    balanceIn: D,
-    balanceOut: D,
-    amountIn: D,
-    virtualParamIn: D,
-    virtualParamOut: D,
-    currentInvariant: D,
+    balanceIn: D, balanceOut: D, amountIn: D, virtualParamIn: D, virtualParamOut: D
 ) -> D:
     assert amountIn <= balanceIn * _MAX_IN_RATIO
     virtIn = balanceIn + virtualParamIn
     virtOut = balanceOut + virtualParamOut
-    return virtOut - currentInvariant.mul_up(currentInvariant).div_up(virtIn + amountIn)
+    return virtOut - virtIn.mul_up(virtOut).div_up(virtIn + amountIn)
 
 
 def calcInGivenOut(
-    balanceIn: D,
-    balanceOut: D,
-    amountOut: D,
-    virtualParamIn: D,
-    virtualParamOut: D,
-    currentInvariant: D,
+    balanceIn: D, balanceOut: D, amountOut: D, virtualParamIn: D, virtualParamOut: D
 ) -> D:
     assert amountOut <= balanceOut * _MAX_OUT_RATIO
     virtOut = balanceOut + virtualParamOut
     virtIn = balanceIn + virtualParamIn
-    return (
-        currentInvariant.mul_up(currentInvariant).div_up(virtOut - amountOut) - virtIn
-    )
+    return virtIn.mul_up(virtOut).div_up(virtOut - amountOut) - virtIn
 
 
 def calculateVirtualParameter0(invariant: D, sqrtBeta: D) -> D:

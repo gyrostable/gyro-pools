@@ -88,7 +88,7 @@ def gen_params_dinvariant(draw):
 )
 def test_invariant_underestimated(gyro_two_math_testing, balances, params):
     sqrt_alpha, sqrt_beta = params
-    mtest_invariant_across_calcOutGivenIn(
+    mtest_invariant_underestimated(
         gyro_two_math_testing,
         balances,
         sqrt_alpha,
@@ -102,7 +102,7 @@ def test_invariant_underestimated(gyro_two_math_testing, balances, params):
 )
 def test_invariant_underestimated_stable(gyro_two_math_testing, balances, params):
     sqrt_alpha, sqrt_beta = params
-    mtest_invariant_across_calcOutGivenIn(
+    mtest_invariant_underestimated(
         gyro_two_math_testing,
         balances,
         sqrt_alpha,
@@ -116,7 +116,7 @@ def test_invariant_underestimated_stable(gyro_two_math_testing, balances, params
 )
 def test_invariant_underestimated_eth_btc(gyro_two_math_testing, balances, params):
     sqrt_alpha, sqrt_beta = params
-    mtest_invariant_across_calcOutGivenIn(
+    mtest_invariant_underestimated(
         gyro_two_math_testing,
         balances,
         sqrt_alpha,
@@ -140,7 +140,7 @@ def test_invariant_across_calcInGivenOut(
     invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
         gyro_two_math_testing, amount_out, balances, sqrt_alpha, sqrt_beta, False
     )
-    assert invariant_after >= invariant - D("1e-6")
+    assert invariant_after >= invariant
 
 
 ######
@@ -243,7 +243,7 @@ def test_invariant_across_calcOutGivenIn_eth_btc(
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
         gyro_two_math_testing, amount_in_2, balances, sqrt_alpha_t, sqrt_beta_t, False
     )
-    assert invariant_after >= invariant - D("1e-6")
+    assert invariant_after >= invariant
 
 
 ################################################################################
@@ -291,7 +291,6 @@ def mtest_invariant_across_calcInGivenOut(
         to_decimal(amount_out),
         to_decimal(virtual_param_in),
         to_decimal(virtual_param_out),
-        unscale(D(invariant_sol)),
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -307,7 +306,6 @@ def mtest_invariant_across_calcInGivenOut(
             scale(amount_out),
             scale(virtual_param_in),
             scale(virtual_param_out),
-            invariant_sol,
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -317,7 +315,6 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(amount_out),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                invariant_sol,
             )
         return 0, 0
     else:
@@ -328,7 +325,6 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(amount_out),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                invariant_sol,
             )
         return 0, 0
 
@@ -395,7 +391,6 @@ def mtest_invariant_across_calcOutGivenIn(
         to_decimal(amount_in),
         to_decimal(virtual_param_in),
         to_decimal(virtual_param_out),
-        unscale(D(invariant_sol)),
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
@@ -411,7 +406,6 @@ def mtest_invariant_across_calcOutGivenIn(
             scale(amount_in),
             scale(virtual_param_in),
             scale(virtual_param_out),
-            invariant_sol,
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -421,7 +415,6 @@ def mtest_invariant_across_calcOutGivenIn(
                 scale(amount_in),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                invariant_sol,
             )
         return 0, 0
     else:
@@ -432,7 +425,6 @@ def mtest_invariant_across_calcOutGivenIn(
                 scale(amount_in),
                 scale(virtual_param_in),
                 scale(virtual_param_out),
-                invariant_sol,
             )
         return 0, 0
 
@@ -459,7 +451,7 @@ def mtest_invariant_across_calcOutGivenIn(
     return invariant_after, invariant
 
 
-def mtest_invariant_across_calcOutGivenIn(
+def mtest_invariant_underestimated(
     gyro_two_math_testing,
     balances: Tuple[int, int],
     sqrt_alpha,
