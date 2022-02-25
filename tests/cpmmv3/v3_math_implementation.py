@@ -93,7 +93,7 @@ def calculateInvariantNewton(
 
         # delta==0 can happen with poor numerical precision! In this case, this is all we can get.
         if delta_pre is not None and (delta == 0 or f_l < 0):
-            warning("Early exit due to numerical instability")
+            # warning("Early exit due to numerical instability")
             return l, log
 
         l -= delta
