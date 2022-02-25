@@ -80,6 +80,7 @@ library GyroThreeMath {
         mb = bterm.mulDown(alpha23);
         uint256 cterm = (balances[0].mulDown(balances[1])).add(balances[1].mulDown(balances[2])).add(balances[2].mulDown(balances[0]));
         mc = cterm.mulDown(root3Alpha);
+        // TODO MAYBE to reduce rounding error amplification, multiply the smallest value last. Quite some effort though.
         md = balances[0].mulDown(balances[1]).mulDown(balances[2]);
     }
 
@@ -110,7 +111,7 @@ library GyroThreeMath {
         uint256 // md
     ) internal pure returns (uint256 l0) {
         uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
-        uint256 lmin = mb.divUp(a * 3) + radic.powUp(FixedPoint.ONE / 2).divUp(a * 3);
+        uint256 lmin = mb.divUp(a * 3).add(radic.powUp(FixedPoint.ONE / 2).divUp(a * 3));
         // The factor 3/2 is a magic number found experimentally for our invariant. All factors > 1 are safe.
         l0 = lmin.mulUp((3 * FixedPoint.ONE) / 2);
     }
@@ -156,21 +157,31 @@ library GyroThreeMath {
         uint256 md,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        uint256 dfRootEst = (3 * a).mulUp(rootEst).sub(2 * mb).mulUp(rootEst).sub(mc); // Does not underflow since rootEst >> 0 by assumption.
+        // We aim to, when in doubt, overestimate the step in the negative direction and in absolute value.
+        // Subtraction does not underflow since rootEst >> 0 by assumption.
+        uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
         // We know that a rootEst^2 / dfRootEst ~ 1. (this is pretty exact actually, see the Mathematica notebook). We use this
         // multiplication order to prevent overflows that can otherwise occur when computing l^3 for very large
         // reserves.
-        uint256 deltaMinus = a.mulUp(rootEst).mulUp(rootEst);
-        deltaMinus = deltaMinus.divUp(dfRootEst).mulUp(rootEst);
-        // use multiple statements to prevent 'stack too deep'. The order of operations is chosen to prevent overflows
-        // for very large numbers.
-        uint256 deltaPlus = mb.mulUp(rootEst).add(mc).divUp(dfRootEst);
-        deltaPlus = deltaPlus.mulUp(rootEst).add(md.divUp(dfRootEst));
+        // uint256 deltaMinus = rootEst.mulUp(rootEst).mulUp(a);
+        // deltaMinus = deltaMinus.divUp(dfRootEst).mulUp(rootEst);
+        // EXPERIMENTAL for higher accuracy?:
+        uint256 deltaMinus = rootEst.mulUp(rootEst).mulUp(rootEst);
+        deltaMinus = deltaMinus.mulUp(a).divUp(dfRootEst);
+
+        // The order of operations is chosen to prevent overflows for very large numbers.
+        // uint256 deltaPlus = mb.mulUp(rootEst).add(mc).divUp(dfRootEst);
+        // deltaPlus = deltaPlus.mulUp(rootEst).add(md.divUp(dfRootEst));
+        // EXPERIMENTAL for higher accuracy?:
+        uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
+        deltaPlus = deltaPlus.add(rootEst.mulDown(mc)).divDown(dfRootEst);
+        deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
 
         deltaIsPos = (deltaPlus >= deltaMinus);
         deltaAbs = (deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus);
     }
 
+    // TODO KILLME
     // Ensures balances[i] >= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
     // comparison. In particular, the 0th entry will be the maximum
     function maxOtherBalances(uint256[] memory balances) internal pure returns (uint8[] memory indices) {
@@ -234,9 +245,9 @@ library GyroThreeMath {
         (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
         if (balOutNew >= balInNew) {
-            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(balInNew.divDown(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
-            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(balOutNew.divDown(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
@@ -282,9 +293,9 @@ library GyroThreeMath {
         (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
         if (balOutNew >= balInNew) {
-            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(balInNew.divDown(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
-            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(balOutNew.divDown( balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
