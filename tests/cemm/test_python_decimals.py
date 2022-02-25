@@ -17,10 +17,9 @@ from hypothesis import strategies as st
 from tests.cemm.util import (
     params2MathParams,
     mathParams2DerivedParams,
-    gen_params,
-    gen_balances,
-    debug_postmortem_on_exc,
+    gen_params, MIN_PRICE_SEPARATION,
 )
+from tests.support.util_common import gen_balances, debug_postmortem_on_exc, BasicPoolParameters
 from tests.support import quantized_decimal
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams
@@ -31,6 +30,10 @@ import cemm_float as mimpl_float
 
 MIN_BALANCE_RATIO = D("1E-5")
 MIN_FEE = D("0.0001")
+
+bpool_params = BasicPoolParameters(
+    MIN_PRICE_SEPARATION, D('0.3'), D('0.3'), MIN_BALANCE_RATIO, MIN_FEE
+)
 
 # Ad-hoc hack to collect error values while running tests. Should be refactored somehow at some point.
 error_values = None
@@ -76,7 +79,7 @@ def test_derivedParams(params):
 @settings(max_examples=20_000)
 @given(
     params=gen_params(),
-    balances=gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
@@ -127,7 +130,7 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0):
 @settings(max_examples=10_000, suppress_health_check=[HealthCheck.return_value])
 @given(
     params=gen_params(),
-    balances=gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
@@ -224,7 +227,7 @@ def mparams2float(params: mimpl.Params) -> mimpl_float.Params:
 @settings(max_examples=10_000, suppress_health_check=[HealthCheck.return_value])
 @given(
     params=gen_params(),
-    balances=gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )

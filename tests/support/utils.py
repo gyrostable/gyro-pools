@@ -83,8 +83,12 @@ def unscale(x, decimals=18):
 
 
 def qdecimals(
-    *args, allow_nan=False, allow_infinity=False, **kwargs
+    min_value=None, max_value=None, allow_nan=False, allow_infinity=False, **kwargs
 ) -> st.SearchStrategy[QuantizedDecimal]:
+    if isinstance(min_value, QuantizedDecimal):
+        min_value = min_value.raw
+    if isinstance(max_value, QuantizedDecimal):
+        max_value = max_value.raw
     return st.decimals(
-        *args, allow_nan=allow_nan, allow_infinity=allow_infinity, **kwargs
+        min_value, max_value, allow_nan=allow_nan, allow_infinity=allow_infinity, **kwargs
     ).map(QuantizedDecimal)
