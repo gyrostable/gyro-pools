@@ -170,7 +170,7 @@ def calcProtocolFees(
         return D(0), D(0)
 
     diffInvariant = protocolSwapFeePerc * (currentInvariant - previousInvariant)
-    numerator = diffInvariant * currentBptSupply
+    numerator = currentBptSupply * (currentInvariant - previousInvariant) * protocolSwapFeePerc
     denominator = currentInvariant - diffInvariant
     deltaS = numerator / denominator
 
