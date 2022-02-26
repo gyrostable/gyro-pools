@@ -3,6 +3,8 @@ from typing import Tuple
 
 import hypothesis.strategies as st
 import numpy as np
+from hypothesis import settings
+
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie.test import given
 from tests.support.utils import scale, to_decimal
@@ -251,7 +253,7 @@ def test_calculate_invariant(
         scale(balances), scale(root_three_alpha)
     )
 
-    assert int(invariant_sol) == scale(invariant).approxed(rel=1 / to_decimal(10) ** 6)
+    assert int(invariant_sol) == scale(invariant).approxed(rel=1 / to_decimal(10) ** 14)
 
 
 @given(
