@@ -3,6 +3,7 @@ from brownie import ZERO_ADDRESS
 from tests.conftest import TOKENS_PER_USER
 from tests.cpmmv2 import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
+from tests.support.utils import unscale, approxed
 
 
 def test_empty_erc20s(admin, gyro_erc20_empty):
@@ -111,6 +112,8 @@ def test_pool_on_join(users, mock_vault_pool, mock_vault):
     sqrtBeta = sqrtParams[1] / (10**18)
 
     # Check pool's invariant after initialization
+    # NOTE: Calculation is completely unscaled; this is not the math that is actually done by anyone, but it works as a
+    # check.
     currentInvariant = mock_vault_pool.getLastInvariant()
     squareInvariant = (amount_in + currentInvariant / sqrtBeta) * (
         amount_in + currentInvariant * sqrtAlpha
@@ -195,8 +198,7 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
         mock_vault_pool.balanceOf(users[0]) * amountOut // amount_in,
     )
 
-    deltas = tuple(int(v) for v in tx.events["PoolBalanceChanged"]["deltas"])
-    assert deltas == pytest.approx((amountOut, amountOut))
+    assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(unscale((amountOut, amountOut)))
 
     (_, balancesAfterExit) = mock_vault.getPoolTokens(poolId)
     assert int(balancesAfterExit[0]) == pytest.approx(
