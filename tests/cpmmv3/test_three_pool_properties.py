@@ -70,7 +70,7 @@ def test_invariant_sol_inv_below_py_inv(
     )
 
 
-# @settings(max_examples=1_000)
+@settings(max_examples=1_000)
 @given(
     balances=gen_balances(),
     root_three_alpha=gen_bounds(),
@@ -87,6 +87,7 @@ def test_sol_invariant_underestimated(
 # test calcInGivenOut for invariant change
 
 
+@settings(max_examples=1_000)
 @given(
     setup=gen_params_in_given_out(),
     root_three_alpha=st.decimals(
@@ -109,6 +110,7 @@ def test_invariant_across_calcInGivenOut(
 # test calcOutGivenIn for invariant change
 
 
+@settings(max_examples=1_000)
 @given(
     setup=gen_params_out_given_in(),
     root_three_alpha=st.decimals(
@@ -200,11 +202,13 @@ def mtest_invariant_across_calcInGivenOut(
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
-    invariant_sol = gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root_three_alpha)
+    invariant_sol = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances), scale(root_three_alpha)
+        )
     )
 
-    virtual_offset = unscale(invariant_sol) * D(root_three_alpha)
+    virtual_offset = invariant_sol * D(root_three_alpha)
 
     in_amount = math_implementation.calcInGivenOut(
         to_decimal(balances[0]),
@@ -266,7 +270,17 @@ def mtest_invariant_across_calcInGivenOut(
     if check_sol_inv:
         assert unscale(invariant_sol_after) >= invariant_sol
 
-    return invariant_after, invariant
+    # return invariant_after, invariant
+    partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
+        balances, virtual_offset
+    )
+    partial_invariant_from_offsets_after = calculate_partial_invariant_from_offsets(
+        balances_after, virtual_offset
+    )
+    partial_invariant_from_sol = invariant_sol / (D(balances[2]) + D(virtual_offset))
+    assert partial_invariant_from_offsets >= partial_invariant_from_sol
+    # assert invariant_from_offsets >= invariant_sol
+    return partial_invariant_from_offsets_after, partial_invariant_from_offsets
 
 
 def mtest_invariant_across_calcOutGivenIn(
@@ -358,6 +372,32 @@ def mtest_invariant_across_calcOutGivenIn(
 
     # assert invariant_after >= invariant
     if check_sol_inv:
-        assert invariant_sol_after >= invariant_sol
+        assert unscale(invariant_sol_after) >= invariant_sol
 
-    return invariant_after, invariant
+    # return invariant_after, invariant
+    partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
+        balances, virtual_offset
+    )
+    partial_invariant_from_offsets_after = calculate_partial_invariant_from_offsets(
+        balances_after, virtual_offset
+    )
+    partial_invariant_from_sol = invariant_sol / (D(balances[2]) + D(virtual_offset))
+    assert partial_invariant_from_offsets >= partial_invariant_from_sol
+    # assert invariant_from_offsets >= invariant_sol
+    return partial_invariant_from_offsets_after, partial_invariant_from_offsets
+
+
+def calculate_invariant_from_offsets(balances, virtual_offset):
+    return (
+        ((D(balances[0]) + D(virtual_offset)) ** D(1 / 3))
+        .mul_up((D(balances[1]) + D(virtual_offset)) ** D(1 / 3))
+        .mul_up((D(balances[2]) + D(virtual_offset)) ** D(1 / 3))
+    )
+
+
+def calculate_partial_invariant_from_offsets(balances, virtual_offset):
+    # ignores the third balance b/c it is not changed in a swap.
+    # this has better fixed point precision b/c the extra factor can otherwise be large
+    return (D(balances[0]) + D(virtual_offset)).mul_up(
+        D(balances[1] + D(virtual_offset))
+    )
