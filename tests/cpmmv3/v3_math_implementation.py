@@ -1,5 +1,6 @@
 from logging import warning
-from typing import Iterable, List, Tuple
+from math import sqrt
+from typing import Iterable, List, Tuple, Callable
 
 import numpy as np
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -13,7 +14,6 @@ prec_convergence = D("1E-18")
 def calculateInvariant(balances: Iterable[D], root3Alpha: D) -> D:
     (a, mb, mc, md) = calculateCubicTerms(balances, root3Alpha)
     return calculateCubic(a, mb, mc, md, root3Alpha, balances)
-
 
 def calculateCubicTerms(balances: Iterable[D], root3Alpha: D) -> tuple[D, D, D, D]:
     x, y, z = balances
@@ -98,6 +98,63 @@ def calculateInvariantNewton(
 
         l -= delta
         delta_pre = delta
+
+def invariantFunctionsFloat(balances: Iterable[D], root3Alpha: D) -> tuple[Callable, Callable]:
+    a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
+    def f(l):
+        # res = a * l**3 - mb * l**2 - mc * l - md
+        # To prevent catastrophic elimination. Note this makes a BIG difference ito f values, but not ito computed l
+        # values.
+        res = ((a * l - mb) * l - mc) * l - md
+        print(f" f({l})".ljust(22) + f"= {res}")
+        return res
+    def df(l):
+        # res = 3 * a * l**2 - 2 * mb * l - mc
+        res = (3 * a * l - 2 * mb) * l - mc
+        print(f"df({l})".ljust(22) + f"= {res}")
+        return res
+    return f, df
+
+
+def calculateInvariantAltFloatWithInfo(balances: Iterable[D], root3Alpha: D):
+    """Alternative implementation of the invariant calculation that can't be done in Solidity. Should match
+    calculateInvariant() to a high degree of accuracy.
+
+    Version that also returns debug info.
+
+    Don't rely on anything but the 'root' component!"""
+    from scipy.optimize import root_scalar
+
+    f, df = invariantFunctionsFloat(balances, root3Alpha)
+    a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
+
+    # See CPMMV writeup, appendix A.1
+    l_m = mb / (3*a)
+    l_plus = l_m + sqrt(l_m**2 + mc)
+    l_0 = 1.5 * l_plus
+
+    res = root_scalar(f, fprime=df, x0=l_0, rtol=1e-18, xtol=1e-18)
+
+    return dict(
+        root=res.root,
+        f=f,
+        root_results=res,
+        l_0=l_0
+    )
+
+
+def calculateInvariantAltFloat(balances: Iterable[D], root3Alpha: D) -> float:
+    return calculateInvariantAltFloatWithInfo(balances, root3Alpha)['root']
+
+
+def calculateCubicTermsFloat(balances: Iterable[float], root3Alpha: float) -> tuple[float, float, float, float]:
+    x, y, z = balances
+    a = 1 - root3Alpha * root3Alpha * root3Alpha
+    b = -(x + y + z) * root3Alpha * root3Alpha
+    c = -(x * y + y * z + z * x) * root3Alpha
+    d = -x * y * z
+    assert a > 0 and b < 0 and c <= 0 and d <= 0
+    return a, -b, -c, -d
 
 
 def maxOtherBalances(balances: List[D]) -> List[int]:
