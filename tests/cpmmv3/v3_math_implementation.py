@@ -111,6 +111,7 @@ def invariantErrorsInAssets(l, balances: Iterable, root3Alpha):
 
     return x1 - x, y1 - y, z1 - z
 
+
 def invariantFunctionsFloat(balances: Iterable[D], root3Alpha: D) -> tuple[Callable, Callable]:
     a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
     def f(l):
@@ -118,12 +119,12 @@ def invariantFunctionsFloat(balances: Iterable[D], root3Alpha: D) -> tuple[Calla
         # To prevent catastrophic elimination. Note this makes a BIG difference ito f values, but not ito computed l
         # values.
         res = ((a * l - mb) * l - mc) * l - md
-        print(f" f({l})".ljust(22) + f"= {res}")  # DEBUG OUTPUT
+        # print(f" f({l})".ljust(22) + f"= {res}")  # DEBUG OUTPUT
         return res
     def df(l):
         # res = 3 * a * l**2 - 2 * mb * l - mc
         res = (3 * a * l - 2 * mb) * l - mc
-        print(f"df({l})".ljust(22) + f"= {res}")  # DEBUG OUTPUT
+        # print(f"df({l})".ljust(22) + f"= {res}")  # DEBUG OUTPUT
         return res
     return f, df
 
