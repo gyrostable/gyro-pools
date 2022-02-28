@@ -11,7 +11,7 @@ from tests.support.utils import scale, to_decimal
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
+billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 
 # this is a multiplicative separation
 # This is consistent with tightest price range of 0.9999 - 1.0001
@@ -205,7 +205,7 @@ def test_calc_in_given_out(
         to_decimal(balances[1]),
         to_decimal(amount_out),
         to_decimal(virtual_param_in),
-        to_decimal(virtual_param_out)
+        to_decimal(virtual_param_out),
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -220,7 +220,7 @@ def test_calc_in_given_out(
             scale(balances[1]),
             scale(amount_out),
             scale(virtual_param_in),
-            scale(virtual_param_out)
+            scale(virtual_param_out),
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -229,7 +229,7 @@ def test_calc_in_given_out(
                 scale(balances[1]),
                 scale(amount_out),
                 scale(virtual_param_in),
-                scale(virtual_param_out)
+                scale(virtual_param_out),
             )
         return
     else:
@@ -239,7 +239,7 @@ def test_calc_in_given_out(
                 scale(balances[1]),
                 scale(amount_out),
                 scale(virtual_param_in),
-                scale(virtual_param_out)
+                scale(virtual_param_out),
             )
         return
 
@@ -277,7 +277,7 @@ def test_calc_out_given_in(
         to_decimal(balances[1]),
         to_decimal(amount_in),
         to_decimal(virtual_param_in),
-        to_decimal(virtual_param_out)
+        to_decimal(virtual_param_out),
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
@@ -286,14 +286,28 @@ def test_calc_out_given_in(
     else:
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
-    if out_amount <= to_decimal("0.3") * balances[1] and within_bal_ratio:
+    if (
+        out_amount <= to_decimal("0.3") * balances[1]
+        and within_bal_ratio
+        and out_amount >= 0
+    ):
         out_amount_sol = gyro_two_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_in),
             scale(virtual_param_in),
-            scale(virtual_param_out)
+            scale(virtual_param_out),
         )
+    elif out_amount < 0:
+        with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
+            gyro_two_math_testing.calcOutGivenIn(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_in),
+                scale(virtual_param_in),
+                scale(virtual_param_out),
+            )
+        return
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_two_math_testing.calcOutGivenIn(
@@ -301,7 +315,7 @@ def test_calc_out_given_in(
                 scale(balances[1]),
                 scale(amount_in),
                 scale(virtual_param_in),
-                scale(virtual_param_out)
+                scale(virtual_param_out),
             )
         return
     else:
@@ -311,7 +325,7 @@ def test_calc_out_given_in(
                 scale(balances[1]),
                 scale(amount_in),
                 scale(virtual_param_in),
-                scale(virtual_param_out)
+                scale(virtual_param_out),
             )
         return
 

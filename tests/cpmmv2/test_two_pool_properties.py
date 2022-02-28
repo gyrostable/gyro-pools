@@ -400,7 +400,11 @@ def mtest_invariant_across_calcOutGivenIn(
     else:
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
-    if out_amount <= to_decimal("0.3") * balances[1] and within_bal_ratio:
+    if (
+        out_amount <= to_decimal("0.3") * balances[1]
+        and within_bal_ratio
+        and out_amount >= 0
+    ):
         out_amount_sol = gyro_two_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
@@ -408,6 +412,16 @@ def mtest_invariant_across_calcOutGivenIn(
             scale(virtual_param_in),
             scale(virtual_param_out),
         )
+    elif out_amount < 0:
+        with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
+            gyro_two_math_testing.calcOutGivenIn(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_in),
+                scale(virtual_param_in),
+                scale(virtual_param_out),
+            )
+        return
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_two_math_testing.calcOutGivenIn(

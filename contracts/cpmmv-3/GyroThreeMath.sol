@@ -181,34 +181,6 @@ library GyroThreeMath {
         deltaAbs = (deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus);
     }
 
-    // TODO KILLME
-    // Ensures balances[i] >= balances[j], balances[k] and i, j, k are pairwise distinct. Like sorting minus one
-    // comparison. In particular, the 0th entry will be the maximum
-    function maxOtherBalances(uint256[] memory balances) internal pure returns (uint8[] memory indices) {
-        indices = new uint8[](3);
-        if (balances[0] >= balances[1]) {
-            if (balances[0] >= balances[2]) {
-                indices[0] = 0;
-                indices[1] = 1;
-                indices[2] = 2;
-            } else {
-                indices[0] = 2;
-                indices[1] = 0;
-                indices[2] = 1;
-            }
-        } else {
-            if (balances[1] >= balances[2]) {
-                indices[0] = 1;
-                indices[1] = 0;
-                indices[2] = 2;
-            } else {
-                indices[0] = 2;
-                indices[1] = 1;
-                indices[2] = 0;
-            }
-        }
-    }
-
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
      * current balances and weights.
      * Changed signs compared to original algorithm to account for amountOut < 0.
@@ -242,6 +214,7 @@ library GyroThreeMath {
             amountOut = virtOut.sub(subtrahend);
         }
 
+        _require(amountOut < balanceOut, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
         if (balOutNew >= balInNew) {
@@ -295,7 +268,7 @@ library GyroThreeMath {
         if (balOutNew >= balInNew) {
             _require(balInNew.divDown(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
-            _require(balOutNew.divDown( balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(balOutNew.divDown(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);

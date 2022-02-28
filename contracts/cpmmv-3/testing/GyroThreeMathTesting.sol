@@ -124,8 +124,4 @@ contract GyroThreeMathTesting {
     function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
         return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
     }
-
-    function maxOtherBalances(uint256[] memory balances) external pure returns (uint8[] memory) {
-        return GyroThreeMath.maxOtherBalances(balances);
-    }
 }
