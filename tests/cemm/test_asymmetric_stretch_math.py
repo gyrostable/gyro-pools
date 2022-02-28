@@ -1,22 +1,19 @@
-import functools
+from decimal import Decimal
 from decimal import Decimal
 from math import pi, sin, cos
-from typing import Tuple
-from unicodedata import decimal
 
 import hypothesis.strategies as st
-from _pytest.python_api import ApproxDecimal
-
+import pytest
 # from pyrsistent import Invariant
 from brownie.test import given
-from brownie import reverts
-from hypothesis import assume, settings, event, example
-import pytest
+from hypothesis import assume, example
+
+from tests.support.util_common import BasicPoolParameters, gen_balances, gen_balances_vector
 from tests.cemm import cemm as mimpl
 from tests.cemm import util
-from tests.support.utils import scale, to_decimal, qdecimals, unscale
-from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.types import *
+from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
 billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
 
@@ -33,7 +30,7 @@ MIN_FEE = D("0.0002")
 DP_IN_SOL = False
 
 
-bpool_params = util.Basic_Pool_Parameters(
+bpool_params = BasicPoolParameters(
     MIN_PRICE_SEPARATION, MAX_IN_RATIO, MAX_OUT_RATIO, MIN_BALANCE_RATIO, MIN_FEE
 )
 
@@ -66,7 +63,7 @@ def gen_params(draw):
 def gen_params_cemm_dinvariant(draw):
     params = draw(gen_params())
     mparams = util.params2MathParams(params)
-    balances = draw(util.gen_balances())
+    balances = draw(gen_balances(2, bpool_params))
     assume(balances[0] > 0 and balances[1] > 0)
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     dinvariant = draw(
@@ -79,12 +76,12 @@ def gen_params_cemm_dinvariant(draw):
 ################################################################################
 
 
-@given(params=gen_params(), t=util.gen_balances_vector())
+@given(params=gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulAinv(params, t, gyro_cemm_math_testing)
 
 
-@given(params=gen_params(), t=util.gen_balances_vector())
+@given(params=gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulA(params, t, gyro_cemm_math_testing)
 
@@ -116,7 +113,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
     util.mtest_maxBalances(params, invariant, gyro_cemm_math_testing)
 
 
-@given(params=gen_params(), balances=util.gen_balances())
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
     invariant_py, invariant_sol = util.mtest_calculateInvariant(
         params, balances, DP_IN_SOL, gyro_cemm_math_testing
@@ -129,7 +126,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
     )
 
 
-@given(params=gen_params(), balances=util.gen_balances())
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calculatePrice(params, balances, gyro_cemm_math_testing):
     assume(balances != (0, 0))
     price_py, price_sol = util.mtest_calculatePrice(
@@ -166,7 +163,7 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
 @pytest.mark.skip(reason="Imprecision error to fix")
 @given(
     params=gen_params(),
-    balances=util.gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
@@ -192,7 +189,7 @@ def test_calcOutGivenIn(
 @pytest.mark.skip(reason="Imprecision error to fix")
 @given(
     params=gen_params(),
-    balances=util.gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountOut=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )

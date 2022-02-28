@@ -14,7 +14,8 @@ from toolz import groupby, first, second, valmap
 
 from tests.cemm import util
 from tests.cemm import test_cemm_properties
-from tests.cemm.util import gen_params, gen_balances
+from tests.cemm.util import gen_params
+from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams
 from tests.support.utils import qdecimals
@@ -22,6 +23,7 @@ from tests.support.utils import qdecimals
 error_values: Union[None, list[dict]]  # None means disabled.
 error_values = None
 
+bpool_params = BasicPoolParameters(min_balance_ratio=D('1e-5'))  # Almost a dummy
 
 def push_error_values(row: dict):
     global error_values
@@ -32,7 +34,7 @@ def push_error_values(row: dict):
 @settings(max_examples=1_000)
 @given(
     params=gen_params(),
-    balances=gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )

@@ -11,42 +11,23 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.validateParams(params);
     }
 
-    function validateDerivedParams(
-        GyroCEMMMath.Params memory params,
-        GyroCEMMMath.DerivedParams memory derived
-    ) external pure {
+    function validateDerivedParams(GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory derived) external pure {
         GyroCEMMMath.validateDerivedParams(params, derived);
     }
 
-    function scalarProdUp(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2)
-        external
-        pure
-        returns (int256 ret)
-    {
+    function scalarProdUp(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2) external pure returns (int256 ret) {
         ret = GyroCEMMMath.scalarProdUp(t1, t2);
     }
 
-    function scalarProdDown(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2)
-        external
-        pure
-        returns (int256 ret)
-    {
+    function scalarProdDown(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2) external pure returns (int256 ret) {
         ret = GyroCEMMMath.scalarProdDown(t1, t2);
     }
 
-    function mulAinv(GyroCEMMMath.Params memory params, GyroCEMMMath.Vector2 memory t)
-        external
-        pure
-        returns (GyroCEMMMath.Vector2 memory tp)
-    {
+    function mulAinv(GyroCEMMMath.Params memory params, GyroCEMMMath.Vector2 memory t) external pure returns (GyroCEMMMath.Vector2 memory tp) {
         tp = GyroCEMMMath.mulAinv(params, t);
     }
 
-    function mulA(GyroCEMMMath.Params memory params, GyroCEMMMath.Vector2 memory tp)
-        external
-        pure
-        returns (GyroCEMMMath.Vector2 memory t)
-    {
+    function mulA(GyroCEMMMath.Params memory params, GyroCEMMMath.Vector2 memory tp) external pure returns (GyroCEMMMath.Vector2 memory t) {
         t = GyroCEMMMath.mulA(params, tp);
     }
 
@@ -54,11 +35,7 @@ contract GyroCEMMMathTesting {
         pxc = GyroCEMMMath.zeta(params, px);
     }
 
-    function tau(GyroCEMMMath.Params memory params, int256 px)
-        external
-        pure
-        returns (GyroCEMMMath.Vector2 memory tpp)
-    {
+    function tau(GyroCEMMMath.Params memory params, int256 px) external pure returns (GyroCEMMMath.Vector2 memory tpp) {
         tpp = GyroCEMMMath.tau(params, px);
     }
 
@@ -70,11 +47,7 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.tau(params, px, sqrt);
     }
 
-    function mkDerivedParams(GyroCEMMMath.Params memory params)
-        external
-        pure
-        returns (GyroCEMMMath.DerivedParams memory derived)
-    {
+    function mkDerivedParams(GyroCEMMMath.Params memory params) external pure returns (GyroCEMMMath.DerivedParams memory derived) {
         derived = GyroCEMMMath.mkDerivedParams(params);
     }
 
@@ -110,19 +83,11 @@ contract GyroCEMMMathTesting {
         ret = GyroCEMMMath.chi(params, derived);
     }
 
-    function solveQuadraticPlus(GyroCEMMMath.QParams memory qparams)
-        external
-        pure
-        returns (int256 x)
-    {
+    function solveQuadraticPlus(GyroCEMMMath.QParams memory qparams) external pure returns (int256 x) {
         x = GyroCEMMMath.solveQuadraticPlus(qparams);
     }
 
-    function solveQuadraticMinus(GyroCEMMMath.QParams memory qparams)
-        external
-        pure
-        returns (int256 x)
-    {
+    function solveQuadraticMinus(GyroCEMMMath.QParams memory qparams) external pure returns (int256 x) {
         x = GyroCEMMMath.solveQuadraticMinus(qparams);
     }
 
@@ -161,14 +126,7 @@ contract GyroCEMMMathTesting {
         GyroCEMMMath.DerivedParams memory derived,
         uint256 uinvariant
     ) external pure returns (uint256 amountOut) {
-        amountOut = GyroCEMMMath.calcOutGivenIn(
-            balances,
-            amountIn,
-            tokenInIsToken0,
-            params,
-            derived,
-            uinvariant
-        );
+        amountOut = GyroCEMMMath.calcOutGivenIn(balances, amountIn, tokenInIsToken0, params, derived, uinvariant);
     }
 
     function calcInGivenOut(
@@ -179,14 +137,7 @@ contract GyroCEMMMathTesting {
         GyroCEMMMath.DerivedParams memory derived,
         uint256 uinvariant
     ) external pure returns (uint256 amountIn) {
-        amountIn = GyroCEMMMath.calcInGivenOut(
-            balances,
-            amountOut,
-            tokenInIsToken0,
-            params,
-            derived,
-            uinvariant
-        );
+        amountIn = GyroCEMMMath.calcInGivenOut(balances, amountOut, tokenInIsToken0, params, derived, uinvariant);
     }
 
     function calcYGivenX(
@@ -213,12 +164,7 @@ contract GyroCEMMMathTesting {
         uint256[] memory deltaBalances,
         bool isIncreaseLiq
     ) external pure returns (uint256 unewInvariant) {
-        unewInvariant = GyroCEMMMath.liquidityInvariantUpdate(
-            balances,
-            uinvariant,
-            deltaBalances,
-            isIncreaseLiq
-        );
+        unewInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, uinvariant, deltaBalances, isIncreaseLiq);
     }
 
     function _calcAllTokensInGivenExactBptOut(
@@ -244,13 +190,6 @@ contract GyroCEMMMathTesting {
         uint256 protocolSwapFeePerc,
         uint256 protocolFeeGyroPortion
     ) external pure returns (uint256, uint256) {
-        return
-            GyroPoolMath._calcProtocolFees(
-                previousInvariant,
-                currentInvariant,
-                currentBptSupply,
-                protocolSwapFeePerc,
-                protocolFeeGyroPortion
-            );
+        return GyroPoolMath._calcProtocolFees(previousInvariant, currentInvariant, currentBptSupply, protocolSwapFeePerc, protocolFeeGyroPortion);
     }
 }

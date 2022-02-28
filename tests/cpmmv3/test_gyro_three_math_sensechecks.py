@@ -5,28 +5,31 @@ from brownie import reverts  # type: ignore
 from brownie.test import given
 from hypothesis import assume
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
-
+MAX_ALPHA=D("0.99996")
 
 def triple_uniform_integers(min_value=0, max_value=1_000_000_000):
     g = st.integers(min_value=min_value, max_value=max_value)
     return st.tuples(g, g, g)
 
 
-def gen_balances():
-    return st.tuples(
-        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-    )
+bpool_params = BasicPoolParameters(
+    min_price_separation=D(1)/MAX_ALPHA - MAX_ALPHA,
+    max_out_ratio=D('0.3'),
+    max_in_ratio=D('0.3'),
+    min_balance_ratio=D('1e-5'),
+    min_fee=D('0.0001')
+)
 
 
 def gen_root3Alpha():
-    return qdecimals(min_value="0.9", max_value="0.99996")
+    return qdecimals(min_value="0.9", max_value=MAX_ALPHA)
 
 
 @given(
-    balances=gen_balances(),
+    balances=gen_balances(3, bpool_params),
     root3Alpha=gen_root3Alpha(),
     addl_balances=triple_uniform_integers(500_000_000),
 )
@@ -210,7 +213,7 @@ def test_InOut_inverse(gyro_three_math_testing):
 
 
 @given(
-    balances=gen_balances(),
+    balances=gen_balances(3, bpool_params),
     root3Alpha=gen_root3Alpha(),
     amountIn=qdecimals(min_value=0, max_value=500_000),
     ixIn=st.integers(0, 2),

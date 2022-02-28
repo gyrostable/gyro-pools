@@ -1,6 +1,4 @@
-from contextlib import contextmanager
 from math import pi, sin, cos, tan, acos
-from unicodedata import decimal
 
 from hypothesis import strategies as st, assume, event
 
@@ -9,13 +7,14 @@ from brownie import reverts
 from tests.cemm import cemm as mimpl
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams, CEMMMathDerivedParams, Vector2
+from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
 MIN_PRICE_SEPARATION = D("0.001")
 
-
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
-
+bpool_params = BasicPoolParameters(
+    MIN_PRICE_SEPARATION, D('0.3'), D('0.3'), D('1E-5'), D('0.0001')
+)
 
 def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
     """The python math implementation is a bit older and uses its own data structures. This function converts."""
@@ -26,17 +25,6 @@ def mathParams2DerivedParams(mparams: mimpl.Params) -> CEMMMathDerivedParams:
     return CEMMMathDerivedParams(
         tauAlpha=Vector2(*mparams.tau_alpha), tauBeta=Vector2(*mparams.tau_beta)
     )
-
-
-class Basic_Pool_Parameters:
-    def __init__(
-        self, mps: decimal, mir: decimal, mor: decimal, mbr: decimal, mf: decimal
-    ):
-        self.min_price_separation = mps
-        self.max_in_ratio = mir
-        self.max_out_ratio = mor
-        self.min_balance_ratio = mbr
-        self.min_fee = mf
 
 
 @st.composite
@@ -61,28 +49,11 @@ def gen_params(draw):
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
-def gen_balances_raw():
-    return st.tuples(billion_balance_strategy, billion_balance_strategy)
-
-
-@st.composite
-def gen_balances(draw):
-    balances = draw(gen_balances_raw())
-    assume(balances[0] > 0 and balances[1] > 0)
-    assume(balances[0] / balances[1] > 1e-5)
-    assume(balances[1] / balances[0] > 1e-5)
-    return balances
-
-
-def gen_balances_vector():
-    return gen_balances().map(lambda args: Vector2(*args))
-
-
 @st.composite
 def gen_params_cemm_dinvariant(draw):
     params = draw(gen_params())
     mparams = params2MathParams(params)
-    balances = draw(gen_balances())
+    balances = draw(gen_balances(2, bpool_params))
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     dinvariant = draw(
         qdecimals(-cemm.r.raw, 2 * cemm.r.raw)
@@ -587,29 +558,12 @@ def mtest_liquidityInvariantUpdateEquivalence(
     assert dy == (dinvariant / r * cemm.y).approxed(abs=1e-5)
 
 
-@contextmanager
-def debug_postmortem_on_exc(use_pdb=True):
-    """When use_pdb is True, enter the debugger if an exception is raised."""
-    try:
-        yield
-    except Exception as e:
-        if not use_pdb:
-            raise
-        import sys
-        import traceback
-        import pdb
-
-        info = sys.exc_info()
-        traceback.print_exception(*info)
-        pdb.post_mortem(info[2])
-
-
 #####################################################################
 ### for testing invariant changes across swaps
 
 
 def faulty_params(
-    balances, params: CEMMMathParams, bpool_params: Basic_Pool_Parameters
+    balances, params: CEMMMathParams, bpool_params: BasicPoolParameters
 ):
     balances = [to_decimal(b) for b in balances]
     if balances[0] == 0 and balances[1] == 0:
