@@ -1,7 +1,7 @@
 from tests.support.quantized_decimal import QuantizedDecimal as D
 import pytest
 
-from tests.support.types import TwoPoolBaseParams, TwoPoolParams
+from tests.support.types import TwoPoolBaseParams, TwoPoolParams, ThreePoolParams
 
 TOKENS_PER_USER = 1000 * 10**18
 
@@ -38,13 +38,15 @@ def gyro_three_math_testing(admin, GyroThreeMathTesting):
 def mock_gyro_config(admin, MockGyroConfig):
     return admin.deploy(MockGyroConfig)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def gyro_erc20_empty(admin, SimpleERC20):
     return (admin.deploy(SimpleERC20), admin.deploy(SimpleERC20))
 
+@pytest.fixture
+def gyro_erc20_empty3(admin, SimpleERC20):
+    return tuple(admin.deploy(SimpleERC20) for _ in range(3))
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def gyro_erc20_funded(admin, SimpleERC20, users):
     gyro_erc20_0 = admin.deploy(SimpleERC20)
     gyro_erc20_1 = admin.deploy(SimpleERC20)
@@ -60,24 +62,31 @@ def gyro_erc20_funded(admin, SimpleERC20, users):
     else:
         return (gyro_erc20_1, gyro_erc20_0)
 
+@pytest.fixture
+def gyro_erc20_funded3(admin, SimpleERC20, users):
+    npools = 3
+    gyro_erc20s = [admin.deploy(SimpleERC20) for _ in range(npools)]
+    for i in range(2):
+        for gyro_erc20 in gyro_erc20s:
+            gyro_erc20.mint(users[i], TOKENS_PER_USER)
+    gyro_erc20s.sort(key=lambda p: p.address.lower())
+    return tuple(gyro_erc20s)
+
 
 @pytest.fixture(scope="module")
 def authorizer(admin, Authorizer):
     return admin.deploy(Authorizer, admin)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def mock_vault(admin, MockVault, authorizer):
     return admin.deploy(MockVault, authorizer)
-
 
 @pytest.fixture(scope="module")
 def balancer_vault(admin, BalancerVault, SimpleERC20, authorizer):
     weth9 = admin.deploy(SimpleERC20)
     return admin.deploy(BalancerVault, authorizer.address, weth9.address, 0, 0)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def balancer_vault_pool(
     admin,
     GyroTwoPool,
@@ -107,8 +116,7 @@ def balancer_vault_pool(
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def mock_vault_pool(
     admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProcessor, mock_gyro_config
 ):
@@ -122,7 +130,7 @@ def mock_vault_pool(
             token1=gyro_erc20_funded[1].address,  # IERC20
             normalizedWeight0=D("0.6") * 10**18,  # uint256
             normalizedWeight1=D("0.4") * 10**18,  # uint256
-            swapFeePercentage=D(1) * 10**15,  # 0.5%
+            swapFeePercentage=D(1) * 10**15,
             pauseWindowDuration=0,  # uint256
             bufferPeriodDuration=0,  # uint256
             oracleEnabled=False,  # bool
@@ -132,6 +140,49 @@ def mock_vault_pool(
         sqrtBeta=D("1.02") * 10**18,  # uint256
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
+
+@pytest.fixture
+def mock_vault_pool3(
+    admin, GyroThreePool, gyro_erc20_funded3, mock_vault, QueryProcessor, mock_gyro_config
+):
+    admin.deploy(QueryProcessor)
+    args = ThreePoolParams(
+        vault=mock_vault.address,
+        name="GyroThreePool",  # string
+        symbol="G3P",  # string
+        tokens=[gyro_erc20_funded3[i].address for i in range(3)],
+        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
+        swapFeePercentage=D(1) * 10**15,
+        pauseWindowDuration=0,  # uint256
+        bufferPeriodDuration=0,  # uint256
+        owner=admin,  # address
+        root3Alpha=D("0.97") * 10**18,
+    )
+    return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
+
+@pytest.fixture
+def balancer_vault_pool3(
+    admin,
+    GyroThreePool,
+    gyro_erc20_funded3,
+    balancer_vault,
+    QueryProcessor,
+    mock_gyro_config,
+):
+    admin.deploy(QueryProcessor)
+    args = ThreePoolParams(
+        vault=balancer_vault.address,
+        name="GyroThreePool",  # string
+        symbol="G3P",  # string
+        tokens=[gyro_erc20_funded3[i].address for i in range(3)],
+        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
+        swapFeePercentage=D(1) * 10**15,
+        pauseWindowDuration=0,  # uint256
+        bufferPeriodDuration=0,  # uint256
+        owner=admin,  # address
+        root3Alpha=D("0.97") * 10**18,
+    )
+    return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
 
 
 @pytest.fixture(scope="module")

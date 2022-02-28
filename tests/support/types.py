@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 from tests.support.quantized_decimal import DecimalLike
 
@@ -15,7 +15,7 @@ class CallJoinPoolGyroParams(NamedTuple):
     poolId: bytes
     sender: address
     recipient: address
-    currentBalances: int
+    currentBalances: Tuple[int, ...]
     lastChangeBlock: int
     protocolSwapFeePercentage: int
     amountIn: int
@@ -53,6 +53,20 @@ class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     sqrtAlpha: DecimalLike  # should already be upscaled
     sqrtBeta: DecimalLike  # Should already be upscaled
+
+
+class ThreePoolParams(NamedTuple):
+    vault: str
+    name: str
+    symbol: str
+    tokens: list[str]
+    root3Alpha: DecimalLike
+    assetManagers: list[str]  # Usually all zero addresses
+    swapFeePercentage: DecimalLike
+    pauseWindowDuration: DecimalLike
+    bufferPeriodDuration: DecimalLike
+    owner: str
+    # configAddress listed separately
 
 
 class CEMMMathParams(NamedTuple):

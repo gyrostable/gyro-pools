@@ -72,9 +72,13 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
 
-        _require(root3Alpha < 1, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+        _require(root3Alpha < FixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
         _root3Alpha = root3Alpha;
         gyroConfig = IGyroConfig(configAddress);
+    }
+
+    function getRoot3Alpha() external view returns (uint256) {
+        return _root3Alpha;
     }
 
     // We don't support weights at the moment; in other words, all tokens are always weighted equally and thus their

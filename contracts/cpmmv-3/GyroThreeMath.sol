@@ -139,8 +139,9 @@ library GyroThreeMath {
                 return rootEst;
             if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {
                 // stalled
-                // Move one more step to the left to ensure we're underestimating, rather than overestimating, L
-                return rootEst - deltaAbs;
+                // Move one more step to the left to ensure we're not definitely overestimating L.
+                // (we might still overestimate L by a small amount in some parameter settings)
+                return rootEst - 2 * deltaAbs;
             }
             deltaAbsPrev = deltaAbs;
             if (deltaIsPos) rootEst = rootEst.add(deltaAbs);
