@@ -72,20 +72,15 @@ def calculateInvariantNewton(
 
         # Compute derived values for comparison:
         # TESTING only; could base the exit condition on this if I really wanted
-        gamma = l ** 2 / ((x + l * alpha1) * (y + l * alpha1))  # 3√(px py)
-        px = (z + l * alpha1) / (x + l * alpha1)
-        py = (z + l * alpha1) / (y + l * alpha1)
-        x1 = l * (gamma / px - alpha1)
-        y1 = l * (gamma / py - alpha1)
-        z1 = l * (gamma - alpha1)
+        dx, dy, dz = invariantErrorsInAssets(l, balances, alpha1)
 
-        log.append(dict(l=l, delta=delta, f_l=f_l, dx=x1 - x, dy=y1 - y, dz=z1 - z))
+        log.append(dict(l=l, delta=delta, f_l=f_l, dx=dx, dy=dy, dz=dz))
 
         # if abs(f_l) < prec_convergence:
         if (
-            abs(x - x1) < prec_convergence
-            and abs(y - y1) < prec_convergence
-            and abs(z - z1) < prec_convergence
+            abs(dx) < prec_convergence
+            and abs(dy) < prec_convergence
+            and abs(dz) < prec_convergence
         ):
             return l, log
         df_l = a * 3 * l ** 2 + b * 2 * l + c
@@ -98,6 +93,21 @@ def calculateInvariantNewton(
 
         l -= delta
         delta_pre = delta
+
+def invariantErrorsInAssets(l, balances: Iterable, root3Alpha):
+    """Error of l measured in assets. This is ONE way to do it.
+
+    Type agnostic: Pass D to get D calculations or float to get float calculations."""
+    x, y, z = balances
+
+    gamma = l ** 2 / ((x + l * root3Alpha) * (y + l * root3Alpha))  # 3√(px py)
+    px = (z + l * root3Alpha) / (x + l * root3Alpha)
+    py = (z + l * root3Alpha) / (y + l * root3Alpha)
+    x1 = l * (gamma / px - root3Alpha)
+    y1 = l * (gamma / py - root3Alpha)
+    z1 = l * (gamma - root3Alpha)
+
+    return x1 - x, y1 - y, z1 - z
 
 def invariantFunctionsFloat(balances: Iterable[D], root3Alpha: D) -> tuple[Callable, Callable]:
     a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
