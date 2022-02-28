@@ -158,21 +158,12 @@ library GyroThreeMath {
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
         // We aim to, when in doubt, overestimate the step in the negative direction and in absolute value.
-        // Subtraction does not underflow since rootEst >> 0 by assumption.
+        // Subtraction does not underflow since rootEst is chosen so that it's always above the (only) local minimum.
         uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
-        // We know that a rootEst^2 / dfRootEst ~ 1. (this is pretty exact actually, see the Mathematica notebook). We use this
-        // multiplication order to prevent overflows that can otherwise occur when computing l^3 for very large
-        // reserves.
-        // uint256 deltaMinus = rootEst.mulUp(rootEst).mulUp(a);
-        // deltaMinus = deltaMinus.divUp(dfRootEst).mulUp(rootEst);
-        // EXPERIMENTAL for higher accuracy?:
+        // Note: We know that a rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
         uint256 deltaMinus = rootEst.mulUp(rootEst).mulUp(rootEst);
         deltaMinus = deltaMinus.mulUp(a).divUp(dfRootEst);
 
-        // The order of operations is chosen to prevent overflows for very large numbers.
-        // uint256 deltaPlus = mb.mulUp(rootEst).add(mc).divUp(dfRootEst);
-        // deltaPlus = deltaPlus.mulUp(rootEst).add(md.divUp(dfRootEst));
-        // EXPERIMENTAL for higher accuracy?:
         uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
         deltaPlus = deltaPlus.add(rootEst.mulDown(mc)).divDown(dfRootEst);
         deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
