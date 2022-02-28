@@ -97,6 +97,8 @@ def calculateInvariantNewton(
 def invariantErrorsInAssets(l, balances: Iterable, root3Alpha):
     """Error of l measured in assets. This is ONE way to do it.
 
+    We have invariantErrorsInAssets(l, ...) == 0 iff l is the correct invariant. But this scales differently.
+
     Type agnostic: Pass D to get D calculations or float to get float calculations."""
     x, y, z = balances
 
