@@ -156,7 +156,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 invariant
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
-        return GyroCEMMMath.calcInGivenOut(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+        return GyroCEMMMath.calcOutGivenIn(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
     }
 
     function _onSwapGivenOut(
@@ -168,7 +168,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 invariant
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
-        return GyroCEMMMath.calcOutGivenIn(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+        return GyroCEMMMath.calcInGivenOut(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
     }
 
     //Note: is public visibility ok for the following function?

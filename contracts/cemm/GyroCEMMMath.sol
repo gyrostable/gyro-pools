@@ -230,21 +230,23 @@ library GyroCEMMMath {
     /** Solve quadratic equation for the 'plus sqrt' solution
      *  qparams contains a,b,c coefficients defining the quadratic.
      *  Reverts if the equation has no solution or is actually linear (i.e., a==0)
-     *  This is used in invariant calculation for an underestimate */
+     *  This is used in invariant calculation for an underestimate
+     *  calculates (-b + sqrt(b^2-ac))/a, and so a->2a and c->2c vs standard quadratic formula */
     function solveQuadraticPlus(QParams memory qparams) internal pure returns (int256 x) {
-        int256 sqrt = qparams.b.mulDown(qparams.b).sub(4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c));
+        int256 sqrt = qparams.b.mulDown(qparams.b).sub(qparams.a.mulUp(qparams.c));
         sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
-        x = (-qparams.b).add(sqrt).divDown(2 * SignedFixedPoint.ONE.mulUp(qparams.a));
+        x = (-qparams.b).add(sqrt).divDown(qparams.a);
     }
 
     /** Solve quadratic equation for the 'minus sqrt' solution
      *  qparams contains a,b,c coefficients defining the quadratic
      *  This is used in swap calculations, where we want to underestimate the square root b/c we want to
-     *  overestimate new reserve balances (and so underestimate the swap out amount) */
+     *  overestimate new reserve balances (and so underestimate the swap out amount)
+     *  calculates (-b - sqrt(b^2-ac))/a, and so a->2a and c->2c vs standard quadratic formula */
     function solveQuadraticMinus(QParams memory qparams) internal pure returns (int256 x) {
-        int256 sqrt = qparams.b.mulDown(qparams.b).sub(4 * SignedFixedPoint.ONE.mulUp(qparams.a).mulUp(qparams.c));
+        int256 sqrt = qparams.b.mulDown(qparams.b).sub(qparams.a.mulUp(qparams.c));
         sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
-        x = (-qparams.b).sub(sqrt).divDown(2 * SignedFixedPoint.ONE.mulUp(qparams.a));
+        x = (-qparams.b).sub(sqrt).divDown(qparams.a);
     }
 
     /** @dev Compute the invariant 'r' corresponding to the given values. The invariant can't be negative, but
@@ -271,9 +273,9 @@ library GyroCEMMMath {
         Vector2 memory vecAChi = mulA(params, chi(params, derived));
         QParams memory qparams;
         // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = (scalarProdUp(vecAChi, vecAChi).sub(SignedFixedPoint.ONE)).divUp(2 * SignedFixedPoint.ONE);
+        qparams.a = scalarProdUp(vecAChi, vecAChi).sub(SignedFixedPoint.ONE);
         qparams.b = -scalarProdDown(vecAt, vecAChi);
-        qparams.c = scalarProdUp(vecAt, vecAt).divUp(2 * SignedFixedPoint.ONE);
+        qparams.c = scalarProdUp(vecAt, vecAt);
         invariant = solveQuadraticPlus(qparams);
     }
 
@@ -410,11 +412,10 @@ library GyroCEMMMath {
         int256 lamBar = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
 
         // Convert Prop 14 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = (SignedFixedPoint.ONE.sub(lamBar.mulDown(params.s).mulDown(params.s))).divUp(2 * SignedFixedPoint.ONE);
+        qparams.a = SignedFixedPoint.ONE.sub(lamBar.mulDown(params.s).mulDown(params.s));
         qparams.b = params.s.mulUp(params.c).mulUp(lamBar).mulUp(x);
         qparams.c = SignedFixedPoint.ONE.sub(lamBar.mulUp(params.c).mulUp(params.c));
         qparams.c = (qparams.c.mulDown(x).mulDown(x)).sub(invariant.mulDown(invariant));
-        qparams.c = qparams.c.divUp(2 * SignedFixedPoint.ONE);
 
         y = solveQuadraticMinus(qparams);
         // shift back by the virtual offsets
@@ -434,11 +435,10 @@ library GyroCEMMMath {
         int256 lamBar = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
 
         // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = (SignedFixedPoint.ONE.sub(lamBar.mulDown(params.c).mulDown(params.c))).divUp(2 * SignedFixedPoint.ONE);
+        qparams.a = SignedFixedPoint.ONE.sub(lamBar.mulDown(params.c).mulDown(params.c));
         qparams.b = params.s.mulUp(params.c).mulUp(lamBar).mulUp(y);
         qparams.c = SignedFixedPoint.ONE.sub(lamBar.mulUp(params.s).mulUp(params.s));
         qparams.c = (qparams.c.mulDown(y).mulDown(y)).sub(invariant.mulDown(invariant));
-        qparams.c = qparams.c.divUp(2 * SignedFixedPoint.ONE);
 
         x = solveQuadraticMinus(qparams);
         // shift back by the virtual offsets
