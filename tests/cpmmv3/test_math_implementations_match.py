@@ -84,6 +84,19 @@ def gen_balances_raw():
 
 
 @st.composite
+def gen_balances(draw):
+    balances = draw(gen_balances_raw())
+    assume(balances[0] > 0 and balances[1] > 0 and balances[2] > 0)
+    if balances[0] > 0:
+        assume(min(balances[1], balances[2]) / balances[0] > MIN_BAL_RATIO)
+    if balances[1] > 0:
+        assume(min(balances[2], balances[0]) / balances[1] > MIN_BAL_RATIO)
+    if balances[2] > 0:
+        assume(min(balances[0], balances[1]) / balances[2] > MIN_BAL_RATIO)
+    return balances
+
+
+@st.composite
 def gen_params_in_given_out(draw):
     balances = draw(gen_balances_raw())
     assume(balances[0] > 0 and balances[1] > 0 and balances[2] > 0)
@@ -384,3 +397,83 @@ def test_calculate_invariant(
 
 #     assert to_decimal(protocol_fees_sol[0]) == scale(protocol_fees[0])
 #     assert to_decimal(protocol_fees_sol[1]) == scale(protocol_fees[1])
+
+
+@given(
+    balances=gen_balances(),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
+    rootEst=st.decimals(min_value="1", max_value="100000000000", places=4),
+)
+def test_isInvariantUnderestimated(
+    gyro_three_math_testing, balances, root_three_alpha, rootEst
+):
+    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
+    isUnder_py = math_implementation.isInvariantUnderestimated(a, mb, mc, md, rootEst)
+    isUnder_sol = gyro_three_math_testing.isInvariantUnderestimated(
+        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
+    )
+    assert isUnder_py == isUnder_sol
+
+
+@given(
+    balances=gen_balances(),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
+    # rootEst=st.decimals(min_value="1", max_value="100000000000", places=4),
+)
+def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
+    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
+    rootEst = math_implementation.calculateCubic(
+        a, mb, mc, md, root_three_alpha, balances
+    )
+    delta_abs, delta_is_pos = math_implementation.calcNewtonDelta(
+        a, mb, mc, md, rootEst
+    )
+    delta_abs_sol, delta_is_pos_sol = gyro_three_math_testing.calcNewtonDelta(
+        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
+    )
+
+    assert delta_abs == unscale(delta_abs_sol)
+    assert delta_is_pos == delta_is_pos_sol
+
+
+@given(
+    balances=gen_balances(),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
+)
+def test_finalIteration_1(gyro_three_math_testing, balances, root_three_alpha):
+    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
+    rootEst = math_implementation.calculateCubic(
+        a, mb, mc, md, root_three_alpha, balances
+    )
+
+    # assert math_implementation.isInvariantUnderestimated(a, mb, mc, md, rootEst)
+
+    L_py, isUnder_py = math_implementation.finalIteration(a, mb, mc, md, rootEst)
+    L_sol, isUnder_sol = gyro_three_math_testing.finalIteration(
+        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
+    )
+
+    assert L_py == unscale(L_sol)
+    assert isUnder_py == isUnder_sol
+
+
+@given(
+    balances=gen_balances(),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
+)
+def test_finalIteration_2(gyro_three_math_testing, balances, root_three_alpha):
+    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
+    rootEst = gyro_three_math_testing.calculateCubic(
+        scale(a), scale(mb), scale(mc), scale(md)
+    )
+    rootEst = unscale(rootEst)
+
+    # assert math_implementation.isInvariantUnderestimated(a, mb, mc, md, rootEst)
+
+    L_py, isUnder_py = math_implementation.finalIteration(a, mb, mc, md, rootEst)
+    L_sol, isUnder_sol = gyro_three_math_testing.finalIteration(
+        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
+    )
+
+    assert L_py == unscale(L_sol)
+    assert isUnder_py == isUnder_sol

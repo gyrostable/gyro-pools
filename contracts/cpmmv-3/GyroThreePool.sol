@@ -149,7 +149,9 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, uint256 virtualOffset) = _calculateCurrentValues();
+        (, bool isUnderestimate, uint256 virtualOffset) = _calculateCurrentValues();
+        // swap will revert if it is not shown to be an underestimate
+        _require(isUnderestimate, GyroThreePoolErrors.UNDERESTIMATE_INVARIANT_FAILED);
         return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
@@ -158,19 +160,29 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, uint256 virtualOffset) = _calculateCurrentValues();
+        (, bool isUnderestimate, uint256 virtualOffset) = _calculateCurrentValues();
+        // swap will revert if it is not shown to be an underestimate
+        _require(isUnderestimate, GyroThreePoolErrors.UNDERESTIMATE_INVARIANT_FAILED);
         return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
     /** @dev Calculate the invariant and the offset that takes real reserves to virtual reserves.
      * Note that, because our price bounds are symmetric, the offset is the same for the three assets.
      */
-    function _calculateCurrentValues() private view returns (uint256 invariant, uint256 virtualOffset) {
+    function _calculateCurrentValues()
+        private
+        view
+        returns (
+            uint256 invariant,
+            bool isUnderestimate,
+            uint256 virtualOffset
+        )
+    {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         _upscaleArray(balances, _scalingFactors());
 
         uint256 root3Alpha = _root3Alpha;
-        invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
+        (invariant, isUnderestimate) = GyroThreeMath._underestimateInvariant(balances, root3Alpha);
         virtualOffset = invariant.mulDown(root3Alpha);
     }
 
@@ -375,7 +387,13 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * @dev Returns the current value of the invariant.
      */
     function getInvariant() public view override returns (uint256 invariant) {
-        (invariant, ) = _calculateCurrentValues();
+        (invariant, , ) = _calculateCurrentValues();
+    }
+
+    /** @dev Returns false if a swap will revert b/c the invariant is not provably underestimated
+     *  This is highly unlikely to occur, but it is hard to prove */
+    function invariantUnderestimatedForSwap() public view returns (bool isUnderestimate) {
+        (, isUnderestimate, ) = _calculateCurrentValues();
     }
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)

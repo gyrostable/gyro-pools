@@ -2,6 +2,8 @@ from logging import warning
 from math import sqrt
 from typing import Iterable, List, Tuple, Callable
 
+from tests.support.utils import scale, to_decimal, unscale, qdecimals
+
 import numpy as np
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
@@ -14,6 +16,7 @@ prec_convergence = D("1E-18")
 def calculateInvariant(balances: Iterable[D], root3Alpha: D) -> D:
     (a, mb, mc, md) = calculateCubicTerms(balances, root3Alpha)
     return calculateCubic(a, mb, mc, md, root3Alpha, balances)
+
 
 def calculateCubicTerms(balances: Iterable[D], root3Alpha: D) -> tuple[D, D, D, D]:
     x, y, z = balances
@@ -94,6 +97,7 @@ def calculateInvariantNewton(
         l -= delta
         delta_pre = delta
 
+
 def invariantErrorsInAssets(l, balances: Iterable, root3Alpha):
     """Error of l measured in assets. This is ONE way to do it.
 
@@ -112,8 +116,11 @@ def invariantErrorsInAssets(l, balances: Iterable, root3Alpha):
     return x1 - x, y1 - y, z1 - z
 
 
-def invariantFunctionsFloat(balances: Iterable[D], root3Alpha: D) -> tuple[Callable, Callable]:
+def invariantFunctionsFloat(
+    balances: Iterable[D], root3Alpha: D
+) -> tuple[Callable, Callable]:
     a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
+
     def f(l):
         # res = a * l**3 - mb * l**2 - mc * l - md
         # To prevent catastrophic elimination. Note this makes a BIG difference ito f values, but not ito computed l
@@ -121,11 +128,13 @@ def invariantFunctionsFloat(balances: Iterable[D], root3Alpha: D) -> tuple[Calla
         res = ((a * l - mb) * l - mc) * l - md
         # print(f" f({l})".ljust(22) + f"= {res}")  # DEBUG OUTPUT
         return res
+
     def df(l):
         # res = 3 * a * l**2 - 2 * mb * l - mc
         res = (3 * a * l - 2 * mb) * l - mc
         # print(f"df({l})".ljust(22) + f"= {res}")  # DEBUG OUTPUT
         return res
+
     return f, df
 
 
@@ -142,25 +151,22 @@ def calculateInvariantAltFloatWithInfo(balances: Iterable[D], root3Alpha: D):
     a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
 
     # See CPMMV writeup, appendix A.1
-    l_m = mb / (3*a)
-    l_plus = l_m + sqrt(l_m**2 + mc)
+    l_m = mb / (3 * a)
+    l_plus = l_m + sqrt(l_m ** 2 + mc)
     l_0 = 1.5 * l_plus
 
     res = root_scalar(f, fprime=df, x0=l_0, rtol=1e-18, xtol=1e-18)
 
-    return dict(
-        root=res.root,
-        f=f,
-        root_results=res,
-        l_0=l_0
-    )
+    return dict(root=res.root, f=f, root_results=res, l_0=l_0)
 
 
 def calculateInvariantAltFloat(balances: Iterable[D], root3Alpha: D) -> float:
-    return calculateInvariantAltFloatWithInfo(balances, root3Alpha)['root']
+    return calculateInvariantAltFloatWithInfo(balances, root3Alpha)["root"]
 
 
-def calculateCubicTermsFloat(balances: Iterable[float], root3Alpha: float) -> tuple[float, float, float, float]:
+def calculateCubicTermsFloat(
+    balances: Iterable[float], root3Alpha: float
+) -> tuple[float, float, float, float]:
     x, y, z = balances
     a = 1 - root3Alpha * root3Alpha * root3Alpha
     b = -(x + y + z) * root3Alpha * root3Alpha
@@ -211,3 +217,37 @@ def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) 
     amountIn = virtIn.mul_up(virtOut).div_up(virtOut - amountOut) - virtIn
     # assert amountIn <= balanceIn * _MAX_IN_RATIO
     return amountIn
+
+
+def calcNewtonDelta(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
+    (a, mb, mc, md, rootEst) = (D(a), D(mb), D(mc), D(md), D(rootEst))
+    dfRootEst = rootEst * rootEst * (D(3) * a) - rootEst.mul_up(D(2) * mb) - mc
+
+    deltaMinus = rootEst.mul_up(rootEst).mul_up(rootEst).mul_up(a).div_up(dfRootEst)
+
+    deltaPlus = (rootEst * rootEst * mb + rootEst * mc) / dfRootEst + md / dfRootEst
+    if deltaPlus >= deltaMinus:
+        deltaAbs = deltaPlus - deltaMinus
+        deltaIsPos = True
+    else:
+        deltaAbs = deltaMinus - deltaPlus
+        deltaIsPos = False
+    return deltaAbs, deltaIsPos
+
+
+def finalIteration(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
+    (a, mb, mc, md, rootEst) = (D(a), D(mb), D(mc), D(md), D(rootEst))
+    if isInvariantUnderestimated(a, mb, mc, md, rootEst):
+        return (rootEst, True)
+    else:
+        (deltaAbs, deltaIsPos) = calcNewtonDelta(a, mb, mc, md, rootEst)
+        step = rootEst.mul_up(unscale(D("1e4")))
+        if step <= deltaAbs:
+            step = deltaAbs
+        rootEst = rootEst - step
+        return (rootEst, isInvariantUnderestimated(a, mb, mc, md, rootEst))
+
+
+def isInvariantUnderestimated(a: D, mb: D, mc: D, md: D, L: D) -> bool:
+    (a, mb, mc, md, L) = (D(a), D(mb), D(mc), D(md), D(L))
+    return L.mul_up(L).mul_up(L).mul_up(a) - L * L * mb - L * mc - md <= 0

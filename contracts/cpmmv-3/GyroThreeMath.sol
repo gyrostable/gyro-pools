@@ -58,6 +58,16 @@ library GyroThreeMath {
         return _calculateCubic(a, mb, mc, md);
     }
 
+    /** @dev This provides an underestimate of the invariant or else signals that a swap should revert
+     *  Not getting an underestimate is highly unlikely as 2* newton step should be sufficient, but this isn't provable
+     *  This gives an extra step to finding an underestimate but will revert swaps if it is not an underestimate
+     *  but liquidity can still be added and removed from the pool, which will change the pool state to something workable again */
+    function _underestimateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst, bool isUnder) {
+        (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
+        rootEst = _calculateCubic(a, mb, mc, md);
+        return _finalIteration(a, mb, mc, md, rootEst);
+    }
+
     /** @dev Prepares quadratic terms for input to _calculateCubic
      *  assumes a > 0, b < 0, c <= 0, and d <= 0 and returns a, -b, -c, -d
      *  terms come from cubic in Section 3.1.1
@@ -141,7 +151,7 @@ library GyroThreeMath {
                 // stalled
                 // Move one more step to the left to ensure we're not definitely overestimating L.
                 // (we might still overestimate L by a small amount in some parameter settings)
-                return rootEst - 2 * deltaAbs;
+                return rootEst.sub(2 * deltaAbs);
             }
             deltaAbsPrev = deltaAbs;
             if (deltaIsPos) rootEst = rootEst.add(deltaAbs);
@@ -170,11 +180,49 @@ library GyroThreeMath {
         deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
 
         deltaIsPos = (deltaPlus >= deltaMinus);
-        deltaAbs = (deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus);
+        deltaAbs = (deltaIsPos ? deltaPlus.sub(deltaMinus) : deltaMinus.sub(deltaPlus));
+    }
+
+    /** @dev Check that rootEst is an underestimate and correct if not
+     *  The 'else' is highly unlikely to be ever called as 2* newton step should be sufficient, but this isn't provable
+     *  This provides a fallback in such a case */
+    function _finalIteration(
+        uint256 a,
+        uint256 mb,
+        uint256 mc,
+        uint256 md,
+        uint256 rootEst
+    ) internal pure returns (uint256, bool) {
+        if (_isInvariantUnderestimated(a, mb, mc, md, rootEst)) {
+            return (rootEst, true);
+        } else {
+            (uint256 deltaAbs, ) = _calcNewtonDelta(a, mb, mc, md, rootEst);
+            uint256 step = rootEst.mulUp(1e4); // 1e-14 relative error
+            step = step > deltaAbs ? step : deltaAbs;
+            rootEst = rootEst.sub(step);
+            return (rootEst, _isInvariantUnderestimated(a, mb, mc, md, rootEst));
+        }
+    }
+
+    /** @dev given estimate of L, calculates an overestimate of f(L) in the cubic equation
+     *  If the overestimate f(L) <= 0, then L is an underestimate of the invariant
+     *  Note that a is overestimated and mb, mc, md are underestimated as required in calculateCubicTerms*/
+    function _isInvariantUnderestimated(
+        uint256 a,
+        uint256 mb,
+        uint256 mc,
+        uint256 md,
+        uint256 rootEst
+    ) internal pure returns (bool isUnderestimated) {
+        uint256 fLSub = rootEst.mulDown(rootEst).mulDown(mb).add(rootEst.mulDown(mc)).add(md);
+        uint256 fLPos = rootEst.mulUp(rootEst).mulUp(rootEst).mulUp(a);
+        isUnderestimated = (fLPos <= fLSub);
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
      * current balances and weights.
+     * Given an underestimated invariant L, the virtual offset is underestimated, which means that price impacts are greater than for an exact L
+     * This combined with rounding directions ensures a swap is calculated in the pool's favor
      * Changed signs compared to original algorithm to account for amountOut < 0.
      * See Proposition 12 in 3.1.4.*/
     function _calcOutGivenIn(
@@ -222,6 +270,8 @@ library GyroThreeMath {
 
     /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
      * currhent balances and weights.
+     * Given an underestimated invariant L, the virtual offset is underestimated, which means that price impacts are greater than for an exact L
+     * This combined with rounding directions ensures a swap is calculated in the pool's favor
      * Similar to the one before but adapting bc negative values (amountOut would be negative).*/
     function _calcInGivenOut(
         uint256 balanceIn,

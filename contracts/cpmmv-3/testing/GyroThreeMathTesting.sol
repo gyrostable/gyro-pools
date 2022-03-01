@@ -12,6 +12,10 @@ contract GyroThreeMathTesting {
         return GyroThreeMath._calculateInvariant(balances, root3Alpha);
     }
 
+    function underestimateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256, bool) {
+        return GyroThreeMath._underestimateInvariant(balances, root3Alpha);
+    }
+
     function calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
         external
         pure
@@ -61,6 +65,26 @@ contract GyroThreeMathTesting {
         uint256 rootEst
     ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
         return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, rootEst);
+    }
+
+    function finalIteration(
+        uint256 a,
+        uint256 mb,
+        uint256 mc,
+        uint256 md,
+        uint256 rootEst
+    ) external pure returns (uint256, bool) {
+        return GyroThreeMath._finalIteration(a, mb, mc, md, rootEst);
+    }
+
+    function isInvariantUnderestimated(
+        uint256 a,
+        uint256 mb,
+        uint256 mc,
+        uint256 md,
+        uint256 rootEst
+    ) external pure returns (bool) {
+        return GyroThreeMath._isInvariantUnderestimated(a, mb, mc, md, rootEst);
     }
 
     function liquidityInvariantUpdate(

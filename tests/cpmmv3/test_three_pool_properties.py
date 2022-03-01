@@ -70,7 +70,7 @@ def test_invariant_sol_inv_below_py_inv(
     )
 
 
-@settings(max_examples=1_000)
+# @settings(max_examples=1_000)
 @given(
     balances=gen_balances(),
     root_three_alpha=gen_bounds(),
@@ -87,7 +87,7 @@ def test_sol_invariant_underestimated(
 # test calcInGivenOut for invariant change
 
 
-@settings(max_examples=1_000)
+# @settings(max_examples=1_000)
 @given(
     setup=gen_params_in_given_out(),
     root_three_alpha=st.decimals(
@@ -110,7 +110,7 @@ def test_invariant_across_calcInGivenOut(
 # test calcOutGivenIn for invariant change
 
 
-@settings(max_examples=1_000)
+# @settings(max_examples=1_000)
 @given(
     setup=gen_params_out_given_in(),
     root_three_alpha=st.decimals(
@@ -202,11 +202,11 @@ def mtest_invariant_across_calcInGivenOut(
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
-    invariant_sol = unscale(
-        gyro_three_math_testing.calculateInvariant(
-            scale(balances), scale(root_three_alpha)
-        )
+    invariant_sol, is_underestimate = gyro_three_math_testing.underestimateInvariant(
+        scale(balances), scale(root_three_alpha)
     )
+    invariant_sol = unscale(invariant_sol)
+    assert is_underestimate
 
     virtual_offset = invariant_sol * D(root_three_alpha)
 
@@ -294,11 +294,11 @@ def mtest_invariant_across_calcOutGivenIn(
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
-    invariant_sol = unscale(
-        gyro_three_math_testing.calculateInvariant(
-            scale(balances), scale(root_three_alpha)
-        )
+    invariant_sol, is_underestimate = gyro_three_math_testing.underestimateInvariant(
+        scale(balances), scale(root_three_alpha)
     )
+    invariant_sol = unscale(invariant_sol)
+    assert is_underestimate
 
     virtual_offset = invariant_sol * to_decimal(root_three_alpha)
 
