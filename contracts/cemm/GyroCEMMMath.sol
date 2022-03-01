@@ -115,19 +115,16 @@ library GyroCEMMMath {
     /** @dev Calculate A^{-1}t where A^{-1} is given in Section 2.2
      *  This is rotating and scaling the circle into the ellipse */
     function mulAinv(Params memory params, Vector2 memory t) internal pure returns (Vector2 memory tp) {
-        tp.x = params.c.mulDown(params.lambda).mulDown(t.x);
-        tp.x = tp.x.add(params.s.mulDown(t.y));
-        tp.y = (-params.s).mulDown(params.lambda).mulDown(t.x);
-        tp.y = tp.y.add(params.c.mulDown(t.y));
+        tp.x = t.x.mulDown(params.lambda).mulDown(params.c).add(params.s.mulDown(t.y));
+        tp.y = (-t.x.mulDown(params.lambda).mulDown(params.s)).add(params.c.mulDown(t.y));
     }
 
     /** @dev Calculate A t where A is given in Section 2.2
      *  This is reversing rotation and scaling of the ellipse (mapping back to circle) */
     function mulA(Params memory params, Vector2 memory tp) internal pure returns (Vector2 memory t) {
-        t.x = params.c.divDown(params.lambda).mulDown(tp.x);
-        t.x = t.x.sub(params.s.divDown(params.lambda).mulDown(tp.y));
-        t.y = params.s.mulDown(tp.x);
-        t.y = t.y.add(params.c.mulDown(tp.y));
+        t.x = params.c.mulDown(tp.x).divDown(params.lambda);
+        t.x = t.x.sub(params.s.mulDown(tp.y).divDown(params.lambda));
+        t.y = params.s.mulDown(tp.x).add(params.c.mulDown(tp.y));
     }
 
     /** @dev Given price px on the transformed ellipse, get the untransformed price pxc on the circle
