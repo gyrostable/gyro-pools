@@ -187,6 +187,44 @@ library GyroCEMMMath {
         ab.y = invariant.mulDown(mulAinv(params, derived.tauAlpha).y); // virtual offset b
     }
 
+    /** @dev Calculates a = r*(A^{-1}tau(beta))_x with optimal precision and rounding up in signed direction
+     *   TODO: correct for underestimate of r, in this case, mulUp/mulDown might not matter */
+    function virtualOffset0(
+        Params memory params,
+        DerivedParams memory derived,
+        int256 invariant
+    ) internal pure returns (int256 a) {
+        if (derived.tauBeta.x > 0) {
+            a = invariant.mulUp(params.lambda).mulUp(derived.tauBeta.x).mulUp(params.c);
+        } else {
+            a = invariant.mulDown(params.lambda).mulDown(derived.tauBeta.x).mulDown(params.c);
+        }
+        if (derived.tauBeta.y > 0) {
+            a = a.add(invariant.mulUp(params.s).mulUp(derived.tauBeta.y));
+        } else {
+            a = a.add(invariant.mulDown(params.s).mulDown(derived.tauBeta.y));
+        }
+    }
+
+    /** @dev Calculates b = r*(A^{-1}tau(alpha))_y with optimal precision and rounding up in signed direction
+        TODO: correct for underestiamte of r, in this case, mulUp/mulDown might not matter */
+    function virtualOffset1(
+        Params memory params,
+        DerivedParams memory derived,
+        int256 invariant
+    ) internal pure returns (int256 b) {
+        if (derived.tauAlpha.x < 0) {
+            b = invariant.mulUp(params.lambda).mulUp(-derived.tauAlpha.x).mulUp(params.s);
+        } else {
+            b = -invariant.mulDown(params.lambda).mulDown(derived.tauAlpha.x).mulDown(params.s);
+        }
+        if (derived.tauAlpha.y > 0) {
+            b = b.add(invariant.mulUp(params.c).mulUp(derived.tauAlpha.y));
+        } else {
+            b = b.add(invariant.mulDown(params.c).mulDown(derived.tauAlpha.y));
+        }
+    }
+
     /** @dev Maximal values for the real reserves x and y when the respective other balance is 0, for a given
      *  invariant.
      *  See calculation in Section 2.1.2 Computing reserve offsets
@@ -394,6 +432,51 @@ library GyroCEMMMath {
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
+    /** @dev Variables are named for calculating y given x
+     *  to calculate x given y, change x->y, s->c, c->s, b->a
+     *  TODO: account for error in b and thus also x-b */
+    function solveQuadraticSwap(
+        int256 lambda,
+        int256 x,
+        int256 s,
+        int256 c,
+        int256 r,
+        int256 b
+    ) internal pure returns (int256) {
+        // shift by the virtual offsets
+        x = x.sub(b);
+        Vector2 memory lamBar; // x component will round up, y will round down
+        lamBar.x = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(lambda).divDown(lambda);
+        lamBar.y = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divUp(lambda).divUp(lambda);
+        QParams memory qparams;
+        if (x > 0) {
+            qparams.b = -x.mulDown(lamBar.y).mulDown(s).mulDown(c);
+        } else {
+            qparams.b = (-x).mulUp(lamBar.x).mulUp(s).mulUp(c);
+        }
+        qparams.c = x.mulDown(x).mulDown(lamBar.y).mulDown(lamBar.y);
+        qparams.c = qparams.c.mulDown(s).mulDown(s).mulDown(c).mulDown(c);
+        // x component will round up, y will round down
+        Vector2 memory sTerm = Vector2(
+            SignedFixedPoint.ONE.sub(lamBar.y.mulDown(s).mulDown(s)),
+            SignedFixedPoint.ONE.sub(lamBar.x.mulUp(s).mulUp(s))
+        );
+        Vector2 memory cTerm = Vector2(
+            SignedFixedPoint.ONE.sub(lamBar.y.mulDown(c).mulDown(c)),
+            SignedFixedPoint.ONE.sub(lamBar.x.mulUp(c).mulUp(c))
+        );
+        qparams.c += r.mulDown(r).mulDown(sTerm.y);
+        qparams.c += -x.mulUp(x).mulUp(sTerm.x).mulUp(cTerm.x);
+        qparams.c = FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256();
+        // calculate the result in qparams.a
+        if (qparams.b - qparams.c > 0) {
+            qparams.a = (qparams.b - qparams.c).divUp(sTerm.y);
+        } else {
+            qparams.a = (qparams.b - qparams.c).divDown(sTerm.x);
+        }
+        return qparams.a + b;
+    }
+
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.
      *   See Prop 14 in section 2.2.2 Trade Execution */
     function calcYGivenX(
@@ -402,21 +485,8 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (int256 y) {
-        QParams memory qparams;
-        Vector2 memory ab = virtualOffsets(params, derived, invariant);
-        // shift by the virtual offsets
-        x = x.sub(ab.x);
-        int256 lamBar = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
-
-        // Convert Prop 14 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = SignedFixedPoint.ONE.sub(lamBar.mulDown(params.s).mulDown(params.s));
-        qparams.b = params.s.mulUp(params.c).mulUp(lamBar).mulUp(x);
-        qparams.c = SignedFixedPoint.ONE.sub(lamBar.mulUp(params.c).mulUp(params.c));
-        qparams.c = (qparams.c.mulDown(x).mulDown(x)).sub(invariant.mulDown(invariant));
-
-        y = solveQuadraticMinus(qparams);
-        // shift back by the virtual offsets
-        y = y.add(ab.y);
+        int256 b = virtualOffset1(params, derived, invariant);
+        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, b);
     }
 
     function calcXGivenY(
@@ -425,20 +495,8 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (int256 x) {
-        QParams memory qparams;
-        Vector2 memory ab = virtualOffsets(params, derived, invariant);
-        // shift by the virtual offsets
-        y = y.sub(ab.y);
-        int256 lamBar = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(params.lambda.mulDown(params.lambda));
-
-        // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = SignedFixedPoint.ONE.sub(lamBar.mulDown(params.c).mulDown(params.c));
-        qparams.b = params.s.mulUp(params.c).mulUp(lamBar).mulUp(y);
-        qparams.c = SignedFixedPoint.ONE.sub(lamBar.mulUp(params.s).mulUp(params.s));
-        qparams.c = (qparams.c.mulDown(y).mulDown(y)).sub(invariant.mulDown(invariant));
-
-        x = solveQuadraticMinus(qparams);
-        // shift back by the virtual offsets
-        x = x.add(ab.x);
+        int256 a = virtualOffset0(params, derived, invariant);
+        // change x->y, s->c, c->s, b->a vs calcYGivenX
+        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, a);
     }
 }
