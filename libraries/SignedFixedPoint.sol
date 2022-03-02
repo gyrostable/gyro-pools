@@ -16,11 +16,14 @@ pragma solidity ^0.7.0;
 
 import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
+import "@openzeppelin/contracts/utils/SafeCast.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 
 /// @dev Signed fixed point operations based on Balancer's FixedPoint library.
 library SignedFixedPoint {
+    using SafeCast for int256;
+
     int256 internal constant ONE = 1e18; // 18 decimal places
     int256 internal constant MAX_POW_RELATIVE_ERROR = 10000; // 10^(-14)
 
@@ -61,12 +64,78 @@ library SignedFixedPoint {
         // If product > 0, the result should be ceil(p/ONE) = floor((p-1)/ONE) + 1, where floor() is implicit. If
         // product < 0, the result should be floor(p/ONE) = ceil((p+1)/ONE) - 1, where ceil() is implicit.
         // Addition for signed numbers: Case selection so we round away from 0, not always up.
-        if (product > 0)
-            return ((product - 1) / ONE) + 1;
-        else if (product < 0)
-            return ((product + 1) / ONE) - 1;
-        else  // product == 0
-            return 0;
+        if (product > 0) return ((product - 1) / ONE) + 1;
+        else if (product < 0) return ((product + 1) / ONE) - 1;
+        // product == 0
+        else return 0;
+    }
+
+    /// @dev n-fold multiplication that rounds up in signed direction
+    function mulArrayUp(int256[] memory inputs) internal pure returns (int256 prod) {
+        int256 sign = 1;
+        for (uint256 i = 0; i < inputs.length; i++) {
+            if (inputs[i] < 0) {
+                sign = -sign;
+            }
+        }
+        prod = inputs[0];
+        if (sign > 0) {
+            for (uint256 i = 1; i < inputs.length; i++) {
+                prod = mulUp(prod, inputs[i]);
+            }
+        } else {
+            for (uint256 i = 1; i < inputs.length; i++) {
+                prod = mulDown(prod, inputs[i]);
+            }
+        }
+    }
+
+    /// @dev n-fold multiplication that rounds down in signed direction
+    function mulArrayDown(int256[] memory inputs) internal pure returns (int256 prod) {
+        int256 sign = 1;
+        for (uint256 i = 0; i < inputs.length; i++) {
+            if (inputs[i] < 0) {
+                sign = -sign;
+            }
+        }
+        prod = inputs[0];
+        if (sign < 0) {
+            for (uint256 i = 1; i < inputs.length; i++) {
+                prod = mulUp(prod, inputs[i]);
+            }
+        } else {
+            for (uint256 i = 1; i < inputs.length; i++) {
+                prod = mulDown(prod, inputs[i]);
+            }
+        }
+    }
+
+    function mulArrayXPrecUp(int256[] memory inputs) internal pure returns (int256 prod) {
+        prod = inputs[0];
+        for (uint256 i = 1; i < inputs.length; i++) {
+            int256 nextProd = prod * inputs[i];
+            _require(prod == 0 || nextProd / prod == inputs[i], Errors.MUL_OVERFLOW);
+            prod = nextProd;
+        }
+        if (prod > 0) {
+            prod = divUp(prod, int256(10)**(18 * (inputs.length - 1)));
+        } else {
+            prod = divDown(prod, int256(10)**(18 * (inputs.length - 1)));
+        }
+    }
+
+    function mulArrayXPrecDown(int256[] memory inputs) internal pure returns (int256 prod) {
+        prod = inputs[0];
+        for (uint256 i = 1; i < inputs.length; i++) {
+            int256 nextProd = prod * inputs[i];
+            _require(prod == 0 || nextProd / prod == inputs[i], Errors.MUL_OVERFLOW);
+            prod = nextProd;
+        }
+        if (prod < 0) {
+            prod = divUp(prod, int256(10)**(18 * (inputs.length - 1)));
+        } else {
+            prod = divDown(prod, int256(10)**(18 * (inputs.length - 1)));
+        }
     }
 
     /// @dev Rounds towards 0, i.e., down in absolute value.
@@ -93,10 +162,8 @@ library SignedFixedPoint {
             int256 aInflated = a * ONE;
             _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
 
-            if (aInflated > 0)
-                return ((aInflated - 1) / b) + 1;
-            else
-                return ((aInflated + 1) / b) - 1;
+            if (aInflated > 0) return ((aInflated - 1) / b) + 1;
+            else return ((aInflated + 1) / b) - 1;
         }
     }
 
@@ -138,8 +205,7 @@ library SignedFixedPoint {
      * prevents intermediate negative values.
      */
     function complement(int256 x) internal pure returns (int256) {
-        if (x >= ONE || x <= 0)
-            return 0;
+        if (x >= ONE || x <= 0) return 0;
         return ONE - x;
     }
 }
