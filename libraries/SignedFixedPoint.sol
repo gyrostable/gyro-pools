@@ -16,14 +16,11 @@ pragma solidity ^0.7.0;
 
 import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
-import "@openzeppelin/contracts/utils/SafeCast.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 
 /// @dev Signed fixed point operations based on Balancer's FixedPoint library.
 library SignedFixedPoint {
-    using SafeCast for int256;
-
     int256 internal constant ONE = 1e18; // 18 decimal places
     int256 internal constant MAX_POW_RELATIVE_ERROR = 10000; // 10^(-14)
 
@@ -110,32 +107,9 @@ library SignedFixedPoint {
         }
     }
 
-    function mulArrayXPrecUp(int256[] memory inputs) internal pure returns (int256 prod) {
-        prod = inputs[0];
-        for (uint256 i = 1; i < inputs.length; i++) {
-            int256 nextProd = prod * inputs[i];
-            _require(prod == 0 || nextProd / prod == inputs[i], Errors.MUL_OVERFLOW);
-            prod = nextProd;
-        }
-        if (prod > 0) {
-            prod = divUp(prod, int256(10)**(18 * (inputs.length - 1)));
-        } else {
-            prod = divDown(prod, int256(10)**(18 * (inputs.length - 1)));
-        }
-    }
-
-    function mulArrayXPrecDown(int256[] memory inputs) internal pure returns (int256 prod) {
-        prod = inputs[0];
-        for (uint256 i = 1; i < inputs.length; i++) {
-            int256 nextProd = prod * inputs[i];
-            _require(prod == 0 || nextProd / prod == inputs[i], Errors.MUL_OVERFLOW);
-            prod = nextProd;
-        }
-        if (prod < 0) {
-            prod = divUp(prod, int256(10)**(18 * (inputs.length - 1)));
-        } else {
-            prod = divDown(prod, int256(10)**(18 * (inputs.length - 1)));
-        }
+    /// @dev n-fold multiplication that rounds in signed direction given by roundUp
+    function mulArray(int256[] memory inputs, bool roundUp) internal pure returns (int256) {
+        return roundUp ? mulArrayUp(inputs) : mulArrayDown(inputs);
     }
 
     /// @dev Rounds towards 0, i.e., down in absolute value.

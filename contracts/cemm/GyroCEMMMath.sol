@@ -15,6 +15,7 @@ import "@openzeppelin/contracts/utils/SafeCast.sol";
  */
 library GyroCEMMMath {
     uint256 internal constant ONEHALF = 0.5e18;
+    int256 internal constant ONE = 1e18; // 18 decimal places
 
     int256 internal constant VALIDATION_PRECISION_NORMED_INPUT = 500; // 5e-16
     int256 internal constant VALIDATION_PRECISION_ZETA = 500; // 5e-16
@@ -52,6 +53,8 @@ library GyroCEMMMath {
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
+        // lambda assumed to only have 3 significant decimal digits (0s after)
+        _require((params.lambda / 1e15) * 1e15 == params.lambda, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
         validateNormed(Vector2(params.c, params.s), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
 
@@ -298,6 +301,40 @@ library GyroCEMMMath {
         return _calculateInvariant(vbalances, params, derived).toUint256();
     }
 
+    function calcAtAChi(
+        Vector2 memory balances,
+        int256 c,
+        int256 s,
+        int256 lambda,
+        Vector2 memory tauBeta,
+        Vector2 memory tauAlpha
+    ) internal pure returns (int256 val) {
+        val = balances.x.mulDown(c) - balances.y.mulDown(s);
+        val = val.mulDown(tauBeta.x.mulDown(c).add(s.mulDown(tauBeta.y).divDown(lambda)));
+        val = val.sub(balances.x.mulDown(lambda).mulDown(s).mulDown(s).mulDown(tauAlpha.x));
+        val = val.sub(balances.y.mulDown(lambda).mulDown(c).mulDown(s).mulDown(tauAlpha.x));
+        val = val.add((balances.x.mulDown(s).add(balances.y.mulDown(c))).mulDown(c).mulDown(tauAlpha.y));
+    }
+
+    /// @dev round up in signed direction
+    function calcAChiAChi(
+        int256 c,
+        int256 s,
+        int256 lambda,
+        Vector2 memory tauBeta,
+        Vector2 memory tauAlpha
+    ) internal pure returns (int256 val) {
+        val = lambda.mulUp(lambda).mulUp(tauBeta.x).mulUp(tauBeta.x).mulUp(c).mulUp(c);
+        int256[] memory muls = new int256[](5);
+        (muls[0], muls[1], muls[2], muls[3], muls[4]) = (lambda * 2, tauBeta.x, tauBeta.y, s, c);
+        val = val.add(SignedFixedPoint.mulArrayUp(muls));
+        val = val.add(s.mulUp(s).mulUp(tauBeta.y).mulUp(tauBeta.y));
+        val = val.add(lambda.mulUp(lambda).mulUp(s).mulUp(s).mulUp(tauAlpha.x).mulUp(tauAlpha.x));
+        (muls[0], muls[1], muls[2], muls[3], muls[4]) = (lambda * 2, tauAlpha.x, tauAlpha.y, s, c);
+        val = val.add(SignedFixedPoint.mulArrayUp(muls));
+        val = val.add(c.mulUp(c).mulUp(tauAlpha.y).mulUp(tauAlpha.y));
+    }
+
     /** @dev Computes the invariant r according to Prop 13 in 2.2.1 Initialization from Real Reserves */
     function _calculateInvariant(
         Vector2 memory balances,
@@ -308,7 +345,8 @@ library GyroCEMMMath {
         Vector2 memory vecAChi = mulA(params, chi(params, derived));
         QParams memory qparams;
         // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = scalarProdUp(vecAChi, vecAChi).sub(SignedFixedPoint.ONE);
+        qparams.a = calcAChiAChi(params.c, params.s, params.lambda, derived.tauBeta, derived.tauAlpha).sub(SignedFixedPoint.ONE);
+
         qparams.b = -scalarProdDown(vecAt, vecAChi);
         qparams.c = scalarProdUp(vecAt, vecAt);
         invariant = solveQuadraticPlus(qparams);
@@ -433,48 +471,91 @@ library GyroCEMMMath {
     }
 
     /** @dev Variables are named for calculating y given x
-     *  to calculate x given y, change x->y, s->c, c->s, b->a
-     *  TODO: account for error in b and thus also x-b */
+     *  to calculate x given y, change x->y, s->c, c->s, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y
+     *  TODO: account for error in b (from r) and thus also x-b */
     function solveQuadraticSwap(
         int256 lambda,
         int256 x,
         int256 s,
         int256 c,
         int256 r,
-        int256 b
+        int256 b,
+        Vector2 memory tauBeta
     ) internal pure returns (int256) {
-        // shift by the virtual offsets
-        x = x.sub(b);
         Vector2 memory lamBar; // x component will round up, y will round down
-        lamBar.x = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divDown(lambda).divDown(lambda);
-        lamBar.y = SignedFixedPoint.ONE - SignedFixedPoint.ONE.divUp(lambda).divUp(lambda);
+        lamBar.x = ONE.sub(ONE.divDown(lambda).divDown(lambda));
+        lamBar.y = ONE.sub(ONE.divUp(lambda).divUp(lambda));
         QParams memory qparams;
-        if (x > 0) {
-            qparams.b = -x.mulDown(lamBar.y).mulDown(s).mulDown(c);
-        } else {
-            qparams.b = (-x).mulUp(lamBar.x).mulUp(s).mulUp(c);
+        {
+            // shift by the virtual offsets
+            int256 xp = x.sub(b);
+            qparams.b = xp > 0 ? -xp.mulDown(lamBar.y).mulDown(s).mulDown(c) : (-xp).mulUp(lamBar.x).mulUp(s).mulUp(c);
         }
-        qparams.c = x.mulDown(x).mulDown(lamBar.y).mulDown(lamBar.y);
-        qparams.c = qparams.c.mulDown(s).mulDown(s).mulDown(c).mulDown(c);
         // x component will round up, y will round down
-        Vector2 memory sTerm = Vector2(
-            SignedFixedPoint.ONE.sub(lamBar.y.mulDown(s).mulDown(s)),
-            SignedFixedPoint.ONE.sub(lamBar.x.mulUp(s).mulUp(s))
-        );
-        Vector2 memory cTerm = Vector2(
-            SignedFixedPoint.ONE.sub(lamBar.y.mulDown(c).mulDown(c)),
-            SignedFixedPoint.ONE.sub(lamBar.x.mulUp(c).mulUp(c))
-        );
-        qparams.c += r.mulDown(r).mulDown(sTerm.y);
-        qparams.c += -x.mulUp(x).mulUp(sTerm.x).mulUp(cTerm.x);
+        Vector2 memory sTerm = Vector2(ONE.sub(lamBar.y.mulDown(s).mulDown(s)), ONE.sub(lamBar.x.mulUp(s).mulUp(s)));
+        Vector2 memory cTerm = Vector2(ONE.sub(lamBar.y.mulDown(c).mulDown(c)), ONE.sub(lamBar.x.mulUp(c).mulUp(c)));
+        // first compute the smaller terms that will be multiplied by x'x'
+        qparams.c = lamBar.y.mulDown(lamBar.y).mulDown(s);
+        qparams.c = qparams.c.mulDown(s).mulDown(c).mulDown(c);
+        qparams.c = qparams.c.sub(sTerm.x.mulUp(cTerm.x));
+
+        {
+            // x'x' * (terms), round x'x' up if the other terms are < 0
+            int256 xx = calcXpXp(x, r, lambda, s, c, tauBeta, qparams.c < 0);
+            qparams.c = qparams.c < 0 ? xx.mulUp(qparams.c) : xx.mulDown(qparams.c);
+        }
+
+        qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y));
         qparams.c = FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256();
         // calculate the result in qparams.a
         if (qparams.b - qparams.c > 0) {
-            qparams.a = (qparams.b - qparams.c).divUp(sTerm.y);
+            qparams.a = (qparams.b.sub(qparams.c)).divUp(sTerm.y);
         } else {
-            qparams.a = (qparams.b - qparams.c).divDown(sTerm.x);
+            qparams.a = (qparams.b.sub(qparams.c)).divDown(sTerm.x);
         }
-        return qparams.a + b;
+        return qparams.a.add(b);
+    }
+
+    /** @dev Calculates x'x' where x' = x - b = x - r (A^{-1}tau(beta))_x
+     *  to calculate y'y', change x->y, s->c, c->s, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y  */
+    function calcXpXp(
+        int256 x,
+        int256 r,
+        int256 lambda,
+        int256 s,
+        int256 c,
+        Vector2 memory tauBeta,
+        bool roundUp
+    ) internal pure returns (int256 xx) {
+        {
+            //This term is always positive
+            int256[] memory muls = new int256[](5);
+            (muls[0], muls[1], muls[2], muls[3], muls[4]) = (mulXpInXYLambdaLambda(r, r, lambda, roundUp), tauBeta.x, tauBeta.x, c, c);
+            xx = SignedFixedPoint.mulArray(muls, roundUp);
+
+            //Next term is positive if tauBeta.x * tauBeta.y < 0
+            bool roundUpMag = roundUp ? (tauBeta.x * tauBeta.y < 0) : (tauBeta.x * tauBeta.y > 0);
+            (muls[0], muls[1], muls[2], muls[3], muls[4]) = (-mulXpInXYLambda(r, r, 2 * lambda, roundUpMag), c, s, tauBeta.x, tauBeta.y);
+            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
+        }
+        {
+            int256[] memory muls = new int256[](3);
+            //Next term is positive if tauBeta.x < 0
+            bool roundUpMag = roundUp ? (tauBeta.x < 0) : (tauBeta.x > 0);
+            (muls[0], muls[1], muls[2]) = (-mulXpInXYLambda(r, r, 2 * lambda, roundUpMag), c, tauBeta.x);
+            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
+        }
+        {
+            int256[] memory muls = new int256[](6);
+            (muls[0], muls[1], muls[2], muls[3], muls[4], muls[5]) = (r, r, s, s, tauBeta.y, tauBeta.y);
+            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
+        }
+        {
+            int256[] memory muls = new int256[](4);
+            (muls[0], muls[1], muls[2], muls[3]) = (r, x * 2, s, tauBeta.y);
+            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
+        }
+        xx = xx.add(roundUp ? x.mulUp(x) : x.mulDown(x));
     }
 
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.
@@ -486,7 +567,7 @@ library GyroCEMMMath {
         int256 invariant
     ) internal pure returns (int256 y) {
         int256 b = virtualOffset1(params, derived, invariant);
-        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, b);
+        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, b, derived.tauBeta);
     }
 
     function calcXGivenY(
@@ -496,7 +577,45 @@ library GyroCEMMMath {
         int256 invariant
     ) internal pure returns (int256 x) {
         int256 a = virtualOffset0(params, derived, invariant);
-        // change x->y, s->c, c->s, b->a vs calcYGivenX
-        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, a);
+        // change x->y, s->c, c->s, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
+        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, a, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
+    }
+
+    /** @dev calculates x*y*lambda with extra precision
+     *  assumes x,y, lambda > 0 and that lambda only has 3 significant decimal digits (0s after)
+     *  guaranteed not to overflow for x,y < 1e12 and lambda < 1e8 with some digits of wiggle room above that
+     *  Rounds in magnitude in direction given by roundUp */
+    function mulXpInXYLambda(
+        int256 x,
+        int256 y,
+        int256 lambda,
+        bool roundUp
+    ) internal pure returns (int256) {
+        int256 prod = x * y;
+        _require(x == 0 || prod / x == y, Errors.MUL_OVERFLOW);
+        int256 nextProd = prod * (lambda / 1e15);
+        _require(prod == 0 || nextProd / prod == lambda / 1e15, Errors.MUL_OVERFLOW);
+        return roundUp ? (nextProd - 1) / 1e21 + 1 : nextProd / 1e21;
+    }
+
+    /** @dev calculates x*y*lambda*lambda with extra precision
+     *  assumes x,y, lambda > 0 and that lambda only has 3 significant decimal digits (0s after)
+     *  guaranteed not to overflow for x,y < 1e12 and lambda < 1e8 with some digits of wiggle room above that
+     *  Rounds in magnitude in direction given by roundUp */
+    function mulXpInXYLambdaLambda(
+        int256 x,
+        int256 y,
+        int256 lambda,
+        bool roundUp
+    ) internal pure returns (int256) {
+        int256 prod = x * y;
+        _require(x == 0 || prod / x == y, Errors.MUL_OVERFLOW);
+        int256 nextProd = prod * (lambda / 1e15);
+        _require(prod == 0 || nextProd / prod == lambda / 1e15, Errors.MUL_OVERFLOW);
+        prod = roundUp ? (nextProd - 1) / 1e13 + 1 : nextProd / 1e13;
+
+        nextProd = prod * (lambda / 1e15);
+        _require(prod == 0 || nextProd / prod == lambda / 1e15, Errors.MUL_OVERFLOW);
+        return roundUp ? (nextProd - 1) / 1e11 + 1 : nextProd / 1e11;
     }
 }
