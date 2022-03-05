@@ -44,12 +44,14 @@ def test_decimal_behavior(math_testing, a, b, ops):
         a, b = b, op(a, b)
         assert scale(b) == solidity_b
 
-
+@settings(max_examples=1_000)
 @given(a=qdecimals(0))
 @example(a=D(1))
+@example(a=D(0))
+@example(a=D('1E-18'))
 def test_sqrt(math_testing, a):
     # Note that errors are relatively large, with, e.g., 5 decimals for sqrt(1)
     res_math = a.sqrt()
     res_sol = math_testing.sqrt(scale(a))
     # Absolute error tolerated in the last decimal + the default relative error.
-    assert int(res_sol) == scale(res_math).approxed(abs=D("1e5"), rel=D("1e-12"))
+    assert int(res_sol) == scale(res_math).approxed(abs=D("5"), rel=D("5e-14"))
