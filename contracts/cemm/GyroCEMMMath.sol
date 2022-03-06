@@ -252,104 +252,149 @@ library GyroCEMMMath {
         xy.x = xy.x.add(ab.x);
     }
 
-    /** @dev Calculate normalized offsets chi = (a,b)/r without having computed the invariant r
-     *   see Prop 8 in 2.1.3 Initialization from real reserves */
-    function chi(Params memory params, DerivedParams memory derived) internal pure returns (Vector2 memory ret) {
-        ret.x = mulAinv(params, derived.tauBeta).x;
-        ret.y = mulAinv(params, derived.tauAlpha).y;
-    }
-
     struct QParams {
         int256 a;
         int256 b;
         int256 c;
     }
 
-    /** Solve quadratic equation for the 'plus sqrt' solution
-     *  qparams contains a,b,c coefficients defining the quadratic.
-     *  Reverts if the equation has no solution or is actually linear (i.e., a==0)
-     *  This is used in invariant calculation for an underestimate
-     *  calculates (-b + sqrt(b^2-ac))/a, and so a->2a and c->2c vs standard quadratic formula */
-    function solveQuadraticPlus(QParams memory qparams) internal pure returns (int256 x) {
-        int256 sqrt = qparams.b.mulDown(qparams.b).sub(qparams.a.mulUp(qparams.c));
-        sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
-        x = (-qparams.b).add(sqrt).divDown(qparams.a);
-    }
-
-    /** Solve quadratic equation for the 'minus sqrt' solution
-     *  qparams contains a,b,c coefficients defining the quadratic
-     *  This is used in swap calculations, where we want to underestimate the square root b/c we want to
-     *  overestimate new reserve balances (and so underestimate the swap out amount)
-     *  calculates (-b - sqrt(b^2-ac))/a, and so a->2a and c->2c vs standard quadratic formula */
-    function solveQuadraticMinus(QParams memory qparams) internal pure returns (int256 x) {
-        int256 sqrt = qparams.b.mulDown(qparams.b).sub(qparams.a.mulUp(qparams.c));
-        sqrt = FixedPoint.powDown(sqrt.toUint256(), ONEHALF).toInt256();
-        x = (-qparams.b).sub(sqrt).divDown(qparams.a);
-    }
-
     /** @dev Compute the invariant 'r' corresponding to the given values. The invariant can't be negative, but
-     *  we use a signed value to store it because all the other calculations are happening with signed ints,
-     *  too.*/
+     *  we use a signed value to store it because all the other calculations are happening with signed ints, too.
+     *  Computes r according to Prop 13 in 2.2.1 Initialization from Real Reserves
+     *  orders operations to achieve best precision
+     *  computes an underestimate */
     function calculateInvariant(
         uint256[] memory balances,
         Params memory params,
         DerivedParams memory derived
     ) internal pure returns (uint256 uinvariant) {
-        Vector2 memory vbalances;
-        vbalances.x = balances[0].toInt256();
-        vbalances.y = balances[1].toInt256();
-        return _calculateInvariant(vbalances, params, derived).toUint256();
+        Vector2 memory vbalances = Vector2(balances[0].toInt256(), balances[1].toInt256());
+        int256 AChi_x = calcAChi_x(params, derived);
+        int256 AChiDivLambda_y = calcAChiDivLambda_y(params, derived);
+        int256 AtAChi = calcAtAChi(vbalances.x, vbalances.y, params, derived, AChi_x);
+        int256 sqrt = calcInvariantSqrt(vbalances.x, vbalances.y, params, AChi_x, AChiDivLambda_y);
+        // A chi . A chi > 1, so round it up to round denominator up
+        int256 denominator = calcAChiAChi(params, AChi_x, AChiDivLambda_y).sub(ONE);
+        int256 invariant = AtAChi.add(sqrt).divDown(denominator);
+        return invariant.toUint256();
     }
 
+    /// @dev calculate (A chi)_x, ignores rounding direction
+    function calcAChi_x(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
+        // sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x
+        val = p.s.mulDown(p.c).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)).divDown(p.lambda).add(d.tauBeta.x).add(d.tauAlpha.x);
+        // possible rounding error is 4 considering that each variable <= 1 individually, but don't know which way
+    }
+
+    /// @dev calculate (A chi / lambda)_y, ignores rounding direction
+    function calcAChiDivLambda_y(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
+        // sc * (tau(beta)_x - tau(alpha)_x) + (s^2 tau(beta)_y + c^2 tau(alpha)_y) / lambda
+        val = (p.s.mulDown(p.s).mulDown(d.tauBeta.y).add(p.c.mulDown(p.c).mulDown(d.tauAlpha.y)).divDown(p.lambda));
+        val = val.add(p.s.mulDown(p.c).mulDown(d.tauBeta.x.sub(d.tauAlpha.x)));
+        // possible rounding error is 8 considering that each variable <= 1 individually and lambda > 1, but don't know which way
+    }
+
+    /// @dev calculate At \cdot A chi, ignores rounding direction
     function calcAtAChi(
-        Vector2 memory balances,
-        int256 c,
-        int256 s,
-        int256 lambda,
-        Vector2 memory tauBeta,
-        Vector2 memory tauAlpha
+        int256 x,
+        int256 y,
+        Params memory p,
+        DerivedParams memory d,
+        int256 AChi_x
     ) internal pure returns (int256 val) {
-        val = balances.x.mulDown(c) - balances.y.mulDown(s);
-        val = val.mulDown(tauBeta.x.mulDown(c).add(s.mulDown(tauBeta.y).divDown(lambda)));
-        val = val.sub(balances.x.mulDown(lambda).mulDown(s).mulDown(s).mulDown(tauAlpha.x));
-        val = val.sub(balances.y.mulDown(lambda).mulDown(c).mulDown(s).mulDown(tauAlpha.x));
-        val = val.add((balances.x.mulDown(s).add(balances.y.mulDown(c))).mulDown(c).mulDown(tauAlpha.y));
+        // (cx / lambda - sy / lambda) * (A chi)_x
+        val = x.mulDown(p.c).divDown(p.lambda).sub(y.mulUp(p.s).divUp(p.lambda));
+        val = val.mulDown(AChi_x);
+
+        // (x lambda s + y lambda c) * sc * (tau(beta)_x - tau(alpha)_x)
+        int256 term = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
+        val = val.add(term.mulDown(p.s).mulDown(p.c).mulDown(d.tauBeta.x.sub(d.tauAlpha.x)));
+
+        // (sx+cy) * (s^2 tau(beta)_y + c^2 tau(alpha)_y)
+        term = p.s.mulDown(p.s).mulDown(d.tauBeta.y).add(p.c.mulDown(p.c).mulDown(d.tauAlpha.y));
+        val = val.add((x.mulDown(p.s).add(y.mulDown(p.c))).mulDown(term));
     }
 
-    /// @dev round up in signed direction
+    /// @dev calculates A chi \cdot A chi, corrects for rounding direction error to overestimate in signed direction
     function calcAChiAChi(
-        int256 c,
-        int256 s,
-        int256 lambda,
-        Vector2 memory tauBeta,
-        Vector2 memory tauAlpha
+        Params memory p,
+        int256 AChi_x,
+        int256 AChiDivLambda_y
     ) internal pure returns (int256 val) {
-        val = lambda.mulUp(lambda).mulUp(tauBeta.x).mulUp(tauBeta.x).mulUp(c).mulUp(c);
-        int256[] memory muls = new int256[](5);
-        (muls[0], muls[1], muls[2], muls[3], muls[4]) = (lambda * 2, tauBeta.x, tauBeta.y, s, c);
-        val = val.add(SignedFixedPoint.mulArrayUp(muls));
-        val = val.add(s.mulUp(s).mulUp(tauBeta.y).mulUp(tauBeta.y));
-        val = val.add(lambda.mulUp(lambda).mulUp(s).mulUp(s).mulUp(tauAlpha.x).mulUp(tauAlpha.x));
-        (muls[0], muls[1], muls[2], muls[3], muls[4]) = (lambda * 2, tauAlpha.x, tauAlpha.y, s, c);
-        val = val.add(SignedFixedPoint.mulArrayUp(muls));
-        val = val.add(c.mulUp(c).mulUp(tauAlpha.y).mulUp(tauAlpha.y));
+        // ( sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x ) ^ 2
+        // add 4 in magnitude within the square to correct for rounding error
+        val = AChi_x.addMag(4);
+        val = val.mulUp(val);
+
+        // lambda^2 * (A chi / lambda)_y ^ 2
+        // add 8 in magnitude within square to correct for rounding error
+        int256 term = AChiDivLambda_y.addMag(8);
+        val = val.add(p.lambda.mulUp(p.lambda).mulUp(term).mulUp(term));
     }
 
-    /** @dev Computes the invariant r according to Prop 13 in 2.2.1 Initialization from Real Reserves */
-    function _calculateInvariant(
-        Vector2 memory balances,
-        Params memory params,
-        DerivedParams memory derived
-    ) internal pure returns (int256 invariant) {
-        Vector2 memory vecAt = mulA(params, balances);
-        Vector2 memory vecAChi = mulA(params, chi(params, derived));
-        QParams memory qparams;
-        // Convert Prop 13 equation into quadratic coefficients, account for factors of 2 and minus signs
-        qparams.a = calcAChiAChi(params.c, params.s, params.lambda, derived.tauBeta, derived.tauAlpha).sub(SignedFixedPoint.ONE);
+    /// @dev calculate -(At)_x ^2 (A chi)_y ^2 + (At)_x ^2, rounding down in signed direction
+    function calcMinAtxAChiySqPlusAtxSq(
+        int256 x,
+        int256 y,
+        Params memory p,
+        int256 AChiDivLambda_y
+    ) internal pure returns (int256 val) {
+        // first calculate -(At)_x ^2 (A chi)_y ^2
+        // (cx - sy)^2 > 0, calculate as x^2 c^2 + y^2 s^2 - xy2cs
+        val = x.mulUp(x).mulUp(p.c).mulUp(p.c).add(y.mulUp(y).mulUp(p.s).mulUp(p.s));
+        val = val.sub(x.mulDown(y).mulDown(p.c * 2).mulDown(p.s));
 
-        qparams.b = -scalarProdDown(vecAt, vecAChi);
-        qparams.c = scalarProdUp(vecAt, vecAt);
-        invariant = solveQuadraticPlus(qparams);
+        // * (A chi / lambda)_y ^ 2
+        // add 8 in magnitude within the square to correct for rounding error
+        int256 term = AChiDivLambda_y.addMag(8);
+
+        // subtract 10 to account for rounding error in lambda^2 * (At)_x ^2
+        val = (-val.mulUp(term).mulUp(term)).add(val.sub(10).divDown(p.lambda).divDown(p.lambda));
+    }
+
+    /// @dev calculate 2(At)_x * (At)_y * (A chi)_x * (A chi)_y, ignores rounding direction
+    function calc2AtxAtyAChixAChiy(
+        int256 x,
+        int256 y,
+        Params memory p,
+        int256 AChi_x,
+        int256 AChiDivLambda_y
+    ) internal pure returns (int256 val) {
+        // (x^2 - y^2) sc * 2 + yx (c^2 - s^2) * 2
+        val = (x.mulDown(x).sub(y.mulDown(y))).mulDown(p.c).mulDown(p.s * 2);
+        val = y.mulDown(x).mulDown((p.c.mulDown(p.c).sub(p.s.mulDown(p.s))) * 2);
+        // * (A chi)_x * (A chi / lambda)_y
+        val = val.mulDown(AChi_x).mulDown(AChiDivLambda_y);
+    }
+
+    /// @dev calculate -(At)_y ^2 (A chi)_x ^2 + (At)_y ^2, rounding down in signed direction
+    function calcMinAtyAChixSqPlusAtySq(
+        int256 x,
+        int256 y,
+        Params memory p,
+        int256 AChi_x
+    ) internal pure returns (int256 val) {
+        val = x.mulUp(x).mulUp(p.s).mulUp(p.s).add(y.mulUp(y).mulUp(p.c).mulUp(p.c));
+        val = val.add(x.mulUp(y).mulUp(p.s * 2).mulUp(p.c));
+        // add 4 in magnitude within the square to correct for rounding error
+        int256 term = AChi_x.addMag(4);
+
+        // subtract 10 to account for rounding error in (At)_y ^2
+        val = (-val.mulUp(term).mulUp(term)).add(val.sub(10));
+    }
+
+    function calcInvariantSqrt(
+        int256 x,
+        int256 y,
+        Params memory p,
+        int256 AChi_x,
+        int256 AChiDivLambda_y
+    ) internal pure returns (int256 val) {
+        val = calcMinAtxAChiySqPlusAtxSq(x, y, p, AChiDivLambda_y).add(calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChiDivLambda_y));
+        val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, AChi_x));
+        val = val.sub(100); // correct to downside for rounding error, given everything is O(eps) error propagation
+        // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
+        val = val > 0 ? FixedPoint.powDown(val.toUint256(), ONEHALF).toInt256() : 0;
     }
 
     /** @dev Instantanteous price.
@@ -506,7 +551,8 @@ library GyroCEMMMath {
         }
 
         qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y));
-        qparams.c = FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256();
+        // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error, but this shouldn't happen
+        qparams.c = qparams.c > 0 ? FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256() : 0;
         // calculate the result in qparams.a
         if (qparams.b - qparams.c > 0) {
             qparams.a = (qparams.b.sub(qparams.c)).divUp(sTerm.y);
@@ -552,7 +598,7 @@ library GyroCEMMMath {
         }
         {
             int256[] memory muls = new int256[](4);
-            (muls[0], muls[1], muls[2], muls[3]) = (r, x * 2, s, tauBeta.y);
+            (muls[0], muls[1], muls[2], muls[3]) = (r, x, s * 2, tauBeta.y);
             xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
         }
         xx = xx.add(roundUp ? x.mulUp(x) : x.mulDown(x));

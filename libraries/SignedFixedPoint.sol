@@ -35,6 +35,13 @@ library SignedFixedPoint {
         return c;
     }
 
+    function addMag(int256 a, int256 b) internal pure returns (int256 c) {
+        // add b in the same signed direction as a, i.e. increase the magnitude of a by b
+        c = a > 0 ? add(a, b) : sub(a, b);
+    }
+
+    function addDir(int256 a, int256 b) internal pure returns (int256 c) {}
+
     function sub(int256 a, int256 b) internal pure returns (int256) {
         // Fixed Point addition is the same as regular checked addition
 

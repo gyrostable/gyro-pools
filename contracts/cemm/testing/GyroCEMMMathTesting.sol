@@ -75,22 +75,6 @@ contract GyroCEMMMathTesting {
         xy = GyroCEMMMath.maxBalances(params, derived, invariant);
     }
 
-    function chi(GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory derived)
-        external
-        pure
-        returns (GyroCEMMMath.Vector2 memory ret)
-    {
-        ret = GyroCEMMMath.chi(params, derived);
-    }
-
-    function solveQuadraticPlus(GyroCEMMMath.QParams memory qparams) external pure returns (int256 x) {
-        x = GyroCEMMMath.solveQuadraticPlus(qparams);
-    }
-
-    function solveQuadraticMinus(GyroCEMMMath.QParams memory qparams) external pure returns (int256 x) {
-        x = GyroCEMMMath.solveQuadraticMinus(qparams);
-    }
-
     function calculateInvariant(
         uint256[] memory balances,
         GyroCEMMMath.Params memory params,
