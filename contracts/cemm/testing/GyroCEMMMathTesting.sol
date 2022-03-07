@@ -142,6 +142,112 @@ contract GyroCEMMMathTesting {
         x = GyroCEMMMath.calcXGivenY(y, params, derived, invariant);
     }
 
+    function mulXpInXYLambda(
+        int256 x,
+        int256 y,
+        int256 lambda,
+        bool roundUp
+    ) external pure returns (int256) {
+        return GyroCEMMMath.mulXpInXYLambda(x, y, lambda, roundUp);
+    }
+
+    function mulXpInXYLambdaLambda(
+        int256 x,
+        int256 y,
+        int256 lambda,
+        bool roundUp
+    ) external pure returns (int256) {
+        return GyroCEMMMath.mulXpInXYLambdaLambda(x, y, lambda, roundUp);
+    }
+
+    function calcAChi_x(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d) external pure returns (int256) {
+        return GyroCEMMMath.calcAChi_x(p, d);
+    }
+
+    function calcAChiDivLambda_y(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d) external pure returns (int256) {
+        return GyroCEMMMath.calcAChiDivLambda_y(p, d);
+    }
+
+    function calcAtAChi(
+        int256 x,
+        int256 y,
+        GyroCEMMMath.Params memory p,
+        GyroCEMMMath.DerivedParams memory d,
+        int256 AChi_x
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calcAtAChi(x, y, p, d, AChi_x);
+    }
+
+    function calcAChiAChi(
+        GyroCEMMMath.Params memory p,
+        int256 AChi_x,
+        int256 AChiDivLambda_y
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calcAChiAChi(p, AChi_x, AChiDivLambda_y);
+    }
+
+    function calcMinAtxAChiySqPlusAtxSq(
+        int256 x,
+        int256 y,
+        GyroCEMMMath.Params memory p,
+        int256 AChiDivLambda_y
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calcMinAtxAChiySqPlusAtxSq(x, y, p, AChiDivLambda_y);
+    }
+
+    function calc2AtxAtyAChixAChiy(
+        int256 x,
+        int256 y,
+        GyroCEMMMath.Params memory p,
+        int256 AChi_x,
+        int256 AChiDivLambda_y
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChiDivLambda_y);
+    }
+
+    function calcMinAtyAChixSqPlusAtySq(
+        int256 x,
+        int256 y,
+        GyroCEMMMath.Params memory p,
+        int256 AChi_x
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calcMinAtyAChixSqPlusAtySq(x, y, p, AChi_x);
+    }
+
+    function calcInvariantSqrt(
+        int256 x,
+        int256 y,
+        GyroCEMMMath.Params memory p,
+        int256 AChi_x,
+        int256 AChiDivLambda_y
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calcInvariantSqrt(x, y, p, AChi_x, AChiDivLambda_y);
+    }
+
+    function solveQuadraticSwap(
+        int256 lambda,
+        int256 x,
+        int256 s,
+        int256 c,
+        int256 r,
+        GyroCEMMMath.Vector2 memory ab,
+        GyroCEMMMath.Vector2 memory tauBeta
+    ) external pure returns (int256) {
+        return GyroCEMMMath.solveQuadraticSwap(lambda, x, s, c, r, ab, tauBeta);
+    }
+
+    function calcXpXp(
+        int256 x,
+        int256 r,
+        int256 lambda,
+        int256 s,
+        int256 c,
+        GyroCEMMMath.Vector2 memory tauBeta,
+        bool roundUp
+    ) external pure returns (int256) {
+        return GyroCEMMMath.calcXpXp(x, r, lambda, s, c, tauBeta, roundUp);
+    }
+
     function liquidityInvariantUpdate(
         uint256[] memory balances,
         uint256 uinvariant,

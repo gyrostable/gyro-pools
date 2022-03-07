@@ -273,7 +273,7 @@ library GyroCEMMMath {
         int256 AChiDivLambda_y = calcAChiDivLambda_y(params, derived);
         int256 AtAChi = calcAtAChi(vbalances.x, vbalances.y, params, derived, AChi_x);
         int256 sqrt = calcInvariantSqrt(vbalances.x, vbalances.y, params, AChi_x, AChiDivLambda_y);
-        // A chi . A chi > 1, so round it up to round denominator up
+        // A chi \cdot A chi > 1, so round it up to round denominator up
         int256 denominator = calcAChiAChi(params, AChi_x, AChiDivLambda_y).sub(ONE);
         int256 invariant = AtAChi.add(sqrt).divDown(denominator);
         return invariant.toUint256();
@@ -362,7 +362,7 @@ library GyroCEMMMath {
     ) internal pure returns (int256 val) {
         // (x^2 - y^2) sc * 2 + yx (c^2 - s^2) * 2
         val = (x.mulDown(x).sub(y.mulDown(y))).mulDown(p.c).mulDown(p.s * 2);
-        val = y.mulDown(x).mulDown((p.c.mulDown(p.c).sub(p.s.mulDown(p.s))) * 2);
+        val = val.add(y.mulDown(x).mulDown((p.c.mulDown(p.c).sub(p.s.mulDown(p.s))) * 2));
         // * (A chi)_x * (A chi / lambda)_y
         val = val.mulDown(AChi_x).mulDown(AChiDivLambda_y);
     }
@@ -516,7 +516,7 @@ library GyroCEMMMath {
     }
 
     /** @dev Variables are named for calculating y given x
-     *  to calculate x given y, change x->y, s->c, c->s, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y
+     *  to calculate x given y, change x->y, s->c, c->s, a_>b, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y
      *  TODO: account for error in b (from r) and thus also x-b */
     function solveQuadraticSwap(
         int256 lambda,
@@ -524,7 +524,7 @@ library GyroCEMMMath {
         int256 s,
         int256 c,
         int256 r,
-        int256 b,
+        Vector2 memory ab,
         Vector2 memory tauBeta
     ) internal pure returns (int256) {
         Vector2 memory lamBar; // x component will round up, y will round down
@@ -533,7 +533,7 @@ library GyroCEMMMath {
         QParams memory qparams;
         {
             // shift by the virtual offsets
-            int256 xp = x.sub(b);
+            int256 xp = x.sub(ab.x);
             qparams.b = xp > 0 ? -xp.mulDown(lamBar.y).mulDown(s).mulDown(c) : (-xp).mulUp(lamBar.x).mulUp(s).mulUp(c);
         }
         // x component will round up, y will round down
@@ -559,7 +559,7 @@ library GyroCEMMMath {
         } else {
             qparams.a = (qparams.b.sub(qparams.c)).divDown(sTerm.x);
         }
-        return qparams.a.add(b);
+        return qparams.a.add(ab.y);
     }
 
     /** @dev Calculates x'x' where x' = x - b = x - r (A^{-1}tau(beta))_x
@@ -612,8 +612,8 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (int256 y) {
-        int256 b = virtualOffset1(params, derived, invariant);
-        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, b, derived.tauBeta);
+        Vector2 memory ab = Vector2(virtualOffset0(params, derived, invariant), virtualOffset1(params, derived, invariant));
+        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, ab, derived.tauBeta);
     }
 
     function calcXGivenY(
@@ -622,9 +622,9 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (int256 x) {
-        int256 a = virtualOffset0(params, derived, invariant);
-        // change x->y, s->c, c->s, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
-        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, a, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
+        Vector2 memory ba = Vector2(virtualOffset1(params, derived, invariant), virtualOffset0(params, derived, invariant));
+        // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
+        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, ba, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
     }
 
     /** @dev calculates x*y*lambda with extra precision

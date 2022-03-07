@@ -22,4 +22,20 @@ contract SignedMathTesting {
     function truediv(int256 a, int256 b) external pure returns (int256) {
         return a.divDown(b);
     }
+
+    function addMag(int256 a, int256 b) external pure returns (int256) {
+        return SignedFixedPoint.addMag(a, b);
+    }
+
+    function mulArrayUp(int256[] memory inputs) external pure returns (int256) {
+        return SignedFixedPoint.mulArrayUp(inputs);
+    }
+
+    function mulArrayDown(int256[] memory inputs) external pure returns (int256) {
+        return SignedFixedPoint.mulArrayDown(inputs);
+    }
+
+    function mulArray(int256[] memory inputs, bool roundUp) external pure returns (int256) {
+        return SignedFixedPoint.mulArray(inputs, roundUp);
+    }
 }
