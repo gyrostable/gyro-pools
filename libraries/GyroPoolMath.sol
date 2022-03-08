@@ -143,4 +143,47 @@ library GyroPoolMath {
         uint256 deltaInvariant = uinvariant.mulDown(deltaBalances[largestBalanceIndex]).divDown(balances[largestBalanceIndex]);
         unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
+    
+        
+    /** @dev Implements square root algorithm using Newton's method and a first-guess optimisation **/
+    function _sqrt(uint256 input) internal pure returns (uint256) {
+        if (input == 0) {
+            return 0;
+        }
+
+        uint256 guess = _makeInitialGuess(input);
+        uint256 minStepSize = 5;
+
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 oldGuess = guess;
+            guess = guess.add(input.divDown(guess)) / 2;
+
+            if (
+                (oldGuess > guess && oldGuess - guess < minStepSize) ||
+                (oldGuess <= guess && guess - oldGuess < minStepSize)
+            ) {
+                break;
+            }
+        }
+
+        return guess;
+    }
+
+    function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
+        uint256 orderUpperBound = 72;
+        uint256 orderLowerBound = 0;
+        uint256 orderMiddle;
+
+        orderMiddle = (orderUpperBound + orderLowerBound) / 2;
+
+        while (orderUpperBound - orderLowerBound != 1) {
+            if (10**orderMiddle > input) {
+                orderUpperBound = orderMiddle;
+            } else {
+                orderLowerBound = orderMiddle;
+            }
+        }
+
+        return 10**(orderUpperBound / 2);
+    }
 }
