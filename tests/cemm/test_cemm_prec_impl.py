@@ -21,6 +21,9 @@ from tests.support.types import *
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.cemm import util
 
+
+from tests.support.types import Vector2
+
 billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
 
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
@@ -106,6 +109,15 @@ def test_calcAChi(gyro_cemm_math_testing, params):
     )
     assert result3_py == unscale(result3_sol)
 
+    # test against the old (imprecise) implementation
+    chi = Vector2(
+        mparams.Ainv_times(derived.tauBeta[0], derived.tauBeta[1])[0],
+        mparams.Ainv_times(derived.tauAlpha[0], derived.tauAlpha[1])[1],
+    )
+    AChi = mparams.A_times(chi[0], chi[1])
+    assert result_py == AChi[0].approxed()
+    assert result2_py == (AChi[1] / params.l).approxed()
+
 
 @given(
     params=util.gen_params(),
@@ -115,6 +127,7 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     AChi_x = prec_impl.calcAChi_x(params, derived)
+    AChiDivLambda_y = prec_impl.calcAChiDivLambda_y(params, derived)
     result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived, AChi_x)
     result_sol = gyro_cemm_math_testing.calcAtAChi(
         scale(balances[0]),
@@ -124,6 +137,11 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
         scale(AChi_x),
     )
     assert result_py == unscale(result_sol)
+
+    # test against the old (imprecise) implementation
+    At = mparams.A_times(balances[0], balances[1])
+    AtAChi = At[0] * AChi_x + At[1] * AChiDivLambda_y * params.l
+    assert AtAChi == result_py.approxed()
 
 
 @given(
@@ -217,5 +235,6 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     )
     assert result_py == unscale(result_sol).approxed(rel=D("1e-13"))
 
+    # test against the old (imprecise) implementation
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     assert cemm.r == result_py.approxed()

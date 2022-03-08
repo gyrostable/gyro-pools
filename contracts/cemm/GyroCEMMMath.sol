@@ -282,8 +282,9 @@ library GyroCEMMMath {
     /// @dev calculate (A chi)_x, ignores rounding direction
     function calcAChi_x(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x
-        val = p.s.mulDown(p.c).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)).divDown(p.lambda).add(d.tauBeta.x).add(d.tauAlpha.x);
-        // possible rounding error is 4 considering that each variable <= 1 individually, but don't know which way
+        val = p.s.mulDown(p.c).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)).divDown(p.lambda);
+        val = val.add(d.tauBeta.x.mulDown(p.c).mulDown(p.c)).add(d.tauAlpha.x.mulDown(p.s).mulDown(p.s));
+        // possible rounding error is 7 considering that each variable <= 1 individually, but don't know which way
     }
 
     /// @dev calculate (A chi / lambda)_y, ignores rounding direction
@@ -322,8 +323,8 @@ library GyroCEMMMath {
         int256 AChiDivLambda_y
     ) internal pure returns (int256 val) {
         // ( sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x ) ^ 2
-        // add 4 in magnitude within the square to correct for rounding error
-        val = AChi_x.addMag(4);
+        // add 7 in magnitude within the square to correct for rounding error
+        val = AChi_x.addMag(7);
         val = val.mulUp(val);
 
         // lambda^2 * (A chi / lambda)_y ^ 2
@@ -376,8 +377,8 @@ library GyroCEMMMath {
     ) internal pure returns (int256 val) {
         val = x.mulUp(x).mulUp(p.s).mulUp(p.s).add(y.mulUp(y).mulUp(p.c).mulUp(p.c));
         val = val.add(x.mulUp(y).mulUp(p.s * 2).mulUp(p.c));
-        // add 4 in magnitude within the square to correct for rounding error
-        int256 term = AChi_x.addMag(4);
+        // add 7 in magnitude within the square to correct for rounding error
+        int256 term = AChi_x.addMag(7);
 
         // subtract 10 to account for rounding error in (At)_y ^2
         val = (-val.mulUp(term).mulUp(term)).add(val.sub(10));

@@ -31,7 +31,9 @@ def convert_to_qdecimal(inputs: Iterable[D]) -> Iterable[D]:
 
 def calcAChi_x(p: Params, d: DerivedParams) -> D:
     return (
-        p.s * p.c * (d.tauBeta[1] - d.tauAlpha[1]) / p.l + d.tauBeta[0] + d.tauAlpha[0]
+        p.s * p.c * (d.tauBeta[1] - d.tauAlpha[1]) / p.l
+        + d.tauBeta[0] * p.c * p.c
+        + d.tauAlpha[0] * p.s * p.s
     )
 
 
@@ -50,7 +52,7 @@ def calcAtAChi(x: D, y: D, p: Params, d: DerivedParams, AChi_x: D) -> D:
 
 
 def calcAChiAChi(p: Params, AChi_x: D, AChiDivLambda_y: D) -> D:
-    val = D(add_mag(AChi_x, D("4e-18")))
+    val = D(add_mag(AChi_x, D("7e-18")))
     val = val.mul_up(val)
     term = D(add_mag(AChiDivLambda_y, D("8e-18")))
     term = D(p.l).mul_up(D(p.l)).mul_up(term).mul_up(term)
@@ -77,7 +79,7 @@ def calcMinAtyAChixSqPlusAtySq(x: D, y: D, p: Params, AChi_x: D) -> D:
         p.c
     )
     val += D(x).mul_up(y).mul_up(p.s * 2).mul_up(p.c)
-    term = D(add_mag(AChi_x, D("4e-18")))
+    term = D(add_mag(AChi_x, D("7e-18")))
     return -val.mul_up(term).mul_up(term) + (val - D("1e-17"))
 
 
