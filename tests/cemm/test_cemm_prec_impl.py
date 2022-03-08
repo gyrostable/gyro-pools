@@ -431,6 +431,7 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
     assert val_y_py == unscale(val_y_sol).approxed(abs=error_toly)
 
 
+# note: only test this for conservative parameters b/c old implementation is so imprecise
 @given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
 def test_solveQuadraticSwap_sense_check(gyro_cemm_math_testing, params, balances):
     mparams = util.params2MathParams(params)
@@ -462,3 +463,58 @@ def test_solveQuadraticSwap_sense_check(gyro_cemm_math_testing, params, balances
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
     assert x == val_y_py.approxed(rel=D("1e-5"))
+
+
+# also tests calcXGivenY
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+
+    error_tolx = max(
+        invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
+    ) * D("5e-13")
+    error_toly = max(
+        invariant * params.l * params.c, invariant, balances[1] / params.l / params.l
+    ) * D("5e-13")
+
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
+    y_sol = gyro_cemm_math_testing.calcYGivenX(
+        scale(balances[0]), scale(params), scale(derived), scale(invariant)
+    )
+    assert y_py <= unscale(y_sol)
+    assert y_py == unscale(y_sol).approxed(abs=error_tolx)
+
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
+    x_sol = gyro_cemm_math_testing.calcXGivenY(
+        scale(balances[1]), scale(params), scale(derived), scale(invariant)
+    )
+    assert x_py <= unscale(x_sol)
+    assert x_py == unscale(x_sol).approxed(abs=error_toly)
+
+
+@given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
+def test_calcYGivenX_sense_check(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
+
+    # sense test against old implementation
+    midprice = (params.alpha + params.beta) / 2
+    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
+    y = cemm._compute_y_for_x(balances[0])
+    assume(y is not None)  # O/w out of bounds for this invariant
+    assume(balances[0] > 0 and y > 0)
+    assert y == y_py.approxed(rel=D("1e-5"))
+
+    # sense test against old implementation
+    midprice = (params.alpha + params.beta) / 2
+    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
+    x = cemm._compute_x_for_y(balances[1])
+    assume(x is not None)  # O/w out of bounds for this invariant
+    assume(balances[1] > 0 and x > 0)
+    assert x == x_py.approxed(rel=D("1e-5"))

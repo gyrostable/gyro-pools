@@ -197,3 +197,18 @@ def solveQuadraticSwap(
         return D(qb - qc).div_up(sTerm[1]) + ab[1]
     else:
         return (qb - qc) / (sTerm[0]) + ab[1]
+
+
+def calcYGivenX(x: D, p: Params, d: DerivedParams, invariant: D) -> D:
+    a = virtualOffset0(p, d, invariant)
+    b = virtualOffset1(p, d, invariant)
+    y = solveQuadraticSwap(p.l, x, p.s, p.c, invariant, (a, b), d.tauBeta)
+    return y
+
+
+def calcXGivenY(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
+    a = virtualOffset0(p, d, invariant)
+    b = virtualOffset1(p, d, invariant)
+    tau_beta = (-d.tauAlpha[0], d.tauAlpha[1])
+    x = solveQuadraticSwap(p.l, y, p.c, p.s, invariant, (b, a), tau_beta)
+    return x
