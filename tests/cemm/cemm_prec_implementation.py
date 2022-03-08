@@ -3,7 +3,7 @@ from typing import Iterable
 
 import pytest
 from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.libraries.signed_fixed_point import add_mag
+from tests.libraries.signed_fixed_point import add_mag, mul_array
 from tests.support.utils import scale, unscale
 
 _MAX_IN_RATIO = D("0.3")
@@ -23,10 +23,28 @@ class DerivedParams:
     tauBeta: tuple[D, D]
 
 
-def convert_to_qdecimal(inputs: Iterable[D]) -> Iterable[D]:
-    inputs = list(inputs)
-    inputs = [D(i) for i in inputs]
-    return tuple(inputs)
+def virtualOffset0(p: Params, d: DerivedParams, invariant: D) -> D:
+    if d.tauBeta[0] > 0:
+        a = D(invariant).mul_up(p.l).mul_up(d.tauBeta[0]).mul_up(p.c)
+    else:
+        a = D(invariant) * p.l * d.tauBeta[0] * p.c
+    if d.tauBeta[1] > 0:
+        a += D(invariant).mul_up(p.s).mul_up(d.tauBeta[1])
+    else:
+        a += D(invariant) * p.s * d.tauBeta[1]
+    return a
+
+
+def virtualOffset1(p: Params, d: DerivedParams, invariant: D) -> D:
+    if d.tauAlpha[0] < 0:
+        b = D(invariant).mul_up(p.l).mul_up(-d.tauAlpha[0]).mul_up(p.s)
+    else:
+        b = -D(invariant) * p.l * d.tauAlpha[0] * p.s
+    if d.tauAlpha[1] > 0:
+        b += D(invariant).mul_up(p.c).mul_up(d.tauAlpha[1])
+    else:
+        b += D(invariant) * p.c * d.tauAlpha[1]
+    return b
 
 
 def calcAChi_x(p: Params, d: DerivedParams) -> D:
@@ -136,3 +154,40 @@ def mul_xp_in_xylambdalambda(x: D, y: D, lam: D, round_up: bool) -> D:
         prod = prod * lami
         result = prod // int(D("1e11"))
         return unscale(D(result))
+
+
+def calcXpXp(x: D, r: D, lam: D, s: D, c: D, tauBeta: Iterable[D], roundUp: bool) -> D:
+    muls = (mul_xp_in_xylambdalambda(r, r, lam, roundUp), tauBeta[0], tauBeta[0], c, c)
+    xx = mul_array(muls, roundUp)
+
+    if roundUp:
+        roundUpMag = tauBeta[0] * tauBeta[1] < 0
+    else:
+        roundUpMag = tauBeta[0] * tauBeta[1] > 0
+    muls = (
+        mul_xp_in_xylambda(r, r, 2 * lam, roundUpMag),
+        c,
+        s,
+        tauBeta[0],
+        tauBeta[1],
+    )
+    xx += mul_array(muls, roundUp)
+
+    if roundUp:
+        roundUpMag = tauBeta[0] < 0
+    else:
+        roundUpMag = tauBeta[0] > 0
+    muls = (-mul_xp_in_xylambda(r, x, 2 * lam, roundUpMag), c, tauBeta[0])
+    xx += mul_array(muls, roundUp)
+
+    muls = (r, r, s, s, tauBeta[1], tauBeta[1])
+    xx += mul_array(muls, roundUp)
+
+    muls = (-r, x, s * 2, tauBeta[1])
+    xx += mul_array(muls, roundUp)
+
+    if roundUp:
+        xx += D(x).mul_up(x)
+    else:
+        xx += x * x
+    return xx

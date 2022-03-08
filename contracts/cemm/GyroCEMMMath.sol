@@ -582,14 +582,14 @@ library GyroCEMMMath {
 
             //Next term is positive if tauBeta.x * tauBeta.y < 0
             bool roundUpMag = roundUp ? (tauBeta.x * tauBeta.y < 0) : (tauBeta.x * tauBeta.y > 0);
-            (muls[0], muls[1], muls[2], muls[3], muls[4]) = (-mulXpInXYLambda(r, r, 2 * lambda, roundUpMag), c, s, tauBeta.x, tauBeta.y);
+            (muls[0], muls[1], muls[2], muls[3], muls[4]) = (mulXpInXYLambda(r, r, 2 * lambda, roundUpMag), c, s, tauBeta.x, tauBeta.y);
             xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
         }
         {
             int256[] memory muls = new int256[](3);
             //Next term is positive if tauBeta.x < 0
             bool roundUpMag = roundUp ? (tauBeta.x < 0) : (tauBeta.x > 0);
-            (muls[0], muls[1], muls[2]) = (-mulXpInXYLambda(r, r, 2 * lambda, roundUpMag), c, tauBeta.x);
+            (muls[0], muls[1], muls[2]) = (-mulXpInXYLambda(r, x, 2 * lambda, roundUpMag), c, tauBeta.x);
             xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
         }
         {
@@ -599,7 +599,7 @@ library GyroCEMMMath {
         }
         {
             int256[] memory muls = new int256[](4);
-            (muls[0], muls[1], muls[2], muls[3]) = (r, x, s * 2, tauBeta.y);
+            (muls[0], muls[1], muls[2], muls[3]) = (-r, x, s * 2, tauBeta.y);
             xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
         }
         xx = xx.add(roundUp ? x.mulUp(x) : x.mulDown(x));

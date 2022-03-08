@@ -21,10 +21,12 @@ from tests.support.types import *
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.cemm import util
 
+from math import pi, sin, cos, tan, acos
+
 
 from tests.support.types import Vector2
 
-billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
+billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
 MAX_IN_RATIO = to_decimal("0.3")
@@ -41,6 +43,28 @@ bpool_params = BasicPoolParameters(
 billions_strategy = st.decimals(min_value="0", max_value="1e12", places=4)
 # assume lambda only has three non-zero decimals
 lambda_strategy = st.decimals(min_value="1", max_value="1e8", places=3)
+
+
+@st.composite
+def gen_params(draw):
+    phi_degrees = draw(st.floats(10, 80))
+    phi = phi_degrees / 360 * 2 * pi
+
+    # Price bounds. Choose s.t. the 'peg' lies approximately within the bounds (within 30%).
+    # It'd be nonsensical if this was not the case: Why are we using an ellipse then?!
+    peg = tan(phi)  # = price where the flattest point of the ellipse lies.
+    peg = D(peg)
+    alpha_high = peg * D("1.3")
+    beta_low = peg * D("0.7")
+    alpha = draw(qdecimals("0.05", alpha_high.raw))
+    beta = draw(
+        qdecimals(max(beta_low.raw, (alpha + MIN_PRICE_SEPARATION).raw), "20.0")
+    )
+
+    s = sin(phi)
+    c = cos(phi)
+    l = draw(qdecimals(min_value="1", max_value="1e8", places=3))
+    return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
 @given(
@@ -65,6 +89,8 @@ def test_mulXpInXYLambda(gyro_cemm_math_testing, x, y, lam):
     assert prod_down_py == unscale(prod_down_sol)
     assert prod_down_py == prod.approxed()
 
+    assert prod_down_py == prod_up_py.approxed(abs=D("1e-17"))
+
 
 @given(
     x=billions_strategy,
@@ -87,6 +113,8 @@ def test_mulXpInXYLambdaLambda(gyro_cemm_math_testing, x, y, lam):
     )
     assert prod_down_py == unscale(prod_down_sol)
     assert prod_down_py == prod.approxed()
+
+    assert prod_down_py == prod_up_py.approxed(abs=D("1e-17"))
 
 
 @given(params=util.gen_params())
@@ -238,3 +266,111 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     # test against the old (imprecise) implementation
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     assert cemm.r == result_py.approxed()
+
+
+@given(
+    params=util.gen_params(),
+    invariant=st.decimals(min_value="1e-5", max_value="1e12", places=4),
+)
+def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    a_py = prec_impl.virtualOffset0(params, derived, invariant)
+    b_py = prec_impl.virtualOffset1(params, derived, invariant)
+    a_sol = gyro_cemm_math_testing.virtualOffset0(
+        scale(params), scale(derived), scale(invariant)
+    )
+    b_sol = gyro_cemm_math_testing.virtualOffset1(
+        scale(params), scale(derived), scale(invariant)
+    )
+    assert a_py == unscale(a_sol)
+    assert b_py == unscale(b_sol)
+
+    # test against the old (imprecise) implementation
+    midprice = (mparams.alpha + mparams.beta) / D(2)
+    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)
+    assert a_py == cemm.a.approxed()
+    assert b_py == cemm.b.approxed()
+
+
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_calcXpXp(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+
+    XpXp_up_py = prec_impl.calcXpXp(
+        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta, True
+    )
+    XpXp_up_sol = gyro_cemm_math_testing.calcXpXp(
+        scale(balances[0]),
+        scale(invariant),
+        scale(params.l),
+        scale(params.s),
+        scale(params.c),
+        scale(derived.tauBeta),
+        True,
+    )
+    assert XpXp_up_py == unscale(XpXp_up_sol)
+
+    XpXp_down_py = prec_impl.calcXpXp(
+        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta, False
+    )
+    XpXp_down_sol = gyro_cemm_math_testing.calcXpXp(
+        scale(balances[0]),
+        scale(invariant),
+        scale(params.l),
+        scale(params.s),
+        scale(params.c),
+        scale(derived.tauBeta),
+        False,
+    )
+    assert XpXp_down_py == unscale(XpXp_down_sol)
+
+    # sense test
+    a_py = prec_impl.virtualOffset0(params, derived, invariant)
+    XpXp = (balances[0] - a_py) ** 2
+    assert XpXp == XpXp_up_py.approxed()
+    assert XpXp_up_py == XpXp_down_py.approxed(abs=D("3e-17"))
+
+
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_calcYpYp(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+
+    tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
+    YpYp_up_py = prec_impl.calcXpXp(
+        balances[1], invariant, params.l, params.c, params.s, tau_beta, True
+    )
+    YpYp_up_sol = gyro_cemm_math_testing.calcXpXp(
+        scale(balances[1]),
+        scale(invariant),
+        scale(params.l),
+        scale(params.c),
+        scale(params.s),
+        scale(tau_beta),
+        True,
+    )
+    assert YpYp_up_py == unscale(YpYp_up_sol)
+
+    YpYp_down_py = prec_impl.calcXpXp(
+        balances[1], invariant, params.l, params.c, params.s, tau_beta, False
+    )
+    YpYp_down_sol = gyro_cemm_math_testing.calcXpXp(
+        scale(balances[1]),
+        scale(invariant),
+        scale(params.l),
+        scale(params.c),
+        scale(params.s),
+        scale(tau_beta),
+        False,
+    )
+    assert YpYp_down_py == unscale(YpYp_down_sol)
+
+    # sense test
+    b_py = prec_impl.virtualOffset1(params, derived, invariant)
+    YpYp = (balances[1] - b_py) ** 2
+    assert YpYp == YpYp_up_py.approxed()
+    assert YpYp_up_py == YpYp_down_py.approxed(abs=D("3e-17"))
