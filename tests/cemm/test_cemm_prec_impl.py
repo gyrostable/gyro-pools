@@ -294,83 +294,171 @@ def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
-def test_calcXpXp(gyro_cemm_math_testing, params, balances):
+def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     invariant = prec_impl.calculateInvariant(balances, params, derived)
 
-    XpXp_up_py = prec_impl.calcXpXp(
-        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta, True
+    XpXp_up_py = prec_impl.calcXpXpDivLambdaLambda(
+        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta
     )
-    XpXp_up_sol = gyro_cemm_math_testing.calcXpXp(
+    XpXp_up_sol = gyro_cemm_math_testing.calcXpXpDivLambdaLambda(
         scale(balances[0]),
         scale(invariant),
         scale(params.l),
         scale(params.s),
         scale(params.c),
         scale(derived.tauBeta),
-        True,
     )
     assert XpXp_up_py == unscale(XpXp_up_sol)
 
-    XpXp_down_py = prec_impl.calcXpXp(
-        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta, False
+    XpXp_down_py = prec_impl.calcXpXpDivLambdaLambda(
+        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta
     )
-    XpXp_down_sol = gyro_cemm_math_testing.calcXpXp(
+    XpXp_down_sol = gyro_cemm_math_testing.calcXpXpDivLambdaLambda(
         scale(balances[0]),
         scale(invariant),
         scale(params.l),
         scale(params.s),
         scale(params.c),
         scale(derived.tauBeta),
-        False,
     )
     assert XpXp_down_py == unscale(XpXp_down_sol)
 
     # sense test
     a_py = prec_impl.virtualOffset0(params, derived, invariant)
-    XpXp = (balances[0] - a_py) ** 2
+    XpXp = (balances[0] - a_py) * (balances[0] - a_py) / params.l / params.l
     assert XpXp == XpXp_up_py.approxed()
     assert XpXp_up_py == XpXp_down_py.approxed(abs=D("3e-17"))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
-def test_calcYpYp(gyro_cemm_math_testing, params, balances):
+def test_calcYpYpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     invariant = prec_impl.calculateInvariant(balances, params, derived)
 
     tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
-    YpYp_up_py = prec_impl.calcXpXp(
-        balances[1], invariant, params.l, params.c, params.s, tau_beta, True
+    YpYp_up_py = prec_impl.calcXpXpDivLambdaLambda(
+        balances[1], invariant, params.l, params.c, params.s, tau_beta
     )
-    YpYp_up_sol = gyro_cemm_math_testing.calcXpXp(
+    YpYp_up_sol = gyro_cemm_math_testing.calcXpXpDivLambdaLambda(
         scale(balances[1]),
         scale(invariant),
         scale(params.l),
         scale(params.c),
         scale(params.s),
         scale(tau_beta),
-        True,
     )
     assert YpYp_up_py == unscale(YpYp_up_sol)
 
-    YpYp_down_py = prec_impl.calcXpXp(
-        balances[1], invariant, params.l, params.c, params.s, tau_beta, False
+    YpYp_down_py = prec_impl.calcXpXpDivLambdaLambda(
+        balances[1], invariant, params.l, params.c, params.s, tau_beta
     )
-    YpYp_down_sol = gyro_cemm_math_testing.calcXpXp(
+    YpYp_down_sol = gyro_cemm_math_testing.calcXpXpDivLambdaLambda(
         scale(balances[1]),
         scale(invariant),
         scale(params.l),
         scale(params.c),
         scale(params.s),
         scale(tau_beta),
-        False,
     )
     assert YpYp_down_py == unscale(YpYp_down_sol)
 
     # sense test
     b_py = prec_impl.virtualOffset1(params, derived, invariant)
-    YpYp = (balances[1] - b_py) ** 2
+    YpYp = (balances[1] - b_py) * (balances[1] - b_py) / params.l / params.l
     assert YpYp == YpYp_up_py.approxed()
     assert YpYp_up_py == YpYp_down_py.approxed(abs=D("3e-17"))
+
+
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+@example(
+    params=CEMMMathParams(
+        alpha=Decimal("0.050000000000000000"),
+        beta=Decimal("0.123428886495925482"),
+        c=Decimal("0.984807753012208020"),
+        s=Decimal("0.173648177666930331"),
+        l=Decimal("17746.178000000000000000"),
+    ),
+    balances=[1, 1],
+)
+def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    a = prec_impl.virtualOffset0(params, derived, invariant)
+    b = prec_impl.virtualOffset1(params, derived, invariant)
+    # the error comes from the square root and from the square root in r (in the offset)
+    # these are amplified by the invariant, lambda, and/or balances
+    # note that r can be orders of magnitude greater than balances
+    error_tolx = max(
+        invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
+    ) * D("5e-13")
+    error_toly = max(
+        invariant * params.l * params.c, invariant, balances[1] / params.l / params.l
+    ) * D("5e-13")
+
+    val_py = prec_impl.solveQuadraticSwap(
+        params.l, balances[0], params.s, params.c, invariant, [a, b], derived.tauBeta
+    )
+    val_sol = gyro_cemm_math_testing.solveQuadraticSwap(
+        scale(params.l),
+        scale(balances[0]),
+        scale(params.s),
+        scale(params.c),
+        scale(invariant),
+        scale([a, b]),
+        scale(derived.tauBeta),
+    )
+    assert val_py <= unscale(val_sol)
+    assert val_py == unscale(val_sol).approxed(abs=error_tolx)
+
+    tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
+    val_y_py = prec_impl.solveQuadraticSwap(
+        params.l, balances[1], params.c, params.s, invariant, [b, a], tau_beta
+    )
+    val_y_sol = gyro_cemm_math_testing.solveQuadraticSwap(
+        scale(params.l),
+        scale(balances[1]),
+        scale(params.c),
+        scale(params.s),
+        scale(invariant),
+        scale([b, a]),
+        scale(tau_beta),
+    )
+    assert val_y_py <= unscale(val_y_sol)
+    assert val_y_py == unscale(val_y_sol).approxed(abs=error_toly)
+
+
+@given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
+def test_solveQuadraticSwap_sense_check(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    a = prec_impl.virtualOffset0(params, derived, invariant)
+    b = prec_impl.virtualOffset1(params, derived, invariant)
+
+    val_py = prec_impl.solveQuadraticSwap(
+        params.l, balances[0], params.s, params.c, invariant, [a, b], derived.tauBeta
+    )
+    tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
+    val_y_py = prec_impl.solveQuadraticSwap(
+        params.l, balances[1], params.c, params.s, invariant, [b, a], tau_beta
+    )
+
+    # sense test against old implementation
+    midprice = (params.alpha + params.beta) / 2
+    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
+    y = cemm._compute_y_for_x(balances[0])
+    assume(y is not None)  # O/w out of bounds for this invariant
+    assume(balances[0] > 0 and y > 0)
+    assert y == val_py.approxed(rel=D("1e-5"))
+
+    # sense test against old implementation
+    midprice = (params.alpha + params.beta) / 2
+    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
+    x = cemm._compute_x_for_y(balances[1])
+    assume(x is not None)  # O/w out of bounds for this invariant
+    assume(balances[1] > 0 and x > 0)
+    assert x == val_y_py.approxed(rel=D("1e-5"))

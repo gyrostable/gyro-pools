@@ -252,16 +252,15 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.solveQuadraticSwap(lambda, x, s, c, r, ab, tauBeta);
     }
 
-    function calcXpXp(
+    function calcXpXpDivLambdaLambda(
         int256 x,
         int256 r,
         int256 lambda,
         int256 s,
         int256 c,
-        GyroCEMMMath.Vector2 memory tauBeta,
-        bool roundUp
+        GyroCEMMMath.Vector2 memory tauBeta
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcXpXp(x, r, lambda, s, c, tauBeta, roundUp);
+        return GyroCEMMMath.calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
     }
 
     function liquidityInvariantUpdate(

@@ -532,77 +532,50 @@ library GyroCEMMMath {
         lamBar.x = ONE.sub(ONE.divDown(lambda).divDown(lambda));
         lamBar.y = ONE.sub(ONE.divUp(lambda).divUp(lambda));
         QParams memory qparams;
-        {
-            // shift by the virtual offsets
-            int256 xp = x.sub(ab.x);
-            qparams.b = xp > 0 ? -xp.mulDown(lamBar.y).mulDown(s).mulDown(c) : (-xp).mulUp(lamBar.x).mulUp(s).mulUp(c);
-        }
+
+        // shift by the virtual offsets
+        int256 xp = x.sub(ab.x);
+        qparams.b = xp > 0 ? -xp.mulDown(lamBar.y).mulDown(s).mulDown(c) : (-xp).mulUp(lamBar.x).mulUp(s).mulUp(c);
+
         // x component will round up, y will round down
         Vector2 memory sTerm = Vector2(ONE.sub(lamBar.y.mulDown(s).mulDown(s)), ONE.sub(lamBar.x.mulUp(s).mulUp(s)));
-        Vector2 memory cTerm = Vector2(ONE.sub(lamBar.y.mulDown(c).mulDown(c)), ONE.sub(lamBar.x.mulUp(c).mulUp(c)));
-        // first compute the smaller terms that will be multiplied by x'x'
-        qparams.c = lamBar.y.mulDown(lamBar.y).mulDown(s);
-        qparams.c = qparams.c.mulDown(s).mulDown(c).mulDown(c);
-        qparams.c = qparams.c.sub(sTerm.x.mulUp(cTerm.x));
 
-        {
-            // x'x' * (terms), round x'x' up if the other terms are < 0
-            int256 xx = calcXpXp(x, r, lambda, s, c, tauBeta, qparams.c < 0);
-            qparams.c = qparams.c < 0 ? xx.mulUp(qparams.c) : xx.mulDown(qparams.c);
-        }
-
+        // now compute the argument of the square root
+        qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
         qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y));
+
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error, but this shouldn't happen
         qparams.c = qparams.c > 0 ? FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256() : 0;
         // calculate the result in qparams.a
-        if (qparams.b - qparams.c > 0) {
-            qparams.a = (qparams.b.sub(qparams.c)).divUp(sTerm.y);
-        } else {
-            qparams.a = (qparams.b.sub(qparams.c)).divDown(sTerm.x);
-        }
+        qparams.a = qparams.b - qparams.c > 0 ? (qparams.b.sub(qparams.c)).divUp(sTerm.y) : (qparams.b.sub(qparams.c)).divDown(sTerm.x);
         return qparams.a.add(ab.y);
     }
 
     /** @dev Calculates x'x' where x' = x - b = x - r (A^{-1}tau(beta))_x
+     *  calculates an overestimate
      *  to calculate y'y', change x->y, s->c, c->s, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y  */
-    function calcXpXp(
+    function calcXpXpDivLambdaLambda(
         int256 x,
         int256 r,
         int256 lambda,
         int256 s,
         int256 c,
-        Vector2 memory tauBeta,
-        bool roundUp
-    ) internal pure returns (int256 xx) {
-        {
-            //This term is always positive
-            int256[] memory muls = new int256[](5);
-            (muls[0], muls[1], muls[2], muls[3], muls[4]) = (mulXpInXYLambdaLambda(r, r, lambda, roundUp), tauBeta.x, tauBeta.x, c, c);
-            xx = SignedFixedPoint.mulArray(muls, roundUp);
+        Vector2 memory tauBeta
+    ) internal pure returns (int256 val) {
+        // r^2 tau(beta)_x^2 c^2
+        val = r.mulUp(r).mulUp(tauBeta.x).mulUp(tauBeta.x).mulUp(c).mulUp(c);
 
-            //Next term is positive if tauBeta.x * tauBeta.y < 0
-            bool roundUpMag = roundUp ? (tauBeta.x * tauBeta.y < 0) : (tauBeta.x * tauBeta.y > 0);
-            (muls[0], muls[1], muls[2], muls[3], muls[4]) = (mulXpInXYLambda(r, r, 2 * lambda, roundUpMag), c, s, tauBeta.x, tauBeta.y);
-            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
-        }
-        {
-            int256[] memory muls = new int256[](3);
-            //Next term is positive if tauBeta.x < 0
-            bool roundUpMag = roundUp ? (tauBeta.x < 0) : (tauBeta.x > 0);
-            (muls[0], muls[1], muls[2]) = (-mulXpInXYLambda(r, x, 2 * lambda, roundUpMag), c, tauBeta.x);
-            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
-        }
-        {
-            int256[] memory muls = new int256[](6);
-            (muls[0], muls[1], muls[2], muls[3], muls[4], muls[5]) = (r, r, s, s, tauBeta.y, tauBeta.y);
-            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
-        }
-        {
-            int256[] memory muls = new int256[](4);
-            (muls[0], muls[1], muls[2], muls[3]) = (-r, x, s * 2, tauBeta.y);
-            xx = xx.add(SignedFixedPoint.mulArray(muls, roundUp));
-        }
-        xx = xx.add(roundUp ? x.mulUp(x) : x.mulDown(x));
+        // (r^2 s tau(beta)_y - rx)2c tau(beta)_x / lambda
+        // add 8 to accout for rounding error in numerator, considering magnitude of terms
+        int256 term = r.mulDown(r).mulDown(s).mulDown(tauBeta.y).sub(r.mulDown(x));
+        term = term.mulDown(2 * c).mulDown(tauBeta.x) + 8;
+        val = term > 0 ? val.add(term.divUp(lambda)) : val.add(term.divDown(lambda));
+
+        // ((r^2 s tau(beta)_y - rx 2) s tau(beta)_y + x^2) / lambda^2
+        // add 9 to account for rounding error in numerator, considering magnitude of terms
+        term = r.mulDown(r).mulDown(s).mulDown(tauBeta.y).sub(r.mulDown(x).mulDown(2 * ONE));
+        term = term.mulDown(s).mulDown(tauBeta.y).add(x.mulUp(x)) + 9;
+        val = term > 0 ? val.add(term.divUp(lambda).divUp(lambda)) : val.add(term.divDown(lambda).divDown(lambda));
     }
 
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.

@@ -156,38 +156,44 @@ def mul_xp_in_xylambdalambda(x: D, y: D, lam: D, round_up: bool) -> D:
         return unscale(D(result))
 
 
-def calcXpXp(x: D, r: D, lam: D, s: D, c: D, tauBeta: Iterable[D], roundUp: bool) -> D:
-    muls = (mul_xp_in_xylambdalambda(r, r, lam, roundUp), tauBeta[0], tauBeta[0], c, c)
-    xx = mul_array(muls, roundUp)
+def calcXpXpDivLambdaLambda(x: D, r: D, lam: D, s: D, c: D, tauBeta: Iterable[D]) -> D:
+    val = D(r).mul_up(r).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
 
-    if roundUp:
-        roundUpMag = tauBeta[0] * tauBeta[1] < 0
+    term = (D(r) * r * s * tauBeta[1] - D(r) * x) * (2 * c) * tauBeta[0] + D("8e-18")
+    if term > 0:
+        val += D(term).div_up(lam)
     else:
-        roundUpMag = tauBeta[0] * tauBeta[1] > 0
-    muls = (
-        mul_xp_in_xylambda(r, r, 2 * lam, roundUpMag),
-        c,
-        s,
-        tauBeta[0],
-        tauBeta[1],
+        val += D(term) / lam
+
+    term = (
+        (D(r) * r * s * tauBeta[1] - D(r) * x * 2) * s * tauBeta[1]
+        + D(x).mul_up(x)
+        + D("9e-18")
     )
-    xx += mul_array(muls, roundUp)
-
-    if roundUp:
-        roundUpMag = tauBeta[0] < 0
+    if term > 0:
+        val += D(term).div_up(lam).div_up(lam)
     else:
-        roundUpMag = tauBeta[0] > 0
-    muls = (-mul_xp_in_xylambda(r, x, 2 * lam, roundUpMag), c, tauBeta[0])
-    xx += mul_array(muls, roundUp)
+        val += D(term) / lam / lam
+    return val
 
-    muls = (r, r, s, s, tauBeta[1], tauBeta[1])
-    xx += mul_array(muls, roundUp)
 
-    muls = (-r, x, s * 2, tauBeta[1])
-    xx += mul_array(muls, roundUp)
-
-    if roundUp:
-        xx += D(x).mul_up(x)
+def solveQuadraticSwap(
+    lam: D, x: D, s: D, c: D, r: D, ab: Iterable[D], tauBeta: Iterable[D]
+) -> D:
+    lamBar = (D(1) - (D(1) / lam / lam), D(1) - D(1).div_up(lam).div_up(lam))
+    xp = x - ab[0]
+    if xp > 0:
+        qb = -xp * lamBar[1] * s * c
     else:
-        xx += x * x
-    return xx
+        qb = -D(xp).mul_up(lamBar[0]).mul_up(s).mul_up(c)
+
+    sTerm = (D(1) - lamBar[1] * s * s, D(1) - lamBar[0].mul_up(s).mul_up(s))
+
+    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, tauBeta) + r * r * sTerm[0]
+    assert qc >= 0
+    qc = D(qc).sqrt()
+
+    if qb - qc > 0:
+        return D(qb - qc).div_up(sTerm[1]) + ab[1]
+    else:
+        return (qb - qc) / (sTerm[0]) + ab[1]
