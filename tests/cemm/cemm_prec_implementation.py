@@ -156,7 +156,11 @@ def mul_xp_in_xylambdalambda(x: D, y: D, lam: D, round_up: bool) -> D:
         return unscale(D(result))
 
 
-def calcXpXpDivLambdaLambda(x: D, r: D, lam: D, s: D, c: D, tauBeta: Iterable[D]) -> D:
+def calcXpXpDivLambdaLambda(
+    x: D, r: D, lam: D, s: D, c: D, a: D, tauBeta: Iterable[D]
+) -> D:
+    if x - a > 0:
+        r = r + D(r).mul_up(D("1e-12"))
     val = D(r).mul_up(r).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
 
     term = (D(r) * r * s * tauBeta[1] - D(r) * x) * (2 * c) * tauBeta[0] + D("8e-18")
@@ -189,8 +193,9 @@ def solveQuadraticSwap(
 
     sTerm = (D(1) - lamBar[1] * s * s, D(1) - lamBar[0].mul_up(s).mul_up(s))
 
-    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, tauBeta) + r * r * sTerm[0]
-    assert qc >= 0
+    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, ab[0], tauBeta) + r * r * sTerm[0]
+    if qc < 0:
+        qc = 0
     qc = D(qc).sqrt()
 
     if qb - qc > 0:
@@ -200,15 +205,78 @@ def solveQuadraticSwap(
 
 
 def calcYGivenX(x: D, p: Params, d: DerivedParams, invariant: D) -> D:
-    a = virtualOffset0(p, d, invariant)
-    b = virtualOffset1(p, d, invariant)
+    invariant_up = invariant + D(invariant).mul_up(D("1e-12"))
+    a = virtualOffset0(p, d, invariant_up)
+    b = virtualOffset1(p, d, invariant_up)
     y = solveQuadraticSwap(p.l, x, p.s, p.c, invariant, (a, b), d.tauBeta)
     return y
 
 
 def calcXGivenY(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
-    a = virtualOffset0(p, d, invariant)
-    b = virtualOffset1(p, d, invariant)
+    invariant_up = invariant + D(invariant).mul_up(D("1e-12"))
+    a = virtualOffset0(p, d, invariant_up)
+    b = virtualOffset1(p, d, invariant_up)
     tau_beta = (-d.tauAlpha[0], d.tauAlpha[1])
     x = solveQuadraticSwap(p.l, y, p.c, p.s, invariant, (b, a), tau_beta)
     return x
+
+
+def calcYGivenX_true(x: D, p: Params, d: DerivedParams, invariant: D) -> D:
+    a = virtualOffset0(p, d, invariant)
+    b = virtualOffset1(p, d, invariant)
+    y = solveQuadraticSwap_true(p.l, x, p.s, p.c, invariant, (a, b), d.tauBeta)
+    return y
+
+
+def calcXGivenY_true(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
+    a = virtualOffset0(p, d, invariant)
+    b = virtualOffset1(p, d, invariant)
+    tau_beta = (-d.tauAlpha[0], d.tauAlpha[1])
+    x = solveQuadraticSwap_true(p.l, y, p.c, p.s, invariant, (b, a), tau_beta)
+    return x
+
+
+def calcXpXpDivLambdaLambda_true(
+    x: D, r: D, lam: D, s: D, c: D, a: D, tauBeta: Iterable[D]
+) -> D:
+    val = D(r).mul_up(r).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
+
+    term = (D(r) * r * s * tauBeta[1] - D(r) * x) * (2 * c) * tauBeta[0] + D("8e-18")
+    if term > 0:
+        val += D(term).div_up(lam)
+    else:
+        val += D(term) / lam
+
+    term = (
+        (D(r) * r * s * tauBeta[1] - D(r) * x * 2) * s * tauBeta[1]
+        + D(x).mul_up(x)
+        + D("9e-18")
+    )
+    if term > 0:
+        val += D(term).div_up(lam).div_up(lam)
+    else:
+        val += D(term) / lam / lam
+    return val
+
+
+def solveQuadraticSwap_true(
+    lam: D, x: D, s: D, c: D, r: D, ab: Iterable[D], tauBeta: Iterable[D]
+) -> D:
+    lamBar = (D(1) - (D(1) / lam / lam), D(1) - D(1).div_up(lam).div_up(lam))
+    xp = x - ab[0]
+    if xp > 0:
+        qb = -xp * lamBar[1] * s * c
+    else:
+        qb = -D(xp).mul_up(lamBar[0]).mul_up(s).mul_up(c)
+
+    sTerm = (D(1) - lamBar[1] * s * s, D(1) - lamBar[0].mul_up(s).mul_up(s))
+
+    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, ab[0], tauBeta) + r * r * sTerm[0]
+    if qc < 0:
+        qc = 0
+    qc = D(qc).sqrt()
+
+    if qb - qc > 0:
+        return D(qb - qc).div_up(sTerm[1]) + ab[1]
+    else:
+        return (qb - qc) / (sTerm[0]) + ab[1]

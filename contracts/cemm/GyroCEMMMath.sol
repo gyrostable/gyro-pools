@@ -210,7 +210,7 @@ library GyroCEMMMath {
     }
 
     /** @dev Calculates b = r*(A^{-1}tau(alpha))_y with optimal precision and rounding up in signed direction
-        TODO: correct for underestiamte of r, in this case, mulUp/mulDown might not matter */
+        TODO: correct for underestimate of r, in this case, mulUp/mulDown might not matter */
     function virtualOffset1(
         Params memory params,
         DerivedParams memory derived,
@@ -534,6 +534,7 @@ library GyroCEMMMath {
         QParams memory qparams;
 
         // shift by the virtual offsets
+        // note that we want an overestimate of offset here so that -x'*lambar*s*c is overestimated in signed direction
         int256 xp = x.sub(ab.x);
         qparams.b = xp > 0 ? -xp.mulDown(lamBar.y).mulDown(s).mulDown(c) : (-xp).mulUp(lamBar.x).mulUp(s).mulUp(c);
 
@@ -541,13 +542,14 @@ library GyroCEMMMath {
         Vector2 memory sTerm = Vector2(ONE.sub(lamBar.y.mulDown(s).mulDown(s)), ONE.sub(lamBar.x.mulUp(s).mulUp(s)));
 
         // now compute the argument of the square root
-        qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
+        qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, ab.x, tauBeta);
         qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y));
 
-        // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error, but this shouldn't happen
+        // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         qparams.c = qparams.c > 0 ? FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256() : 0;
         // calculate the result in qparams.a
         qparams.a = qparams.b - qparams.c > 0 ? (qparams.b.sub(qparams.c)).divUp(sTerm.y) : (qparams.b.sub(qparams.c)).divDown(sTerm.x);
+        // note that we want an overestimate of offset here
         return qparams.a.add(ab.y);
     }
 
@@ -560,10 +562,17 @@ library GyroCEMMMath {
         int256 lambda,
         int256 s,
         int256 c,
+        int256 a,
         Vector2 memory tauBeta
     ) internal pure returns (int256 val) {
+        // We want to overestimate x' in magnitude b/c it will be squared
+        // if x' > 0 then we want an underestimate of offsets (and so an underestimate of r), so we reverse the earlier correction
+        // if x' < 0 then we are good with the overestimate
+        r = x - a > 0 ? r.add(r.mulUp(1e6)) : r;
+
         // r^2 tau(beta)_x^2 c^2
-        val = r.mulUp(r).mulUp(tauBeta.x).mulUp(tauBeta.x).mulUp(c).mulUp(c);
+        val = r.mulUp(r).mulUp(tauBeta.x).mulUp(tauBeta.x);
+        val = val.mulUp(c).mulUp(c);
 
         // (r^2 s tau(beta)_y - rx)2c tau(beta)_x / lambda
         // add 8 to accout for rounding error in numerator, considering magnitude of terms
@@ -573,7 +582,8 @@ library GyroCEMMMath {
 
         // ((r^2 s tau(beta)_y - rx 2) s tau(beta)_y + x^2) / lambda^2
         // add 9 to account for rounding error in numerator, considering magnitude of terms
-        term = r.mulDown(r).mulDown(s).mulDown(tauBeta.y).sub(r.mulDown(x).mulDown(2 * ONE));
+        term = r.mulDown(r).mulDown(s).mulDown(tauBeta.y);
+        term = term.sub(r.mulDown(x).mulDown(2 * ONE));
         term = term.mulDown(s).mulDown(tauBeta.y).add(x.mulUp(x)) + 9;
         val = term > 0 ? val.add(term.divUp(lambda).divUp(lambda)) : val.add(term.divDown(lambda).divDown(lambda));
     }
@@ -586,7 +596,11 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (int256 y) {
-        Vector2 memory ab = Vector2(virtualOffset0(params, derived, invariant), virtualOffset1(params, derived, invariant));
+        // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
+        // note that the error correction here should more than make up for rounding directions in virtual offset functions
+        int256 invariantUp = invariant.add(invariant.mulUp(1e6));
+        // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
+        Vector2 memory ab = Vector2(virtualOffset0(params, derived, invariantUp), virtualOffset1(params, derived, invariantUp));
         y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, ab, derived.tauBeta);
     }
 
@@ -596,7 +610,11 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (int256 x) {
-        Vector2 memory ba = Vector2(virtualOffset1(params, derived, invariant), virtualOffset0(params, derived, invariant));
+        // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
+        // note that the error correction here should more than make up for rounding directions in virtual offset functions
+        int256 invariantUp = invariant.add(invariant.mulUp(1e6));
+        // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
+        Vector2 memory ba = Vector2(virtualOffset1(params, derived, invariantUp), virtualOffset0(params, derived, invariantUp));
         // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
         x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, ba, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
     }

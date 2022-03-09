@@ -8,6 +8,7 @@ from tests.support.types import Vector2
 from tests.support.utils import qdecimals
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
+
 @dataclass
 class BasicPoolParameters:
     min_price_separation: D
@@ -16,7 +17,9 @@ class BasicPoolParameters:
     min_balance_ratio: D
     min_fee: D
 
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
+
+billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
+
 
 @st.composite
 def gen_balances(draw, n: int, bparams: BasicPoolParameters):
