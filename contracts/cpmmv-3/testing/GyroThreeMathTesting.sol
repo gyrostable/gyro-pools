@@ -8,12 +8,23 @@ import "./GyroThreeMathDebug.sol";
 import "../../../libraries/GyroPoolMath.sol";
 
 contract GyroThreeMathTesting {
-    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
-        return GyroThreeMath._calculateInvariant(balances, root3Alpha);
+    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256 invariant) {
+        // TODO LEGACY
+        (invariant, ) = GyroThreeMath._calculateInvariantUnder(balances, root3Alpha);
     }
 
     function underestimateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256, bool) {
-        return GyroThreeMath._underestimateInvariant(balances, root3Alpha);
+        return GyroThreeMath._calculateInvariantUnder(balances, root3Alpha);
+    }
+
+    function calculateInvariantUnderOver(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256, bool, uint256) {
+        return GyroThreeMath._calculateInvariantUnderOver(balances, root3Alpha);
+    }
+
+    // Helper function to circumvent the underestimation functionality. Not usually needed.
+    function calculateInvariantOver(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256 rootEst, uint256 deltaAbs) {
+        (uint256 a, uint256 mb, uint256 mc, uint256 md) = GyroThreeMath._calculateCubicTerms(balances, root3Alpha);
+        return GyroThreeMath._calculateCubic(a, mb, mc, md);
     }
 
     function calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
@@ -35,7 +46,8 @@ contract GyroThreeMathTesting {
         uint256 mc,
         uint256 md
     ) external pure returns (uint256 rootEst) {
-        return GyroThreeMath._calculateCubic(a, mb, mc, md);
+        // TODO Legacy. Call signature has changed.
+        (rootEst, ) = GyroThreeMath._calculateCubic(a, mb, mc, md);
     }
 
     function calculateCubicStartingPoint(
@@ -53,8 +65,9 @@ contract GyroThreeMathTesting {
         uint256 mc,
         uint256 md,
         uint256 rootEst
-    ) external pure returns (uint256) {
-        return GyroThreeMath._runNewtonIteration(a, mb, mc, md, rootEst);
+    ) external pure returns (uint256 rootEstOut) {
+        // TODO legacy. call signature has changed.
+        (rootEstOut, ) = GyroThreeMath._runNewtonIteration(a, mb, mc, md, rootEst);
     }
 
     function calcNewtonDelta(
@@ -100,18 +113,22 @@ contract GyroThreeMathTesting {
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountIn,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffsetUnder,
+        uint256 virtualOffsetOver
+        // TODO Fix tests
     ) external pure returns (uint256 amountOut) {
-        return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffsetInOut);
+        return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffsetUnder, virtualOffsetOver);
     }
 
     function calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffsetUnder,
+        uint256 virtualOffsetOver
+        // TODO fix tests
     ) external pure returns (uint256 amountIn) {
-        return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffsetInOut);
+        return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffsetUnder, virtualOffsetOver);
     }
 
     function calcAllTokensInGivenExactBptOut(

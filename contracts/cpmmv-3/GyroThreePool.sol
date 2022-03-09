@@ -149,10 +149,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, bool isUnderestimate, uint256 virtualOffset) = _calculateCurrentValues();
+        (uint256 virtualOffsetUnder, bool isUnderestimate, uint256 virtualOffsetOver) = _calculateVirtualOffset();
         // swap will revert if it is not shown to be an underestimate
         _require(isUnderestimate, GyroThreePoolErrors.UNDERESTIMATE_INVARIANT_FAILED);
-        return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
+        return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffsetUnder, virtualOffsetOver);
     }
 
     function _onSwapGivenOut(
@@ -160,48 +160,59 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, bool isUnderestimate, uint256 virtualOffset) = _calculateCurrentValues();
+        (uint256 virtualOffsetUnder, bool isUnderestimate, uint256 virtualOffsetOver) = _calculateVirtualOffset();
         // swap will revert if it is not shown to be an underestimate
         _require(isUnderestimate, GyroThreePoolErrors.UNDERESTIMATE_INVARIANT_FAILED);
-        return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
+        return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffsetUnder, virtualOffsetOver);
     }
 
-    /** @dev Calculate the invariant and the offset that takes real reserves to virtual reserves.
-     * Note that, because our price bounds are symmetric, the offset is the same for the three assets.
-     */
-    function _calculateCurrentValues()
-        private
-        view
-        returns (
-            uint256 invariant,
-            bool isUnderestimate,
-            uint256 virtualOffset
-        )
-    {
+    /** @dev Calculate the offset that that takes real reserves to virtual reserves, in an under- and an overestimated
+      * version. Note that, because our price bounds are symmetric, the offset is the same for the three assets.
+      * The underestimation can theoretically fail, though this is highly unlikely; we indicate this by
+      * underIsUnder=false.
+      */
+    function _calculateVirtualOffset() private view returns (
+            uint256 virtualOffsetUnder,
+            bool underIsUnder,
+            uint256 virtualOffsetOver) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         _upscaleArray(balances, _scalingFactors());
-
         uint256 root3Alpha = _root3Alpha;
-        (invariant, isUnderestimate) = GyroThreeMath._underestimateInvariant(balances, root3Alpha);
-        virtualOffset = invariant.mulDown(root3Alpha);
+        uint256 invariantUnder;
+        uint256 invariantOver;
+        (invariantUnder, underIsUnder, invariantOver) = GyroThreeMath._calculateInvariantUnderOver(
+            balances, root3Alpha);
+        virtualOffsetUnder = invariantUnder.mulDown(root3Alpha);
+        virtualOffsetOver = invariantOver.mulDown(root3Alpha);
+    }
+
+    /** @dev Calculate the invariant, underestimated.
+      * The underestimation can theoretically fail, though this is highly unlikely; we indicate this by
+      * underIsUnder=false. */
+    function _calculateInvariantUnder() private view returns (uint256 invariantUnder, bool underIsUnder) {
+        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        _upscaleArray(balances, _scalingFactors());
+        return GyroThreeMath._calculateInvariantUnder(balances, _root3Alpha);
     }
 
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffsetUnder,
+        uint256 virtualOffsetOver
     ) private pure returns (uint256) {
-        return GyroThreeMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetInOut);
+        return GyroThreeMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetUnder, virtualOffsetOver);
     }
 
     function _onSwapGivenOut(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffsetUnder,
+        uint256 virtualOffsetOver
     ) private pure returns (uint256) {
-        return GyroThreeMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetInOut);
+        return GyroThreeMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetUnder, virtualOffsetOver);
     }
 
     /**
@@ -233,7 +244,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         // uint256[] memory sqrtParams = _sqrtParameters();
 
-        uint256 invariantAfterJoin = GyroThreeMath._calculateInvariant(amountsIn, _root3Alpha);
+        uint256 invariantAfterJoin;
+        (invariantAfterJoin, ) = GyroThreeMath._calculateInvariantUnder(amountsIn, _root3Alpha);
 
         // Set the initial BPT to the value of the invariant times the number of tokens. This makes BPT supply more
         // consistent in Pools with similar compositions but different number of tokens.
@@ -284,7 +296,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
 
         uint256 root3Alpha = _root3Alpha;
 
-        uint256 invariantBeforeJoin = GyroThreeMath._calculateInvariant(balances, root3Alpha);
+        uint256 invariantBeforeJoin;
+        (invariantBeforeJoin, ) = GyroThreeMath._calculateInvariantUnder(balances, root3Alpha);
 
         _distributeFees(invariantBeforeJoin);
 
@@ -355,7 +368,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            uint256 invariantBeforeExit = GyroThreeMath._calculateInvariant(balances, root3Alpha);
+            uint256 invariantBeforeExit;
+            (invariantBeforeExit, )= GyroThreeMath._calculateInvariantUnder(balances, root3Alpha);
 
             _distributeFees(invariantBeforeExit);
 
@@ -387,13 +401,13 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * @dev Returns the current value of the invariant.
      */
     function getInvariant() public view override returns (uint256 invariant) {
-        (invariant, , ) = _calculateCurrentValues();
+        (invariant, ) = _calculateInvariantUnder();
     }
 
     /** @dev Returns false if a swap will revert b/c the invariant is not provably underestimated
      *  This is highly unlikely to occur, but it is hard to prove */
     function invariantUnderestimatedForSwap() public view returns (bool isUnderestimate) {
-        (, isUnderestimate, ) = _calculateCurrentValues();
+        (, isUnderestimate) = _calculateInvariantUnder();
     }
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)
