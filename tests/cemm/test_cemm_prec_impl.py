@@ -538,3 +538,28 @@ def test_calcYGivenX_sense_check(gyro_cemm_math_testing, params, balances):
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
     assert x == x_py.approxed(rel=D("1e-4"))
+
+
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_maxBalances(gyro_cemm_math_testing, params, balances):
+    mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+
+    xp_py = prec_impl.maxBalances0(params, derived, invariant)
+    yp_py = prec_impl.maxBalances1(params, derived, invariant)
+    xp_sol = gyro_cemm_math_testing.maxBalances0(
+        scale(params), scale(derived), scale(invariant)
+    )
+    yp_sol = gyro_cemm_math_testing.maxBalances1(
+        scale(params), scale(derived), scale(invariant)
+    )
+    assert xp_py == unscale(xp_sol)
+    assert yp_py == unscale(yp_sol)
+
+    # sense test against old implementation
+    midprice = (mparams.alpha + mparams.beta) / D(2)
+    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)
+
+    assert xp_py == D(cemm.xmax).approxed()
+    assert yp_py == D(cemm.ymax).approxed()

@@ -55,6 +55,18 @@ def calcAChi_x(p: Params, d: DerivedParams) -> D:
     )
 
 
+def maxBalances0(p: Params, d: DerivedParams, invariant: D) -> D:
+    return D(invariant) * p.l * p.c * (d.tauBeta[0] - d.tauAlpha[0]) + D(
+        invariant
+    ) * p.s * (d.tauBeta[1] - d.tauAlpha[1])
+
+
+def maxBalances1(p: Params, d: DerivedParams, invariant: D) -> D:
+    return D(invariant) * p.l * p.s * (d.tauBeta[0] - d.tauAlpha[0]) + D(
+        invariant
+    ) * p.c * (d.tauAlpha[1] - d.tauBeta[1])
+
+
 def calcAChiDivLambda_y(p: Params, d: DerivedParams) -> D:
     return (
         p.s * p.c * (d.tauBeta[0] - d.tauAlpha[0])

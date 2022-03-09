@@ -228,6 +228,26 @@ library GyroCEMMMath {
         }
     }
 
+    function maxBalances0(
+        Params memory p,
+        DerivedParams memory d,
+        int256 invariant
+    ) internal pure returns (int256 xp) {
+        // r lambda c (tau(beta)_x - tau(alpha)_x) + rs (tau(beta)_y - tau(alpha)_y)
+        xp = invariant.mulDown(p.lambda).mulDown(p.c).mulDown(d.tauBeta.x.sub(d.tauAlpha.x));
+        xp = xp.add(invariant.mulDown(p.s).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)));
+    }
+
+    function maxBalances1(
+        Params memory p,
+        DerivedParams memory d,
+        int256 invariant
+    ) internal pure returns (int256 yp) {
+        // r lambda s (tau(beta)_x - tau(alpha)_x) + rc (tau(alpha)_y - tau(beta)_y)
+        yp = invariant.mulDown(p.lambda).mulDown(p.s).mulDown(d.tauBeta.x.sub(d.tauAlpha.x));
+        yp = yp.add(invariant.mulDown(p.c).mulDown(d.tauAlpha.y.sub(d.tauBeta.y)));
+    }
+
     /** @dev Maximal values for the real reserves x and y when the respective other balance is 0, for a given
      *  invariant.
      *  See calculation in Section 2.1.2 Computing reserve offsets

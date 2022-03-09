@@ -83,6 +83,22 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.virtualOffset1(params, derived, invariant);
     }
 
+    function maxBalances0(
+        GyroCEMMMath.Params memory params,
+        GyroCEMMMath.DerivedParams memory derived,
+        int256 invariant
+    ) external pure returns (int256) {
+        return GyroCEMMMath.maxBalances0(params, derived, invariant);
+    }
+
+    function maxBalances1(
+        GyroCEMMMath.Params memory params,
+        GyroCEMMMath.DerivedParams memory derived,
+        int256 invariant
+    ) external pure returns (int256) {
+        return GyroCEMMMath.maxBalances1(params, derived, invariant);
+    }
+
     function maxBalances(
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
