@@ -53,8 +53,6 @@ library GyroCEMMMath {
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
-        // lambda assumed to only have 3 significant decimal digits (0s after)
-        _require((params.lambda / 1e15) * 1e15 == params.lambda, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
         validateNormed(Vector2(params.c, params.s), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
 
@@ -66,6 +64,12 @@ library GyroCEMMMath {
     struct Vector2 {
         int256 x;
         int256 y;
+    }
+
+    struct QParams {
+        int256 a;
+        int256 b;
+        int256 c;
     }
 
     /// @dev Ensures that `v` is approximately normed (i.e., lies on the unit circle).
@@ -103,30 +107,17 @@ library GyroCEMMMath {
         );
     }
 
-    // Scalar product of Vector2 objects
-    function scalarProdUp(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
-        ret = t1.x.mulUp(t2.x).add(t1.y.mulUp(t2.y));
-    }
-
-    function scalarProdDown(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
+    function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
         ret = t1.x.mulDown(t2.x).add(t1.y.mulDown(t2.y));
     }
 
     // "Methods" for Params. We could put these into a separate library and import them via 'using' to get method call
     // syntax.
 
-    /** @dev Calculate A^{-1}t where A^{-1} is given in Section 2.2
-     *  This is rotating and scaling the circle into the ellipse */
-    function mulAinv(Params memory params, Vector2 memory t) internal pure returns (Vector2 memory tp) {
-        tp.x = t.x.mulDown(params.lambda).mulDown(params.c).add(params.s.mulDown(t.y));
-        tp.y = (-t.x.mulDown(params.lambda).mulDown(params.s)).add(params.c.mulDown(t.y));
-    }
-
     /** @dev Calculate A t where A is given in Section 2.2
      *  This is reversing rotation and scaling of the ellipse (mapping back to circle) */
     function mulA(Params memory params, Vector2 memory tp) internal pure returns (Vector2 memory t) {
-        t.x = params.c.mulDown(tp.x).divDown(params.lambda);
-        t.x = t.x.sub(params.s.mulDown(tp.y).divDown(params.lambda));
+        t.x = params.c.mulDown(tp.x).divDown(params.lambda).sub(params.s.mulDown(tp.y).divDown(params.lambda));
         t.y = params.s.mulDown(tp.x).add(params.c.mulDown(tp.y));
     }
 
@@ -176,58 +167,34 @@ library GyroCEMMMath {
         tpp.y = SignedFixedPoint.ONE.divDown(z);
     }
 
-    /** @dev Calculate virtual offsets a and b.
-     *   See calculation in Section 2.1.2 Computing reserve offsets
-     *   Note that, in contrast to virtual reserve offsets in CPMM, these are *subtracted* from the real
+    /** @dev Calculate virtual offset a given invariant r.
+     *  See calculation in Section 2.1.2 Computing reserve offsets
+     *  Note that, in contrast to virtual reserve offsets in CPMM, these are *subtracted* from the real
      *  reserves, moving the curve to the upper-right. They can be positive or negative, but not both can be negative.
-     */
-    function virtualOffsets(
-        Params memory params,
-        DerivedParams memory derived,
-        int256 invariant
-    ) internal pure returns (Vector2 memory ab) {
-        ab.x = invariant.mulDown(mulAinv(params, derived.tauBeta).x); // virtual offset a
-        ab.y = invariant.mulDown(mulAinv(params, derived.tauAlpha).y); // virtual offset b
-    }
-
-    /** @dev Calculates a = r*(A^{-1}tau(beta))_x with optimal precision and rounding up in signed direction
-     *   TODO: correct for underestimate of r, in this case, mulUp/mulDown might not matter */
+     *  Calculates a = r*(A^{-1}tau(beta))_x with optimal precision and rounding up in signed direction */
     function virtualOffset0(
-        Params memory params,
-        DerivedParams memory derived,
-        int256 invariant
+        Params memory p,
+        DerivedParams memory d,
+        int256 r
     ) internal pure returns (int256 a) {
-        if (derived.tauBeta.x > 0) {
-            a = invariant.mulUp(params.lambda).mulUp(derived.tauBeta.x).mulUp(params.c);
-        } else {
-            a = invariant.mulDown(params.lambda).mulDown(derived.tauBeta.x).mulDown(params.c);
-        }
-        if (derived.tauBeta.y > 0) {
-            a = a.add(invariant.mulUp(params.s).mulUp(derived.tauBeta.y));
-        } else {
-            a = a.add(invariant.mulDown(params.s).mulDown(derived.tauBeta.y));
-        }
+        a = (d.tauBeta.x > 0) ? r.mulUp(p.lambda).mulUp(d.tauBeta.x).mulUp(p.c) : r.mulDown(p.lambda).mulDown(d.tauBeta.x).mulDown(p.c);
+        a = (d.tauBeta.y > 0) ? a.add(r.mulUp(p.s).mulUp(d.tauBeta.y)) : a.add(r.mulDown(p.s).mulDown(d.tauBeta.y));
     }
 
-    /** @dev Calculates b = r*(A^{-1}tau(alpha))_y with optimal precision and rounding up in signed direction
-        TODO: correct for underestimate of r, in this case, mulUp/mulDown might not matter */
+    /** @dev calculate virtual offset b given invariant r.
+     *  Calculates b = r*(A^{-1}tau(alpha))_y with optimal precision and rounding up in signed direction */
     function virtualOffset1(
-        Params memory params,
-        DerivedParams memory derived,
-        int256 invariant
+        Params memory p,
+        DerivedParams memory d,
+        int256 r
     ) internal pure returns (int256 b) {
-        if (derived.tauAlpha.x < 0) {
-            b = invariant.mulUp(params.lambda).mulUp(-derived.tauAlpha.x).mulUp(params.s);
-        } else {
-            b = -invariant.mulDown(params.lambda).mulDown(derived.tauAlpha.x).mulDown(params.s);
-        }
-        if (derived.tauAlpha.y > 0) {
-            b = b.add(invariant.mulUp(params.c).mulUp(derived.tauAlpha.y));
-        } else {
-            b = b.add(invariant.mulDown(params.c).mulDown(derived.tauAlpha.y));
-        }
+        b = (d.tauAlpha.x < 0) ? r.mulUp(p.lambda).mulUp(-d.tauAlpha.x).mulUp(p.s) : -r.mulDown(p.lambda).mulDown(d.tauAlpha.x).mulDown(p.s);
+        b = (d.tauAlpha.y > 0) ? b.add(r.mulUp(p.c).mulUp(d.tauAlpha.y)) : b.add(r.mulDown(p.c).mulDown(d.tauAlpha.y));
     }
 
+    /** Maximal value for the real reserves x when the respective other balance is 0 for given invariant
+     *  See calculation in Section 2.1.2. Calculation is ordered here for optimal precision
+     *  Rounding direction is ignored but is small considering precision, and is corrected for later */
     function maxBalances0(
         Params memory p,
         DerivedParams memory d,
@@ -238,6 +205,9 @@ library GyroCEMMMath {
         xp = xp.add(invariant.mulDown(p.s).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)));
     }
 
+    /** Maximal value for the real reserves y when the respective other balance is 0 for given invariant
+     *  See calculation in Section 2.1.2. Calculation is ordered here for optimal precision
+     *  Rounding direction is ignored but is small considering precision, and is corrected for later */
     function maxBalances1(
         Params memory p,
         DerivedParams memory d,
@@ -246,36 +216,6 @@ library GyroCEMMMath {
         // r lambda s (tau(beta)_x - tau(alpha)_x) + rc (tau(alpha)_y - tau(beta)_y)
         yp = invariant.mulDown(p.lambda).mulDown(p.s).mulDown(d.tauBeta.x.sub(d.tauAlpha.x));
         yp = yp.add(invariant.mulDown(p.c).mulDown(d.tauAlpha.y.sub(d.tauBeta.y)));
-    }
-
-    /** @dev Maximal values for the real reserves x and y when the respective other balance is 0, for a given
-     *  invariant.
-     *  See calculation in Section 2.1.2 Computing reserve offsets
-     */
-    function maxBalances(
-        Params memory params,
-        DerivedParams memory derived,
-        int256 invariant
-    ) internal pure returns (Vector2 memory xy) {
-        Vector2 memory vecAinvTauBeta = mulAinv(params, derived.tauBeta);
-        Vector2 memory vecAinvTauAlpha = mulAinv(params, derived.tauAlpha);
-
-        // calculate offsets a,b. Reuses matrix calculations already done
-        Vector2 memory ab;
-        ab.x = invariant.mulDown(vecAinvTauBeta.x); // virtual offset a
-        ab.y = invariant.mulDown(vecAinvTauAlpha.y); // virtual offset b
-
-        xy.y = -invariant.mulDown(vecAinvTauBeta.y); // maximal y reserves
-        xy.x = -invariant.mulDown(vecAinvTauAlpha.x); // maximal x reserves
-        // shift maximal amounts by offsets
-        xy.y = xy.y.add(ab.y);
-        xy.x = xy.x.add(ab.x);
-    }
-
-    struct QParams {
-        int256 a;
-        int256 b;
-        int256 c;
     }
 
     /** @dev Compute the invariant 'r' corresponding to the given values. The invariant can't be negative, but
@@ -427,22 +367,17 @@ library GyroCEMMMath {
         int256 invariant
     ) internal pure returns (uint256 px) {
         // shift by virtual offsets to get v(t)
-        Vector2 memory ab = virtualOffsets(params, derived, invariant);
-        Vector2 memory vec;
-        vec.x = balances[0].toInt256().sub(ab.x);
-        vec.y = balances[1].toInt256().sub(ab.y);
+        Vector2 memory ab = Vector2(virtualOffset0(params, derived, invariant), virtualOffset1(params, derived, invariant));
+        Vector2 memory vec = Vector2(balances[0].toInt256().sub(ab.x), balances[1].toInt256().sub(ab.y));
 
         // transform to circle to get Av(t)
         vec = mulA(params, vec);
-        Vector2 memory pc;
         // compute prices on circle
-        pc.x = vec.x.divDown(vec.y);
-        pc.y = SignedFixedPoint.ONE;
+        Vector2 memory pc = Vector2(vec.x.divDown(vec.y), ONE);
 
         // Convert prices back to ellipse
-        int256 pgx = scalarProdDown(pc, mulA(params, Vector2(SignedFixedPoint.ONE, 0)));
-        pgx = pgx.divDown(scalarProdDown(pc, mulA(params, Vector2(0, SignedFixedPoint.ONE))));
-        px = pgx.toUint256();
+        int256 pgx = scalarProd(pc, mulA(params, Vector2(ONE, 0)));
+        px = pgx.divDown(scalarProd(pc, mulA(params, Vector2(0, ONE)))).toUint256();
     }
 
     /** @dev Check that post-swap balances obey maximal asset bounds
@@ -455,12 +390,13 @@ library GyroCEMMMath {
         int256 newBal,
         uint8 assetIndex
     ) internal pure {
-        Vector2 memory xyPlus = maxBalances(params, derived, invariant);
-        int256 factor = SignedFixedPoint.ONE.sub(_MIN_BAL_RATIO.toInt256());
+        int256 factor = ONE.sub(_MIN_BAL_RATIO.toInt256());
         if (assetIndex == 0) {
-            _require(newBal < xyPlus.x.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            int256 xPlus = maxBalances0(params, derived, invariant);
+            _require(newBal < xPlus.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
-            _require(newBal < xyPlus.y.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            int256 yPlus = maxBalances1(params, derived, invariant);
+            _require(newBal < yPlus.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
     }
 
@@ -637,43 +573,5 @@ library GyroCEMMMath {
         Vector2 memory ba = Vector2(virtualOffset1(params, derived, invariantUp), virtualOffset0(params, derived, invariantUp));
         // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
         x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, ba, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
-    }
-
-    /** @dev calculates x*y*lambda with extra precision
-     *  assumes x,y, lambda > 0 and that lambda only has 3 significant decimal digits (0s after)
-     *  guaranteed not to overflow for x,y < 1e12 and lambda < 1e8 with some digits of wiggle room above that
-     *  Rounds in magnitude in direction given by roundUp */
-    function mulXpInXYLambda(
-        int256 x,
-        int256 y,
-        int256 lambda,
-        bool roundUp
-    ) internal pure returns (int256) {
-        int256 prod = x * y;
-        _require(x == 0 || prod / x == y, Errors.MUL_OVERFLOW);
-        int256 nextProd = prod * (lambda / 1e15);
-        _require(prod == 0 || nextProd / prod == lambda / 1e15, Errors.MUL_OVERFLOW);
-        return roundUp ? (nextProd - 1) / 1e21 + 1 : nextProd / 1e21;
-    }
-
-    /** @dev calculates x*y*lambda*lambda with extra precision
-     *  assumes x,y, lambda > 0 and that lambda only has 3 significant decimal digits (0s after)
-     *  guaranteed not to overflow for x,y < 1e12 and lambda < 1e8 with some digits of wiggle room above that
-     *  Rounds in magnitude in direction given by roundUp */
-    function mulXpInXYLambdaLambda(
-        int256 x,
-        int256 y,
-        int256 lambda,
-        bool roundUp
-    ) internal pure returns (int256) {
-        int256 prod = x * y;
-        _require(x == 0 || prod / x == y, Errors.MUL_OVERFLOW);
-        int256 nextProd = prod * (lambda / 1e15);
-        _require(prod == 0 || nextProd / prod == lambda / 1e15, Errors.MUL_OVERFLOW);
-        prod = roundUp ? (nextProd - 1) / 1e13 + 1 : nextProd / 1e13;
-
-        nextProd = prod * (lambda / 1e15);
-        _require(prod == 0 || nextProd / prod == lambda / 1e15, Errors.MUL_OVERFLOW);
-        return roundUp ? (nextProd - 1) / 1e11 + 1 : nextProd / 1e11;
     }
 }

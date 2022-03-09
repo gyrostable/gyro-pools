@@ -15,16 +15,8 @@ contract GyroCEMMMathTesting {
         GyroCEMMMath.validateDerivedParams(params, derived);
     }
 
-    function scalarProdUp(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2) external pure returns (int256 ret) {
-        ret = GyroCEMMMath.scalarProdUp(t1, t2);
-    }
-
-    function scalarProdDown(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2) external pure returns (int256 ret) {
-        ret = GyroCEMMMath.scalarProdDown(t1, t2);
-    }
-
-    function mulAinv(GyroCEMMMath.Params memory params, GyroCEMMMath.Vector2 memory t) external pure returns (GyroCEMMMath.Vector2 memory tp) {
-        tp = GyroCEMMMath.mulAinv(params, t);
+    function scalarProd(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2) external pure returns (int256 ret) {
+        ret = GyroCEMMMath.scalarProd(t1, t2);
     }
 
     function mulA(GyroCEMMMath.Params memory params, GyroCEMMMath.Vector2 memory tp) external pure returns (GyroCEMMMath.Vector2 memory t) {
@@ -59,14 +51,6 @@ contract GyroCEMMMathTesting {
         tpp = GyroCEMMMath.eta(pxc, z);
     }
 
-    function virtualOffsets(
-        GyroCEMMMath.Params memory params,
-        GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant
-    ) external pure returns (GyroCEMMMath.Vector2 memory ab) {
-        ab = GyroCEMMMath.virtualOffsets(params, derived, invariant);
-    }
-
     function virtualOffset0(
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
@@ -97,14 +81,6 @@ contract GyroCEMMMathTesting {
         int256 invariant
     ) external pure returns (int256) {
         return GyroCEMMMath.maxBalances1(params, derived, invariant);
-    }
-
-    function maxBalances(
-        GyroCEMMMath.Params memory params,
-        GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant
-    ) external pure returns (GyroCEMMMath.Vector2 memory xy) {
-        xy = GyroCEMMMath.maxBalances(params, derived, invariant);
     }
 
     function calculateInvariant(
@@ -172,24 +148,6 @@ contract GyroCEMMMathTesting {
         int256 invariant
     ) external pure returns (int256 x) {
         x = GyroCEMMMath.calcXGivenY(y, params, derived, invariant);
-    }
-
-    function mulXpInXYLambda(
-        int256 x,
-        int256 y,
-        int256 lambda,
-        bool roundUp
-    ) external pure returns (int256) {
-        return GyroCEMMMath.mulXpInXYLambda(x, y, lambda, roundUp);
-    }
-
-    function mulXpInXYLambdaLambda(
-        int256 x,
-        int256 y,
-        int256 lambda,
-        bool roundUp
-    ) external pure returns (int256) {
-        return GyroCEMMMath.mulXpInXYLambdaLambda(x, y, lambda, roundUp);
     }
 
     function calcAChi_x(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d) external pure returns (int256) {

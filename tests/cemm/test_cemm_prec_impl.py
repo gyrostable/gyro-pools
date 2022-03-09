@@ -40,10 +40,6 @@ bpool_params = BasicPoolParameters(
     MIN_PRICE_SEPARATION, MAX_IN_RATIO, MAX_OUT_RATIO, MIN_BALANCE_RATIO, MIN_FEE
 )
 
-billions_strategy = st.decimals(min_value="0", max_value="1e12", places=4)
-# assume lambda only has three non-zero decimals
-lambda_strategy = st.decimals(min_value="1", max_value="1e8", places=3)
-
 
 @st.composite
 def gen_params(draw):
@@ -87,56 +83,6 @@ def gen_params_conservative(draw):
     c = cos(phi)
     l = draw(qdecimals("1", "10"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
-
-
-@given(
-    x=billions_strategy,
-    y=billions_strategy,
-    lam=lambda_strategy,
-)
-def test_mulXpInXYLambda(gyro_cemm_math_testing, x, y, lam):
-    (x, y, lam) = (D(x), D(y), D(lam))
-    prod = x * y * lam
-    prod_up_py = prec_impl.mul_xp_in_xylambda(x, y, lam, True)
-    prod_up_sol = gyro_cemm_math_testing.mulXpInXYLambda(
-        scale(x), scale(y), scale(lam), True
-    )
-    assert prod_up_py == unscale(prod_up_sol)
-    assert prod_up_py == prod.approxed()
-
-    prod_down_py = prec_impl.mul_xp_in_xylambda(x, y, lam, False)
-    prod_down_sol = gyro_cemm_math_testing.mulXpInXYLambda(
-        scale(x), scale(y), scale(lam), False
-    )
-    assert prod_down_py == unscale(prod_down_sol)
-    assert prod_down_py == prod.approxed()
-
-    assert prod_down_py == prod_up_py.approxed(abs=D("1e-17"))
-
-
-@given(
-    x=billions_strategy,
-    y=billions_strategy,
-    lam=lambda_strategy,
-)
-def test_mulXpInXYLambdaLambda(gyro_cemm_math_testing, x, y, lam):
-    (x, y, lam) = (D(x), D(y), D(lam))
-    prod = x * y * lam * lam
-    prod_up_py = prec_impl.mul_xp_in_xylambdalambda(x, y, lam, True)
-    prod_up_sol = gyro_cemm_math_testing.mulXpInXYLambdaLambda(
-        scale(x), scale(y), scale(lam), True
-    )
-    assert prod_up_py == unscale(prod_up_sol)
-    assert prod_up_py == prod.approxed()
-
-    prod_down_py = prec_impl.mul_xp_in_xylambdalambda(x, y, lam, False)
-    prod_down_sol = gyro_cemm_math_testing.mulXpInXYLambdaLambda(
-        scale(x), scale(y), scale(lam), False
-    )
-    assert prod_down_py == unscale(prod_down_sol)
-    assert prod_down_py == prod.approxed()
-
-    assert prod_down_py == prod_up_py.approxed(abs=D("1e-17"))
 
 
 @given(params=gen_params())
@@ -193,7 +139,7 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
     params=gen_params_conservative(),
     balances=gen_balances(2, bpool_params),
 )
-def test_calcAtAChi_sense_check(gyro_cemm_math_testing, params, balances):
+def test_calcAtAChi_sense_check(params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     AChi_x = prec_impl.calcAChi_x(params, derived)
@@ -301,7 +247,7 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     params=gen_params_conservative(),
     balances=gen_balances(2, bpool_params),
 )
-def test_calculateInvariant_sense_check(gyro_cemm_math_testing, params, balances):
+def test_calculateInvariant_sense_check(params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     result_py = prec_impl.calculateInvariant(balances, params, derived)
@@ -453,7 +399,7 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
 
 # note: only test this for conservative parameters b/c old implementation is so imprecise
 @given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
-def test_solveQuadraticSwap_sense_check(gyro_cemm_math_testing, params, balances):
+def test_solveQuadraticSwap_sense_check(params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     invariant = prec_impl.calculateInvariant(balances, params, derived)
@@ -515,7 +461,7 @@ def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
 
 
 @given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
-def test_calcYGivenX_sense_check(gyro_cemm_math_testing, params, balances):
+def test_calcYGivenX_sense_check(params, balances):
     mparams = util.params2MathParams(params)
     derived = util.mathParams2DerivedParams(mparams)
     invariant = prec_impl.calculateInvariant(balances, params, derived)

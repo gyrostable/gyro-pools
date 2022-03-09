@@ -136,38 +136,6 @@ def calculateInvariant(balances: Iterable[D], p: Params, d: DerivedParams) -> D:
     return (AtAChi + sqrt) / denominator
 
 
-def mul_xp_in_xylambda(x: D, y: D, lam: D, round_up: bool):
-    # do these in int operations to be exact
-    (xi, yi, lami) = (int(x * D("1e18")), int(y * D("1e18")), int(lam * D("1e3")))
-    prod = xi * yi * lami
-    if round_up:
-        if prod == 0:  # a weird exception case in Python b/c // is floor integer
-            result = 1
-        else:
-            result = int(prod - 1) // int(D("1e21")) + 1
-        return unscale(D(result))
-    else:
-        return unscale(D(prod // int(D("1e21"))))
-
-
-def mul_xp_in_xylambdalambda(x: D, y: D, lam: D, round_up: bool) -> D:
-    (xi, yi, lami) = (int(x * D("1e18")), int(y * D("1e18")), int(lam * D("1e3")))
-    prod = xi * yi * lami
-    if round_up:
-        if prod == 0:  # a weird exception case in Python b/c // is floor integer
-            result = 1
-        else:
-            result = (prod - 1) // int(D("1e13")) + 1
-        prod = result * lami
-        result = (prod - 1) // int(D("1e11")) + 1
-        return unscale(D(result))
-    else:
-        prod = prod // int(D("1e13"))
-        prod = prod * lami
-        result = prod // int(D("1e11"))
-        return unscale(D(result))
-
-
 def calcXpXpDivLambdaLambda(
     x: D, r: D, lam: D, s: D, c: D, a: D, tauBeta: Iterable[D]
 ) -> D:

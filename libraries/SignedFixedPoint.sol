@@ -72,51 +72,6 @@ library SignedFixedPoint {
         else return 0;
     }
 
-    /// @dev n-fold multiplication that rounds up in signed direction
-    function mulArrayUp(int256[] memory inputs) internal pure returns (int256 prod) {
-        int256 sign = 1;
-        for (uint256 i = 0; i < inputs.length; i++) {
-            if (inputs[i] < 0) {
-                sign = -sign;
-            }
-        }
-        prod = inputs[0];
-        if (sign > 0) {
-            for (uint256 i = 1; i < inputs.length; i++) {
-                prod = mulUp(prod, inputs[i]);
-            }
-        } else {
-            for (uint256 i = 1; i < inputs.length; i++) {
-                prod = mulDown(prod, inputs[i]);
-            }
-        }
-    }
-
-    /// @dev n-fold multiplication that rounds down in signed direction
-    function mulArrayDown(int256[] memory inputs) internal pure returns (int256 prod) {
-        int256 sign = 1;
-        for (uint256 i = 0; i < inputs.length; i++) {
-            if (inputs[i] < 0) {
-                sign = -sign;
-            }
-        }
-        prod = inputs[0];
-        if (sign < 0) {
-            for (uint256 i = 1; i < inputs.length; i++) {
-                prod = mulUp(prod, inputs[i]);
-            }
-        } else {
-            for (uint256 i = 1; i < inputs.length; i++) {
-                prod = mulDown(prod, inputs[i]);
-            }
-        }
-    }
-
-    /// @dev n-fold multiplication that rounds in signed direction given by roundUp
-    function mulArray(int256[] memory inputs, bool roundUp) internal pure returns (int256) {
-        return roundUp ? mulArrayUp(inputs) : mulArrayDown(inputs);
-    }
-
     /// @dev Rounds towards 0, i.e., down in absolute value.
     function divDown(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
