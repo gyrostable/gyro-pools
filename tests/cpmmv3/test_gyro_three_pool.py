@@ -276,7 +276,8 @@ def test_swap(
         balances[0],  # balanceIn,
         balances[1],  # balanceOut,
         amountToSwapMinusFees,  # amountIn,
-        scale(current_invariant * root3Alpha),  # virtualOffsetInOut
+        scale(current_invariant * root3Alpha),  # virtualOffsetInOut (under)
+        scale(current_invariant * root3Alpha),  # virtualOffsetInOut (over; we use the same one here)
     )
 
     swapRequest = SwapRequest(

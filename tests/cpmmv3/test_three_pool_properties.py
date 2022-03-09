@@ -4,8 +4,9 @@ from typing import Tuple
 import hypothesis.strategies as st
 from brownie.test import given
 from brownie import reverts
-from hypothesis import assume, settings
+from hypothesis import assume, settings, example
 import tests.cpmmv3.v3_math_implementation as math_implementation
+from tests.cpmmv3.util import calculateInvariantUnderOver
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
@@ -75,6 +76,9 @@ def test_invariant_sol_inv_below_py_inv(
     balances=gen_balances(),
     root_three_alpha=gen_bounds(),
 )
+@example(balances=(D('1e10'), D(0), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
+# Same thing:
+# @example(balances=(10_000_000_000, 0, 0), root_three_alpha=D(ROOT_ALPHA_MAX).raw)
 def test_sol_invariant_underestimated(
     gyro_three_math_testing, balances, root_three_alpha
 ):
@@ -139,22 +143,23 @@ def mtest_invariant_sol_inv_below_py_inv(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
 
-    invariant_sol = gyro_three_math_testing.calculateInvariant(
+    invariant_sol_under, _ = calculateInvariantUnderOver(gyro_three_math_testing,
         scale(balances), scale(root_three_alpha)
     )
 
-    assert unscale(D(invariant_sol)) <= invariant
+    assert unscale(D(invariant_sol_under)) <= invariant
 
 
 def mtest_sol_invariant_underestimated(
     gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
 ):
+    # TODO Perhaps remove this test. It's a bit trivial now since we also check underestimation in solidity.
     (a, mb, mc, md) = math_implementation.calculateCubicTerms(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
     (b, c, d) = (-mb, -mc, -md)
-    L = unscale(
-        gyro_three_math_testing.calculateInvariant(
+    L, _ = unscale(
+        calculateInvariantUnderOver(gyro_three_math_testing,
             scale(balances), scale(root_three_alpha)
         )
     )
@@ -262,13 +267,13 @@ def mtest_invariant_across_calcInGivenOut(
     )
 
     if check_sol_inv:
-        invariant_sol_after = gyro_three_math_testing.calculateInvariant(
+        invariant_sol_after_under, invariant_sol_after_over = calculateInvariantUnderOver(gyro_three_math_testing,
             scale(balances_after), scale(root_three_alpha)
         )
 
     # assert invariant_after >= invariant
     if check_sol_inv:
-        assert unscale(invariant_sol_after) >= invariant_sol
+        assert unscale(invariant_sol_after_over) >= invariant_sol
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
@@ -366,13 +371,13 @@ def mtest_invariant_across_calcOutGivenIn(
     )
 
     if check_sol_inv:
-        invariant_sol_after = gyro_three_math_testing.calculateInvariant(
+        invariant_sol_after_under, invariant_sol_after_over = calculateInvariantUnderOver(gyro_three_math_testing,
             scale(balances_after), scale(root_three_alpha)
         )
 
     # assert invariant_after >= invariant
     if check_sol_inv:
-        assert unscale(invariant_sol_after) >= invariant_sol
+        assert unscale(invariant_sol_after_over) >= invariant_sol
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(

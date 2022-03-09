@@ -6,7 +6,7 @@ from tests.support.types import TwoPoolBaseParams, TwoPoolParams, ThreePoolParam
 TOKENS_PER_USER = 1000 * 10**18
 
 # This will provide assertion introspection for common test functions defined in this module.
-pytest.register_assert_rewrite("tests.cemm.util")
+pytest.register_assert_rewrite("tests.cemm.util", "tests.cpmmv3.util")
 
 
 @pytest.fixture(scope="module")

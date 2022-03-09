@@ -3,11 +3,13 @@ from typing import Tuple
 
 import hypothesis.strategies as st
 import numpy as np
-from hypothesis import settings, assume
+from hypothesis import settings, assume, example
 
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie import reverts
 from brownie.test import given
+
+from tests.cpmmv3.util import calculateInvariantUnderOver
 from tests.support.utils import scale, to_decimal, unscale, qdecimals
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -256,6 +258,12 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     ),
     root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
 )
+@example(balances=[D('1e10'), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
+# L = Decimal('99993316741847.981485422976711167')
+# This is also *approximately* computed by Solidity. Wtf.
+# Crash on L^3, but why?!
+# Reason is that this is really too large: It's ≈ 9.99e13 and we can only represent - and calculate - L^3 for like L ≤ 4.8e13. So it's not even close.
+# - [ ] Why doesn't it crash for Ari??
 def test_calculate_invariant(
     gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
 ):
@@ -272,11 +280,12 @@ def test_calculate_invariant(
 
     roots = np.roots([a, -b, -c, -d])
 
-    invariant_sol = gyro_three_math_testing.calculateInvariant(
+    invariant_sol_under, invariant_sol_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
         scale(balances), scale(root_three_alpha)
-    )
+    ))
 
-    assert int(invariant_sol) == scale(invariant).approxed(rel=D("1e-14"))
+    assert invariant_sol_under.approxed(rel=D("1e-14")) <= invariant.approxed(rel=D("1e-14"))
+    assert invariant_sol_over.approxed(rel=D("1e-14")) >= invariant.approxed(rel=D("1e-14"))
 
 
 # @given(
