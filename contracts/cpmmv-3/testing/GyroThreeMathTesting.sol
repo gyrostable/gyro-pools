@@ -115,7 +115,6 @@ contract GyroThreeMathTesting {
         uint256 amountIn,
         uint256 virtualOffsetUnder,
         uint256 virtualOffsetOver
-        // TODO Fix tests
     ) external pure returns (uint256 amountOut) {
         return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffsetUnder, virtualOffsetOver);
     }
@@ -126,7 +125,6 @@ contract GyroThreeMathTesting {
         uint256 amountOut,
         uint256 virtualOffsetUnder,
         uint256 virtualOffsetOver
-        // TODO fix tests
     ) external pure returns (uint256 amountIn) {
         return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffsetUnder, virtualOffsetOver);
     }
