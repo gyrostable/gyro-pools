@@ -175,10 +175,10 @@ library GyroCEMMMath {
     function virtualOffset0(
         Params memory p,
         DerivedParams memory d,
-        int256 r
+        Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 a) {
-        a = (d.tauBeta.x > 0) ? r.mulUp(p.lambda).mulUp(d.tauBeta.x).mulUp(p.c) : r.mulDown(p.lambda).mulDown(d.tauBeta.x).mulDown(p.c);
-        a = (d.tauBeta.y > 0) ? a.add(r.mulUp(p.s).mulUp(d.tauBeta.y)) : a.add(r.mulDown(p.s).mulDown(d.tauBeta.y));
+        a = (d.tauBeta.x > 0) ? r.x.mulUp(p.lambda).mulUp(d.tauBeta.x).mulUp(p.c) : r.y.mulDown(p.lambda).mulDown(d.tauBeta.x).mulDown(p.c);
+        a = (d.tauBeta.y > 0) ? a.add(r.x.mulUp(p.s).mulUp(d.tauBeta.y)) : a.add(r.y.mulDown(p.s).mulDown(d.tauBeta.y));
     }
 
     /** @dev calculate virtual offset b given invariant r.
@@ -186,10 +186,10 @@ library GyroCEMMMath {
     function virtualOffset1(
         Params memory p,
         DerivedParams memory d,
-        int256 r
+        Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 b) {
-        b = (d.tauAlpha.x < 0) ? r.mulUp(p.lambda).mulUp(-d.tauAlpha.x).mulUp(p.s) : -r.mulDown(p.lambda).mulDown(d.tauAlpha.x).mulDown(p.s);
-        b = (d.tauAlpha.y > 0) ? b.add(r.mulUp(p.c).mulUp(d.tauAlpha.y)) : b.add(r.mulDown(p.c).mulDown(d.tauAlpha.y));
+        b = (d.tauAlpha.x < 0) ? r.x.mulUp(p.lambda).mulUp(-d.tauAlpha.x).mulUp(p.s) : -r.y.mulDown(p.lambda).mulDown(d.tauAlpha.x).mulDown(p.s);
+        b = (d.tauAlpha.y > 0) ? b.add(r.x.mulUp(p.c).mulUp(d.tauAlpha.y)) : b.add(r.y.mulDown(p.c).mulDown(d.tauAlpha.y));
     }
 
     /** Maximal value for the real reserves x when the respective other balance is 0 for given invariant
@@ -367,7 +367,8 @@ library GyroCEMMMath {
         int256 invariant
     ) internal pure returns (uint256 px) {
         // shift by virtual offsets to get v(t)
-        Vector2 memory ab = Vector2(virtualOffset0(params, derived, invariant), virtualOffset1(params, derived, invariant));
+        Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
+        Vector2 memory ab = Vector2(virtualOffset0(params, derived, r), virtualOffset1(params, derived, r));
         Vector2 memory vec = Vector2(balances[0].toInt256().sub(ab.x), balances[1].toInt256().sub(ab.y));
 
         // transform to circle to get Av(t)
@@ -480,7 +481,7 @@ library GyroCEMMMath {
         int256 x,
         int256 s,
         int256 c,
-        int256 r,
+        Vector2 memory r, // overestimate in x component, underestimate in y
         Vector2 memory ab,
         Vector2 memory tauBeta
     ) internal pure returns (int256) {
@@ -498,7 +499,7 @@ library GyroCEMMMath {
 
         // now compute the argument of the square root, subtract 100 to account for rounding errors
         qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
-        qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y)).sub(100);
+        qparams.c = qparams.c.add(r.y.mulDown(r.y).mulDown(sTerm.y)).sub(100);
 
         // the square root is always being subtracted, so round it down to overestimate the end balance
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
@@ -514,30 +515,26 @@ library GyroCEMMMath {
      *  to calculate y'y', change x->y, s->c, c->s, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y  */
     function calcXpXpDivLambdaLambda(
         int256 x,
-        int256 rDown,
+        Vector2 memory r, // overestimate in x component, underestimate in y
         int256 lambda,
         int256 s,
         int256 c,
         Vector2 memory tauBeta
-    ) internal pure returns (int256 val) {
+    ) internal pure returns (int256) {
         //////////////////////////////////////////////////////////////////////////////////
         // x'x'/lambda^2 = r^2 tau(beta)_x^2 c^2
         //      + ( r^2 2 cs tau(beta)_x tau(beta)_y - rx 2c tau(beta)_x ) / lambda
         //      + ( r^2 s^2 tau(beta)_y^2 - rx 2s tau(beta)_y + x^2 ) / lambda^2
         //////////////////////////////////////////////////////////////////////////////////
 
-        // invariant overestimate in x, underestimate in y components
-        Vector2 memory r = Vector2(rDown.add(rDown.mulUp(1e6)), rDown);
-
-        // r^2 tau(beta)_x^2 c^2
-        val = r.x.mulUp(r.x).mulUp(tauBeta.x).mulUp(tauBeta.x).mulUp(c).mulUp(c);
-
         QParams memory q; // for working terms
         // q.a = r^2 s tau(beta)_y 2c tau(beta)_x
         if (tauBeta.y * tauBeta.x > 0) {
-            q.a = r.x.mulUp(r.x).mulUp(2 * s).mulUp(tauBeta.y).mulUp(c).mulUp(tauBeta.x);
+            q.a = r.x.mulUp(r.x).mulUp(2 * s).mulUp(tauBeta.y);
+            q.a = q.a.mulUp(c).mulUp(tauBeta.x);
         } else {
-            q.a = r.y.mulDown(r.y).mulDown(2 * s).mulDown(tauBeta.y).mulDown(c).mulDown(tauBeta.x);
+            q.a = r.y.mulDown(r.y).mulDown(2 * s).mulDown(tauBeta.y);
+            q.a = q.a.mulDown(c).mulDown(tauBeta.x);
         }
         // -rx 2c tau(beta)_x
         q.b = tauBeta.x < 0 ? r.x.mulUp(x).mulUp(2 * c).mulUp(-tauBeta.x) : -r.y.mulDown(x).mulDown(2 * c).mulDown(tauBeta.x);
@@ -545,7 +542,8 @@ library GyroCEMMMath {
         q.a = q.a.add(q.b);
 
         // q.b = r^2 s^2 tau(beta)_y^2
-        q.b = r.x.mulUp(r.x).mulUp(s).mulUp(s).mulUp(tauBeta.y).mulUp(tauBeta.y);
+        q.b = r.x.mulUp(r.x).mulUp(s).mulUp(s);
+        q.b = q.b.mulUp(tauBeta.y).mulUp(tauBeta.y);
         // q.c = -rx 2s tau(beta)_y
         q.c = tauBeta.y < 0 ? r.x.mulUp(x).mulUp(2 * s).mulUp(-tauBeta.y) : -r.y.mulDown(x).mulDown(2 * s).mulDown(tauBeta.y);
         // (q.b + q.c + x^2) / lambda
@@ -555,7 +553,10 @@ library GyroCEMMMath {
         // remaining calculation is (q.a + q.b) / lambda
         q.a = q.a.add(q.b);
         q.a = q.a > 0 ? q.a.divUp(lambda) : q.a.divDown(lambda);
-        val = val.add(q.a);
+
+        // + r^2 tau(beta)_x^2 c^2
+        int256 val = r.x.mulUp(r.x).mulUp(tauBeta.x).mulUp(tauBeta.x);
+        return val.mulUp(c).mulUp(c).add(q.a);
     }
 
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.
@@ -568,10 +569,11 @@ library GyroCEMMMath {
     ) internal pure returns (int256 y) {
         // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
         // note that the error correction here should more than make up for rounding directions in virtual offset functions
-        int256 invariantUp = invariant.add(invariant.mulUp(1e6));
+        // overestimate in x component, underestimate in y
+        Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
-        Vector2 memory ab = Vector2(virtualOffset0(params, derived, invariantUp), virtualOffset1(params, derived, invariantUp));
-        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, invariant, ab, derived.tauBeta);
+        Vector2 memory ab = Vector2(virtualOffset0(params, derived, r), virtualOffset1(params, derived, r));
+        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, r, ab, derived.tauBeta);
     }
 
     function calcXGivenY(
@@ -582,10 +584,16 @@ library GyroCEMMMath {
     ) internal pure returns (int256 x) {
         // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
         // note that the error correction here should more than make up for rounding directions in virtual offset functions
-        int256 invariantUp = invariant.add(invariant.mulUp(1e6));
+        // overestimate in x component, underestimate in y
+        Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
-        Vector2 memory ba = Vector2(virtualOffset1(params, derived, invariantUp), virtualOffset0(params, derived, invariantUp));
+        Vector2 memory ba = Vector2(virtualOffset1(params, derived, r), virtualOffset0(params, derived, r));
         // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
-        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, invariant, ba, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
+        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, r, ba, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
+    }
+
+    /// @dev Given an underestimate of invariant, calculate an overestimate by accounting for error
+    function invariantOverestimate(int256 rDown) internal pure returns (int256 rUp) {
+        rUp = rDown.add(rDown.mulUp(1e6));
     }
 }
