@@ -131,17 +131,19 @@ def test_calc_in_given_out(
 
     assume(amount_out < to_decimal("0.3") * (balances[1]))
 
-    invariant = math_implementation.calculateInvariant(
-        to_decimal(balances), to_decimal(root_three_alpha)
-    )
+    invariant_under, invariant_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+        scale(balances), scale(root_three_alpha)
+    ))
 
-    virtual_offset = invariant * to_decimal(root_three_alpha)
+    virtual_offset_under = invariant_under * to_decimal(root_three_alpha)
+    virtual_offset_over  = invariant_over * to_decimal(root_three_alpha)
+    virtual_offset_mid = (virtual_offset_under + virtual_offset_over) / D(2)
 
     in_amount = math_implementation.calcInGivenOut(
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_out),
-        virtual_offset,
+        virtual_offset_mid,
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -155,7 +157,8 @@ def test_calc_in_given_out(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_out),
-            scale(virtual_offset),
+            scale(virtual_offset_under),
+            scale(virtual_offset_over)
         )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -163,7 +166,8 @@ def test_calc_in_given_out(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return
     else:
@@ -172,7 +176,8 @@ def test_calc_in_given_out(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return
 
@@ -191,17 +196,19 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     # assume(not faulty_params)
     assume(amount_in < to_decimal("0.3") * (balances[0]))
 
-    invariant = math_implementation.calculateInvariant(
-        to_decimal(balances), to_decimal(root_three_alpha)
-    )
+    invariant_under, invariant_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+        scale(balances), scale(root_three_alpha)
+    ))
 
-    virtual_offset = invariant * to_decimal(root_three_alpha)
+    virtual_offset_under = invariant_under * to_decimal(root_three_alpha)
+    virtual_offset_over  = invariant_over * to_decimal(root_three_alpha)
+    virtual_offset_mid = (virtual_offset_under + virtual_offset_over) / D(2)
 
     out_amount = math_implementation.calcOutGivenIn(
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_in),
-        virtual_offset,
+        virtual_offset_mid
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
@@ -219,7 +226,8 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_in),
-            scale(virtual_offset),
+            scale(virtual_offset_under),
+            scale(virtual_offset_over)
         )
     elif out_amount < 0:
         with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
@@ -227,7 +235,8 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return
     elif not within_bal_ratio:
@@ -236,7 +245,8 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return
     else:
@@ -245,7 +255,8 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return
 

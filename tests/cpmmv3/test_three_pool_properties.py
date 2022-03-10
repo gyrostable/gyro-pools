@@ -207,19 +207,26 @@ def mtest_invariant_across_calcInGivenOut(
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
-    invariant_sol, is_underestimate = gyro_three_math_testing.underestimateInvariant(
-        scale(balances), scale(root_three_alpha)
-    )
-    invariant_sol = unscale(invariant_sol)
-    assert is_underestimate
 
-    virtual_offset = invariant_sol * D(root_three_alpha)
+    invariant_sol_under, invariant_sol_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+        scale(balances), scale(root_three_alpha)
+    ))
+
+    assert invariant_sol_under <= invariant.approxed(abs=D('5e-18'))
+    assert invariant <= invariant_sol_over.approxed(abs=D('5e-18'))
+
+    virtual_offset_under = invariant_sol_under * to_decimal(root_three_alpha)
+    virtual_offset_over  = invariant_sol_over * to_decimal(root_three_alpha)
+    virtual_offset_mid = (virtual_offset_under + virtual_offset_over) / D(2)
+
+    # Q: Should we only use this one here?
+    virtual_offset = invariant * to_decimal(root_three_alpha)
 
     in_amount = math_implementation.calcInGivenOut(
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_out),
-        virtual_offset,
+        virtual_offset_mid,
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -229,19 +236,21 @@ def mtest_invariant_across_calcInGivenOut(
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = gyro_three_math_testing.calcInGivenOut(
+        in_amount_sol = unscale(gyro_three_math_testing.calcInGivenOut(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_out),
-            scale(virtual_offset),
-        )
+            scale(virtual_offset_under),
+            scale(virtual_offset_over)
+        ))
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_three_math_testing.calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return 0, 0
     else:
@@ -250,14 +259,16 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset),
+                scale(virtual_offset_under),
+                scale(virtual_offset_over)
             )
         return 0, 0
 
-    assert to_decimal(in_amount_sol) == scale(in_amount)
+    # Sanity check. Note that the two values use slightly different invariants, so they're not gonna be equal!
+    assert to_decimal(in_amount_sol) == in_amount.approxed()
 
     balances_after = balances_after = (
-        balances[0] + unscale(in_amount_sol) * (1 + MIN_FEE),
+        balances[0] + in_amount / (1 - MIN_FEE),
         balances[1] - amount_out,
         balances[2],
     )
@@ -271,9 +282,7 @@ def mtest_invariant_across_calcInGivenOut(
             scale(balances_after), scale(root_three_alpha)
         )
 
-    # assert invariant_after >= invariant
-    if check_sol_inv:
-        assert unscale(invariant_sol_after_over) >= invariant_sol
+        assert unscale(invariant_sol_after_over) >= invariant_sol_under  # TODO should this be `invariant` or so??
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
@@ -282,7 +291,7 @@ def mtest_invariant_across_calcInGivenOut(
     partial_invariant_from_offsets_after = calculate_partial_invariant_from_offsets(
         balances_after, virtual_offset
     )
-    partial_invariant_from_sol = invariant_sol / (D(balances[2]) + D(virtual_offset))
+    partial_invariant_from_sol = invariant_sol_under / (D(balances[2]) + D(virtual_offset))
     assert partial_invariant_from_offsets >= partial_invariant_from_sol
     # assert invariant_from_offsets >= invariant_sol
     return partial_invariant_from_offsets_after, partial_invariant_from_offsets
