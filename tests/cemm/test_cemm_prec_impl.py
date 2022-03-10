@@ -288,7 +288,7 @@ def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     b = prec_impl.virtualOffset1(params, derived, invariant * (D(1) + D("1e-12")))
 
     XpXp_py = prec_impl.calcXpXpDivLambdaLambda(
-        balances[0], invariant, params.l, params.s, params.c, a, derived.tauBeta
+        balances[0], invariant, params.l, params.s, params.c, derived.tauBeta
     )
     XpXp_sol = gyro_cemm_math_testing.calcXpXpDivLambdaLambda(
         scale(balances[0]),
@@ -296,7 +296,6 @@ def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
         scale(params.l),
         scale(params.s),
         scale(params.c),
-        scale(a),
         scale(derived.tauBeta),
     )
     assert XpXp_py == unscale(XpXp_sol)

@@ -497,7 +497,7 @@ library GyroCEMMMath {
         Vector2 memory sTerm = Vector2(ONE.sub(lamBar.y.mulDown(s).mulDown(s)), ONE.sub(lamBar.x.mulUp(s).mulUp(s)));
 
         // now compute the argument of the square root, subtract 100 to account for rounding errors
-        qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, ab.x, tauBeta);
+        qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
         qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y)).sub(100);
 
         // the square root is always being subtracted, so round it down to overestimate the end balance
@@ -514,34 +514,48 @@ library GyroCEMMMath {
      *  to calculate y'y', change x->y, s->c, c->s, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y  */
     function calcXpXpDivLambdaLambda(
         int256 x,
-        int256 r,
+        int256 rDown,
         int256 lambda,
         int256 s,
         int256 c,
-        int256 a,
         Vector2 memory tauBeta
     ) internal pure returns (int256 val) {
-        // We want to overestimate x' in magnitude b/c it will be squared
-        // if x' > 0 then we want an underestimate of offsets (and so an underestimate of r), so we reverse the earlier correction
-        // if x' < 0 then we are good with the overestimate
-        r = x - a > 0 ? r.add(r.mulUp(1e6)) : r;
+        //////////////////////////////////////////////////////////////////////////////////
+        // x'x'/lambda^2 = r^2 tau(beta)_x^2 c^2
+        //      + ( r^2 2 cs tau(beta)_x tau(beta)_y - rx 2c tau(beta)_x ) / lambda
+        //      + ( r^2 s^2 tau(beta)_y^2 - rx 2s tau(beta)_y + x^2 ) / lambda^2
+        //////////////////////////////////////////////////////////////////////////////////
+
+        // invariant overestimate in x, underestimate in y components
+        Vector2 memory r = Vector2(rDown.add(rDown.mulUp(1e6)), rDown);
 
         // r^2 tau(beta)_x^2 c^2
-        val = r.mulUp(r).mulUp(tauBeta.x).mulUp(tauBeta.x);
-        val = val.mulUp(c).mulUp(c);
+        val = r.x.mulUp(r.x).mulUp(tauBeta.x).mulUp(tauBeta.x).mulUp(c).mulUp(c);
 
-        // (r^2 s tau(beta)_y - rx)2c tau(beta)_x / lambda
-        // add 8 to accout for rounding error in numerator, considering magnitude of terms
-        int256 term = r.mulDown(r).mulDown(s).mulDown(tauBeta.y).sub(r.mulDown(x));
-        term = term.mulDown(2 * c).mulDown(tauBeta.x) + 8;
-        val = term > 0 ? val.add(term.divUp(lambda)) : val.add(term.divDown(lambda));
+        QParams memory q; // for working terms
+        // q.a = r^2 s tau(beta)_y 2c tau(beta)_x
+        if (tauBeta.y * tauBeta.x > 0) {
+            q.a = r.x.mulUp(r.x).mulUp(2 * s).mulUp(tauBeta.y).mulUp(c).mulUp(tauBeta.x);
+        } else {
+            q.a = r.y.mulDown(r.y).mulDown(2 * s).mulDown(tauBeta.y).mulDown(c).mulDown(tauBeta.x);
+        }
+        // -rx 2c tau(beta)_x
+        q.b = tauBeta.x < 0 ? r.x.mulUp(x).mulUp(2 * c).mulUp(-tauBeta.x) : -r.y.mulDown(x).mulDown(2 * c).mulDown(tauBeta.x);
+        // q.a later needs to be divided by lambda
+        q.a = q.a.add(q.b);
 
-        // ((r^2 s tau(beta)_y - rx 2) s tau(beta)_y + x^2) / lambda^2
-        // add 9 to account for rounding error in numerator, considering magnitude of terms
-        term = r.mulDown(r).mulDown(s).mulDown(tauBeta.y);
-        term = term.sub(r.mulDown(x).mulDown(2 * ONE));
-        term = term.mulDown(s).mulDown(tauBeta.y).add(x.mulUp(x)) + 9;
-        val = term > 0 ? val.add(term.divUp(lambda).divUp(lambda)) : val.add(term.divDown(lambda).divDown(lambda));
+        // q.b = r^2 s^2 tau(beta)_y^2
+        q.b = r.x.mulUp(r.x).mulUp(s).mulUp(s).mulUp(tauBeta.y).mulUp(tauBeta.y);
+        // q.c = -rx 2s tau(beta)_y
+        q.c = tauBeta.y < 0 ? r.x.mulUp(x).mulUp(2 * s).mulUp(-tauBeta.y) : -r.y.mulDown(x).mulDown(2 * s).mulDown(tauBeta.y);
+        // (q.b + q.c + x^2) / lambda
+        q.b = (q.b.add(q.c).add(x.mulUp(x)));
+        q.b = q.b > 0 ? q.b.divUp(lambda) : q.b.divDown(lambda);
+
+        // remaining calculation is (q.a + q.b) / lambda
+        q.a = q.a.add(q.b);
+        q.a = q.a > 0 ? q.a.divUp(lambda) : q.a.divDown(lambda);
+        val = val.add(q.a);
     }
 
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.

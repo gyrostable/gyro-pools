@@ -232,10 +232,9 @@ contract GyroCEMMMathTesting {
         int256 lambda,
         int256 s,
         int256 c,
-        int256 a,
         GyroCEMMMath.Vector2 memory tauBeta
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcXpXpDivLambdaLambda(x, r, lambda, s, c, a, tauBeta);
+        return GyroCEMMMath.calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
     }
 
     function liquidityInvariantUpdate(

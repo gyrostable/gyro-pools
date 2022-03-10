@@ -136,29 +136,41 @@ def calculateInvariant(balances: Iterable[D], p: Params, d: DerivedParams) -> D:
     return (AtAChi + sqrt) / denominator
 
 
-def calcXpXpDivLambdaLambda(
-    x: D, r: D, lam: D, s: D, c: D, a: D, tauBeta: Iterable[D]
-) -> D:
-    if x - a > 0:
-        r = r + D(r).mul_up(D("1e-12"))
-    val = D(r).mul_up(r).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
+def calcXpXpDivLambdaLambda(x: D, r: D, lam: D, s: D, c: D, tauBeta: Iterable[D]) -> D:
+    r = (D(r) + D(r).mul_up(D("1e-12")), D(r))
 
-    term = (D(r) * r * s * tauBeta[1] - D(r) * x) * (2 * c) * tauBeta[0] + D("8e-18")
-    if term > 0:
-        val += D(term).div_up(lam)
-    else:
-        val += D(term) / lam
+    val = D(r[0]).mul_up(r[0]).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
 
-    term = (
-        (D(r) * r * s * tauBeta[1] - D(r) * x * 2) * s * tauBeta[1]
-        + D(x).mul_up(x)
-        + D("9e-18")
-    )
-    if term > 0:
-        val += D(term).div_up(lam).div_up(lam)
+    if tauBeta[0] * tauBeta[1] > 0:
+        q_a = (
+            D(r[0])
+            .mul_up(r[0])
+            .mul_up(2 * s)
+            .mul_up(tauBeta[1])
+            .mul_up(c)
+            .mul_up(tauBeta[0])
+        )
     else:
-        val += D(term) / lam / lam
-    return val
+        q_a = D(r[1]) * r[1] * (2 * s) * tauBeta[1] * c * tauBeta[0]
+
+    if tauBeta[0] < 0:
+        q_b = D(r[0]).mul_up(x).mul_up(2 * c).mul_up(-tauBeta[0])
+    else:
+        q_b = -D(r[1]) * x * (2 * c) * tauBeta[0]
+    q_a = q_a + q_b
+
+    q_b = D(r[0]).mul_up(r[0]).mul_up(s).mul_up(s).mul_up(tauBeta[1]).mul_up(tauBeta[1])
+    if tauBeta[1] < 0:
+        q_c = D(r[0]).mul_up(x).mul_up(2 * s).mul_up(-tauBeta[1])
+    else:
+        q_c = -D(r[1]) * x * (2 * s) * tauBeta[1]
+    q_b = q_b + q_c + D(x).mul_up(x)
+
+    q_b = D(q_b).div_up(lam) if q_b > 0 else q_b / lam
+
+    q_a = q_a + q_b
+    q_a = D(q_a).div_up(lam) if q_a > 0 else q_a / lam
+    return val + q_a
 
 
 def solveQuadraticSwap(
@@ -221,26 +233,42 @@ def calcXGivenY_true(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
 
 
 def calcXpXpDivLambdaLambda_true(
-    x: D, r: D, lam: D, s: D, c: D, a: D, tauBeta: Iterable[D]
+    x: D, r: D, lam: D, s: D, c: D, tauBeta: Iterable[D]
 ) -> D:
-    val = D(r).mul_up(r).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
+    r = (D(r) + D("1e-18"), D(r))
 
-    term = (D(r) * r * s * tauBeta[1] - D(r) * x) * (2 * c) * tauBeta[0] + D("8e-18")
-    if term > 0:
-        val += D(term).div_up(lam)
-    else:
-        val += D(term) / lam
+    val = D(r[0]).mul_up(r[0]).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
 
-    term = (
-        (D(r) * r * s * tauBeta[1] - D(r) * x * 2) * s * tauBeta[1]
-        + D(x).mul_up(x)
-        + D("9e-18")
-    )
-    if term > 0:
-        val += D(term).div_up(lam).div_up(lam)
+    if tauBeta[0] * tauBeta[1] > 0:
+        q_a = (
+            D(r[0])
+            .mul_up(r[0])
+            .mul_up(2 * s)
+            .mul_up(tauBeta[1])
+            .mul_up(c)
+            .mul_up(tauBeta[0])
+        )
     else:
-        val += D(term) / lam / lam
-    return val
+        q_a = D(r[1]) * r[1] * (2 * s) * tauBeta[1] * c * tauBeta[0]
+
+    if tauBeta[0] < 0:
+        q_b = D(r[0]).mul_up(x).mul_up(2 * c).mul_up(-tauBeta[0])
+    else:
+        q_b = -D(r[1]) * x * (2 * c) * tauBeta[0]
+    q_a = q_a + q_b
+
+    q_b = D(r[0]).mul_up(r[0]).mul_up(s).mul_up(s).mul_up(tauBeta[1]).mul_up(tauBeta[1])
+    if tauBeta[1] < 0:
+        q_c = D(r[0]).mul_up(x).mul_up(2 * s).mul_up(-tauBeta[1])
+    else:
+        q_c = -D(r[1]) * x * (2 * s) * tauBeta[1]
+    q_b = q_b + q_c + D(x).mul_up(x)
+
+    q_b = D(q_b).div_up(lam) if q_b > 0 else q_b / lam
+
+    q_a = q_a + q_b
+    q_a = D(q_a).div_up(lam) if q_a > 0 else q_a / lam
+    return val + q_a
 
 
 def solveQuadraticSwap_true(
