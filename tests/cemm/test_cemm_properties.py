@@ -20,8 +20,6 @@ from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
-billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
-
 # this is a multiplicative separation
 # This is consistent with tightest price range of beta - alpha >= MIN_PRICE_SEPARATION
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
@@ -42,37 +40,13 @@ bpool_params = BasicPoolParameters(
 
 ################################################################################
 ### test calcOutGivenIn for invariant change
-@pytest.mark.skip(reason="Imprecision error to fix")
-@settings(max_examples=1_000)
+# @pytest.mark.skip(reason="Imprecision error to fix")
+# @settings(max_examples=1_000)
 @given(
     params=util.gen_params(),
     balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
-)
-@example(
-    params=CEMMMathParams(
-        alpha=D("5.941451855790000000"),
-        beta=D("9.178966500000000000"),
-        c=D("0.944428837436701696"),
-        s=D("0.328715942749907009"),
-        l=D("8.304036210000000000"),
-    ),
-    balances=(3352648952, 49042),
-    amountIn=D("1.017200000000000000"),
-    tokenInIsToken0=False,
-)
-@example(
-    params=CEMMMathParams(
-        alpha=D("5.464501975666209520"),
-        beta=D("17.477072877102500000"),
-        c=D("0.837352697985946248"),
-        s=D("0.546663021591598741"),
-        l=D("8.712244999970857054"),
-    ),
-    balances=(2198037986, 860945182),
-    amountIn=D("1.021500000000000000"),
-    tokenInIsToken0=True,
 )
 def test_invariant_across_calcOutGivenIn(
     params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
@@ -91,13 +65,13 @@ def test_invariant_across_calcOutGivenIn(
     # compare upper bound on loss in y terms
     loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
     loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
-    assert loss_py_ub < D("5e-2")
-    assert loss_sol_ub < D("5e-2")
+    assert loss_py_ub <= 0  # D("5e-2")
+    assert loss_sol_ub <= 0  # D("5e-2")
 
 
 ################################################################################
 ### test calcInGivenOut for invariant change
-@pytest.mark.skip(reason="Imprecision error to fix")
+# @pytest.mark.skip(reason="Imprecision error to fix")
 @given(
     params=util.gen_params(),
     balances=gen_balances(2, bpool_params),
@@ -121,8 +95,15 @@ def test_invariant_across_calcInGivenOut(
     # compare upper bound on loss in y terms
     loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
     loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
-    assert loss_py_ub < D("5e-2")
-    assert loss_sol_ub < D("5e-2")
+    assert loss_py_ub <= 0  # D("5e-2")
+    assert loss_sol_ub <= 0  # D("5e-2")
+
+
+################################################################################
+### test for zero tokens in
+@given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
+def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
+    util.mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances)
 
 
 ################################################################################

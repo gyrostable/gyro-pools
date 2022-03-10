@@ -173,7 +173,11 @@ def solveQuadraticSwap(
 
     sTerm = (D(1) - lamBar[1] * s * s, D(1) - lamBar[0].mul_up(s).mul_up(s))
 
-    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, ab[0], tauBeta) + r * r * sTerm[0]
+    qc = (
+        -calcXpXpDivLambdaLambda(x, r, lam, s, c, ab[0], tauBeta)
+        + r * r * sTerm[0]
+        - D("100e-18")
+    )
     if qc < 0:
         qc = 0
     qc = D(qc).sqrt()

@@ -1,6 +1,7 @@
 from math import pi, sin, cos
 
 import hypothesis.strategies as st
+
 # from pyrsistent import Invariant
 from brownie.test import given
 from hypothesis import assume
@@ -12,7 +13,6 @@ from tests.support.types import *
 from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.support.utils import qdecimals
 
-billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
 
 # this is a multiplicative separation
 # This is consistent with tightest price range of beta - alpha >= MIN_PRICE_SEPARATION
@@ -48,7 +48,7 @@ def gen_params(draw):
     beta = D(1) / D(alpha)
     s = sin(phi)
     c = cos(phi)
-    l = draw(qdecimals("50", "1000"))
+    l = draw(qdecimals("50", "1e8"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
@@ -56,14 +56,15 @@ def gen_params(draw):
 def gen_params_cemm_dinvariant(draw):
     params = draw(gen_params())
     mparams = util.params2MathParams(params)
+    derived = util.mathParams2DerivedParams(mparams)
     balances = draw(gen_balances(2, bpool_params))
     assume(balances[0] > 0 and balances[1] > 0)
-    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
+    r = util.prec_impl.calculateInvariant(balances, params, derived)
     dinvariant = draw(
-        qdecimals(-cemm.r.raw, 2 * cemm.r.raw)
+        qdecimals(-r * (D(1) - D("1e-5")), 2 * r)
     )  # Upper bound kinda arbitrary
     assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
-    return params, cemm, dinvariant
+    return params, balances, dinvariant
 
 
 ################################################################################
@@ -123,6 +124,13 @@ def test_invariant_across_calcInGivenOut(
     loss_sol_ub = -loss_sol[0] - loss_sol[1]
     assert loss_py_ub < D("5e-3")
     assert loss_sol_ub < D("5e-3")
+
+
+################################################################################
+### test for zero tokens in
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
+    util.mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances)
 
 
 ################################################################################

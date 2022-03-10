@@ -26,8 +26,6 @@ from math import pi, sin, cos, tan, acos
 
 from tests.support.types import Vector2
 
-billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
-
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
 MAX_IN_RATIO = to_decimal("0.3")
 MAX_OUT_RATIO = to_decimal("0.3")

@@ -484,9 +484,8 @@ library GyroCEMMMath {
         Vector2 memory ab,
         Vector2 memory tauBeta
     ) internal pure returns (int256) {
-        Vector2 memory lamBar; // x component will round up, y will round down
-        lamBar.x = ONE.sub(ONE.divDown(lambda).divDown(lambda));
-        lamBar.y = ONE.sub(ONE.divUp(lambda).divUp(lambda));
+        // x component will round up, y will round down
+        Vector2 memory lamBar = Vector2(ONE.sub(ONE.divDown(lambda).divDown(lambda)), ONE.sub(ONE.divUp(lambda).divUp(lambda)));
         QParams memory qparams;
 
         // shift by the virtual offsets
@@ -497,10 +496,11 @@ library GyroCEMMMath {
         // x component will round up, y will round down
         Vector2 memory sTerm = Vector2(ONE.sub(lamBar.y.mulDown(s).mulDown(s)), ONE.sub(lamBar.x.mulUp(s).mulUp(s)));
 
-        // now compute the argument of the square root
+        // now compute the argument of the square root, subtract 100 to account for rounding errors
         qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, ab.x, tauBeta);
-        qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y));
+        qparams.c = qparams.c.add(r.mulDown(r).mulDown(sTerm.y)).sub(100);
 
+        // the square root is always being subtracted, so round it down to overestimate the end balance
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         qparams.c = qparams.c > 0 ? FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256() : 0;
         // calculate the result in qparams.a
