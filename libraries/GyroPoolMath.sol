@@ -169,7 +169,7 @@ library GyroPoolMath {
         return guess;
     }
 
-    function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
+    function _makeInitialGuess10(uint256 input) internal pure returns (uint256) {
         uint256 orderUpperBound = 72;
         uint256 orderLowerBound = 0;
         uint256 orderMiddle;
@@ -185,5 +185,44 @@ library GyroPoolMath {
         }
 
         return 10**(orderUpperBound / 2);
+    }
+
+    function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
+        if (input >= FixedPoint.ONE) {
+            return (1 << (intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
+        } else {
+            return FixedPoint.ONE / (1 << (intLog2Halved(FixedPoint.ONE / input) / 2));
+        }
+    }
+
+    function intLog2Halved(uint256 x) public pure returns (uint256 n) {
+        if (x >= 1 << 128) {
+            x >>= 128;
+            n += 64;
+        }
+        if (x >= 1 << 64) {
+            x >>= 64;
+            n += 32;
+        }
+        if (x >= 1 << 32) {
+            x >>= 32;
+            n += 16;
+        }
+        if (x >= 1 << 16) {
+            x >>= 16;
+            n += 8;
+        }
+        if (x >= 1 << 8) {
+            x >>= 8;
+            n += 4;
+        }
+        if (x >= 1 << 4) {
+            x >>= 4;
+            n += 2;
+        }
+        if (x >= 1 << 2) {
+            x >>= 2;
+            n += 1;
+        }
     }
 }
