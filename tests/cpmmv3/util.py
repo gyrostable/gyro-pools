@@ -73,7 +73,7 @@ def gen_synthetic_balances_via_prices(draw, bparams: BasicPoolParameters, root3A
 
 
 @st.composite
-def gen_synthetic_balances(draw, bparams: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D):
+def gen_synthetic_balances(draw, root3Alpha_min: D, root3Alpha_max: D):
     """This is more accurate than gen_synthetic_balances_via_prices()."""
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
 

@@ -49,7 +49,7 @@ def test_calculateInvariant_match(balances: Iterable[D], root3Alpha: D):
 
 @settings(max_examples=5_000)
 @given(
-    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+    args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
 )
 def test_calculateInvariant_reconstruction(args):
     balances, invariant, root3Alpha = args
@@ -61,7 +61,7 @@ def test_calculateInvariant_reconstruction(args):
 
 @settings(max_examples=5_000)
 @given(
-    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+    args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
 )
 def test_calculateInvariant_reconstruction_alt(args):
     balances, invariant, root3Alpha = args
