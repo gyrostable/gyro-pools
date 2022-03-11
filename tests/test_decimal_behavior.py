@@ -58,7 +58,7 @@ def test_sqrt(math_testing, a):
     assert int(res_sol) == scale(res_math).approxed(abs=D("5"), rel=D("5e-14"))
 
 
-@given(a=qdecimals(0).filter(lambda a: a > 1))
+@given(a=qdecimals(0).filter(lambda a: a > 0))
 @example(a=D(1))
 def test_sqrtNewton(math_testing, a):
     res_math = a.sqrt()
@@ -67,10 +67,13 @@ def test_sqrtNewton(math_testing, a):
     assert int(res_sol) == scale(res_math).approxed(abs=D("5"))
 
 
-@given(a=qdecimals(0).filter(lambda a: a > 1))
+@given(a=qdecimals(0).filter(lambda a: a > 0))
 @example(a=D(1))
 def test_sqrtNewtonInitialGuess(math_testing, a):
 
-    assert 2 ** (floor(log2(a) / 2)) == unscale(
-        math_testing.sqrtNewtonInitialGuess(scale(a))
-    )
+    if a >= 1:
+        assert 2 ** (floor(log2(a) / 2)) == unscale(
+            math_testing.sqrtNewtonInitialGuess(scale(a))
+        )
+    else:
+        assert 1 == unscale(math_testing.sqrtNewtonInitialGuess(scale(a)))
