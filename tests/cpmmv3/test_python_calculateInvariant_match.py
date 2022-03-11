@@ -2,13 +2,17 @@ from pprint import pprint
 from typing import Iterable
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import given, settings, HealthCheck
 
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import to_decimal, qdecimals
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 import tests.cpmmv3.v3_math_implementation as mimpl
+
+from tests.cpmmv3.util import gen_synthetic_balances
+
+from pytest import approx
 
 ROOT_ALPHA_MAX = "0.99996666555"
 ROOT_ALPHA_MIN = "0.2"
@@ -23,12 +27,13 @@ bpool_params = BasicPoolParameters(
     max_balances=100_000_000_000
 )
 
-@settings(max_examples=10_000)
+@settings(max_examples=5_000)
 @given(
     balances=gen_balances(3, bpool_params),
     root3Alpha=qdecimals(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX)
 )
 def test_calculateInvariant_match(balances: Iterable[D], root3Alpha: D):
+    """Compares out fixed-point implementation to an alternative, scipy-based, floating-point implementation."""
     invariant_fixedpoint = mimpl.calculateInvariant(balances, root3Alpha)
     res_floatpoint = mimpl.calculateInvariantAltFloatWithInfo(balances, root3Alpha)
 
@@ -41,3 +46,27 @@ def test_calculateInvariant_match(balances: Iterable[D], root3Alpha: D):
     diff = abs(invariant_fixedpoint_float - invariant_floatpoint) / invariant_min
 
     assert diff == pytest.approx(0.0, abs=1e-13)
+
+@settings(max_examples=5_000)
+@given(
+    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+)
+def test_calculateInvariant_reconstruction(args):
+    balances, invariant, root3Alpha = args
+
+    invariant_re = mimpl.calculateInvariant(balances, root3Alpha)
+
+    assert invariant_re == invariant.approxed(rel=D('5e-16'))
+
+
+@settings(max_examples=5_000)
+@given(
+    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+)
+def test_calculateInvariant_reconstruction_alt(args):
+    balances, invariant, root3Alpha = args
+
+    invariant_re = mimpl.calculateInvariantAltFloat(balances, root3Alpha)
+
+    invariant = float(invariant)
+    assert invariant_re == approx(invariant, rel=1e-13)
