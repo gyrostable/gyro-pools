@@ -6,7 +6,7 @@ from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example
 import tests.cpmmv3.v3_math_implementation as math_implementation
-from tests.cpmmv3.util import calculateInvariantUnderOver
+from tests.cpmmv3.util import calculateInvariantUnderOver, gen_synthetic_balances
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
@@ -415,3 +415,34 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
     return (D(balances[0]) + D(virtual_offset)).mul_up(
         D(balances[1] + D(virtual_offset))
     )
+
+
+# TODO this test fails: Solidity has much worse precision than python; not clear why.
+@settings(max_examples=1_000)
+@given(
+    args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+)
+@example(args=(
+    (D('16743757275.452039152786685295'),
+     D('1967668306.780847696789534899'),
+     D('396788946.610986231634363959')),
+    D('3812260336.851356457000000000'),
+    D('0.200000000181790486')),
+)
+def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
+    balances, invariant, root3Alpha = args
+
+    # TODO precision is not great when balances are small (on the order of 1, and invariant ≈ 1 too).
+    # Then I get a relative difference under/over ≈ 5%, with about equal distance from the truth.
+    assume(any(b >= 10 for b in balances))
+    assume(invariant >= 10)
+
+    invariant_re_under, invariant_re_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+        scale(balances),
+        scale(root3Alpha)))
+
+    assert invariant_re_under <= invariant
+    assert invariant_re_over  >= invariant.approxed(rel=D('5e-18'))
+    # assert invariant_re_under == invariant_re_over.approxed(rel=D('5e-14'))
+    assert invariant_re_under == invariant.approxed(rel=D('1e-16'))
+    assert invariant_re_over  == invariant.approxed(rel=D('5e-14'))
