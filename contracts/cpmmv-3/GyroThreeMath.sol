@@ -256,9 +256,9 @@ library GyroThreeMath {
         // dZ = incrZ = amountOut < 0                                                                //
         // x = balanceIn             x' = x +  virtualOffset                                         //
         // z = balanceOut            z' = z +  virtualOffset                                         //
-        // L  = inv.Liq                   /            x' * z'          \                            //
-        //                   |dZ| = z' - |   --------------------------  |                           //
-        //  x' = virtIn                   \          ( x' + dX)         /                            //
+        // L  = inv.Liq                   /            x' * z'          \          z' * dX           //
+        //                   |dZ| = z' - |   --------------------------  |   = -------------------   //
+        //  x' = virtIn                   \          ( x' + dX)         /          x' + dX           //
         //  z' = virtOut                                                                             //
         // Note that -dz > 0 is what the trader receives.                                            //
         // We exploit the fact that this formula is symmetric up to virtualParam{X,Y,Z}.             //
@@ -267,13 +267,10 @@ library GyroThreeMath {
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
 
         {
-            uint256 virtInUnder  = balanceIn.add(virtualOffsetUnder);
             uint256 virtInOver   = balanceIn.add(virtualOffsetOver);
             uint256 virtOutUnder = balanceOut.add(virtualOffsetUnder);
-            uint256 virtOutOver  = balanceOut.add(virtualOffsetOver);
-            uint256 denominator = virtInUnder.add(amountIn);
-            uint256 subtrahend  = virtInOver.mulUp(virtOutOver).divUp(denominator);
-            amountOut = virtOutUnder.sub(subtrahend);
+
+            amountOut = virtOutUnder.mulUp(amountIn).divDown(virtInOver.add(amountIn));
         }
 
         _require(amountOut < balanceOut, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
@@ -308,9 +305,9 @@ library GyroThreeMath {
         // dZ = incrZ = amountOut < 0                                                                //
         // x = balanceIn             x' = x +  virtualOffset                                         //
         // z = balanceOut            z' = z +  virtualOffset                                         //
-        // L  = inv.Liq            /            x' * z'          \                                   //
-        //                   dX = |   --------------------------  | - x'                             //
-        //  x' = virtIn            \          ( z' + dZ)         /                                   //
+        // L  = inv.Liq            /            x' * z'          \             x' * dZ               //
+        //                   dX = |   --------------------------  | - x' = -------------------       //
+        //  x' = virtIn            \          ( z' + dZ)         /             z' - dZ               //
         //  z' = virtOut                                                                             //
         // Note that dz < 0 < dx.                                                                    //
         // We exploit the fact that this formula is symmetric up to virtualParam{X,Y,Z}.             //
@@ -322,14 +319,10 @@ library GyroThreeMath {
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
 
         {
-            uint256 virtInUnder  = balanceIn.add(virtualOffsetUnder);
             uint256 virtInOver   = balanceIn.add(virtualOffsetOver);
             uint256 virtOutUnder = balanceOut.add(virtualOffsetUnder);
-            uint256 virtOutOver  = balanceOut.add(virtualOffsetOver);
 
-            uint256 denominator = virtOutUnder.sub(amountOut);
-            uint256 minuend = virtInOver.mulUp(virtOutOver).divUp(denominator);
-            amountIn = minuend.sub(virtInUnder);
+            amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }
 
         (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
