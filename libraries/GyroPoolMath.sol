@@ -21,6 +21,16 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 library GyroPoolMath {
     using FixedPoint for uint256;
 
+    uint256 private constant SQRT_1E_NEG_1 = 316227766016837933;
+    uint256 private constant SQRT_1E_NEG_3 = 31622776601683793;
+    uint256 private constant SQRT_1E_NEG_5 = 3162277660168379;
+    uint256 private constant SQRT_1E_NEG_7 = 316227766016837;
+    uint256 private constant SQRT_1E_NEG_9 = 31622776601683;
+    uint256 private constant SQRT_1E_NEG_11 = 3162277660168;
+    uint256 private constant SQRT_1E_NEG_13 = 316227766016;
+    uint256 private constant SQRT_1E_NEG_15 = 31622776601;
+    uint256 private constant SQRT_1E_NEG_17 = 316227766;
+
     // Note: this function is identical to that in WeightedMath.sol audited by Balancer
     function _calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
@@ -130,7 +140,7 @@ library GyroPoolMath {
         uint256 guess = _makeInitialGuess(input);
         uint256 minStepSize = 5;
 
-        for (uint256 i = 0; i < 10; i++) {
+        for (uint256 i = 0; i < 6; i++) {
             uint256 oldGuess = guess;
             guess = guess.add(input.divDown(guess)) / 2;
 
@@ -167,7 +177,58 @@ library GyroPoolMath {
         if (input >= FixedPoint.ONE) {
             return (1 << (intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
         } else {
-            return FixedPoint.ONE / (1 << (intLog2Halved(FixedPoint.ONE / input) / 2));
+            if (input < 10) {
+                return SQRT_1E_NEG_17;
+            }
+            if (input < 1e2) {
+                return 1e10;
+            }
+            if (input < 1e3) {
+                return SQRT_1E_NEG_15;
+            }
+            if (input < 1e4) {
+                return 1e11;
+            }
+            if (input < 1e5) {
+                return SQRT_1E_NEG_13;
+            }
+            if (input < 1e6) {
+                return 1e12;
+            }
+            if (input < 1e7) {
+                return SQRT_1E_NEG_11;
+            }
+            if (input < 1e8) {
+                return 1e13;
+            }
+            if (input < 1e9) {
+                return SQRT_1E_NEG_9;
+            }
+            if (input < 1e10) {
+                return 1e14;
+            }
+            if (input < 1e11) {
+                return SQRT_1E_NEG_7;
+            }
+            if (input < 1e12) {
+                return 1e15;
+            }
+            if (input < 1e13) {
+                return SQRT_1E_NEG_5;
+            }
+            if (input < 1e14) {
+                return 1e16;
+            }
+            if (input < 1e15) {
+                return SQRT_1E_NEG_3;
+            }
+            if (input < 1e16) {
+                return 1e17;
+            }
+            if (input < 1e17) {
+                return SQRT_1E_NEG_1;
+            }
+            return input;
         }
     }
 
