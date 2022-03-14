@@ -31,6 +31,8 @@ library GyroPoolMath {
     uint256 private constant SQRT_1E_NEG_15 = 31622776601;
     uint256 private constant SQRT_1E_NEG_17 = 316227766;
 
+    uint256 private constant MIN_NEWTON_STEP_SIZE = 5;
+
     // Note: this function is identical to that in WeightedMath.sol audited by Balancer
     function _calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
@@ -162,15 +164,14 @@ library GyroPoolMath {
         }
 
         uint256 guess = _makeInitialGuess(input);
-        uint256 minStepSize = 5;
 
-        for (uint256 i = 0; i < 6; i++) {
+        for (uint256 i = 0; i < 7; i++) {
             uint256 oldGuess = guess;
-            guess = guess.add(input.divDown(guess)) / 2;
+            guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
 
             if (
-                (oldGuess > guess && oldGuess - guess < minStepSize) ||
-                (oldGuess <= guess && guess - oldGuess < minStepSize)
+                (oldGuess > guess && oldGuess - guess < MIN_NEWTON_STEP_SIZE) ||
+                (oldGuess <= guess && guess - oldGuess < MIN_NEWTON_STEP_SIZE)
             ) {
                 break;
             }
