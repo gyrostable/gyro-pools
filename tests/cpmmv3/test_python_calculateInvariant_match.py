@@ -2,7 +2,7 @@ from pprint import pprint
 from typing import Iterable
 
 import pytest
-from hypothesis import given, settings, HealthCheck
+from hypothesis import given, settings, HealthCheck, example
 
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import to_decimal, qdecimals
@@ -50,6 +50,13 @@ def test_calculateInvariant_match(balances: Iterable[D], root3Alpha: D):
 @settings(max_examples=5_000)
 @given(
     args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+)
+@example(args=(
+    (D('16743757275.452039152786685295'),
+     D('1967668306.780847696789534899'),
+     D('396788946.610986231634363959')),
+    D('3812260336.851356457000000000'),
+    D('0.200000000181790486')),
 )
 def test_calculateInvariant_reconstruction(args):
     balances, invariant, root3Alpha = args

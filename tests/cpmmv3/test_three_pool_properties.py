@@ -422,6 +422,7 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
 @given(
     args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
 )
+# Gives a relative error of 2.5%
 @example(args=(
     (D('16743757275.452039152786685295'),
      D('1967668306.780847696789534899'),
