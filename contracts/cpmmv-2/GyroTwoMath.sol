@@ -173,18 +173,14 @@ library GyroTwoMath {
 
         // Check in given tolerance range
         uint256 guessSquared = guess.mulDown(guess);
-        require(
-            guessSquared <= input.add(guess.mulUp(tolerance)) &&
-                guessSquared >= input.sub(guess.mulUp(tolerance)),
-            "_sqrt FAILED"
-        );
+        require(guessSquared <= input.add(guess.mulUp(tolerance)) && guessSquared >= input.sub(guess.mulUp(tolerance)), "_sqrt FAILED");
 
         return guess;
     }
 
     function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
         if (input >= FixedPoint.ONE) {
-            return (1 << (intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
+            return (1 << (_intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
         } else {
             if (input < 10) {
                 return SQRT_1E_NEG_17;
@@ -241,7 +237,7 @@ library GyroTwoMath {
         }
     }
 
-    function intLog2Halved(uint256 x) internal pure returns (uint256 n) {
+    function _intLog2Halved(uint256 x) internal pure returns (uint256 n) {
         if (x >= 1 << 128) {
             x >>= 128;
             n += 64;
