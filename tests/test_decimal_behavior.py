@@ -62,7 +62,7 @@ def test_sqrt(math_testing, a):
 @example(a=D(1))
 def test_sqrtNewton(math_testing, a):
     res_math = a.sqrt()
-    res_sol = math_testing.sqrtNewton(scale(a))
+    res_sol = math_testing.sqrtNewton(scale(a), 5)
 
     assert int(res_sol) == scale(res_math).approxed(abs=D("5"))
 
