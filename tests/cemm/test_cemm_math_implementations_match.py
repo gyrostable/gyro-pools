@@ -1,22 +1,27 @@
 import os
+
 import hypothesis.strategies as st
-from brownie.test import given
-from brownie import reverts
-from hypothesis import assume, settings, example
 import pytest
+from brownie.test import given
+from hypothesis import assume, settings, example
+
 from tests.cemm import cemm as mimpl
 from tests.cemm import util
-
+from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal import QuantizedDecimal as Decimal
+from tests.support.types import *
+from tests.support.util_common import gen_balances, gen_balances_vector, BasicPoolParameters
 # from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector, \
 #    gen_params_cemm_dinvariant
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
-from tests.support.types import *
-from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.support.quantized_decimal import QuantizedDecimal as Decimal
 
 # this is a multiplicative separation
 # This is consistent with tightest price range of beta - alpha >= MIN_PRICE_SEPARATION
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
+
+bpool_params = BasicPoolParameters(
+    MIN_PRICE_SEPARATION, D('0.3'), D('0.3'), D('1e-5'), D('0.0001')
+)
 
 # this determines whether derivedParameters are calculated in solidity or not
 DP_IN_SOL = True
@@ -39,12 +44,12 @@ D.approxed_scaled = lambda self: self.approxed(abs=D("1E6"), rel=D("1E-6"))
 D.our_approxed_scaled = lambda self: self.approxed(abs=D("1E15"), rel=D("1E-6"))
 
 
-@given(params=util.gen_params(), t=util.gen_balances_vector())
+@given(params=util.gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulAinv(params, t, gyro_cemm_math_testing)
 
 
-@given(params=util.gen_params(), t=util.gen_balances_vector())
+@given(params=util.gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulA(params, t, gyro_cemm_math_testing)
 
@@ -165,7 +170,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
 
 
 @settings(max_examples=MAX_EXAMPLES)
-@given(params=util.gen_params(), balances=util.gen_balances())
+@given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
 def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
     invariant_py, invariant_sol = util.mtest_calculateInvariant(
         params, balances, DP_IN_SOL, gyro_cemm_math_testing
@@ -179,7 +184,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
 
 
 @settings(max_examples=MAX_EXAMPLES)
-@given(params=util.gen_params(), balances=util.gen_balances())
+@given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
 def test_calculatePrice(params, balances, gyro_cemm_math_testing):
     assume(balances != (0, 0))
     price_py, price_sol = util.mtest_calculatePrice(
@@ -221,7 +226,7 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
 @settings(max_examples=MAX_EXAMPLES)
 @given(
     params=util.gen_params(),
-    balances=util.gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
@@ -247,7 +252,7 @@ def test_calcOutGivenIn(
 @settings(max_examples=MAX_EXAMPLES)
 @given(
     params=util.gen_params(),
-    balances=util.gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountOut=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )

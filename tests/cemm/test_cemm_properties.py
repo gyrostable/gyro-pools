@@ -12,6 +12,8 @@ from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, event, example
 import pytest
+
+from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.cemm import cemm as mimpl
 from tests.cemm import util
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
@@ -33,7 +35,7 @@ MIN_FEE = D("0.0002")
 DP_IN_SOL = False
 
 
-bpool_params = util.Basic_Pool_Parameters(
+bpool_params = BasicPoolParameters(
     MIN_PRICE_SEPARATION, MAX_IN_RATIO, MAX_OUT_RATIO, MIN_BALANCE_RATIO, MIN_FEE
 )
 
@@ -44,7 +46,7 @@ bpool_params = util.Basic_Pool_Parameters(
 @settings(max_examples=1_000)
 @given(
     params=util.gen_params(),
-    balances=util.gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
@@ -98,7 +100,7 @@ def test_invariant_across_calcOutGivenIn(
 @pytest.mark.skip(reason="Imprecision error to fix")
 @given(
     params=util.gen_params(),
-    balances=util.gen_balances(),
+    balances=gen_balances(2, bpool_params),
     amountOut=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
     tokenInIsToken0=st.booleans(),
 )
