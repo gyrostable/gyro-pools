@@ -47,6 +47,19 @@ library GyroTwoMath {
     // Invariant shrink limit: non-proportional exits cannot cause the invariant to decrease by less than this ratio.
     uint256 internal constant _MIN_INVARIANT_RATIO = 0.7e18;
 
+    // Constants required for newton iteration method _squareRoot
+    uint256 private constant SQRT_1E_NEG_1 = 316227766016837933;
+    uint256 private constant SQRT_1E_NEG_3 = 31622776601683793;
+    uint256 private constant SQRT_1E_NEG_5 = 3162277660168379;
+    uint256 private constant SQRT_1E_NEG_7 = 316227766016837;
+    uint256 private constant SQRT_1E_NEG_9 = 31622776601683;
+    uint256 private constant SQRT_1E_NEG_11 = 3162277660168;
+    uint256 private constant SQRT_1E_NEG_13 = 316227766016;
+    uint256 private constant SQRT_1E_NEG_15 = 31622776601;
+    uint256 private constant SQRT_1E_NEG_17 = 316227766;
+
+    uint256 private constant MIN_NEWTON_STEP_SIZE = 5;
+
     // About swap fees on joins and exits:
     // Any join or exit that is not perfectly balanced (e.g. all single token joins or exits) is mathematically
     // equivalent to a perfectly balanced join or  exit followed by a series of swaps. Since these swaps would charge
@@ -130,14 +143,133 @@ library GyroTwoMath {
         uint256 addTerm = (mc.mulDown(4 * FixedPoint.ONE)).mulDown(a);
         // The minus sign in the radicand cancels out in this special case, so we add
         uint256 radicand = bSquare.add(addTerm);
-        uint256 sqrResult = _squareRoot(radicand);
+        uint256 sqrResult = _squareRoot(radicand, 5);
         // The minus sign in the numerator cancels out in this special case
         uint256 numerator = mb.add(sqrResult);
         invariant = numerator.divDown(denominator);
     }
 
-    function _squareRoot(uint256 input) internal pure returns (uint256 result) {
-        result = input.powDown(FixedPoint.ONE / 2);
+    /** @dev Old sqrt function, replaced by Newton Iteration method below
+     * function _squareRoot(uint256 input) internal pure returns (uint256 result) {
+     *     result = input.powDown(FixedPoint.ONE / 2);
+     * }
+     */
+
+    function _squareRoot(uint256 input, uint256 tolerance) internal pure returns (uint256) {
+        if (input == 0) {
+            return 0;
+        }
+
+        uint256 guess = _makeInitialGuess(input);
+
+        // 7 iterations
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+
+        // Check in given tolerance range
+        uint256 guessSquared = guess.mulDown(guess);
+        require(
+            guessSquared <= input.add(guess.mulUp(tolerance)) &&
+                guessSquared >= input.sub(guess.mulUp(tolerance)),
+            "_sqrt FAILED"
+        );
+
+        return guess;
+    }
+
+    function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
+        if (input >= FixedPoint.ONE) {
+            return (1 << (intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
+        } else {
+            if (input < 10) {
+                return SQRT_1E_NEG_17;
+            }
+            if (input < 1e2) {
+                return 1e10;
+            }
+            if (input < 1e3) {
+                return SQRT_1E_NEG_15;
+            }
+            if (input < 1e4) {
+                return 1e11;
+            }
+            if (input < 1e5) {
+                return SQRT_1E_NEG_13;
+            }
+            if (input < 1e6) {
+                return 1e12;
+            }
+            if (input < 1e7) {
+                return SQRT_1E_NEG_11;
+            }
+            if (input < 1e8) {
+                return 1e13;
+            }
+            if (input < 1e9) {
+                return SQRT_1E_NEG_9;
+            }
+            if (input < 1e10) {
+                return 1e14;
+            }
+            if (input < 1e11) {
+                return SQRT_1E_NEG_7;
+            }
+            if (input < 1e12) {
+                return 1e15;
+            }
+            if (input < 1e13) {
+                return SQRT_1E_NEG_5;
+            }
+            if (input < 1e14) {
+                return 1e16;
+            }
+            if (input < 1e15) {
+                return SQRT_1E_NEG_3;
+            }
+            if (input < 1e16) {
+                return 1e17;
+            }
+            if (input < 1e17) {
+                return SQRT_1E_NEG_1;
+            }
+            return input;
+        }
+    }
+
+    function intLog2Halved(uint256 x) internal pure returns (uint256 n) {
+        if (x >= 1 << 128) {
+            x >>= 128;
+            n += 64;
+        }
+        if (x >= 1 << 64) {
+            x >>= 64;
+            n += 32;
+        }
+        if (x >= 1 << 32) {
+            x >>= 32;
+            n += 16;
+        }
+        if (x >= 1 << 16) {
+            x >>= 16;
+            n += 8;
+        }
+        if (x >= 1 << 8) {
+            x >>= 8;
+            n += 4;
+        }
+        if (x >= 1 << 4) {
+            x >>= 4;
+            n += 2;
+        }
+        if (x >= 1 << 2) {
+            x >>= 2;
+            n += 1;
+        }
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances
