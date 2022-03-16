@@ -22,6 +22,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
 /// @dev Signed fixed point operations based on Balancer's FixedPoint library.
 library SignedFixedPoint {
     int256 internal constant ONE = 1e18; // 18 decimal places
+    int256 internal constant ONE_XP = 1e38; // 38 decimal places
     int256 internal constant MAX_POW_RELATIVE_ERROR = 10000; // 10^(-14)
 
     // Minimum base for the power function when the exponent is 'free' (larger than ONE).
@@ -99,6 +100,50 @@ library SignedFixedPoint {
             if (aInflated > 0) return ((aInflated - 1) / b) + 1;
             else return ((aInflated + 1) / b) - 1;
         }
+    }
+
+    /// @dev multiplies two extra precision numbers (with 38 decimals)
+    /// rounds down but this shouldn't matter
+    /// multiplication can overflow if a,b are > 2 in magnitude
+    function mulXp(int256 a, int256 b) internal pure returns (int256) {
+        int256 product = a * b;
+        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+
+        return product / ONE_XP;
+    }
+
+    /// @dev divides two extra precision numbers (with 38 decimals)
+    /// rounds down but this shouldn't matter
+    /// can overflow if a > 2 or b << 1 in magnitude
+    function divXp(int256 a, int256 b) internal pure returns (int256) {
+        _require(b != 0, Errors.ZERO_DIVISION);
+
+        if (a == 0) {
+            return 0;
+        } else {
+            int256 aInflated = a * ONE_XP;
+            _require(aInflated / a == ONE_XP, Errors.DIV_INTERNAL); // mul overflow
+
+            return aInflated / b;
+        }
+    }
+
+    /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
+    /// returns normal precision of the product
+    function mulDownXpToNp(int256 a, int256 b) internal pure returns (int256) {
+        int256 b1 = b / 1e19;
+        int256 b2 = b > 0 ? b - b1 * 1e19 : b + b1 * 1e19;
+        int256 prod = a * b1;
+        _require(a == 0 || prod / a == b1, Errors.MUL_OVERFLOW);
+        return prod > 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + a * b2 + 1) / 1e19 - 1;
+    }
+
+    function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
+        int256 b1 = b / 1e19;
+        int256 b2 = b > 0 ? b - b1 * 1e19 : b + b1 * 1e19;
+        int256 prod = a * b1;
+        _require(a == 0 || prod / a == b1, Errors.MUL_OVERFLOW);
+        return prod < 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + a * b2 - 1) / 1e19 + 1;
     }
 
     // TODO not implementing the pow functions right now b/c it's annoying and slightly ill-defined, and we prob don't need them.

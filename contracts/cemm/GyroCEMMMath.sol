@@ -45,6 +45,9 @@ library GyroCEMMMath {
 
         // Stretching factor:
         int256 lambda; // lambda >= 1 where lambda == 1 is the circle.
+        int256 d;
+        int256 dAlpha;
+        int256 dBeta;
     }
 
     function validateParams(Params memory params) internal pure {
@@ -59,6 +62,10 @@ library GyroCEMMMath {
     struct DerivedParams {
         Vector2 tauAlpha;
         Vector2 tauBeta;
+        int256 u;
+        int256 v;
+        int256 w;
+        int256 z;
     }
 
     struct Vector2 {
@@ -152,6 +159,31 @@ library GyroCEMMMath {
         derived.tauBeta = tau(params, params.beta);
     }
 
+    function tauXp(
+        Params memory p,
+        int256 px,
+        int256 dPx
+    ) internal pure returns (Vector2 memory tauPx) {
+        tauPx.x = (p.c * 1e20 - (p.s * 1e20).divXp(px * 1e20)).mulXp(dPx);
+        tauPx.y = (p.s * 1e20 + (p.c * 1e20).divXp(px * 1e20)).divXp(p.lambda * 1e20).mulXp(dPx);
+    }
+
+    /// make derived params in extra precision, intentionally missing a factor of 1/d where s^2 + c^2 = d^2
+    function mkDerivedParamsXp(Params memory p) internal pure returns (DerivedParams memory d) {
+        d.tauAlpha = tauXp(p, p.alpha, p.dAlpha);
+        d.tauBeta = tauXp(p, p.beta, p.dBeta);
+        // w = sc (tau(beta)_y - tau(alpha)_y
+        d.w = (p.s * 1e20).mulXp(p.c * 1e20).mulXp(d.tauBeta.y.sub(d.tauAlpha.y));
+        // z = c^2 tau(beta)_x + s^2 tau(alpha)_x
+        d.z = (p.c * 1e20).mulXp(p.c * 1e20).mulXp(d.tauBeta.x);
+        d.z = d.z.add((p.s * 1e20)).mulXp(p.s * 1e20).mulXp(d.tauAlpha.x);
+        // u = sc (tau(beta)_x - tau(alpha)_x)
+        d.u = (p.s * 1e20).mulXp(p.c * 1e20).mulXp(d.tauBeta.x.sub(d.tauAlpha.x));
+        // v = s^2 tau(beta)_y + c^2 tau(alpha)_y
+        d.v = (p.s * 1e20).mulXp(p.s * 1e20).mulXp(d.tauBeta.y);
+        d.v = d.v.add((p.c * 1e20).mulXp(p.c * 1e20).mulXp(d.tauAlpha.y));
+    }
+
     /** @dev Given price on a circle, gives the normalized corresponding point on the circle centered at the origin
      *  pxc = price of asset x in terms of asset y (measured on the circle)
      *  Notice that the eta function does not depend on Params.
@@ -230,32 +262,58 @@ library GyroCEMMMath {
     ) internal pure returns (uint256 uinvariant) {
         Vector2 memory vbalances = Vector2(balances[0].toInt256(), balances[1].toInt256());
         int256 AChi_x = calcAChi_x(params, derived);
-        int256 AChiDivLambda_y = calcAChiDivLambda_y(params, derived);
+        Vector2 memory AChi_y = calcAChiDivLambda_y(params, derived);
         int256 AtAChi = calcAtAChi(vbalances.x, vbalances.y, params, derived, AChi_x);
-        int256 sqrt = calcInvariantSqrt(vbalances.x, vbalances.y, params, AChi_x, AChiDivLambda_y);
+        int256 sqrt = calcInvariantSqrt(vbalances.x, vbalances.y, params, AChi_x, AChi_y);
         // A chi \cdot A chi > 1, so round it up to round denominator up
-        int256 denominator = calcAChiAChi(params, AChi_x, AChiDivLambda_y).sub(ONE);
+        int256 denominator = calcAChiAChi(params, AChi_x, AChi_y).sub(ONE);
         int256 invariant = AtAChi.add(sqrt).divDown(denominator);
         return invariant.toUint256();
     }
 
-    /// @dev calculate (A chi)_x, ignores rounding direction
+    /// @dev calculate (A chi)_x, rounds up in signed direction
     function calcAChi_x(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x
-        val = p.s.mulDown(p.c).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)).divDown(p.lambda);
-        val = val.add(d.tauBeta.x.mulDown(p.c).mulDown(p.c)).add(d.tauAlpha.x.mulDown(p.s).mulDown(p.s));
+        val = d.tauBeta.y.sub(d.tauAlpha.y);
+        val = val > 0 ? p.s.mulUp(p.c).mulUp(val).divUp(p.lambda) : p.s.mulDown(p.c).mulDown(val).divDown(p.lambda);
+        val = val.add(d.tauBeta.x > 0 ? d.tauBeta.x.mulUp(p.c).mulUp(p.c) : d.tauBeta.x.mulDown(p.c).mulDown(p.c));
+        val = val.add(d.tauAlpha.x > 0 ? d.tauAlpha.x.mulUp(p.s).mulUp(p.s) : d.tauAlpha.x.mulDown(p.s).mulDown(p.s));
         // possible rounding error is 7 considering that each variable <= 1 individually, but don't know which way
     }
 
-    /// @dev calculate (A chi / lambda)_y, ignores rounding direction
-    function calcAChiDivLambda_y(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
-        // sc * (tau(beta)_x - tau(alpha)_x) + (s^2 tau(beta)_y + c^2 tau(alpha)_y) / lambda
-        val = (p.s.mulDown(p.s).mulDown(d.tauBeta.y).add(p.c.mulDown(p.c).mulDown(d.tauAlpha.y)).divDown(p.lambda));
-        val = val.add(p.s.mulDown(p.c).mulDown(d.tauBeta.x.sub(d.tauAlpha.x)));
-        // possible rounding error is 8 considering that each variable <= 1 individually and lambda > 1, but don't know which way
+    /// @dev calculate terms of (A chi)_y excluding terms with lambda (these will later be accounted for in the best order)
+    /// returns Vector2: x contains terms that should contain lambda factor, y contains other terms
+    /// rounds x,y components up in signed direction
+    function calcAChiDivLambda_y(Params memory p, DerivedParams memory d) internal pure returns (Vector2 memory val) {
+        // (A chi)_y = sc * (tau(beta)_x - tau(alpha)_x) * lambda + (s^2 tau(beta)_y + c^2 tau(alpha)_y)
+        val.x = d.tauBeta.x.sub(d.tauAlpha.x);
+        val.x = val.x > 0 ? p.s.mulUp(p.c).mulUp(val.x) : p.s.mulDown(p.c).mulDown(val.x);
+        val.y = d.tauBeta.y > 0 ? p.s.mulUp(p.s).mulUp(d.tauBeta.y) : p.s.mulDown(p.s).mulDown(d.tauBeta.y);
+        val.y = val.y.add(d.tauAlpha.y > 0 ? p.c.mulUp(p.c).mulUp(d.tauAlpha.y) : p.c.mulDown(p.c).mulDown(d.tauAlpha.y));
+        // possible rounding error in val.x is 3
+        // possible rounding error in val.y is 5
+        // this considers that each variable <= 1 individually
+    }
+
+    /// @dev calculates termToMul * (zu + (wu+zv)/lambda + wv/lambda^2)
+    /// to calculate (A chi)_x^2, use z,w from ( A chi)_x = z + w/lambda, and set u=z, v=w
+    /// to calculate (A chi/lambda)_y^2, use u,v fromt (A chi)_y = lambda u + v, and set z=u, w=v
+    /// to calculate (A chi)_x (A chi/lambda)_y, use u,v,z,w as given
+    function mulAChiFactors(
+        int256 termToMul,
+        int256 w,
+        int256 z,
+        int256 u,
+        int256 v,
+        int256 lambda
+    ) internal pure returns (int256 val) {
+        val = termToMul.mulDown(z).mulDown(u);
+        val = val.add(termToMul.mulDown(w.mulDown(u).add(z.mulDown(v))).divDown(lambda));
+        val = val.add(termToMul.mulDown(w).mulDown(v).divDown(lambda).divDown(lambda));
     }
 
     /// @dev calculate At \cdot A chi, ignores rounding direction
+    // TODO: make this round down
     function calcAtAChi(
         int256 x,
         int256 y,
@@ -263,9 +321,8 @@ library GyroCEMMMath {
         DerivedParams memory d,
         int256 AChi_x
     ) internal pure returns (int256 val) {
-        // (cx / lambda - sy / lambda) * (A chi)_x
-        val = x.mulDown(p.c).divDown(p.lambda).sub(y.mulUp(p.s).divUp(p.lambda));
-        val = val.mulDown(AChi_x);
+        // (cx - sy) * (A chi)_x / lambda
+        val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDown(AChi_x).divDown(p.lambda);
 
         // (x lambda s + y lambda c) * sc * (tau(beta)_x - tau(alpha)_x)
         int256 term = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
@@ -276,21 +333,21 @@ library GyroCEMMMath {
         val = val.add((x.mulDown(p.s).add(y.mulDown(p.c))).mulDown(term));
     }
 
-    /// @dev calculates A chi \cdot A chi, corrects for rounding direction error to overestimate in signed direction
+    /// @dev calculates A chi \cdot A chi, overestimates in signed direction
     function calcAChiAChi(
         Params memory p,
         int256 AChi_x,
-        int256 AChiDivLambda_y
+        Vector2 memory AChi_y // x contains terms *lambda, y contains other terms
     ) internal pure returns (int256 val) {
-        // ( sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x ) ^ 2
-        // add 7 in magnitude within the square to correct for rounding error
-        val = AChi_x.addMag(7);
-        val = val.mulUp(val);
+        // (A chi)_y^2 = lambda^2 v^2 + lambda 2 v w + w^2, where (v,w) = AChi_y
+        // - 3 and 5 to account for rounding error in v, w
+        val = AChi_y.x * AChi_y.y > 0
+            ? p.lambda.mulUp(2 * AChi_y.x).mulUp(AChi_y.y)
+            : p.lambda.mulDown(2 * AChi_y.x.addMag(-3)).mulDown(AChi_y.y.addMag(-5));
+        val = val.add(p.lambda.mulUp(p.lambda).mulUp(AChi_y.x).mulUp(AChi_y.x)).add(AChi_y.y.mulUp(AChi_y.y));
 
-        // lambda^2 * (A chi / lambda)_y ^ 2
-        // add 8 in magnitude within square to correct for rounding error
-        int256 term = AChiDivLambda_y.addMag(8);
-        val = val.add(p.lambda.mulUp(p.lambda).mulUp(term).mulUp(term));
+        // (A chi)_x^2 = ( sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x ) ^ 2
+        val = val.add(AChi_x.mulUp(AChi_x));
     }
 
     /// @dev calculate -(At)_x ^2 (A chi)_y ^2 + (At)_x ^2, rounding down in signed direction
@@ -298,34 +355,51 @@ library GyroCEMMMath {
         int256 x,
         int256 y,
         Params memory p,
-        int256 AChiDivLambda_y
+        Vector2 memory AChi_y // x contains terms *lambda, y contains other terms
     ) internal pure returns (int256 val) {
         // first calculate -(At)_x ^2 (A chi)_y ^2
+
         // (cx - sy)^2 > 0, calculate as x^2 c^2 + y^2 s^2 - xy2cs
         val = x.mulUp(x).mulUp(p.c).mulUp(p.c).add(y.mulUp(y).mulUp(p.s).mulUp(p.s));
         val = val.sub(x.mulDown(y).mulDown(p.c * 2).mulDown(p.s));
+        // * (A chi / lambda)_y ^ 2, by strategically ordering the /lambda
+        // considering (A chi)_y^2 = lambda^2 v^2 + lambda 2 v w + w^2, where (v,w) = AChi_y
+        // - 3 and 5 to account for rounding error in v, w
+        int256 term = val.mulUp(AChi_y.x).mulUp(AChi_y.x);
+        if (AChi_y.x & AChi_y.y > 0) {
+            term = term.add(val.mulUp(2 * AChi_y.x).mulUp(AChi_y.y).divUp(p.lambda));
+        } else {
+            term = term.add(val.mulDown(2 * AChi_y.x.addMag(-3)).mulDown(AChi_y.y.addMag(-5)));
+        }
+        term = term.add(val.mulUp(AChi_y.y).mulUp(AChi_y.y).divUp(p.lambda).divUp(p.lambda));
 
-        // * (A chi / lambda)_y ^ 2
-        // add 8 in magnitude within the square to correct for rounding error
-        int256 term = AChiDivLambda_y.addMag(8);
-
-        // subtract 10 to account for rounding error in lambda^2 * (At)_x ^2
-        val = (-val.mulUp(term).mulUp(term)).add(val.sub(10).divDown(p.lambda).divDown(p.lambda));
+        // account for rounding error in x^2 c^2 + y^2 s^2 - xy2cs
+        // error is ~ 2*(x^2 + y^2) * 1e-18
+        int256 err = (x.mulUp(x).add(y.mulUp(y)) / ONE) * 3;
+        val = (-term).add(val.sub(err).divDown(p.lambda).divDown(p.lambda));
     }
 
-    /// @dev calculate 2(At)_x * (At)_y * (A chi)_x * (A chi)_y, ignores rounding direction
+    /// @dev calculate 2(At)_x * (At)_y * (A chi)_x * (A chi)_y, accounts for error to round down
+    // TODO: confirm this round down
     function calc2AtxAtyAChixAChiy(
         int256 x,
         int256 y,
         Params memory p,
         int256 AChi_x,
-        int256 AChiDivLambda_y
+        Vector2 memory AChi_y // x contains terms *lambda, y contains other terms
     ) internal pure returns (int256 val) {
         // (x^2 - y^2) sc * 2 + yx (c^2 - s^2) * 2
-        val = (x.mulDown(x).sub(y.mulDown(y))).mulDown(p.c).mulDown(p.s * 2);
+        val = x.mulDown(x).sub(y.mulUp(y)).mulDown(p.c * 2).mulDown(p.s);
         val = val.add(y.mulDown(x).mulDown((p.c.mulDown(p.c).sub(p.s.mulDown(p.s))) * 2));
-        // * (A chi)_x * (A chi / lambda)_y
-        val = val.mulDown(AChi_x).mulDown(AChiDivLambda_y);
+        // * (A chi)_x
+        val = val.mulDown(AChi_x);
+        // * (A chi / lambda)_y, by strategically ordering the /lambda
+        // considering (A chi)_y = lambda v + w, where (v,w) = AChi_y
+        // first account for possible rounding error: ~ O((x^2 + y^2)*1e-18)
+        int256 err = ((x.mulUp(x).sub(y.mulUp(y)).add(y.mulUp(x))) / ONE) * 17;
+        err = err > 0 ? err : -err;
+        val = val.mulDown(AChi_y.x).sub(err);
+        val = val.add(val.mulDown(AChi_y.y).sub(err).divDown(p.lambda));
     }
 
     /// @dev calculate -(At)_y ^2 (A chi)_x ^2 + (At)_y ^2, rounding down in signed direction
@@ -338,20 +412,22 @@ library GyroCEMMMath {
         val = x.mulUp(x).mulUp(p.s).mulUp(p.s).add(y.mulUp(y).mulUp(p.c).mulUp(p.c));
         val = val.add(x.mulUp(y).mulUp(p.s * 2).mulUp(p.c));
         // add 7 in magnitude within the square to correct for rounding error
-        int256 term = AChi_x.addMag(7);
+        int256 term = AChi_x;
 
-        // subtract 10 to account for rounding error in (At)_y ^2
-        val = (-val.mulUp(term).mulUp(term)).add(val.sub(10));
+        // account for rounding error in (At)_y ^2
+        int256 err = (x.mulUp(x).add(y.mulUp(y)) / ONE) * 3;
+        val = (-val.mulUp(term).mulUp(term)).add(val.sub(err));
     }
 
+    // TODO: properly account for any residual rounding error
     function calcInvariantSqrt(
         int256 x,
         int256 y,
         Params memory p,
         int256 AChi_x,
-        int256 AChiDivLambda_y
+        Vector2 memory AChi_y
     ) internal pure returns (int256 val) {
-        val = calcMinAtxAChiySqPlusAtxSq(x, y, p, AChiDivLambda_y).add(calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChiDivLambda_y));
+        val = calcMinAtxAChiySqPlusAtxSq(x, y, p, AChi_y).add(calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChi_y));
         val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, AChi_x));
         val = val.sub(100); // correct to downside for rounding error, given everything is O(eps) error propagation
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
@@ -474,8 +550,7 @@ library GyroCEMMMath {
     }
 
     /** @dev Variables are named for calculating y given x
-     *  to calculate x given y, change x->y, s->c, c->s, a_>b, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y
-     *  TODO: account for error in b (from r) and thus also x-b */
+     *  to calculate x given y, change x->y, s->c, c->s, a_>b, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y */
     function solveQuadraticSwap(
         int256 lambda,
         int256 x,

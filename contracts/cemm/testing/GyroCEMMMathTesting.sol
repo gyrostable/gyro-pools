@@ -154,7 +154,11 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.calcAChi_x(p, d);
     }
 
-    function calcAChiDivLambda_y(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d) external pure returns (int256) {
+    function calcAChiDivLambda_y(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d)
+        external
+        pure
+        returns (GyroCEMMMath.Vector2 memory)
+    {
         return GyroCEMMMath.calcAChiDivLambda_y(p, d);
     }
 
@@ -171,18 +175,18 @@ contract GyroCEMMMathTesting {
     function calcAChiAChi(
         GyroCEMMMath.Params memory p,
         int256 AChi_x,
-        int256 AChiDivLambda_y
+        GyroCEMMMath.Vector2 memory AChi_y
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcAChiAChi(p, AChi_x, AChiDivLambda_y);
+        return GyroCEMMMath.calcAChiAChi(p, AChi_x, AChi_y);
     }
 
     function calcMinAtxAChiySqPlusAtxSq(
         int256 x,
         int256 y,
         GyroCEMMMath.Params memory p,
-        int256 AChiDivLambda_y
+        GyroCEMMMath.Vector2 memory AChi_y
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcMinAtxAChiySqPlusAtxSq(x, y, p, AChiDivLambda_y);
+        return GyroCEMMMath.calcMinAtxAChiySqPlusAtxSq(x, y, p, AChi_y);
     }
 
     function calc2AtxAtyAChixAChiy(
@@ -190,9 +194,9 @@ contract GyroCEMMMathTesting {
         int256 y,
         GyroCEMMMath.Params memory p,
         int256 AChi_x,
-        int256 AChiDivLambda_y
+        GyroCEMMMath.Vector2 memory AChi_y
     ) external pure returns (int256) {
-        return GyroCEMMMath.calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChiDivLambda_y);
+        return GyroCEMMMath.calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChi_y);
     }
 
     function calcMinAtyAChixSqPlusAtySq(
@@ -209,9 +213,9 @@ contract GyroCEMMMathTesting {
         int256 y,
         GyroCEMMMath.Params memory p,
         int256 AChi_x,
-        int256 AChiDivLambda_y
+        GyroCEMMMath.Vector2 memory AChi_y
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcInvariantSqrt(x, y, p, AChi_x, AChiDivLambda_y);
+        return GyroCEMMMath.calcInvariantSqrt(x, y, p, AChi_x, AChi_y);
     }
 
     function solveQuadraticSwap(
