@@ -154,13 +154,4 @@ contract GyroThreeMathTesting {
     ) external pure returns (uint256, uint256) {
         return GyroPoolMath._calcProtocolFees(previousInvariant, currentInvariant, currentBptSupply, protocolSwapFeePerc, protocolFeeGyroPortion);
     }
-
-    // DEBUG
-    // Must be declared here, otherwise we can't see it.
-    // solhint-disable-next-line use-forbidden-name
-    event NewtonStep(bool high, uint256 delta, uint256 l);
-
-    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
-        return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
-    }
 }
