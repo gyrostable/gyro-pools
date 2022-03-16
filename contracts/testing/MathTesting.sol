@@ -29,8 +29,8 @@ contract MathTesting {
         return a.powUp(FixedPoint.ONE / 2);
     }
 
-    function sqrtNewton(uint256 input) external pure returns (uint256) {
-        return GyroPoolMath._sqrt(input);
+    function sqrtNewton(uint256 input, uint256 tolerance) external pure returns (uint256) {
+        return GyroPoolMath._sqrt(input, tolerance);
     }
 
     function sqrtNewtonInitialGuess(uint256 input) external pure returns (uint256) {
