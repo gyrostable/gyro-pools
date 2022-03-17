@@ -80,7 +80,7 @@ def test_calculate_quadratic(
         scale(a), scale(mb), scale(b_square), scale(mc)
     )
 
-    assert int(root_sol) == scale(root).approxed()
+    assert int(root_sol) == scale(root).approxed(abs=D("5"))
 
 
 @given(
@@ -104,7 +104,7 @@ def test_calculate_quadratic_special(
         scale(a), scale(mb), scale(b_square), scale(mc)
     )
 
-    assert int(root_sol) == scale(root).approxed()
+    assert int(root_sol) == scale(root).approxed(abs=D("5"))
 
 
 @given(
@@ -127,7 +127,7 @@ def test_calculate_invariant(
     )
 
     assert D(invariant_sol) <= scale(invariant)
-    assert D(invariant_sol) == scale(invariant).approxed(rel=D("1e-13"))
+    assert D(invariant_sol) == scale(invariant).approxed(abs=D("5"))
 
 
 @given(
@@ -171,7 +171,7 @@ def test_calculate_sqrt(gyro_two_math_testing, input):
 
     sqrt_sol = gyro_two_math_testing.sqrt(scale(input))
 
-    assert to_decimal(sqrt_sol) == scale(sqrt).approxed()
+    assert to_decimal(sqrt_sol) == scale(sqrt).approxed(abs=D("5"))
 
 
 @given(

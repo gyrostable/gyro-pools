@@ -78,7 +78,7 @@ contract GyroTwoMathTesting {
     }
 
     function sqrt(uint256 input) external pure returns (uint256) {
-        return GyroTwoMath._squareRoot(input, 5);
+        return GyroPoolMath._sqrt(input, 5);
     }
 
     function calcAllTokensInGivenExactBptOut(

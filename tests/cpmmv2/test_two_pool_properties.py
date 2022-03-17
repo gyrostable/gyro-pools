@@ -170,7 +170,7 @@ def test_invariant_across_calcInGivenOut_eth_btc(
     gyro_two_math_testing, amount_out, balances: Tuple[int, int], params
 ):
     sqrt_alpha, sqrt_beta = params
-    amount_out_1 = amount_out * (sqrt_beta ** 2 + sqrt_alpha ** 2) / 2
+    amount_out_1 = amount_out * (sqrt_beta**2 + sqrt_alpha**2) / 2
     invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
         gyro_two_math_testing, amount_out_1, balances, sqrt_alpha, sqrt_beta, False
     )
@@ -178,7 +178,7 @@ def test_invariant_across_calcInGivenOut_eth_btc(
 
     # test the transpose case also
     sqrt_alpha_t, sqrt_beta_t = (D(1) / sqrt_beta, D(1) / sqrt_alpha)
-    amount_out_2 = amount_out * (sqrt_beta_t ** 2 + sqrt_alpha_t ** 2) / 2
+    amount_out_2 = amount_out * (sqrt_beta_t**2 + sqrt_alpha_t**2) / 2
     invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
         gyro_two_math_testing, amount_out_2, balances, sqrt_alpha_t, sqrt_beta_t, False
     )
@@ -232,7 +232,7 @@ def test_invariant_across_calcOutGivenIn_eth_btc(
     gyro_two_math_testing, amount_in, balances: Tuple[int, int], params
 ):
     sqrt_alpha, sqrt_beta = params
-    amount_in_1 = amount_in * (sqrt_beta ** 2 + sqrt_beta ** 2) / 2
+    amount_in_1 = amount_in * (sqrt_beta**2 + sqrt_beta**2) / 2
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
         gyro_two_math_testing, amount_in_1, balances, sqrt_alpha, sqrt_beta, False
     )
@@ -240,7 +240,7 @@ def test_invariant_across_calcOutGivenIn_eth_btc(
 
     # test the transpose case also
     sqrt_alpha_t, sqrt_beta_t = (D(1) / sqrt_beta, D(1) / sqrt_alpha)
-    amount_in_2 = amount_in * (sqrt_beta_t ** 2 + sqrt_alpha_t ** 2) / 2
+    amount_in_2 = amount_in * (sqrt_beta_t**2 + sqrt_alpha_t**2) / 2
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
         gyro_two_math_testing, amount_in_2, balances, sqrt_alpha_t, sqrt_beta_t, False
     )
