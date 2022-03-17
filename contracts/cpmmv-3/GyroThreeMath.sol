@@ -84,14 +84,11 @@ library GyroThreeMath {
             uint256 md
         )
     {
-        uint256 alpha23 = root3Alpha.mulDown(root3Alpha); // alpha to the power of (2/3)
-        uint256 alpha = alpha23.mulDown(root3Alpha);
-        a = FixedPoint.ONE.sub(alpha);
+        a = FixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
-        mb = bterm.mulDown(alpha23);
+        mb = bterm.mulDown(root3Alpha).mulDown(root3Alpha);
         uint256 cterm = (balances[0].mulDown(balances[1])).add(balances[1].mulDown(balances[2])).add(balances[2].mulDown(balances[0]));
         mc = cterm.mulDown(root3Alpha);
-        // TODO MAYBE to reduce rounding error amplification, multiply the smallest value last. Quite some effort though.
         md = balances[0].mulDown(balances[1]).mulDown(balances[2]);
     }
 
