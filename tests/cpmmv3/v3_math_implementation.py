@@ -87,14 +87,14 @@ def calculateInvariantNewton(
         ):
             return l, log
         df_l = a * 3 * l ** 2 + b * 2 * l + c
-        delta = f_l / df_l
+        delta = - f_l / df_l
 
         # delta==0 can happen with poor numerical precision! In this case, this is all we can get.
         if delta_pre is not None and (delta == 0 or f_l < 0):
             # warning("Early exit due to numerical instability")
             return l, log
 
-        l -= delta
+        l += delta
         delta_pre = delta
 
 
@@ -222,10 +222,17 @@ def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) 
 def calcNewtonDelta(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
     (a, mb, mc, md, rootEst) = (D(a), D(mb), D(mc), D(md), D(rootEst))
     dfRootEst = rootEst * rootEst * (D(3) * a) - rootEst.mul_up(D(2) * mb) - mc
-
     deltaMinus = rootEst.mul_up(rootEst).mul_up(rootEst).mul_up(a).div_up(dfRootEst)
-
     deltaPlus = (rootEst * rootEst * mb + rootEst * mc) / dfRootEst + md / dfRootEst
+    # dfRootEst = rootEst.mul_up(rootEst).mul_up(D(3) * a) - rootEst.mul_down(D(2) * mb) - mc
+    # deltaMinus = rootEst.mul_down(rootEst).mul_down(rootEst).mul_down(a).div_down(dfRootEst)
+    # deltaPlus = (rootEst.mul_up(rootEst).mul_up(mb) + rootEst.mul_up(mc)).div_up(dfRootEst) + md.div_up(dfRootEst)
+
+    # DEBUG
+    print(f"df        = {dfRootEst}")
+    print(f"deltaPlus = {deltaPlus}")
+    print(f"deltaMinus= {deltaMinus}")
+
     if deltaPlus >= deltaMinus:
         deltaAbs = deltaPlus - deltaMinus
         deltaIsPos = True
@@ -233,6 +240,46 @@ def calcNewtonDelta(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
         deltaAbs = deltaMinus - deltaPlus
         deltaIsPos = False
     return deltaAbs, deltaIsPos
+
+
+def calcNewtonDeltaDown(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
+    (a, mb, mc, md, rootEst) = (D(a), D(mb), D(mc), D(md), D(rootEst))
+    # dfRootEst = rootEst * rootEst * (D(3) * a) - rootEst.mul_up(D(2) * mb) - mc
+    # deltaMinus = rootEst.mul_up(rootEst).mul_up(rootEst).mul_up(a).div_up(dfRootEst)
+    # deltaPlus = (rootEst * rootEst * mb + rootEst * mc) / dfRootEst + md / dfRootEst
+    dfRootEst = rootEst.mul_up(rootEst).mul_up(D(3) * a) - rootEst.mul_down(D(2) * mb) - mc
+    deltaMinus = rootEst.mul_down(rootEst).mul_down(rootEst).mul_down(a).div_down(dfRootEst)
+    deltaPlus = (rootEst.mul_up(rootEst).mul_up(mb) + rootEst.mul_up(mc)).div_up(dfRootEst) + md.div_up(dfRootEst)
+
+    # DEBUG
+    print(f"df        = {dfRootEst}")
+    print(f"deltaPlus = {deltaPlus}")
+    print(f"deltaMinus= {deltaMinus}")
+
+    if deltaPlus >= deltaMinus:
+        deltaAbs = deltaPlus - deltaMinus
+        deltaIsPos = True
+    else:
+        deltaAbs = deltaMinus - deltaPlus
+        deltaIsPos = False
+    return deltaAbs, deltaIsPos
+
+
+
+def calcNewtonDelta1(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
+    """Alternative implementation with slightly different rounding behavior."""
+    l = rootEst
+    # Signs: "minus" refers to the delta, not to f(l)!
+    f_l_minus = a * l ** 3
+    f_l_plus = mb * l ** 2 + mc * l + md
+    f_l = f_l_minus - f_l_plus
+    df_l = a * 3 * l ** 2 - mb * 2 * l - mc
+    print(f"f_l = {f_l}")
+    print(f"df_l = {df_l}")
+    print(f"f_l_plus / df_l = {f_l_plus / df_l}")
+    print(f"f_l_minus / df_l = {f_l_minus / df_l}")
+    delta = (f_l_plus - f_l_minus) / df_l
+    return abs(delta), delta >= 0
 
 
 def finalIteration(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
