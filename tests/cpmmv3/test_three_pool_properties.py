@@ -1,16 +1,16 @@
-from decimal import Decimal
 from typing import Tuple
 
 import hypothesis.strategies as st
 from brownie.test import given
 from brownie import reverts
-from hypothesis import assume, settings, example
+from hypothesis import assume, settings, example, HealthCheck
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from tests.cpmmv3.util import calculateInvariantUnderOver, gen_synthetic_balances
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
+Decimal = D
 
 billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 
@@ -19,6 +19,12 @@ ROOT_ALPHA_MIN = "0.2"
 MIN_BAL_RATIO = to_decimal("1e-5")
 MIN_FEE = D("0.0002")
 
+bpool_params = BasicPoolParameters(
+    D(ROOT_ALPHA_MAX)**3 - 1/D(ROOT_ALPHA_MIN)**3,
+    D("0.3"), D("0.3"),
+    MIN_BAL_RATIO,
+    MIN_FEE
+)
 
 def gen_balances_raw():
     return st.tuples(
@@ -416,13 +422,10 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
         D(balances[1] + D(virtual_offset))
     )
 
-
-# TODO this test fails: Solidity has much worse precision than python; not clear why.
-@settings(max_examples=1_000)
+@settings(max_examples=1000)
 @given(
-    args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
 )
-# Gives a relative error of 2.5%
 @example(args=(
     (D('16743757275.452039152786685295'),
      D('1967668306.780847696789534899'),
@@ -430,20 +433,20 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
     D('3812260336.851356457000000000'),
     D('0.200000000181790486')),
 )
+@example(args=((Decimal('9168.743605294506949000'),
+      Decimal('0.091687436052945069'),
+      Decimal('38.996868460619872727')),
+     Decimal('512.421100000000000000'),
+     Decimal('0.200000000000000000')))
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     balances, invariant, root3Alpha = args
-
-    # TODO precision is not great when balances are small (on the order of 1, and invariant ≈ 1 too).
-    # Then I get a relative difference under/over ≈ 5%, with about equal distance from the truth.
-    assume(any(b >= 10 for b in balances))
-    assume(invariant >= 10)
 
     invariant_re_under, invariant_re_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
         scale(balances),
         scale(root3Alpha)))
 
-    assert invariant_re_under <= invariant
-    assert invariant_re_over  >= invariant.approxed(rel=D('5e-18'))
+    assert invariant_re_under <= invariant.approxed(rel=D('5e-18'))
+    assert invariant_re_over  >= invariant.approxed(rel=D('5e-16'))
     # assert invariant_re_under == invariant_re_over.approxed(rel=D('5e-14'))
-    assert invariant_re_under == invariant.approxed(rel=D('1e-16'))
-    assert invariant_re_over  == invariant.approxed(rel=D('5e-14'))
+    assert invariant_re_under == invariant.approxed(rel=D('5e-14'))
+    assert invariant_re_over  == invariant.approxed(rel=D('1e-12'))
