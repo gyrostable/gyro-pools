@@ -183,6 +183,14 @@ class QuantizedDecimal:
         context.rounding = decimal.ROUND_UP
         return QuantizedDecimal(self._value / self._get_value(other), context=context)
 
+    # mul_down and div_down are the defaults but we put them here for consistency so that one can quickly swap out one for the other.
+
+    def mul_down(self, other: DecimalLike):
+        return self * other
+
+    def div_down(self, other: DecimalLike):
+        return self / other
+
     @classmethod
     def from_float(cls, value: float) -> QuantizedDecimal:
         return cls(value)
