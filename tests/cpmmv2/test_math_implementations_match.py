@@ -16,7 +16,7 @@ billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 # this is a multiplicative separation
 # This is consistent with tightest price range of 0.9999 - 1.0001
 MIN_SQRTPARAM_SEPARATION = to_decimal("1.0001")
-MIN_BAL_RATIO = to_decimal("1e-5")
+MIN_BAL_RATIO = to_decimal("0")
 
 
 def faulty_params(balances, sqrt_alpha, sqrt_beta):
