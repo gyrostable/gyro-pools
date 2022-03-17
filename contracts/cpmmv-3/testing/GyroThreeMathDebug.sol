@@ -43,8 +43,8 @@ contract GyroThreeMathDebug {
     // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
     // - ... but in any case, make at least _INVARIANT_MIN_ITERATIONS iterations. This is useful to compensate for a
     // less-than-ideal starting point, which is important when alpha is small.
-    uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 10;
-    uint8 internal constant _INVARIANT_MIN_ITERATIONS = 2;
+    uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 8;
+    uint8 internal constant _INVARIANT_MIN_ITERATIONS = 5;
 
     uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31; // 4.87e13 scaled; source: Theory
 
@@ -88,14 +88,11 @@ contract GyroThreeMathDebug {
             uint256 md
         )
     {
-        uint256 alpha23 = root3Alpha.mulDown(root3Alpha); // alpha to the power of (2/3)
-        uint256 alpha = alpha23.mulDown(root3Alpha);
-        a = FixedPoint.ONE.sub(alpha);
+        a = FixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
-        mb = bterm.mulDown(alpha23);
+        mb = bterm.mulDown(root3Alpha).mulDown(root3Alpha);
         uint256 cterm = (balances[0].mulDown(balances[1])).add(balances[1].mulDown(balances[2])).add(balances[2].mulDown(balances[0]));
         mc = cterm.mulDown(root3Alpha);
-        // TODO MAYBE to reduce rounding error amplification, multiply the smallest value last. Quite some effort though.
         md = balances[0].mulDown(balances[1]).mulDown(balances[2]);
     }
 
@@ -131,8 +128,18 @@ contract GyroThreeMathDebug {
     ) public returns (uint256 l0) {
         uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
         uint256 lmin = mb.divUp(a * 3).add(radic.powUp(FixedPoint.ONE / 2).divUp(a * 3));
-        // The factor 3/2 is a magic number found experimentally for our invariant. All factors > 1 are safe.
-        l0 = lmin.mulUp((3 * FixedPoint.ONE) / 2);
+        // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All factors > 1 are safe.
+        // For small alpha values, it is more efficient to fallback to a larger factor.
+        uint256 alpha = FixedPoint.ONE.sub(a);  // We know that a is in [0, 1].
+        uint256 factor;
+        if (alpha >= 0.5e18) {
+//            factor = 1.3e18;
+//            factor = factor.sub(alpha.mulUp(0.2e18));
+            factor = 1.5e18;
+        } else {
+            factor = 2e18;
+        }
+        l0 = lmin.mulUp(factor);
     }
 
     /** @dev Find a root of the given polynomial with the given starting point l.
@@ -182,6 +189,7 @@ contract GyroThreeMathDebug {
         uint256 rootEst
     ) public returns (uint256 deltaAbs, bool deltaIsPos) {
         // We aim to, when in doubt, overestimate the step in the negative direction and in absolute value.
+        // TODO perhaps we shouldn't not to overshoot?!?
         // Subtraction does not underflow since rootEst is chosen so that it's always above the (only) local minimum.
         uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
         // Note: We know that a rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
