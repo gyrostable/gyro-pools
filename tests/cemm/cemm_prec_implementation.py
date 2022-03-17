@@ -260,3 +260,41 @@ def solveQuadraticSwap_true(
 
 def invariantOverestimate(rDown: D) -> D:
     return D(rDown) + D(rDown).mul_up(D("1e-12"))
+
+
+def mulXp(a: int, b: int) -> int:
+    product = int(a) * int(b) // int(D("1e38"))
+    return product
+
+
+def divXp(a: int, b: int) -> int:
+    if a == 0:
+        return 0
+    a_inflated = int(a) * int(D("1e38"))
+    return a_inflated // int(b)
+
+
+def mulDownXpToNp(a: D, b: int) -> D:
+    b1 = int(b) // int(D("1e19"))
+    b2 = int(b) - b1 * int(D("1e19")) if b > 0 else int(b) + b1 * int(D("1e19"))
+    prod = int(a * D("1e18")) * b1
+    if prod > 0:
+        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19"))) // int(D("1e19"))
+    else:
+        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19")) + 1) // int(
+            D("1e19")
+        ) - 1
+    return D(prod) / D("1e18")
+
+
+def mulUpXpToNp(a: D, b: int) -> D:
+    b1 = int(b) // int(D("1e19"))
+    b2 = int(b) - b1 * int(D("1e19")) if b > 0 else int(b) + b1 * int(D("1e19"))
+    prod = int(a * D("1e18")) * b1
+    if prod < 0:
+        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19"))) // int(D("1e19"))
+    else:
+        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19")) - 1) // int(
+            D("1e19")
+        ) + 1
+    return D(prod) / D("1e18")

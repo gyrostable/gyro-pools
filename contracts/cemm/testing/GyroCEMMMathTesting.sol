@@ -166,10 +166,9 @@ contract GyroCEMMMathTesting {
         int256 x,
         int256 y,
         GyroCEMMMath.Params memory p,
-        GyroCEMMMath.DerivedParams memory d,
-        int256 AChi_x
+        GyroCEMMMath.DerivedParams memory d
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcAtAChi(x, y, p, d, AChi_x);
+        return GyroCEMMMath.calcAtAChi(x, y, p, d);
     }
 
     function calcAChiAChi(

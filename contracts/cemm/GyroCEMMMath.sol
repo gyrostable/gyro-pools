@@ -45,7 +45,7 @@ library GyroCEMMMath {
 
         // Stretching factor:
         int256 lambda; // lambda >= 1 where lambda == 1 is the circle.
-        int256 d;
+        int256 dSq;
         int256 dAlpha;
         int256 dBeta;
     }
@@ -169,6 +169,7 @@ library GyroCEMMMath {
     }
 
     /// make derived params in extra precision, intentionally missing a factor of 1/d where s^2 + c^2 = d^2
+    /// TODO: note how much error could happen in last place for under/overestimate purposes
     function mkDerivedParamsXp(Params memory p) internal pure returns (DerivedParams memory d) {
         d.tauAlpha = tauXp(p, p.alpha, p.dAlpha);
         d.tauBeta = tauXp(p, p.beta, p.dBeta);
@@ -263,7 +264,7 @@ library GyroCEMMMath {
         Vector2 memory vbalances = Vector2(balances[0].toInt256(), balances[1].toInt256());
         int256 AChi_x = calcAChi_x(params, derived);
         Vector2 memory AChi_y = calcAChiDivLambda_y(params, derived);
-        int256 AtAChi = calcAtAChi(vbalances.x, vbalances.y, params, derived, AChi_x);
+        int256 AtAChi = calcAtAChi(vbalances.x, vbalances.y, params, derived);
         int256 sqrt = calcInvariantSqrt(vbalances.x, vbalances.y, params, AChi_x, AChi_y);
         // A chi \cdot A chi > 1, so round it up to round denominator up
         int256 denominator = calcAChiAChi(params, AChi_x, AChi_y).sub(ONE);
@@ -272,6 +273,7 @@ library GyroCEMMMath {
     }
 
     /// @dev calculate (A chi)_x, rounds up in signed direction
+    /// TODO: can remove this since calculated in new mkDerivedParams
     function calcAChi_x(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x
         val = d.tauBeta.y.sub(d.tauAlpha.y);
@@ -284,6 +286,7 @@ library GyroCEMMMath {
     /// @dev calculate terms of (A chi)_y excluding terms with lambda (these will later be accounted for in the best order)
     /// returns Vector2: x contains terms that should contain lambda factor, y contains other terms
     /// rounds x,y components up in signed direction
+    /// TODO: can remove this since calculated in new mkDerivedParams
     function calcAChiDivLambda_y(Params memory p, DerivedParams memory d) internal pure returns (Vector2 memory val) {
         // (A chi)_y = sc * (tau(beta)_x - tau(alpha)_x) * lambda + (s^2 tau(beta)_y + c^2 tau(alpha)_y)
         val.x = d.tauBeta.x.sub(d.tauAlpha.x);
@@ -307,6 +310,9 @@ library GyroCEMMMath {
         int256 v,
         int256 lambda
     ) internal pure returns (int256 val) {
+        //int256 termXp = (w.mulXp(u).add(z.mulXp(v))).divXp(lambda).add(z.mulXp(u));
+        //termXp = termXp.add(w.mulXp(v).divXp(lambda).divXp(lambda))
+
         val = termToMul.mulDown(z).mulDown(u);
         val = val.add(termToMul.mulDown(w.mulDown(u).add(z.mulDown(v))).divDown(lambda));
         val = val.add(termToMul.mulDown(w).mulDown(v).divDown(lambda).divDown(lambda));
@@ -318,19 +324,19 @@ library GyroCEMMMath {
         int256 x,
         int256 y,
         Params memory p,
-        DerivedParams memory d,
-        int256 AChi_x
+        DerivedParams memory d
     ) internal pure returns (int256 val) {
-        // (cx - sy) * (A chi)_x / lambda
-        val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDown(AChi_x).divDown(p.lambda);
+        // (cx - sy) * (w/lambda + z) / lambda
+        int256 term = (d.w.divXp(p.lambda * 1e20).add(d.z)).divXp(p.dSq).divXp(p.dSq).divXp(p.lambda * 1e20);
+        val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDownXpToNp(term);
 
-        // (x lambda s + y lambda c) * sc * (tau(beta)_x - tau(alpha)_x)
-        int256 term = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
-        val = val.add(term.mulDown(p.s).mulDown(p.c).mulDown(d.tauBeta.x.sub(d.tauAlpha.x)));
+        // (x lambda s + y lambda c) * u
+        term = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
+        val = val.add(term.mulDownXpToNp(d.u.divXp(p.dSq).divXp(p.dSq)));
 
-        // (sx+cy) * (s^2 tau(beta)_y + c^2 tau(alpha)_y)
-        term = p.s.mulDown(p.s).mulDown(d.tauBeta.y).add(p.c.mulDown(p.c).mulDown(d.tauAlpha.y));
-        val = val.add((x.mulDown(p.s).add(y.mulDown(p.c))).mulDown(term));
+        // (sx+cy) * v
+        term = x.mulDown(p.s).add(y.mulDown(p.c));
+        val = val.add(term.mulDownXpToNp(d.v.divXp(p.dSq).divXp(p.dSq)));
     }
 
     /// @dev calculates A chi \cdot A chi, overestimates in signed direction

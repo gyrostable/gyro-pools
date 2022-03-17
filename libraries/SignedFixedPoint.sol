@@ -135,7 +135,7 @@ library SignedFixedPoint {
         int256 b2 = b > 0 ? b - b1 * 1e19 : b + b1 * 1e19;
         int256 prod = a * b1;
         _require(a == 0 || prod / a == b1, Errors.MUL_OVERFLOW);
-        return prod > 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + a * b2 + 1) / 1e19 - 1;
+        return prod > 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + (a * b2) / 1e19 + 1) / 1e19 - 1;
     }
 
     function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
@@ -143,7 +143,7 @@ library SignedFixedPoint {
         int256 b2 = b > 0 ? b - b1 * 1e19 : b + b1 * 1e19;
         int256 prod = a * b1;
         _require(a == 0 || prod / a == b1, Errors.MUL_OVERFLOW);
-        return prod < 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + a * b2 - 1) / 1e19 + 1;
+        return prod < 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + (a * b2) / 1e19 - 1) / 1e19 + 1;
     }
 
     // TODO not implementing the pow functions right now b/c it's annoying and slightly ill-defined, and we prob don't need them.

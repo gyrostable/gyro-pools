@@ -522,3 +522,49 @@ def test_maxBalances(gyro_cemm_math_testing, params, balances):
 
     assert xp_py == D(cemm.xmax).approxed()
     assert yp_py == D(cemm.ymax).approxed()
+
+
+@given(
+    a=st.integers(min_value=100, max_value=int(D("2e38"))),
+    b=st.integers(min_value=100, max_value=int(D("2e38"))),
+)
+def test_mulXp(signed_math_testing, a, b):
+    prod_py = prec_impl.mulXp(a, b)
+    prod_sol = signed_math_testing.mulXp(a, b)
+
+    assert prod_py == prod_sol
+    prod_sense = D(a) / D("1e38") * D(b) / D("1e38")
+    assert D(prod_py) / D("1e38") == prod_sense.approxed()
+
+
+@given(
+    a=st.integers(min_value=100, max_value=int(D("2e38"))),
+    b=st.integers(min_value=100, max_value=int(D("2e38"))),
+)
+def test_divXp(signed_math_testing, a, b):
+    div_py = prec_impl.divXp(a, b)
+    div_sol = signed_math_testing.divXp(a, b)
+
+    assert div_py == div_sol
+    div_sense = float(a) / float(b)
+    assert D(float(div_py) / float(1e38)) == D(div_sense).approxed()
+
+
+@given(
+    a=st.decimals(min_value="1", max_value="1e24"),
+    b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
+)
+def test_mulXpToNp(signed_math_testing, a, b):
+    prod_down_py = prec_impl.mulDownXpToNp(D(a), b)
+    prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
+    assert prod_down_py == unscale(prod_down_sol)
+
+    prod_up_py = prec_impl.mulUpXpToNp(D(a), b)
+    prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
+    assert prod_up_py == unscale(prod_up_sol)
+
+    assert prod_up_py >= prod_down_py
+    assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
+
+    prod_sense = float(a) * float(b) / 1e38
+    assert float(prod_up_py) == pytest.approx(prod_sense)
