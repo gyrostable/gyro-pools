@@ -38,8 +38,8 @@ library GyroThreeMath {
     // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
     // - ... but in any case, make at least _INVARIANT_MIN_ITERATIONS iterations. This is useful to compensate for a
     // less-than-ideal starting point, which is important when alpha is small.
-    uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 10;
-    uint8 internal constant _INVARIANT_MIN_ITERATIONS = 2;
+    uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 8;
+    uint8 internal constant _INVARIANT_MIN_ITERATIONS = 5;
 
     uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31; // 4.87e13 scaled; source: Theory
 
