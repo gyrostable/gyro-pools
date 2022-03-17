@@ -177,11 +177,7 @@ library GyroPoolMath {
         // Check in some epsilon range
         // Check square is more or less correct
         uint256 guessSquared = guess.mulDown(guess);
-        require(
-            guessSquared <= input.add(guess.mulUp(tolerance)) &&
-                guessSquared >= input.sub(guess.mulUp(tolerance)),
-            "_sqrt FAILED"
-        );
+        require(guessSquared <= input.add(guess.mulUp(tolerance)) && guessSquared >= input.sub(guess.mulUp(tolerance)), "_sqrt FAILED");
 
         return guess;
     }
@@ -206,7 +202,7 @@ library GyroPoolMath {
 
     function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
         if (input >= FixedPoint.ONE) {
-            return (1 << (intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
+            return (1 << (_intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
         } else {
             if (input < 10) {
                 return SQRT_1E_NEG_17;
@@ -292,5 +288,29 @@ library GyroPoolMath {
             x >>= 2;
             n += 1;
         }
+    }
+
+    /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
+     * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
+     * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
+     * See the writeup, Corollary 3 in Section 2.1.5.
+     */
+    function liquidityInvariantUpdate(
+        uint256[] memory balances,
+        uint256 uinvariant,
+        uint256[] memory deltaBalances,
+        bool isIncreaseLiq
+    ) internal pure returns (uint256 unewInvariant) {
+        uint256 largestBalanceIndex;
+        uint256 largestBalance;
+        for (uint256 i = 0; i < balances.length; i++) {
+            if (balances[i] > largestBalance) {
+                largestBalance = balances[i];
+                largestBalanceIndex = i;
+            }
+        }
+
+        uint256 deltaInvariant = uinvariant.mulDown(deltaBalances[largestBalanceIndex]).divDown(balances[largestBalanceIndex]);
+        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
 }
