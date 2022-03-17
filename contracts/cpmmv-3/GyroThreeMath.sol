@@ -149,7 +149,7 @@ library GyroThreeMath {
             // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
             (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, rootEst);
             // ^ Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
-            if (deltaAbs == 0)
+            if (deltaAbs <= 1)
                 return (rootEst, 0);
             if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos)
                 // numerical error dominates
