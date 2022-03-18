@@ -424,7 +424,7 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
 
 @settings(max_examples=1000)
 @given(
-    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)),
 )
 @example(args=(
     (D('16743757275.452039152786685295'),

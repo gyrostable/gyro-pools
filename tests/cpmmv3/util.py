@@ -75,7 +75,8 @@ def gen_synthetic_balances_via_prices(draw, bparams: BasicPoolParameters, root3A
 
 
 @st.composite
-def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D):
+def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D,
+                           min_balance: D = D(1)):
     """This is more accurate than gen_synthetic_balances_via_prices()."""
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
 
@@ -87,18 +88,18 @@ def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_m
     # We choose x, y, z, in order. The bounds are such that all balances are non-negative and have the given invariant.
     # To see this, go from z to x backwards or see Steffen's notebook p. 148.
     xmax = invariant / (root3Alpha**2) - virtOffset
-    assume(1 <= xmax)
+    assume(min_balance <= xmax)
     x = draw(qdecimals(1, xmax))
     ymax = min(
         invariant**2 / (root3Alpha * (x + virtOffset)) - virtOffset,
         x / bpool_params.min_balance_ratio
     )
-    ymin = max(x * bpool_params.min_balance_ratio, 1)
+    ymin = max(x * bpool_params.min_balance_ratio, min_balance)
     assume(ymin <= ymax)
     y = draw(qdecimals(ymin, ymax))
     z = invariant**3 / ((x + virtOffset) * (y + virtOffset)) - virtOffset
 
-    assume(z >= 1)
+    assume(z >= min_balance)
     assume(y / bpool_params.min_balance_ratio >= z >= y * bpool_params.min_balance_ratio)
     assume(x / bpool_params.min_balance_ratio >= z >= x * bpool_params.min_balance_ratio)
 
