@@ -46,19 +46,6 @@ library GyroTwoMath {
     // Invariant shrink limit: non-proportional exits cannot cause the invariant to decrease by less than this ratio.
     uint256 internal constant _MIN_INVARIANT_RATIO = 0.7e18;
 
-    // Constants required for newton iteration method _squareRoot
-    uint256 private constant SQRT_1E_NEG_1 = 316227766016837933;
-    uint256 private constant SQRT_1E_NEG_3 = 31622776601683793;
-    uint256 private constant SQRT_1E_NEG_5 = 3162277660168379;
-    uint256 private constant SQRT_1E_NEG_7 = 316227766016837;
-    uint256 private constant SQRT_1E_NEG_9 = 31622776601683;
-    uint256 private constant SQRT_1E_NEG_11 = 3162277660168;
-    uint256 private constant SQRT_1E_NEG_13 = 316227766016;
-    uint256 private constant SQRT_1E_NEG_15 = 31622776601;
-    uint256 private constant SQRT_1E_NEG_17 = 316227766;
-
-    uint256 private constant MIN_NEWTON_STEP_SIZE = 5;
-
     // About swap fees on joins and exits:
     // Any join or exit that is not perfectly balanced (e.g. all single token joins or exits) is mathematically
     // equivalent to a perfectly balanced join or  exit followed by a series of swaps. Since these swaps would charge
@@ -188,7 +175,6 @@ library GyroTwoMath {
         }
 
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
-        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
         // This in particular ensures amountOut < balanceOut.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
@@ -227,8 +213,6 @@ library GyroTwoMath {
             uint256 term = virtIn.mulUp(virtOut).divUp(denominator);
             amountIn = term.sub(virtIn);
         }
-
-        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
