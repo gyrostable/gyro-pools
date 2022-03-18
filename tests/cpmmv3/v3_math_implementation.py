@@ -71,7 +71,12 @@ def calculateInvariantNewton(
 
     while True:
         # delta = f(l)/f'(l)
-        f_l = a * l ** 3 + b * l ** 2 + c * l + d
+        l3 = l**3
+        l2 = l**2
+
+        # Ordering optimization. This is crucial to get us the final couple decimals precision.
+        # f_l = a * l3 + b * l2 + c * l + d
+        f_l = l3 - l3 * alpha1 * alpha1 * alpha1 + l2 * b + c * l + d
 
         # Compute derived values for comparison:
         # TESTING only; could base the exit condition on this if I really wanted
@@ -86,7 +91,10 @@ def calculateInvariantNewton(
             and abs(dz) < prec_convergence
         ):
             return l, log
-        df_l = a * 3 * l ** 2 + b * 2 * l + c
+
+        # Ordering optimization. Doesn't seem to matter as much as the first one above.
+        # df_l = a * 3 * l ** 2 + b * 2 * l + c
+        df_l = 3 * l2 - 3 * l2 * alpha1 * alpha1 * alpha1 + l * b * 2 + c
         delta = - f_l / df_l
 
         # delta==0 can happen with poor numerical precision! In this case, this is all we can get.
