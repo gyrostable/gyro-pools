@@ -7,6 +7,7 @@ from brownie.test import given
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.utils import scale, qdecimals
+from math import floor, log2
 
 operators = ["add", "sub", "mul", "truediv"]
 
@@ -53,3 +54,24 @@ def test_sqrt(math_testing, a):
     res_sol = math_testing.sqrt(scale(a))
     # Absolute error tolerated in the last decimal + the default relative error.
     assert int(res_sol) == scale(res_math).approxed(abs=D("1e5"), rel=D("1e-12"))
+
+
+@given(a=qdecimals(0).filter(lambda a: a > 0))
+@example(a=D(1))
+def test_sqrtNewton(math_testing, a):
+    res_math = a.sqrt()
+    res_sol = math_testing.sqrtNewton(scale(a), 5)
+
+    assert int(res_sol) == scale(res_math).approxed(abs=D("5"))
+
+
+@given(a=qdecimals(0).filter(lambda a: a > 0))
+@example(a=D(1))
+def test_sqrtNewtonInitialGuess(math_testing, a):
+
+    if a >= 1:
+        assert 2 ** (floor(log2(a) / 2)) == unscale(
+            math_testing.sqrtNewtonInitialGuess(scale(a))
+        )
+    else:
+        assert 1 == unscale(math_testing.sqrtNewtonInitialGuess(scale(a)))

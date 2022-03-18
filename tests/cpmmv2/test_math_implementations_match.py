@@ -16,7 +16,7 @@ billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 # this is a multiplicative separation
 # This is consistent with tightest price range of 0.9999 - 1.0001
 MIN_SQRTPARAM_SEPARATION = to_decimal("1.0001")
-MIN_BAL_RATIO = to_decimal("1e-5")
+MIN_BAL_RATIO = to_decimal("0")
 
 
 def faulty_params(balances, sqrt_alpha, sqrt_beta):
@@ -80,7 +80,7 @@ def test_calculate_quadratic(
         scale(a), scale(mb), scale(b_square), scale(mc)
     )
 
-    assert int(root_sol) == scale(root).approxed()
+    assert int(root_sol) == scale(root).approxed(abs=D("5"))
 
 
 @given(
@@ -104,7 +104,7 @@ def test_calculate_quadratic_special(
         scale(a), scale(mb), scale(b_square), scale(mc)
     )
 
-    assert int(root_sol) == scale(root).approxed()
+    assert int(root_sol) == scale(root).approxed(abs=D("5"))
 
 
 @given(
@@ -127,7 +127,7 @@ def test_calculate_invariant(
     )
 
     assert D(invariant_sol) <= scale(invariant)
-    assert D(invariant_sol) == scale(invariant).approxed(rel=D("1e-13"))
+    assert D(invariant_sol) == scale(invariant).approxed(abs=D("5"))
 
 
 @given(
@@ -171,7 +171,7 @@ def test_calculate_sqrt(gyro_two_math_testing, input):
 
     sqrt_sol = gyro_two_math_testing.sqrt(scale(input))
 
-    assert to_decimal(sqrt_sol) == scale(sqrt).approxed()
+    assert to_decimal(sqrt_sol) == scale(sqrt).approxed(abs=D("5"))
 
 
 @given(

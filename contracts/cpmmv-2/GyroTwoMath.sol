@@ -18,6 +18,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
+import "../../libraries/GyroPoolMath.sol";
 import "./Gyro2PoolErrors.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
@@ -39,8 +40,6 @@ library GyroTwoMath {
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-
-    uint256 internal constant _MIN_BAL_RATIO = 1e13; // 1e-5
 
     // Invariant growth limit: non-proportional joins cannot cause the invariant to increase by more than this ratio.
     uint256 internal constant _MAX_INVARIANT_RATIO = 3e18;
@@ -130,14 +129,10 @@ library GyroTwoMath {
         uint256 addTerm = (mc.mulDown(4 * FixedPoint.ONE)).mulDown(a);
         // The minus sign in the radicand cancels out in this special case, so we add
         uint256 radicand = bSquare.add(addTerm);
-        uint256 sqrResult = _squareRoot(radicand);
+        uint256 sqrResult = GyroPoolMath._sqrt(radicand, 5);
         // The minus sign in the numerator cancels out in this special case
         uint256 numerator = mb.add(sqrResult);
         invariant = numerator.divDown(denominator);
-    }
-
-    function _squareRoot(uint256 input) internal pure returns (uint256 result) {
-        result = input.powDown(FixedPoint.ONE / 2);
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances
@@ -180,13 +175,6 @@ library GyroTwoMath {
         }
 
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
-        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
-
-        if (balOutNew >= balInNew) {
-            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
-        } else {
-            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
-        }
 
         // This in particular ensures amountOut < balanceOut.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
@@ -224,14 +212,6 @@ library GyroTwoMath {
             uint256 denominator = virtOut.sub(amountOut);
             uint256 term = virtIn.mulUp(virtOut).divUp(denominator);
             amountIn = term.sub(virtIn);
-        }
-
-        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
-
-        if (balOutNew >= balInNew) {
-            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
-        } else {
-            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
