@@ -24,7 +24,7 @@ contract GyroThreeMathTesting {
     // Helper function to circumvent the underestimation functionality. Not usually needed.
     function calculateInvariantOver(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256 rootEst, uint256 deltaAbs) {
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = GyroThreeMath._calculateCubicTerms(balances, root3Alpha);
-        return GyroThreeMath._calculateCubic(a, mb, mc, md);
+        return GyroThreeMath._calculateCubic(a, mb, mc, md, root3Alpha);
     }
 
     function calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
@@ -47,7 +47,8 @@ contract GyroThreeMathTesting {
         uint256 md
     ) external pure returns (uint256 rootEst) {
         // TODO Legacy. Call signature has changed.
-        (rootEst, ) = GyroThreeMath._calculateCubic(a, mb, mc, md);
+        // TODO WRONG, should accept root3Alpha
+        (rootEst, ) = GyroThreeMath._calculateCubic(a, mb, mc, md, 0);
     }
 
     function calculateCubicStartingPoint(
@@ -67,7 +68,8 @@ contract GyroThreeMathTesting {
         uint256 rootEst
     ) external pure returns (uint256 rootEstOut) {
         // TODO legacy. call signature has changed.
-        (rootEstOut, ) = GyroThreeMath._runNewtonIteration(a, mb, mc, md, rootEst);
+        // TODO WRONG, should accept root3Alpha
+        (rootEstOut, ) = GyroThreeMath._runNewtonIteration(a, mb, mc, md, 0, rootEst);
     }
 
     function calcNewtonDelta(
@@ -77,7 +79,8 @@ contract GyroThreeMathTesting {
         uint256 md,
         uint256 rootEst
     ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, rootEst);
+        // TODO WRONG, should accept root3Alpha
+        return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, 0, rootEst);
     }
 
     function finalIteration(
@@ -87,7 +90,8 @@ contract GyroThreeMathTesting {
         uint256 md,
         uint256 rootEst
     ) external pure returns (uint256, bool) {
-        return GyroThreeMath._finalIteration(a, mb, mc, md, rootEst);
+        // TODO WRONG, should accept root3Alpha
+        return GyroThreeMath._finalIteration(a, mb, mc, md, 0, rootEst);
     }
 
     function isInvariantUnderestimated(
@@ -97,7 +101,8 @@ contract GyroThreeMathTesting {
         uint256 md,
         uint256 rootEst
     ) external pure returns (bool) {
-        return GyroThreeMath._isInvariantUnderestimated(a, mb, mc, md, rootEst);
+        // TODO WRONG, should accept root3Alpha
+        return GyroThreeMath._isInvariantUnderestimated(a, mb, mc, md, 0, rootEst);
     }
 
     function liquidityInvariantUpdate(
