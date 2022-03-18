@@ -16,7 +16,7 @@ billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 
 ROOT_ALPHA_MAX = "0.99996666555"
 ROOT_ALPHA_MIN = "0.2"
-MIN_BAL_RATIO = to_decimal("0")
+MIN_BAL_RATIO = to_decimal("1e-5")
 
 
 def faulty_params(balances, root_three_alpha):
