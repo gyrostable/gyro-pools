@@ -449,5 +449,5 @@ def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     assert invariant_re_over  >= invariant.approxed(rel=D('5e-16'))
     # assert invariant_re_under == invariant_re_over.approxed(rel=D('5e-14'))
     assert invariant_re_under == invariant.approxed(abs=D('3e-18'), rel=D('3e-18'))
-    assert invariant_re_under == invariant.approxed(abs=D('5e-17'))
+    assert invariant_re_under == invariant.approxed(abs=D('5e-16'))
     # assert invariant_re_over  == invariant.approxed(rel=D('1e-12'))
