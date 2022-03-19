@@ -57,11 +57,21 @@ def main():
     #          Decimal('130.896398441663402525')),
     #         Decimal('11.163542800000000000'),
     #         Decimal('0.200000000000478659'))
-    args=((Decimal('728109563488.263687529903349137'),
-      Decimal('7281095.634882636875299036'),
-      Decimal('1724716619.689367265339564601')),
-     Decimal('36417643407.707023648100000000'),
-     Decimal('0.200000000021982758'))
+    # args=((Decimal('728109563488.263687529903349137'),
+    #   Decimal('7281095.634882636875299036'),
+    #   Decimal('1724716619.689367265339564601')),
+    #  Decimal('36417643407.707023648100000000'),
+    #  Decimal('0.200000000021982758'))
+    # args = ((Decimal('10.000000000000000000'),
+    #          Decimal('23.181541716675501365'),
+    #          Decimal('26.188711041986014369')),
+    #         Decimal('31046.278348833000000000'),
+    #         Decimal('0.999362587428787313'))
+    args = ([Decimal('1029444269637.250423547829820659'),
+             Decimal('0E-18'),
+             Decimal('0E-18')],
+            Decimal('41509849622.621794054000000000'),
+            Decimal('0.200000000096340603'))
 
     balances, invariant, root3Alpha = args
 
@@ -121,11 +131,13 @@ def main():
     ))
 
     print("\n----- Solidity: -----\n")
-    keys = ['l', 'deltaAbs']
-    # pprint([valmap(unscale, e) for e in tx.events['NewtonStep']])
-    print(tabulate(
-        [[dstr(unscale(e[k])) for k in keys] + [e['deltaIsPos']] for e in tx.events['NewtonStep']],
-        headers=keys + ['is pos']
-    ))
+    if 'NewtonStep' in tx.events:
+        # True unless we're in the lower-order special case.
+        keys = ['l', 'deltaAbs']
+        # pprint([valmap(unscale, e) for e in tx.events['NewtonStep']])
+        print(tabulate(
+            [[dstr(unscale(e[k])) for k in keys] + [e['deltaIsPos']] for e in tx.events['NewtonStep']],
+            headers=keys + ['is pos']
+        ))
 
     print(f"\nGas used (Solidity): {tx.gas_used}")
