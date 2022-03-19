@@ -206,9 +206,10 @@ contract GyroCEMMMathTesting {
         int256 c,
         GyroCEMMMath.Vector2 memory r,
         GyroCEMMMath.Vector2 memory ab,
-        GyroCEMMMath.Vector2 memory tauBeta
+        GyroCEMMMath.Vector2 memory tauBeta,
+        int256 dSq
     ) external pure returns (int256) {
-        return GyroCEMMMath.solveQuadraticSwap(lambda, x, s, c, r, ab, tauBeta);
+        return GyroCEMMMath.solveQuadraticSwap(lambda, x, s, c, r, ab, tauBeta, dSq);
     }
 
     function calcXpXpDivLambdaLambda(
@@ -217,9 +218,10 @@ contract GyroCEMMMathTesting {
         int256 lambda,
         int256 s,
         int256 c,
-        GyroCEMMMath.Vector2 memory tauBeta
+        GyroCEMMMath.Vector2 memory tauBeta,
+        int256 dSq
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
+        return GyroCEMMMath.calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta, dSq);
     }
 
     function liquidityInvariantUpdate(

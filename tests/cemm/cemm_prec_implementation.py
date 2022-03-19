@@ -38,54 +38,41 @@ class Vector2(NamedTuple):
 
 
 def virtualOffset0(p: Params, d: DerivedParams, r: Iterable[D]) -> D:
+    termXp = D2(d.tauBeta[0]) / d.dSq
     if d.tauBeta[0] > 0:
-        a = D(r[0]).mul_up(p.l).mul_up(d.tauBeta[0]).mul_up(p.c)
+        a = mulUpXpToNp(D(r[0]).mul_up(p.l).mul_up(p.c), termXp)
     else:
-        a = D(r[1]) * p.l * d.tauBeta[0] * p.c
-    if d.tauBeta[1] > 0:
-        a += D(r[0]).mul_up(p.s).mul_up(d.tauBeta[1])
-    else:
-        a += D(r[1]) * p.s * d.tauBeta[1]
+        a = mulUpXpToNp(D(r[1]) * p.l * p.c, termXp)
+    termXp = D2(d.tauBeta[1]) / d.dSq
+    a += mulUpXpToNp(D(r[0]).mul_up(p.s), termXp)
     return a
 
 
 def virtualOffset1(p: Params, d: DerivedParams, r: Iterable[D]) -> D:
+    termXp = D2(d.tauAlpha[0]) / d.dSq
     if d.tauAlpha[0] < 0:
-        b = D(r[0]).mul_up(p.l).mul_up(-d.tauAlpha[0]).mul_up(p.s)
+        b = mulUpXpToNp(D(r[0]).mul_up(p.l).mul_up(p.s), -termXp)
     else:
-        b = -D(r[1]) * p.l * d.tauAlpha[0] * p.s
-    if d.tauAlpha[1] > 0:
-        b += D(r[0]).mul_up(p.c).mul_up(d.tauAlpha[1])
-    else:
-        b += D(r[1]) * p.c * d.tauAlpha[1]
+        b = mulUpXpToNp(-D(r[1]) * p.l * p.s, termXp)
+    termXp = D2(d.tauAlpha[1]) / d.dSq
+    b += mulUpXpToNp(D(r[0]).mul_up(p.c), termXp)
     return b
 
 
-def calcAChi_x(p: Params, d: DerivedParams) -> D:
-    return (
-        p.s * p.c * (d.tauBeta[1] - d.tauAlpha[1]) / p.l
-        + d.tauBeta[0] * p.c * p.c
-        + d.tauAlpha[0] * p.s * p.s
-    )
+def maxBalances0(p: Params, d: DerivedParams, r: D) -> D:
+    termXp1 = (D2(d.tauBeta[0]) - d.tauAlpha[0]) / d.dSq
+    termXp2 = (D2(d.tauBeta[1]) - d.tauAlpha[1]) / d.dSq
+    xp = mulDownXpToNp(D(r) * p.l * p.c, termXp1)
+    xp += mulDownXpToNp(D(r) * p.s, termXp2)
+    return xp
 
 
-def maxBalances0(p: Params, d: DerivedParams, invariant: D) -> D:
-    return D(invariant) * p.l * p.c * (d.tauBeta[0] - d.tauAlpha[0]) + D(
-        invariant
-    ) * p.s * (d.tauBeta[1] - d.tauAlpha[1])
-
-
-def maxBalances1(p: Params, d: DerivedParams, invariant: D) -> D:
-    return D(invariant) * p.l * p.s * (d.tauBeta[0] - d.tauAlpha[0]) + D(
-        invariant
-    ) * p.c * (d.tauAlpha[1] - d.tauBeta[1])
-
-
-def calcAChiDivLambda_y(p: Params, d: DerivedParams) -> D:
-    return (
-        p.s * p.c * (d.tauBeta[0] - d.tauAlpha[0])
-        + (p.s * p.s * d.tauBeta[1] + p.c * p.c * d.tauAlpha[1]) / p.l
-    )
+def maxBalances1(p: Params, d: DerivedParams, r: D) -> D:
+    termXp1 = (D2(d.tauBeta[0]) - d.tauAlpha[0]) / d.dSq
+    termXp2 = (D2(d.tauAlpha[1]) - d.tauBeta[1]) / d.dSq
+    yp = mulDownXpToNp(D(r) * p.l * p.s, termXp1)
+    yp += mulDownXpToNp(D(r) * p.c, termXp2)
+    return yp
 
 
 def calcAtAChi(x: D, y: D, p: Params, d: DerivedParams) -> D:
@@ -120,22 +107,16 @@ def calcAChiAChi(p: Params, d: DerivedParams) -> D:
         D2(D(p.l).raw),
         D2(d.dSq),
     )
-    if u * v > 0:
-        termXp = (D2(2) * u * v + D2("3e-38")) / dSq
-        val = mulUpXpToNp(p.l, termXp)
-    else:
-        termXp = (D2(2) * u * v) / dSq
-        val = mulDownXpToNp(p.l, termXp)
+    termXp = ((2 * u) * v) / dSq / dSq / dSq
+    val = mulUpXpToNp(p.l, termXp)
 
-    termXp = (u + D2("1e-38")) * (u + D2("1e-38")) / dSq
-    val += mulUpXpToNp(p.l.mul_up(p.l), termXp)
+    termXp = (u + D2("1e-38")) * (u + D2("1e-38")) / dSq / dSq / dSq
+    val += mulUpXpToNp(D(p.l).mul_up(p.l), termXp)
 
-    val += D(((v + D2("1e-38")) * (v + D2("1e-38")) / dSq - D2("1e-38")).raw) + D(
-        "1e-18"
-    )
+    val += D((v * v / dSq / dSq / dSq - D2("1e-38")).raw) + D("1e-18")
 
-    termXp = add_mag(w.div_up(lam) + z, D2("3e-38"))
-    val += D((termXp * termXp / dSq - D2("1e-38")).raw) + D("1e-18")
+    termXp = w.div_up(lam) + z
+    val += D((termXp * termXp / dSq / dSq / dSq - D2("1e-38")).raw) + D("1e-18")
     return val
 
 
@@ -232,33 +213,35 @@ def calculateInvariant(balances: Iterable[D], p: Params, d: DerivedParams) -> D:
 
 
 def calcXpXpDivLambdaLambda(
-    x: D, r: Iterable[D], lam: D, s: D, c: D, tauBeta: Iterable[D]
+    x: D, r: Iterable[D], lam: D, s: D, c: D, tauBeta: Iterable[D2], dSq: D2
 ) -> D:
-    val = D(r[0]).mul_up(r[0]).mul_up(tauBeta[0]).mul_up(tauBeta[0]).mul_up(c).mul_up(c)
+    val = D(r[0]).mul_up(r[0]).mul_up(c).mul_up(c)
+    val = mulUpXpToNp(val, tauBeta[0] * tauBeta[0] / dSq / dSq)
 
-    if tauBeta[0] * tauBeta[1] > 0:
-        q_a = (
-            D(r[0])
-            .mul_up(r[0])
-            .mul_up(2 * s)
-            .mul_up(tauBeta[1])
-            .mul_up(c)
-            .mul_up(tauBeta[0])
-        )
+    termXp = tauBeta[0] * tauBeta[1] / dSq / dSq
+    if termXp > 0:
+        q_a = D(r[0]).mul_up(r[0]).mul_up(2 * s).mul_up(c)
+        q_a = mulUpXpToNp(q_a, termXp)
     else:
-        q_a = D(r[1]) * r[1] * (2 * s) * tauBeta[1] * c * tauBeta[0]
+        q_a = D(r[1]) * r[1] * (2 * s) * c
+        q_a = mulUpXpToNp(q_a, termXp)
 
+    termXp = tauBeta[0] / dSq
     if tauBeta[0] < 0:
-        q_b = D(r[0]).mul_up(x).mul_up(2 * c).mul_up(-tauBeta[0])
+        q_b = D(r[0]).mul_up(x).mul_up(2 * c)
+        q_b = mulUpXpToNp(q_b, -termXp)
     else:
-        q_b = -D(r[1]) * x * (2 * c) * tauBeta[0]
+        q_b = -D(r[1]) * x * (2 * c)
+        q_b = mulUpXpToNp(q_b, termXp)
     q_a = q_a + q_b
 
-    q_b = D(r[0]).mul_up(r[0]).mul_up(s).mul_up(s).mul_up(tauBeta[1]).mul_up(tauBeta[1])
-    if tauBeta[1] < 0:
-        q_c = D(r[0]).mul_up(x).mul_up(2 * s).mul_up(-tauBeta[1])
-    else:
-        q_c = -D(r[1]) * x * (2 * s) * tauBeta[1]
+    termXp = tauBeta[1] * tauBeta[1] / dSq / dSq
+    q_b = D(r[0]).mul_up(r[0]).mul_up(s).mul_up(s)
+    q_b = mulUpXpToNp(q_b, termXp)
+
+    q_c = -D(r[1]) * x * (2 * s)
+    q_c = mulUpXpToNp(q_c, tauBeta[1] / dSq)
+
     q_b = q_b + q_c + D(x).mul_up(x)
 
     q_b = D(q_b).div_up(lam) if q_b > 0 else q_b / lam
@@ -269,30 +252,43 @@ def calcXpXpDivLambdaLambda(
 
 
 def solveQuadraticSwap(
-    lam: D, x: D, s: D, c: D, r: Iterable[D], ab: Iterable[D], tauBeta: Iterable[D]
+    lam: D,
+    x: D,
+    s: D,
+    c: D,
+    r: Iterable[D],
+    ab: Iterable[D],
+    tauBeta: Iterable[D2],
+    dSq: D2,
 ) -> D:
-    lamBar = (D(1) - (D(1) / lam / lam), D(1) - D(1).div_up(lam).div_up(lam))
+    lam2 = D2(D(lam).raw)
+    lamBar = (D2(1) - (D2(1) / lam2 / lam2), D2(1) - D2(1).div_up(lam2).div_up(lam2))
     xp = x - ab[0]
     if xp > 0:
-        qb = -xp * lamBar[1] * s * c
+        qb = -xp * s * c
+        qb = mulUpXpToNp(qb, lamBar[1] / dSq)
     else:
-        qb = -D(xp).mul_up(lamBar[0]).mul_up(s).mul_up(c)
+        qb = -D(xp).mul_up(s).mul_up(c)
+        qb = mulUpXpToNp(qb, lamBar[0] / dSq + D2("1e-38"))
 
-    sTerm = (D(1) - lamBar[1] * s * s, D(1) - lamBar[0].mul_up(s).mul_up(s))
-
-    qc = (
-        -calcXpXpDivLambdaLambda(x, r, lam, s, c, tauBeta)
-        + r[1] * r[1] * sTerm[0]
-        - D("100e-18")
+    s2 = D2(D(s).raw)
+    sTerm = (
+        D2(1) - lamBar[1] * s2 * s2 / dSq,
+        D2(1) - lamBar[0].mul_up(s2).mul_up(s2) / dSq - D2("1e-38"),
     )
+
+    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, tauBeta, dSq)
+    qc += mulDownXpToNp(r[1] * r[1], sTerm[1])
     if qc < 0:
         qc = 0
     qc = D(qc).sqrt()
 
     if qb - qc > 0:
-        return D(qb - qc).div_up(sTerm[1]) + ab[1]
+        qa = mulUpXpToNp(qb - qc, D2(1) / sTerm[1] + D2("1e-38"))
+        return qa + ab[1]
     else:
-        return (qb - qc) / (sTerm[0]) + ab[1]
+        qa = mulUpXpToNp(qb - qc, D2(1) / sTerm[0])
+        return qa + ab[1]
 
 
 def calcYGivenX(x: D, p: Params, d: DerivedParams, invariant: D) -> D:

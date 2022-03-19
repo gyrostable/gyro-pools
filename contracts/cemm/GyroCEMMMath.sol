@@ -207,51 +207,68 @@ library GyroCEMMMath {
      *  See calculation in Section 2.1.2 Computing reserve offsets
      *  Note that, in contrast to virtual reserve offsets in CPMM, these are *subtracted* from the real
      *  reserves, moving the curve to the upper-right. They can be positive or negative, but not both can be negative.
-     *  Calculates a = r*(A^{-1}tau(beta))_x with optimal precision and rounding up in signed direction */
+     *  Calculates a = r*(A^{-1}tau(beta))_x rounding up in signed direction
+     *  Notice that error in r is scaled by lambda, and so rounding direction is important */
     function virtualOffset0(
         Params memory p,
         DerivedParams memory d,
         Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 a) {
-        a = (d.tauBeta.x > 0) ? r.x.mulUp(p.lambda).mulUp(d.tauBeta.x).mulUp(p.c) : r.y.mulDown(p.lambda).mulDown(d.tauBeta.x).mulDown(p.c);
-        a = (d.tauBeta.y > 0) ? a.add(r.x.mulUp(p.s).mulUp(d.tauBeta.y)) : a.add(r.y.mulDown(p.s).mulDown(d.tauBeta.y));
+        // a = r lambda c tau(beta)_x + rs tau(beta)_y
+        //       account for 1 factors of dSq (2 s,c factors)
+        int256 termXp = d.tauBeta.x.divXp(d.dSq);
+        a = d.tauBeta.x > 0 ? r.x.mulUp(p.lambda).mulUp(p.c).mulUpXpToNp(termXp) : r.y.mulDown(p.lambda).mulDown(p.c).mulUpXpToNp(termXp);
+
+        // use fact that tau(beta)_y > 0
+        a = a.add(r.x.mulUp(p.s).mulUpXpToNp(d.tauBeta.y.divXp(d.dSq)));
     }
 
     /** @dev calculate virtual offset b given invariant r.
-     *  Calculates b = r*(A^{-1}tau(alpha))_y with optimal precision and rounding up in signed direction */
+     *  Calculates b = r*(A^{-1}tau(alpha))_y rounding up in signed direction */
     function virtualOffset1(
         Params memory p,
         DerivedParams memory d,
         Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 b) {
-        b = (d.tauAlpha.x < 0) ? r.x.mulUp(p.lambda).mulUp(-d.tauAlpha.x).mulUp(p.s) : -r.y.mulDown(p.lambda).mulDown(d.tauAlpha.x).mulDown(p.s);
-        b = (d.tauAlpha.y > 0) ? b.add(r.x.mulUp(p.c).mulUp(d.tauAlpha.y)) : b.add(r.y.mulDown(p.c).mulDown(d.tauAlpha.y));
+        // b = -r \lambda s tau(alpha)_x + rc tau(alpha)_y
+        //       account for 1 factors of dSq (2 s,c factors)
+        int256 termXp = d.tauAlpha.x.divXp(d.dSq);
+        b = (d.tauAlpha.x < 0) ? r.x.mulUp(p.lambda).mulUp(p.s).mulUpXpToNp(-termXp) : (-r.y).mulDown(p.lambda).mulDown(p.s).mulUpXpToNp(termXp);
+
+        // use fact that tau(alpha)_y > 0
+        b = b.add(r.x.mulUp(p.c).mulUpXpToNp(d.tauAlpha.y.divXp(d.dSq)));
     }
 
     /** Maximal value for the real reserves x when the respective other balance is 0 for given invariant
-     *  See calculation in Section 2.1.2. Calculation is ordered here for optimal precision
-     *  Rounding direction is ignored but is small considering precision, and is corrected for later */
+     *  See calculation in Section 2.1.2. Calculation is ordered here for precision, but erorr in r is magnified by lambda
+     *  Rounding direction is ignored and is corrected for later in MIN_BAL_RATIO */
     function maxBalances0(
         Params memory p,
         DerivedParams memory d,
-        int256 invariant
+        int256 r
     ) internal pure returns (int256 xp) {
-        // r lambda c (tau(beta)_x - tau(alpha)_x) + rs (tau(beta)_y - tau(alpha)_y)
-        xp = invariant.mulDown(p.lambda).mulDown(p.c).mulDown(d.tauBeta.x.sub(d.tauAlpha.x));
-        xp = xp.add(invariant.mulDown(p.s).mulDown(d.tauBeta.y.sub(d.tauAlpha.y)));
+        // x^+ = r lambda c (tau(beta)_x - tau(alpha)_x) + rs (tau(beta)_y - tau(alpha)_y)
+        //      account for 1 factors of dSq (2 s,c factors)
+        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq);
+        int256 termXp2 = (d.tauBeta.y.sub(d.tauAlpha.y)).divXp(d.dSq);
+        xp = r.mulDown(p.lambda).mulDown(p.c).mulDownXpToNp(termXp1);
+        xp = xp.add(r.mulDown(p.s).mulDownXpToNp(termXp2));
     }
 
     /** Maximal value for the real reserves y when the respective other balance is 0 for given invariant
-     *  See calculation in Section 2.1.2. Calculation is ordered here for optimal precision
-     *  Rounding direction is ignored but is small considering precision, and is corrected for later */
+     *  See calculation in Section 2.1.2. Calculation is ordered here for precision, but erorr in r is magnified by lambda
+     *  Rounding direction is ignored and is corrected for later in MIN_BAL_RATIO */
     function maxBalances1(
         Params memory p,
         DerivedParams memory d,
-        int256 invariant
+        int256 r
     ) internal pure returns (int256 yp) {
-        // r lambda s (tau(beta)_x - tau(alpha)_x) + rc (tau(alpha)_y - tau(beta)_y)
-        yp = invariant.mulDown(p.lambda).mulDown(p.s).mulDown(d.tauBeta.x.sub(d.tauAlpha.x));
-        yp = yp.add(invariant.mulDown(p.c).mulDown(d.tauAlpha.y.sub(d.tauBeta.y)));
+        // y^+ = r lambda s (tau(beta)_x - tau(alpha)_x) + rc (tau(alpha)_y - tau(beta)_y)
+        //      account for 1 factors of dSq (2 s,c factors)
+        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq);
+        int256 termXp2 = (d.tauAlpha.y.sub(d.tauBeta.y)).divXp(d.dSq);
+        yp = r.mulDown(p.lambda).mulDown(p.s).mulDownXpToNp(termXp1);
+        yp = yp.add(r.mulDown(p.c).mulDownXpToNp(termXp2));
     }
 
     /** @dev Compute the invariant 'r' corresponding to the given values. The invariant can't be negative, but
@@ -282,6 +299,7 @@ library GyroCEMMMath {
         DerivedParams memory d
     ) internal pure returns (int256 val) {
         // (cx - sy) * (w/lambda + z) / lambda
+        //      account for 2 factors of dSq (4 s,c factors)
         int256 termXp = (d.w.divDown(p.lambda).add(d.z)).divDown(p.lambda).divXp(d.dSq).divXp(d.dSq);
         val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDownXpToNp(termXp);
 
@@ -297,14 +315,16 @@ library GyroCEMMMath {
     /// @dev calculates A chi \cdot A chi, overestimates in signed direction
     function calcAChiAChi(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
-        // +1, +3 to account for truncation errors (but shouldn't matter)
-        val = d.u * d.v > 0 ? p.lambda.mulUpXpToNp((2 * d.u.mulXp(d.v) + 3).divXp(d.dSq)) : p.lambda.mulDownXpToNp((2 * d.u.mulXp(d.v)).divXp(d.dSq));
-        val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.u + 1).mulXp(d.u + 1).divXp(d.dSq)));
-        val = val.add(((d.v + 1).mulXp(d.v + 1).divXp(d.dSq) - 1) / 1e20 + 1);
+        //      account for 3 factors of dSq (6 s,c factors)
+        val = p.lambda.mulUpXpToNp((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
+        // for lambda^2 u^2 factor in rounding error in u since lambda could be big
+        val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)));
+        val = val.add(((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
 
         // (A chi)_x^2 = (w/lambda + z)^2
-        int256 termXp = (d.w.divUp(p.lambda).add(d.z)).addMag(3);
-        val = val.add((termXp.mulXp(termXp).divXp(d.dSq) - 1) / 1e20 + 1);
+        //      account for 3 factors of dSq (6 s,c factors)
+        int256 termXp = d.w.divUp(p.lambda).add(d.z);
+        val = val.add((termXp.mulXp(termXp).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
     }
 
     /// @dev calculate -(At)_x ^2 (A chi)_y ^2 + (At)_x ^2, rounding down in signed direction
@@ -522,31 +542,47 @@ library GyroCEMMMath {
         int256 c,
         Vector2 memory r, // overestimate in x component, underestimate in y
         Vector2 memory ab,
-        Vector2 memory tauBeta
+        Vector2 memory tauBeta,
+        int256 dSq
     ) internal pure returns (int256) {
-        // x component will round up, y will round down
-        Vector2 memory lamBar = Vector2(ONE.sub(ONE.divDown(lambda).divDown(lambda)), ONE.sub(ONE.divUp(lambda).divUp(lambda)));
-        QParams memory qparams;
-
+        // x component will round up, y will round down, use extra precision
+        Vector2 memory lamBar;
+        lamBar.x = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divDown(lambda).divDown(lambda));
+        lamBar.y = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divUp(lambda).divUp(lambda));
+        QParams memory q;
         // shift by the virtual offsets
         // note that we want an overestimate of offset here so that -x'*lambar*s*c is overestimated in signed direction
+        // account for 1 factor of dSq (2 s,c factors)
         int256 xp = x.sub(ab.x);
-        qparams.b = xp > 0 ? -xp.mulDown(lamBar.y).mulDown(s).mulDown(c) : (-xp).mulUp(lamBar.x).mulUp(s).mulUp(c);
+        if (xp > 0) {
+            q.b = (-xp).mulDown(s).mulDown(c).mulUpXpToNp(lamBar.y.divXp(dSq));
+        } else {
+            q.b = (-xp).mulUp(s).mulUp(c).mulUpXpToNp(lamBar.x.divXp(dSq) + 1);
+        }
 
-        // x component will round up, y will round down
-        Vector2 memory sTerm = Vector2(ONE.sub(lamBar.y.mulDown(s).mulDown(s)), ONE.sub(lamBar.x.mulUp(s).mulUp(s)));
+        // x component will round up, y will round down, use extra precision
+        // account for 1 factor of dSq (2 s,c factors)
+        Vector2 memory sTerm;
+        sTerm.x = lamBar.y.mulDown(s).mulDown(s).divXp(dSq);
+        sTerm.y = lamBar.x.mulUp(s).mulUp(s).divXp(dSq) + 1; // account for rounding error in divXp
+        sTerm = Vector2(SignedFixedPoint.ONE_XP.sub(sTerm.x), SignedFixedPoint.ONE_XP.sub(sTerm.y));
 
-        // now compute the argument of the square root, subtract 100 to account for rounding errors
-        qparams.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta);
-        qparams.c = qparams.c.add(r.y.mulDown(r.y).mulDown(sTerm.y)).sub(100);
-
+        // now compute the argument of the square root
+        q.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta, dSq);
+        q.c = q.c.add(r.y.mulDown(r.y).mulDownXpToNp(sTerm.y));
         // the square root is always being subtracted, so round it down to overestimate the end balance
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
-        qparams.c = qparams.c > 0 ? FixedPoint.powDown(qparams.c.toUint256(), ONEHALF).toInt256() : 0;
-        // calculate the result in qparams.a
-        qparams.a = qparams.b - qparams.c > 0 ? (qparams.b.sub(qparams.c)).divUp(sTerm.y) : (qparams.b.sub(qparams.c)).divDown(sTerm.x);
-        // note that we want an overestimate of offset here
-        return qparams.a.add(ab.y);
+        q.c = q.c > 0 ? FixedPoint.powDown(q.c.toUint256(), ONEHALF).toInt256() : 0;
+
+        // calculate the result in q.a
+        if (q.b - q.c > 0) {
+            q.a = (q.b.sub(q.c)).mulUpXpToNp(SignedFixedPoint.ONE_XP.divXp(sTerm.y) + 1);
+        } else {
+            q.a = (q.b.sub(q.c)).mulUpXpToNp(SignedFixedPoint.ONE_XP.divXp(sTerm.x));
+        }
+
+        // lastly, add the offset, note that we want an overestimate of offset here
+        return q.a.add(ab.y);
     }
 
     /** @dev Calculates x'x' where x' = x - b = x - r (A^{-1}tau(beta))_x
@@ -558,44 +594,59 @@ library GyroCEMMMath {
         int256 lambda,
         int256 s,
         int256 c,
-        Vector2 memory tauBeta
+        Vector2 memory tauBeta,
+        int256 dSq
     ) internal pure returns (int256) {
         //////////////////////////////////////////////////////////////////////////////////
-        // x'x'/lambda^2 = r^2 tau(beta)_x^2 c^2
-        //      + ( r^2 2 cs tau(beta)_x tau(beta)_y - rx 2c tau(beta)_x ) / lambda
+        // x'x'/lambda^2 = r^2 c^2 tau(beta)_x^2
+        //      + ( r^2 2s c tau(beta)_x tau(beta)_y - rx 2c tau(beta)_x ) / lambda
         //      + ( r^2 s^2 tau(beta)_y^2 - rx 2s tau(beta)_y + x^2 ) / lambda^2
         //////////////////////////////////////////////////////////////////////////////////
-
         QParams memory q; // for working terms
-        // q.a = r^2 s tau(beta)_y 2c tau(beta)_x
-        if (tauBeta.y * tauBeta.x > 0) {
-            q.a = r.x.mulUp(r.x).mulUp(2 * s).mulUp(tauBeta.y);
-            q.a = q.a.mulUp(c).mulUp(tauBeta.x);
+        // q.a = r^2 s 2c tau(beta)_x tau(beta)_y
+        //      account for 2 factors of dSq (4 s,c factors)
+        int256 termXp = tauBeta.x.mulXp(tauBeta.y).divXp(dSq).divXp(dSq);
+        if (termXp > 0) {
+            q.a = r.x.mulUp(r.x).mulUp(2 * s);
+            q.a = q.a.mulUp(c).mulUpXpToNp(termXp);
         } else {
-            q.a = r.y.mulDown(r.y).mulDown(2 * s).mulDown(tauBeta.y);
-            q.a = q.a.mulDown(c).mulDown(tauBeta.x);
+            q.a = r.y.mulDown(r.y).mulDown(2 * s);
+            q.a = q.a.mulDown(c).mulUpXpToNp(termXp);
         }
+
         // -rx 2c tau(beta)_x
-        q.b = tauBeta.x < 0 ? r.x.mulUp(x).mulUp(2 * c).mulUp(-tauBeta.x) : -r.y.mulDown(x).mulDown(2 * c).mulDown(tauBeta.x);
+        //      account for 1 factor of dSq (2 s,c factors)
+        if (tauBeta.x < 0) {
+            q.b = r.x.mulUp(x).mulUp(2 * c).mulUpXpToNp(-tauBeta.x.divXp(dSq));
+        } else {
+            q.b = (-r.y).mulDown(x).mulDown(2 * c).mulUpXpToNp(tauBeta.x.divXp(dSq));
+        }
         // q.a later needs to be divided by lambda
         q.a = q.a.add(q.b);
 
         // q.b = r^2 s^2 tau(beta)_y^2
-        q.b = r.x.mulUp(r.x).mulUp(s).mulUp(s);
-        q.b = q.b.mulUp(tauBeta.y).mulUp(tauBeta.y);
-        // q.c = -rx 2s tau(beta)_y
-        q.c = tauBeta.y < 0 ? r.x.mulUp(x).mulUp(2 * s).mulUp(-tauBeta.y) : -r.y.mulDown(x).mulDown(2 * s).mulDown(tauBeta.y);
+        //      account for 2 factors of dSq (4 s,c factors)
+        termXp = tauBeta.y.mulXp(tauBeta.y).divXp(dSq).divXp(dSq);
+        q.b = r.x.mulUp(r.x).mulUp(s);
+        q.b = q.b.mulUp(s).mulUpXpToNp(termXp);
+
+        // q.c = -rx 2s tau(beta)_y, recall that tauBeta.y > 0 so round lower in magnitude
+        //      account for 1 factor of dSq (2 s,c factors)
+        q.c = (-r.y).mulDown(x).mulDown(2 * s).mulUpXpToNp(tauBeta.y.divXp(dSq));
+
         // (q.b + q.c + x^2) / lambda
-        q.b = (q.b.add(q.c).add(x.mulUp(x)));
+        q.b = q.b.add(q.c).add(x.mulUp(x));
         q.b = q.b > 0 ? q.b.divUp(lambda) : q.b.divDown(lambda);
 
         // remaining calculation is (q.a + q.b) / lambda
         q.a = q.a.add(q.b);
         q.a = q.a > 0 ? q.a.divUp(lambda) : q.a.divDown(lambda);
 
-        // + r^2 tau(beta)_x^2 c^2
-        int256 val = r.x.mulUp(r.x).mulUp(tauBeta.x).mulUp(tauBeta.x);
-        return val.mulUp(c).mulUp(c).add(q.a);
+        // + r^2 c^2 tau(beta)_x^2
+        //      account for 2 factors of dSq (4 s,c factors)
+        termXp = tauBeta.x.mulXp(tauBeta.x).divXp(dSq).divXp(dSq);
+        int256 val = r.x.mulUp(r.x).mulUp(c).mulUp(c);
+        return (val.mulUpXpToNp(termXp)).add(q.a);
     }
 
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.
@@ -603,7 +654,7 @@ library GyroCEMMMath {
     function calcYGivenX(
         int256 x,
         Params memory params,
-        DerivedParams memory derived,
+        DerivedParams memory d,
         int256 invariant
     ) internal pure returns (int256 y) {
         // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
@@ -611,14 +662,14 @@ library GyroCEMMMath {
         // overestimate in x component, underestimate in y
         Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
-        Vector2 memory ab = Vector2(virtualOffset0(params, derived, r), virtualOffset1(params, derived, r));
-        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, r, ab, derived.tauBeta);
+        Vector2 memory ab = Vector2(virtualOffset0(params, d, r), virtualOffset1(params, d, r));
+        y = solveQuadraticSwap(params.lambda, x, params.s, params.c, r, ab, d.tauBeta, d.dSq);
     }
 
     function calcXGivenY(
         int256 y,
         Params memory params,
-        DerivedParams memory derived,
+        DerivedParams memory d,
         int256 invariant
     ) internal pure returns (int256 x) {
         // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
@@ -626,9 +677,9 @@ library GyroCEMMMath {
         // overestimate in x component, underestimate in y
         Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
-        Vector2 memory ba = Vector2(virtualOffset1(params, derived, r), virtualOffset0(params, derived, r));
+        Vector2 memory ba = Vector2(virtualOffset1(params, d, r), virtualOffset0(params, d, r));
         // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
-        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, r, ba, Vector2(-derived.tauAlpha.x, derived.tauAlpha.y));
+        x = solveQuadraticSwap(params.lambda, y, params.c, params.s, r, ba, Vector2(-d.tauAlpha.x, d.tauAlpha.y), d.dSq);
     }
 
     /// @dev Given an underestimate of invariant, calculate an overestimate by accounting for error
