@@ -187,12 +187,28 @@ library GyroThreeMath {
         // We aim to, when in doubt, overestimate the step in the negative direction and in absolute value.
         // Subtraction does not underflow since rootEst is chosen so that it's always above the (only) local minimum.
         // TODO if we want, a can be split up here, too. Perhaps not needed.
-        uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
+//        uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
+        uint256 dfRootEst;
+        {
+            uint256 rootEst2 = rootEst.mulDown(rootEst);
+            dfRootEst = (3 * rootEst2).sub(
+                (3 * rootEst2).mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
+            );
+            dfRootEst = dfRootEst.sub(rootEst.mulDown(mb) * 2).sub(mc);
+        }
+
         // Note: We know that a rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
-        uint256 deltaMinus = _safeLargePow3Down(rootEst);
+        uint256 deltaMinus;
+        {
+            uint256 rootEst3 = _safeLargePow3Down(rootEst);
+            deltaMinus = rootEst3.sub(
+                rootEst3.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
+            );
+            deltaMinus = deltaMinus.divDown(dfRootEst);
         // == deltaMinus.mulUp(a), but with an optimized order of operations against errors
-        deltaMinus = deltaMinus.sub(deltaMinus.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
-        deltaMinus = deltaMinus.divUp(dfRootEst);
+//            deltaMinus = deltaMinus.sub(deltaMinus.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
+//            deltaMinus = deltaMinus.divUp(dfRootEst);
+        }
 
         // TODO if needed, we can pull root3Alpha^2 out of mb and root3Alpha out of mc to avoid another 1e-18 error. But it's prob not worth it b/c these calculations have errors anyways.
         uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
@@ -214,6 +230,9 @@ library GyroThreeMath {
         uint256 root3Alpha,
         uint256 rootEst
     ) internal pure returns (uint256, bool) {
+        // TESTING what happens without this
+        return (rootEst, true);
+
         if (_isInvariantUnderestimated(a, mb, mc, md, root3Alpha, rootEst)) {
             return (rootEst, true);
         } else {
