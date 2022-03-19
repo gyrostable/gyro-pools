@@ -33,6 +33,7 @@ contract GyroThreeMathDebug {
 
 
     using FixedPoint for uint256;
+    using GyroPoolMath for uint256;  // number._sqrt(tolerance)
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     // _MAX_OUT_RATIO also ensures that we never compute swaps that take more out than is in the pool. (because
