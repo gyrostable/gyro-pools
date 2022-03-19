@@ -68,10 +68,10 @@ contract GyroThreeMathDebug {
         {
             // TODO get rid of deltaAbs, just have everything return under and over?
             uint256 deltaAbs;
-            (rootEstOver, deltaAbs) = _calculateCubic(a, mb, mc, md);
+            (rootEstOver, deltaAbs) = _calculateCubic(a, mb, mc, md, root3Alpha);
             rootEstUnder = rootEstOver - deltaAbs;
         }
-        (rootEstUnder, underIsUnder) = _finalIteration(a, mb, mc, md, rootEstUnder);
+        (rootEstUnder, underIsUnder) = _finalIteration(a, mb, mc, md, root3Alpha, rootEstUnder);
     }
 
     /** @dev Prepares quadratic terms for input to _calculateCubic
@@ -103,7 +103,8 @@ contract GyroThreeMathDebug {
         uint256 a,
         uint256 mb,
         uint256 mc,
-        uint256 md
+        uint256 md,
+        uint256 root3Alpha
     ) public returns (uint256 rootEst, uint256 deltaAbs) {
         if (md == 0) {
             // lower-order special case
@@ -114,7 +115,7 @@ contract GyroThreeMathDebug {
             deltaAbs = root.sub(radic.powDown(FixedPoint.ONE / 2)).divUp(2 * a);
         } else {
             rootEst = _calculateCubicStartingPoint(a, mb, mc, md);
-            (rootEst, deltaAbs) = _runNewtonIteration(a, mb, mc, md, rootEst);
+            (rootEst, deltaAbs) = _runNewtonIteration(a, mb, mc, md, root3Alpha, rootEst);
         }
     }
 
@@ -155,16 +156,17 @@ contract GyroThreeMathDebug {
         uint256 mb,
         uint256 mc,
         uint256 md,
+        uint256 root3Alpha,
         uint256 rootEst
     ) public returns (uint256, uint256) {
         uint256 deltaAbsPrev = 0;
         for (uint256 iteration = 0; iteration < 255; ++iteration) {
             // The delta to the next step can be positive or negative, so we represent a positive and a negative part
             // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
-            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, rootEst);
+            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, root3Alpha, rootEst);
             // ^ Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
             emit NewtonStep(deltaAbs, deltaIsPos, rootEst);
-            if (deltaAbs == 0)
+            if (deltaAbs <= 1)
                 return (rootEst, 0);
             if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos)
                 // numerical error dominates
@@ -186,16 +188,37 @@ contract GyroThreeMathDebug {
         uint256 mb,
         uint256 mc,
         uint256 md,
+        uint256 root3Alpha,
         uint256 rootEst
     ) public returns (uint256 deltaAbs, bool deltaIsPos) {
         // We aim to, when in doubt, overestimate the step in the negative direction and in absolute value.
         // TODO perhaps we shouldn't not to overshoot?!?
         // Subtraction does not underflow since rootEst is chosen so that it's always above the (only) local minimum.
-        uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
-        // Note: We know that a rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
-        uint256 deltaMinus = _safeLargePow3Down(rootEst);
-        deltaMinus = deltaMinus.mulUp(a).divUp(dfRootEst);
+        // TODO if we want, a can be split up here, too. Perhaps not needed.
+//        uint256 dfRootEst = rootEst.mulDown(rootEst).mulDown(3 * a).sub(rootEst.mulUp(2 * mb)).sub(mc);
+        uint256 dfRootEst;
+        {
+            uint256 rootEst2 = rootEst.mulDown(rootEst);
+            dfRootEst = (3 * rootEst2).sub(
+                (3 * rootEst2).mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
+            );
+            dfRootEst = dfRootEst.sub(rootEst.mulDown(mb) * 2).sub(mc);
+        }
 
+        // Note: We know that a rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
+        uint256 deltaMinus;
+        {
+            uint256 rootEst3 = _safeLargePow3Down(rootEst);
+            deltaMinus = rootEst3.sub(
+                rootEst3.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
+            );
+            deltaMinus = deltaMinus.divDown(dfRootEst);
+            // == deltaMinus.mulUp(a), but with an optimized order of operations against errors
+//            deltaMinus = deltaMinus.sub(deltaMinus.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
+//            deltaMinus = deltaMinus.divUp(dfRootEst);
+        }
+
+        // TODO if needed, we can pull root3Alpha^2 out of mb and root3Alpha out of mc to avoid another 1e-18 error. But it's prob not worth it b/c these calculations have errors anyways.
         uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
         deltaPlus = deltaPlus.add(rootEst.mulDown(mc)).divDown(dfRootEst);
         deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
@@ -212,16 +235,20 @@ contract GyroThreeMathDebug {
         uint256 mb,
         uint256 mc,
         uint256 md,
+        uint256 root3Alpha,
         uint256 rootEst
     ) public returns (uint256, bool) {
-        if (_isInvariantUnderestimated(a, mb, mc, md, rootEst)) {
+        // TESTING what happens without this
+        return (rootEst, true);
+
+        if (_isInvariantUnderestimated(a, mb, mc, md, root3Alpha, rootEst)) {
             return (rootEst, true);
         } else {
-            (uint256 deltaAbs, ) = _calcNewtonDelta(a, mb, mc, md, rootEst);
+            (uint256 deltaAbs, ) = _calcNewtonDelta(a, mb, mc, md, root3Alpha, rootEst);
             uint256 step = rootEst.mulUp(1e4); // 1e-14 relative error
             step = step > deltaAbs ? step : deltaAbs;
             rootEst = rootEst.sub(step);
-            return (rootEst, _isInvariantUnderestimated(a, mb, mc, md, rootEst));
+            return (rootEst, _isInvariantUnderestimated(a, mb, mc, md, root3Alpha, rootEst));
         }
     }
 
@@ -233,10 +260,14 @@ contract GyroThreeMathDebug {
         uint256 mb,
         uint256 mc,
         uint256 md,
+        uint256 root3Alpha,
         uint256 rootEst
     ) public returns (bool isUnderestimated) {
         uint256 fLSub = rootEst.mulDown(rootEst).mulDown(mb).add(rootEst.mulDown(mc)).add(md);
-        uint256 fLPos = _safeLargePow3Down(rootEst).mulUp(a);  // TODO maybe add a _safeLargePow3Up()
+        // flPos = L^3 * a, but optimized against rounding errors.
+        // TODO maybe add a _safeLargePow3Up()
+        uint256 fLPos = _safeLargePow3Down(rootEst);
+        fLPos = fLPos.sub(fLPos.mulUp(root3Alpha).mulUp(root3Alpha).mulUp(root3Alpha));
         isUnderestimated = (fLPos <= fLSub);
     }
 
