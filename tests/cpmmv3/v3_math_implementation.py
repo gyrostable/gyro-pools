@@ -57,6 +57,14 @@ def calculateInvariantNewton(
     #         to_decimal(invariant))
     x, y, z = balances
 
+    # Lower-order special case
+    # if d == 0:
+    #     # ac = c - c * alpha1 * alpha1 * alpha1
+    #     ac = a * c
+    #     l = (-b + (b**2 - ac * 4).sqrt()) / (2 * a)
+    #     return l, log
+
+
     lmin = -b / (a * 3) + (b ** 2 - a * c * 3).sqrt() / (
         a * 3
     )  # Sqrt is not gonna make a problem b/c all summands are positive.

@@ -109,17 +109,16 @@ contract GyroThreeMathDebug {
         uint256 md,
         uint256 root3Alpha
     ) public returns (uint256 rootEst, uint256 deltaAbs) {
-        if (md == 0) {
-            // lower-order special case
-            uint256 radic = mb.mulUp(mb).add(4 * a.mulUp(mc));
-            uint256 root = radic.powUp(FixedPoint.ONE / 2);
-            rootEst = mb.add(root).divUp(2 * a);
-            // TODO kinda a stub. review with potential new sqrt implementation.
-            deltaAbs = root.sub(radic.powDown(FixedPoint.ONE / 2)).divUp(2 * a);
-        } else {
+//        if (md == 0) {
+//            // lower-order special case
+//            uint256 radic = mb.mulUp(mb).add(4 * a.mulUp(mc));
+//            uint256 root = radic._sqrt(5);
+//            rootEst = mb.add(root).divUp(2 * a);
+//            deltaAbs = 5;
+//        } else {
             rootEst = _calculateCubicStartingPoint(a, mb, mc, md);
             (rootEst, deltaAbs) = _runNewtonIteration(a, mb, mc, md, root3Alpha, rootEst);
-        }
+//        }
     }
 
     /** @dev Starting point for Newton iteration. Safe with all cubic polynomials where the coefficients have the appropriate
