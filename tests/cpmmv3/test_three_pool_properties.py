@@ -433,11 +433,11 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
     D('3812260336.851356457000000000'),
     D('0.200000000181790486')),
 )
-@example(args=((Decimal('9168.743605294506949000'),
-      Decimal('0.091687436052945069'),
-      Decimal('38.996868460619872727')),
-     Decimal('512.421100000000000000'),
-     Decimal('0.200000000000000000')))
+@example(args=((Decimal('728109563488.263687529903349137'),
+      Decimal('7281095.634882636875299036'),
+      Decimal('1724716619.689367265339564601')),
+     Decimal('36417643407.707023648100000000'),
+     Decimal('0.200000000021982758')))
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     balances, invariant, root3Alpha = args
 
@@ -448,5 +448,6 @@ def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     assert invariant_re_under <= invariant.approxed(rel=D('5e-18'))
     assert invariant_re_over  >= invariant.approxed(rel=D('5e-16'))
     # assert invariant_re_under == invariant_re_over.approxed(rel=D('5e-14'))
-    assert invariant_re_under == invariant.approxed(rel=D('5e-14'))
-    assert invariant_re_over  == invariant.approxed(rel=D('1e-12'))
+    assert invariant_re_under == invariant.approxed(abs=D('3e-18'), rel=D('3e-18'))
+    assert invariant_re_under == invariant.approxed(abs=D('5e-17'))
+    # assert invariant_re_over  == invariant.approxed(rel=D('1e-12'))
