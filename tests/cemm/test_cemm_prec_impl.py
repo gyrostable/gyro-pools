@@ -152,16 +152,38 @@ def test_calcAtAChi_sense_check(params, balances):
     balances=gen_balances(2, bpool_params),
 )
 def test_calcMinAtxAChiySqPlusAtxSq(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    AChiDivLambda_y = prec_impl.calcAChiDivLambda_y(params, derived)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
     result_py = prec_impl.calcMinAtxAChiySqPlusAtxSq(
-        balances[0], balances[1], params, AChiDivLambda_y
+        balances[0], balances[1], params, derived
     )
     result_sol = gyro_cemm_math_testing.calcMinAtxAChiySqPlusAtxSq(
-        scale(balances[0]), scale(balances[1]), scale(params), scale(AChiDivLambda_y)
+        scale(balances[0]), scale(balances[1]), scale(params), derived_scaled
     )
     assert result_py == unscale(result_sol)
+
+
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params),
+)
+def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
+    mparams = util.params2MathParams(params)
+    derived_m = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
+    result_py = prec_impl.calcMinAtxAChiySqPlusAtxSq(
+        balances[0], balances[1], params, derived
+    )
+    # test against the old (imprecise) implementation
+    At = mparams.A_times(balances[0], balances[1])
+    chi = (
+        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
+        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+    )
+    AChi = mparams.A_times(chi[0], chi[1])
+    val_sense = At[0] * At[0] * (1 - AChi[1] * AChi[1])
+    assert result_py == val_sense.approxed()
 
 
 @given(
@@ -169,21 +191,39 @@ def test_calcMinAtxAChiySqPlusAtxSq(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params),
 )
 def test_calc2AtxAtyAChixAChiy(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    AChi_x = prec_impl.calcAChi_x(params, derived)
-    AChiDivLambda_y = prec_impl.calcAChiDivLambda_y(params, derived)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
+
     result_py = prec_impl.calc2AtxAtyAChixAChiy(
-        balances[0], balances[1], params, AChi_x, AChiDivLambda_y
+        balances[0], balances[1], params, derived
     )
     result_sol = gyro_cemm_math_testing.calc2AtxAtyAChixAChiy(
-        scale(balances[0]),
-        scale(balances[1]),
-        scale(params),
-        scale(AChi_x),
-        scale(AChiDivLambda_y),
+        scale(balances[0]), scale(balances[1]), scale(params), derived_scaled
     )
     assert result_py == unscale(result_sol)
+
+
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params),
+)
+def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
+    mparams = util.params2MathParams(params)
+    derived_m = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
+    result_py = prec_impl.calc2AtxAtyAChixAChiy(
+        balances[0], balances[1], params, derived
+    )
+    # test against the old (imprecise) implementation
+    At = mparams.A_times(balances[0], balances[1])
+    chi = (
+        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
+        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+    )
+    AChi = mparams.A_times(chi[0], chi[1])
+    val_sense = D(2) * At[0] * At[1] * AChi[0] * AChi[1]
+    assert result_py == val_sense.approxed()
 
 
 @given(
@@ -191,16 +231,38 @@ def test_calc2AtxAtyAChixAChiy(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params),
 )
 def test_calcMinAtyAChixSqPlusAtySq(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    AChi_x = prec_impl.calcAChi_x(params, derived)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
     result_py = prec_impl.calcMinAtyAChixSqPlusAtySq(
-        balances[0], balances[1], params, AChi_x
+        balances[0], balances[1], params, derived
     )
     result_sol = gyro_cemm_math_testing.calcMinAtyAChixSqPlusAtySq(
-        scale(balances[0]), scale(balances[1]), scale(params), scale(AChi_x)
+        scale(balances[0]), scale(balances[1]), scale(params), derived_scaled
     )
     assert result_py == unscale(result_sol)
+
+
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params),
+)
+def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
+    mparams = util.params2MathParams(params)
+    derived_m = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
+    result_py = prec_impl.calcMinAtyAChixSqPlusAtySq(
+        balances[0], balances[1], params, derived
+    )
+    # test against the old (imprecise) implementation
+    At = mparams.A_times(balances[0], balances[1])
+    chi = (
+        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
+        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+    )
+    AChi = mparams.A_times(chi[0], chi[1])
+    val_sense = At[1] * At[1] * (D(1) - AChi[0] * AChi[0])
+    assert result_py == val_sense.approxed()
 
 
 @given(
@@ -208,19 +270,11 @@ def test_calcMinAtyAChixSqPlusAtySq(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params),
 )
 def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    AChi_x = prec_impl.calcAChi_x(params, derived)
-    AChiDivLambda_y = prec_impl.calcAChiDivLambda_y(params, derived)
-    result_py = prec_impl.calcInvariantSqrt(
-        balances[0], balances[1], params, AChi_x, AChiDivLambda_y
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
+    result_py = prec_impl.calcInvariantSqrt(balances[0], balances[1], params, derived)
     result_sol = gyro_cemm_math_testing.calcInvariantSqrt(
-        scale(balances[0]),
-        scale(balances[1]),
-        scale(params),
-        scale(AChi_x),
-        scale(AChiDivLambda_y),
+        scale(balances[0]), scale(balances[1]), scale(params), derived_scaled
     )
     assert result_py == unscale(result_sol).approxed(rel=D("1e-13"))
 
@@ -230,13 +284,16 @@ def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params),
 )
 def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
     result_py = prec_impl.calculateInvariant(balances, params, derived)
     result_sol = gyro_cemm_math_testing.calculateInvariant(
-        scale(balances), scale(params), scale(derived)
+        scale(balances), scale(params), derived_scaled
     )
-    assert result_py == unscale(result_sol).approxed(rel=D("1e-12"))
+    denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
+    # erorr scales if denominator is small
+    err = D("1e-12") if denominator > 1 else D("1e-12") / D(denominator)
+    assert result_py == unscale(result_sol).approxed(rel=err)
 
 
 @given(
@@ -245,7 +302,8 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
 )
 def test_calculateInvariant_sense_check(params, balances):
     mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calculateInvariant(balances, params, derived)
     # test against the old (imprecise) implementation
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)

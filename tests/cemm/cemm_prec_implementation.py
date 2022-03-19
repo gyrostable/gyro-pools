@@ -139,37 +139,84 @@ def calcAChiAChi(p: Params, d: DerivedParams) -> D:
     return val
 
 
-def calcMinAtxAChiySqPlusAtxSq(x: D, y: D, p: Params, AChiDivLambda_y: D) -> D:
-    val = D(x).mul_up(x).mul_up(p.c).mul_up(p.c) + D(y).mul_up(y).mul_up(p.s).mul_up(
+def calcMinAtxAChiySqPlusAtxSq(x: D, y: D, p: Params, d: DerivedParams) -> D:
+    w, z, u, v, lam, dSq = (
+        D2(d.w),
+        D2(d.z),
+        D2(d.u),
+        D2(d.v),
+        D2(D(p.l).raw),
+        D2(d.dSq),
+    )
+    termNp = D(x).mul_up(x).mul_up(p.c).mul_up(p.c) + D(y).mul_up(y).mul_up(p.s).mul_up(
         p.s
     )
-    val -= x * y * (2 * p.c) * p.s
+    termNp -= x * y * (2 * p.c) * p.s
 
-    term = add_mag(AChiDivLambda_y, D("8e-18"))
-    return -val.mul_up(term).mul_up(term) + (val - D("1e-17")) / p.l / p.l
+    termXp = u * u + (2 * u) * v / lam + v * v / lam / lam
+    termXp = termXp / dSq / dSq / dSq / dSq
+    val = mulDownXpToNp(-termNp, termXp)
+
+    termXp = D2(1) / dSq
+    termNp = (termNp - D("9e-18")) / p.l / p.l
+    val = val + mulDownXpToNp(termNp, termXp)
+    return val
 
 
-def calc2AtxAtyAChixAChiy(x: D, y: D, p: Params, AChi_x: D, AChiDivLambda_y: D) -> D:
-    val = (x * x - y * y) * p.c * (2 * p.s) + y * x * ((p.c * p.c - p.s * p.s) * 2)
-    return val * AChi_x * AChiDivLambda_y
+def calc2AtxAtyAChixAChiy(x: D, y: D, p: Params, d: DerivedParams) -> D:
+    w, z, u, v, lam, dSq = (
+        D2(d.w),
+        D2(d.z),
+        D2(d.u),
+        D2(d.v),
+        D2(D(p.l).raw),
+        D2(d.dSq),
+    )
+    xy = D(y) * (2 * D(x))
+    termNp = (D(x) * x - D(y) * y) * (2 * p.c) * p.s + xy * p.c * p.c - xy * p.s * p.s
+
+    termXp = z * u + (w * u + z * v) / lam + w * v / lam / lam
+    termXp = termXp / dSq / dSq / dSq / dSq
+
+    return mulDownXpToNp(termNp, termXp)
 
 
-def calcMinAtyAChixSqPlusAtySq(x: D, y: D, p: Params, AChi_x: D) -> D:
-    val = D(x).mul_up(x).mul_up(p.s).mul_up(p.s) + D(y).mul_up(y).mul_up(p.c).mul_up(
+def calcMinAtyAChixSqPlusAtySq(x: D, y: D, p: Params, d: DerivedParams) -> D:
+    w, z, u, v, lam, dSq = (
+        D2(d.w),
+        D2(d.z),
+        D2(d.u),
+        D2(d.v),
+        D2(D(p.l).raw),
+        D2(d.dSq),
+    )
+    termNp = D(x).mul_up(x).mul_up(p.s).mul_up(p.s) + D(y).mul_up(y).mul_up(p.c).mul_up(
         p.c
     )
-    val += D(x).mul_up(y).mul_up(p.s * 2).mul_up(p.c)
-    term = D(add_mag(AChi_x, D("7e-18")))
-    return -val.mul_up(term).mul_up(term) + (val - D("1e-17"))
+    termNp += D(x).mul_up(y).mul_up(p.s * 2).mul_up(p.c)
+
+    termXp = z * z + w * w / lam / lam + (2 * z) * w / lam
+    termXp = termXp / dSq / dSq / dSq / dSq
+    val = mulDownXpToNp(-termNp, termXp)
+
+    termXp = D2(1) / dSq
+    termNp = termNp - D("9e-18")
+    val = val + mulDownXpToNp(termNp, termXp)
+    return val
 
 
-def calcInvariantSqrt(x: D, y: D, p: Params, AChi_x: D, AChiDivLambda_y: D) -> D:
+def calcInvariantSqrt(x: D, y: D, p: Params, d: DerivedParams) -> D:
     val = (
-        calcMinAtxAChiySqPlusAtxSq(x, y, p, AChiDivLambda_y)
-        + calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChiDivLambda_y)
-        + calcMinAtyAChixSqPlusAtySq(x, y, p, AChi_x)
+        calcMinAtxAChiySqPlusAtxSq(x, y, p, d)
+        + calc2AtxAtyAChixAChiy(x, y, p, d)
+        + calcMinAtyAChixSqPlusAtySq(x, y, p, d)
     )
-    val -= D("100e-18")
+    if D(x) > D("1e11") or D(y) > D("1e11"):
+        err = (D(x) * x + D(y) * y) / D("1e38") * D("100e-18")
+    else:
+        err = D("100e-18")
+
+    val -= err
     if val < 0:
         val = 0
     return D(val).sqrt()
@@ -177,11 +224,9 @@ def calcInvariantSqrt(x: D, y: D, p: Params, AChi_x: D, AChiDivLambda_y: D) -> D
 
 def calculateInvariant(balances: Iterable[D], p: Params, d: DerivedParams) -> D:
     x, y = (D(balances[0]), D(balances[1]))
-    AChi_x = calcAChi_x(p, d)
-    AChiDivLambda_y = calcAChiDivLambda_y(p, d)
-    AtAChi = calcAtAChi(x, y, p, d, AChi_x)
-    sqrt = calcInvariantSqrt(x, y, p, AChi_x, AChiDivLambda_y)
-    denominator = calcAChiAChi(p, AChi_x, AChiDivLambda_y) - D(1)
+    AtAChi = calcAtAChi(x, y, p, d)
+    sqrt = calcInvariantSqrt(x, y, p, d)
+    denominator = calcAChiAChi(p, d) - D(1)
     assert denominator > 0
     return (AtAChi + sqrt) / denominator
 

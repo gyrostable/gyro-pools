@@ -150,18 +150,6 @@ contract GyroCEMMMathTesting {
         x = GyroCEMMMath.calcXGivenY(y, params, derived, invariant);
     }
 
-    function calcAChi_x(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d) external pure returns (int256) {
-        return GyroCEMMMath.calcAChi_x(p, d);
-    }
-
-    function calcAChiDivLambda_y(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d)
-        external
-        pure
-        returns (GyroCEMMMath.Vector2 memory)
-    {
-        return GyroCEMMMath.calcAChiDivLambda_y(p, d);
-    }
-
     function calcAtAChi(
         int256 x,
         int256 y,
@@ -179,38 +167,36 @@ contract GyroCEMMMathTesting {
         int256 x,
         int256 y,
         GyroCEMMMath.Params memory p,
-        GyroCEMMMath.Vector2 memory AChi_y
+        GyroCEMMMath.DerivedParams memory d
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcMinAtxAChiySqPlusAtxSq(x, y, p, AChi_y);
+        return GyroCEMMMath.calcMinAtxAChiySqPlusAtxSq(x, y, p, d);
     }
 
     function calc2AtxAtyAChixAChiy(
         int256 x,
         int256 y,
         GyroCEMMMath.Params memory p,
-        int256 AChi_x,
-        GyroCEMMMath.Vector2 memory AChi_y
+        GyroCEMMMath.DerivedParams memory d
     ) external pure returns (int256) {
-        return GyroCEMMMath.calc2AtxAtyAChixAChiy(x, y, p, AChi_x, AChi_y);
+        return GyroCEMMMath.calc2AtxAtyAChixAChiy(x, y, p, d);
     }
 
     function calcMinAtyAChixSqPlusAtySq(
         int256 x,
         int256 y,
         GyroCEMMMath.Params memory p,
-        int256 AChi_x
+        GyroCEMMMath.DerivedParams memory d
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcMinAtyAChixSqPlusAtySq(x, y, p, AChi_x);
+        return GyroCEMMMath.calcMinAtyAChixSqPlusAtySq(x, y, p, d);
     }
 
     function calcInvariantSqrt(
         int256 x,
         int256 y,
         GyroCEMMMath.Params memory p,
-        int256 AChi_x,
-        GyroCEMMMath.Vector2 memory AChi_y
+        GyroCEMMMath.DerivedParams memory d
     ) external pure returns (int256) {
-        return GyroCEMMMath.calcInvariantSqrt(x, y, p, AChi_x, AChi_y);
+        return GyroCEMMMath.calcInvariantSqrt(x, y, p, d);
     }
 
     function solveQuadraticSwap(
