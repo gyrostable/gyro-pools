@@ -35,6 +35,31 @@ def gyro_three_math_testing(admin, GyroThreeMathTesting):
 
 
 @pytest.fixture(scope="module")
+def gyro_three_math_debug(admin, GyroThreeMathDebug):
+    return admin.deploy(GyroThreeMathDebug)
+
+class ContractAsPureWrapper:
+    """Allows using a contract in places where a library of pure functions is expected, for easy debugging or gas measurement.
+
+    Example: ContractAsPureWrapper(GyroMathDebug), then use where GyroMathTesting is expected."""
+    def __init__(self, contract, prefix = '_'):
+        self.contract = contract
+        self.prefix = prefix
+
+    def __getattr__(self, item):
+        item = self.prefix + item
+        m = getattr(self.contract, item)
+        def f(*args, **kwargs):
+            tx = m(*args, **kwargs)
+            return tx.return_value
+        return f
+
+@pytest.fixture(scope="module")
+def gyro_three_math_debug_as_testing(admin, gyro_three_math_debug):
+    return ContractAsPureWrapper(gyro_three_math_debug)
+
+
+@pytest.fixture(scope="module")
 def mock_gyro_config(admin, MockGyroConfig):
     return admin.deploy(MockGyroConfig)
 
