@@ -111,7 +111,7 @@ def calcAtAChi(x: D, y: D, p: Params, d: DerivedParams) -> D:
     return val
 
 
-def calcAChiAChi(p: Params, d: DerivedParams, AChi_x: D, AChiDivLambda_y: D) -> D:
+def calcAChiAChi(p: Params, d: DerivedParams) -> D:
     w, z, u, v, lam, dSq = (
         D2(d.w),
         D2(d.z),
@@ -120,12 +120,23 @@ def calcAChiAChi(p: Params, d: DerivedParams, AChi_x: D, AChiDivLambda_y: D) -> 
         D2(D(p.l).raw),
         D2(d.dSq),
     )
+    if u * v > 0:
+        termXp = (D2(2) * u * v + D2("3e-38")) / dSq
+        val = mulUpXpToNp(p.l, termXp)
+    else:
+        termXp = (D2(2) * u * v) / dSq
+        val = mulDownXpToNp(p.l, termXp)
 
-    val = D(add_mag(AChi_x, D("7e-18")))
-    val = val.mul_up(val)
-    term = D(add_mag(AChiDivLambda_y, D("8e-18")))
-    term = D(p.l).mul_up(D(p.l)).mul_up(term).mul_up(term)
-    return val + term
+    termXp = (u + D2("1e-38")) * (u + D2("1e-38")) / dSq
+    val += mulUpXpToNp(p.l.mul_up(p.l), termXp)
+
+    val += D(((v + D2("1e-38")) * (v + D2("1e-38")) / dSq - D2("1e-38")).raw) + D(
+        "1e-18"
+    )
+
+    termXp = add_mag(w.div_up(lam) + z, D2("3e-38"))
+    val += D((termXp * termXp / dSq - D2("1e-38")).raw) + D("1e-18")
+    return val
 
 
 def calcMinAtxAChiySqPlusAtxSq(x: D, y: D, p: Params, AChiDivLambda_y: D) -> D:

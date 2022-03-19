@@ -344,10 +344,11 @@ library GyroCEMMMath {
 
     /// @dev calculates A chi \cdot A chi, overestimates in signed direction
     function calcAChiAChi(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
-        // (A chi)_y^2 = lambda^2 v^2 + lambda 2 v w + w^2, where (v,w) = AChi_y
+        // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
         // +1, +3 to account for truncation errors (but shouldn't matter)
-        val = d.v * d.w > 0 ? p.lambda.mulUpXpToNp((2 * d.v.mulXp(d.w) + 3).divXp(d.dSq)) : p.lambda.mulDownXpToNp((2 * d.v.mulXp(d.w)).divXp(d.dSq));
-        val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.v + 1).mulXp(d.v + 1).divXp(d.dSq))).add((d.w + 1).mulXp(d.w + 1).divXp(d.dSq) / 1e20);
+        val = d.u * d.v > 0 ? p.lambda.mulUpXpToNp((2 * d.u.mulXp(d.v) + 3).divXp(d.dSq)) : p.lambda.mulDownXpToNp((2 * d.u.mulXp(d.v)).divXp(d.dSq));
+        val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.u + 1).mulXp(d.u + 1).divXp(d.dSq)));
+        val = val.add(((d.v + 1).mulXp(d.v + 1).divXp(d.dSq) - 1) / 1e20 + 1);
 
         // (A chi)_x^2 = (w/lambda + z)^2
         int256 term = (d.w.divUp(p.lambda).add(d.z)).addMag(3);

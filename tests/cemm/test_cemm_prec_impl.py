@@ -86,44 +86,26 @@ def gen_params_conservative(draw):
 
 
 @given(params=gen_params())
-@example(
-    params=CEMMMathParams(
-        alpha=Decimal("0.490825169983507155"),
-        beta=Decimal("0.490925169983507155"),
-        c=Decimal("0.834720115672092922"),
-        s=Decimal("0.550674430577966501"),
-        l=Decimal("34400913.229000000000000000"),
-    ),
-    balances=[1, 1],
-)
-def test_calcAChi(gyro_cemm_math_testing, params):
+def test_calcAChiAChi(gyro_cemm_math_testing, params):
     mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    result_py = prec_impl.calcAChi_x(params, derived)
-    result_sol = gyro_cemm_math_testing.calcAChi_x(scale(params), scale(derived))
+    derived_m = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
+
+    result_py = prec_impl.calcAChiAChi(params, derived)
+    result_sol = gyro_cemm_math_testing.calcAChiAChi(scale(params), derived_scaled)
     assert result_py == unscale(result_sol)
-
-    result2_py = prec_impl.calcAChiDivLambda_y(params, derived)
-    result2_sol = gyro_cemm_math_testing.calcAChiDivLambda_y(
-        scale(params), scale(derived)
-    )
-    assert result2_py == unscale(result2_sol)
-
-    result3_py = prec_impl.calcAChiAChi(params, result_py, result2_py)
-    result3_sol = gyro_cemm_math_testing.calcAChiAChi(
-        scale(params), scale(result_py), scale(result2_py)
-    )
-    assert result3_py == unscale(result3_sol)
-    assert result3_py > 1
+    assert result_py > 1
 
     # test against the old (imprecise) implementation
-    chi = Vector2(
-        mparams.Ainv_times(derived.tauBeta[0], derived.tauBeta[1])[0],
-        mparams.Ainv_times(derived.tauAlpha[0], derived.tauAlpha[1])[1],
+    chi = (
+        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
+        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
-    assert result_py == AChi[0].approxed()
-    assert result2_py == (AChi[1] / params.l).approxed()
+    AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
+    assert result_py == AChiAChi.approxed()
 
 
 @given(
@@ -131,9 +113,6 @@ def test_calcAChi(gyro_cemm_math_testing, params):
     balances=gen_balances(2, bpool_params),
 )
 def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
-    # mparams = util.params2MathParams(params)
-    # derived = util.mathParams2DerivedParams(mparams)
-
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
     result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
@@ -143,8 +122,7 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
         scale(params),
         derived_scaled,
     )
-    # assert result_py == D2(result_sol) / D2("1e38")
-    assert result_py == unscale(result_sol)  # .approxed(abs=D("5e-16"))
+    assert result_py == unscale(result_sol)
 
 
 @given(
