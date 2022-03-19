@@ -20,12 +20,15 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 import "./GyroThreePoolErrors.sol";
 
+import "../../libraries/GyroPoolMath.sol";
+
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
 library GyroThreeMath {
     using FixedPoint for uint256;
+    using GyroPoolMath for uint256;  // number._sqrt(tolerance)
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     // _MAX_OUT_RATIO also ensures that we never compute swaps that take more out than is in the pool. (because
@@ -124,7 +127,7 @@ library GyroThreeMath {
         uint256 // md
     ) internal pure returns (uint256 l0) {
         uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
-        uint256 lmin = mb.divUp(a * 3).add(radic.powUp(FixedPoint.ONE / 2).divUp(a * 3));
+        uint256 lmin = mb.divUp(a * 3).add(radic._sqrt(5).divUp(a * 3));
         // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All factors > 1 are safe.
         // For small alpha values, it is more efficient to fallback to a larger factor.
         uint256 alpha = FixedPoint.ONE.sub(a);  // We know that a is in [0, 1].
