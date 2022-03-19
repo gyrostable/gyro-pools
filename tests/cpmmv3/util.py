@@ -89,7 +89,7 @@ def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_m
     # To see this, go from z to x backwards or see Steffen's notebook p. 148.
     xmax = invariant / (root3Alpha**2) - virtOffset
     assume(min_balance <= xmax)
-    x = draw(qdecimals(1, xmax))
+    x = draw(qdecimals(min_balance, xmax))
     ymax = min(
         invariant**2 / (root3Alpha * (x + virtOffset)) - virtOffset,
         x / bpool_params.min_balance_ratio
