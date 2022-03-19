@@ -106,3 +106,46 @@ def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_m
     balances = (x, y, z)
 
     return balances, invariant, root3Alpha
+
+
+@st.composite
+def gen_synthetic_balances_1asset(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D,
+                           min_balance: D = D(1)):
+    """Like gen_gen_synthetic_balances(), but only one asset is non-zero."""
+
+    root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
+    invariant = draw(qdecimals(1, 100_000_000_000))
+
+    x = invariant / root3Alpha / root3Alpha - invariant * root3Alpha
+    assume(x >= min_balance)
+
+    # Random position in the three assets
+    balances = [D(0)] * 3
+    balances[draw(st.integers(0, 2))] = x
+
+    return balances, invariant, root3Alpha
+
+@st.composite
+def gen_synthetic_balances_2assets(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D,
+                           min_balance: D = D(1)):
+    """Like gen_gen_synthetic_balances(), but only two assets are non-zero."""
+
+    root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
+    invariant = draw(qdecimals(1, 100_000_000_000))
+    virtOffset = invariant * root3Alpha
+
+    xmax = invariant / root3Alpha / root3Alpha - invariant * root3Alpha
+    assume(xmax >= min_balance)
+    x = draw(qdecimals(min_balance, xmax))
+
+    y = invariant**2 / root3Alpha / (x + virtOffset) - virtOffset
+
+    assume(y >= min_balance)
+    assume(x * bpool_params.min_balance_ratio <= y <= x / bpool_params.min_balance_ratio)
+
+    shift = draw(st.integers(0, 2))
+    balances = [D(0)] * 3
+    balances[(0 + shift) % 3] = x
+    balances[(1 + shift) % 3] = y
+
+    return balances, invariant, root3Alpha

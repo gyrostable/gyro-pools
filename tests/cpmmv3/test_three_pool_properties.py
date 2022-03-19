@@ -5,7 +5,8 @@ from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example, HealthCheck
 import tests.cpmmv3.v3_math_implementation as math_implementation
-from tests.cpmmv3.util import calculateInvariantUnderOver, gen_synthetic_balances
+from tests.cpmmv3.util import calculateInvariantUnderOver, gen_synthetic_balances, gen_synthetic_balances_1asset, \
+    gen_synthetic_balances_2assets
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
@@ -424,7 +425,11 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
 
 @settings(max_examples=1000)
 @given(
-    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)),
+    args=st.one_of(
+        gen_synthetic_balances_1asset(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(100)),
+        gen_synthetic_balances_2assets(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)),
+        gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)),
+    )
 )
 @example(args=(
     (D('16743757275.452039152786685295'),
