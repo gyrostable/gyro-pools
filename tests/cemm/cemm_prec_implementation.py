@@ -1,8 +1,10 @@
 from operator import add, sub
-from typing import Iterable
+from typing import Iterable, NamedTuple, Tuple
 
 import pytest
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
+from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.libraries.signed_fixed_point import add_mag, mul_array
 from tests.support.utils import scale, unscale
 
@@ -10,7 +12,7 @@ _MAX_IN_RATIO = D("0.3")
 _MAX_OUT_RATIO = D("0.3")
 
 
-class Params:
+class Params(NamedTuple):
     alpha: D
     beta: D
     c: D
@@ -18,9 +20,21 @@ class Params:
     l: D
 
 
-class DerivedParams:
-    tauAlpha: tuple[D, D]
-    tauBeta: tuple[D, D]
+class DerivedParams(NamedTuple):
+    tauAlpha: Tuple[D2, D2]
+    tauBeta: Tuple[D2, D2]
+    u: D2
+    v: D2
+    w: D2
+    z: D2
+    dSq: D2
+    dAlpha: D2
+    dBeta: D2
+
+
+class Vector2(NamedTuple):
+    x: D2
+    y: D2
 
 
 def virtualOffset0(p: Params, d: DerivedParams, r: Iterable[D]) -> D:
@@ -74,14 +88,39 @@ def calcAChiDivLambda_y(p: Params, d: DerivedParams) -> D:
     )
 
 
-def calcAtAChi(x: D, y: D, p: Params, d: DerivedParams, AChi_x: D) -> D:
-    val = (x * p.c / p.l - D(y).mul_up(D(p.s)).div_up(D(p.l))) * AChi_x
-    val += (x * p.l * p.s + y * p.l * p.c) * p.s * p.c * (d.tauBeta[0] - d.tauAlpha[0])
-    val += (x * p.s + y * p.c) * (p.s * p.s * d.tauBeta[1] + p.c * p.c * d.tauAlpha[1])
+def calcAtAChi(x: D, y: D, p: Params, d: DerivedParams) -> D:
+    w, z, u, v, lam, dSq = (
+        D2(d.w),
+        D2(d.z),
+        D2(d.u),
+        D2(d.v),
+        D2(D(p.l).raw),
+        D2(d.dSq),
+    )
+    termXp = (w / lam + z) / lam / dSq / dSq
+    termNp = D(x) * p.c - D(y) * p.s
+    val = mulDownXpToNp(termNp, termXp)
+
+    termNp = D(x) * p.l * p.s + D(y) * p.l * p.c
+    termXp = u / dSq / dSq
+    val += mulDownXpToNp(termNp, termXp)
+
+    termNp = D(x) * p.s + D(y) * p.c
+    termXp = v / dSq / dSq
+    val += mulDownXpToNp(termNp, termXp)
     return val
 
 
-def calcAChiAChi(p: Params, AChi_x: D, AChiDivLambda_y: D) -> D:
+def calcAChiAChi(p: Params, d: DerivedParams, AChi_x: D, AChiDivLambda_y: D) -> D:
+    w, z, u, v, lam, dSq = (
+        D2(d.w),
+        D2(d.z),
+        D2(d.u),
+        D2(d.v),
+        D2(D(p.l).raw),
+        D2(d.dSq),
+    )
+
     val = D(add_mag(AChi_x, D("7e-18")))
     val = val.mul_up(val)
     term = D(add_mag(AChiDivLambda_y, D("8e-18")))
@@ -274,27 +313,110 @@ def divXp(a: int, b: int) -> int:
     return a_inflated // int(b)
 
 
-def mulDownXpToNp(a: D, b: int) -> D:
-    b1 = int(b) // int(D("1e19"))
-    b2 = int(b) - b1 * int(D("1e19")) if b > 0 else int(b) + b1 * int(D("1e19"))
-    prod = int(a * D("1e18")) * b1
-    if prod > 0:
-        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19"))) // int(D("1e19"))
+def mulDownXpToNp(a: D, b: D2) -> D:
+    a = int(D(a) * D("1e18"))
+    b = int(b * D2("1e38"))
+    b1 = b // int(D("1e19"))
+    b2 = b - b1 * int(D("1e19")) if b1 != 0 else b
+    prod1 = a * b1
+    prod2 = a * b2
+    if prod1 >= 0 and prod2 >= 0:
+        prod = (prod1 + prod2 // int(D("1e19"))) // int(D("1e19"))
     else:
-        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19")) + 1) // int(
-            D("1e19")
-        ) - 1
+        # have to use double minus signs b/c of how // operator works
+        prod = -((-prod1 - prod2 // int(D("1e19")) - 1) // int(D("1e19"))) - 1
     return D(prod) / D("1e18")
 
 
-def mulUpXpToNp(a: D, b: int) -> D:
-    b1 = int(b) // int(D("1e19"))
-    b2 = int(b) - b1 * int(D("1e19")) if b > 0 else int(b) + b1 * int(D("1e19"))
-    prod = int(a * D("1e18")) * b1
-    if prod < 0:
-        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19"))) // int(D("1e19"))
+def mulUpXpToNp(a: D, b: D2) -> D:
+    a = int(D(a) * D("1e18"))
+    b = int(b * D2("1e38"))
+    b1 = b // int(D("1e19"))
+    b2 = b - b1 * int(D("1e19")) if b1 != 0 else b
+    prod1 = a * b1
+    prod2 = a * b2
+    if prod1 <= 0 and prod2 <= 0:
+        # have to use double minus signs b/c of how // operator works
+        prod = -((-prod1 + -prod2 // int(D("1e19"))) // int(D("1e19")))
     else:
-        prod = (prod + (int(a * D("1e18")) * b2) // int(D("1e19")) - 1) // int(
-            D("1e19")
-        ) + 1
+        prod = (prod1 + prod2 // int(D("1e19")) - 1) // int(D("1e19")) + 1
     return D(prod) / D("1e18")
+
+
+def tauXp(p: Params, px: D, dPx: D2) -> tuple[D2, D2]:
+    tauPx = [0, 0]
+    tauPx[0] = (D2(px) * D2(p.c) - D2(p.s)) * dPx
+    tauPx[1] = ((D2(p.s) * D2(px) + D2(p.c)) / D2(p.l)) * dPx
+    return tuple(tauPx)
+
+
+def calc_derived_values(p: Params) -> DerivedParams:
+    s, c, lam, alpha, beta = (
+        D(p.s).raw,
+        D(p.c).raw,
+        D(p.l).raw,
+        D(p.alpha).raw,
+        D(p.beta).raw,
+    )
+    s, c, lam, alpha, beta = (
+        D3(s),
+        D3(c),
+        D3(lam),
+        D3(alpha),
+        D3(beta),
+    )
+    dSq = c * c + s * s
+    d = dSq.sqrt()
+    dAlpha = D3(1) / (
+        ((c / d + alpha * s / d) ** 2 / lam ** 2 + (alpha * c / d - s / d) ** 2).sqrt()
+    )
+    dBeta = D3(1) / (
+        ((c / d + beta * s / d) ** 2 / lam ** 2 + (beta * c / d - s / d) ** 2).sqrt()
+    )
+    tauAlpha = [0, 0]
+    tauAlpha[0] = (alpha * c - s) * dAlpha
+    tauAlpha[1] = (c + s * alpha) * dAlpha / lam
+
+    tauBeta = [0, 0]
+    tauBeta[0] = (beta * c - s) * dBeta
+    tauBeta[1] = (c + s * beta) * dBeta / lam
+
+    w = s * c * (tauBeta[1] - tauAlpha[1])
+    z = c * c * tauBeta[0] + s * s * tauAlpha[0]
+    u = s * c * (tauBeta[0] - tauAlpha[0])
+    v = s * s * tauBeta[1] + c * c * tauAlpha[1]
+
+    tauAlpha38 = (D2(tauAlpha[0].raw), D2(tauAlpha[1].raw))
+    tauBeta38 = (D2(tauBeta[0].raw), D2(tauBeta[1].raw))
+    derived = DerivedParams(
+        tauAlpha=(tauAlpha38[0], tauAlpha38[1]),
+        tauBeta=(tauBeta38[0], tauBeta38[1]),
+        u=D2(u.raw),
+        v=D2(v.raw),
+        w=D2(w.raw),
+        z=D2(z.raw),
+        dSq=D2(dSq.raw),
+        dAlpha=D2(dAlpha.raw),
+        dBeta=D2(dBeta.raw),
+    )
+    return derived
+
+
+def scale_derived_values(d: DerivedParams) -> DerivedParams:
+    derived = DerivedParams(
+        tauAlpha=Vector2(d.tauAlpha[0] * D2("1e38"), d.tauAlpha[1] * D2("1e38")),
+        tauBeta=Vector2(d.tauBeta[0] * D2("1e38"), d.tauBeta[1] * D2("1e38")),
+        u=d.u * D2("1e38"),
+        v=d.v * D2("1e38"),
+        w=d.w * D2("1e38"),
+        z=d.z * D2("1e38"),
+        dSq=d.dSq * D2("1e38"),
+        dAlpha=d.dAlpha * D2("1e38"),
+        dBeta=d.dBeta * D2("1e38"),
+    )
+    return derived
+
+
+# def mkDerivedParmasXp(p: Params) -> DerivedParams:
+#     tauAlpha = tauXp(p, p.alpha, p.dAlpha)
+#     tauBeta = tauXp(p, p.beta, p.dBeta)

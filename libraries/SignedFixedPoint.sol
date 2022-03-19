@@ -132,18 +132,22 @@ library SignedFixedPoint {
     /// returns normal precision of the product
     function mulDownXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
-        int256 b2 = b > 0 ? b - b1 * 1e19 : b + b1 * 1e19;
-        int256 prod = a * b1;
-        _require(a == 0 || prod / a == b1, Errors.MUL_OVERFLOW);
-        return prod > 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + (a * b2) / 1e19 + 1) / 1e19 - 1;
+        int256 b2 = b1 != 0 ? b - b1 * 1e19 : b;
+        int256 prod1 = a * b1;
+        _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
+        int256 prod2 = a * b2;
+        _require(a == 0 || prod2 / a == b2, Errors.MUL_OVERFLOW);
+        return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
     }
 
     function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
-        int256 b2 = b > 0 ? b - b1 * 1e19 : b + b1 * 1e19;
-        int256 prod = a * b1;
-        _require(a == 0 || prod / a == b1, Errors.MUL_OVERFLOW);
-        return prod < 0 ? (prod + (a * b2) / 1e19) / 1e19 : (prod + (a * b2) / 1e19 - 1) / 1e19 + 1;
+        int256 b2 = b1 != 0 ? b - b1 * 1e19 : b;
+        int256 prod1 = a * b1;
+        _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
+        int256 prod2 = a * b2;
+        _require(a == 0 || prod2 / a == b2, Errors.MUL_OVERFLOW);
+        return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
     }
 
     // TODO not implementing the pow functions right now b/c it's annoying and slightly ill-defined, and we prob don't need them.

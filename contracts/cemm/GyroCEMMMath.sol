@@ -45,9 +45,6 @@ library GyroCEMMMath {
 
         // Stretching factor:
         int256 lambda; // lambda >= 1 where lambda == 1 is the circle.
-        int256 dSq;
-        int256 dAlpha;
-        int256 dBeta;
     }
 
     function validateParams(Params memory params) internal pure {
@@ -66,6 +63,9 @@ library GyroCEMMMath {
         int256 v;
         int256 w;
         int256 z;
+        int256 dSq;
+        int256 dAlpha;
+        int256 dBeta;
     }
 
     struct Vector2 {
@@ -159,31 +159,34 @@ library GyroCEMMMath {
         derived.tauBeta = tau(params, params.beta);
     }
 
-    function tauXp(
-        Params memory p,
-        int256 px,
-        int256 dPx
-    ) internal pure returns (Vector2 memory tauPx) {
-        tauPx.x = (p.c * 1e20 - (p.s * 1e20).divXp(px * 1e20)).mulXp(dPx);
-        tauPx.y = (p.s * 1e20 + (p.c * 1e20).divXp(px * 1e20)).divXp(p.lambda * 1e20).mulXp(dPx);
-    }
+    // function tauXp(
+    //     Params memory p,
+    //     int256 px,
+    //     int256 dPx
+    // ) internal pure returns (Vector2 memory tauPx) {
+    //     // these shouldn't overflow b/c extra precision products should be <= 1
+    //     // (c px - s)*dPx
+    //     tauPx.x = ((px * 1e20).mulDown(p.c) - p.s * 1e20).mulXp(dPx);
+    //     // (c + s px)*dPx / lambda
+    //     tauPx.y = ((px * 1e20).mulDown(p.s) + p.c * 1e20).divDown(p.lambda).mulXp(dPx);
+    // }
 
     /// make derived params in extra precision, intentionally missing a factor of 1/d where s^2 + c^2 = d^2
     /// TODO: note how much error could happen in last place for under/overestimate purposes
-    function mkDerivedParamsXp(Params memory p) internal pure returns (DerivedParams memory d) {
-        d.tauAlpha = tauXp(p, p.alpha, p.dAlpha);
-        d.tauBeta = tauXp(p, p.beta, p.dBeta);
-        // w = sc (tau(beta)_y - tau(alpha)_y
-        d.w = (p.s * 1e20).mulXp(p.c * 1e20).mulXp(d.tauBeta.y.sub(d.tauAlpha.y));
-        // z = c^2 tau(beta)_x + s^2 tau(alpha)_x
-        d.z = (p.c * 1e20).mulXp(p.c * 1e20).mulXp(d.tauBeta.x);
-        d.z = d.z.add((p.s * 1e20)).mulXp(p.s * 1e20).mulXp(d.tauAlpha.x);
-        // u = sc (tau(beta)_x - tau(alpha)_x)
-        d.u = (p.s * 1e20).mulXp(p.c * 1e20).mulXp(d.tauBeta.x.sub(d.tauAlpha.x));
-        // v = s^2 tau(beta)_y + c^2 tau(alpha)_y
-        d.v = (p.s * 1e20).mulXp(p.s * 1e20).mulXp(d.tauBeta.y);
-        d.v = d.v.add((p.c * 1e20).mulXp(p.c * 1e20).mulXp(d.tauAlpha.y));
-    }
+    // function mkDerivedParamsXp(Params memory p) internal pure returns (DerivedParams memory d) {
+    //     d.tauAlpha = tauXp(p, p.alpha, p.dAlpha);
+    //     d.tauBeta = tauXp(p, p.beta, p.dBeta);
+    //     // w = sc (tau(beta)_y - tau(alpha)_y
+    //     d.w = (p.s * 1e20).mulDown(p.c).mulXp(d.tauBeta.y.sub(d.tauAlpha.y));
+    //     // z = c^2 tau(beta)_x + s^2 tau(alpha)_x
+    //     d.z = (p.c * 1e20).mulDown(p.c).mulXp(d.tauBeta.x);
+    //     d.z = d.z.add((p.s * 1e20)).mulDown(p.s).mulXp(d.tauAlpha.x);
+    //     // u = sc (tau(beta)_x - tau(alpha)_x)
+    //     d.u = (p.s * 1e20).mulDown(p.c).mulXp(d.tauBeta.x.sub(d.tauAlpha.x));
+    //     // v = s^2 tau(beta)_y + c^2 tau(alpha)_y
+    //     d.v = (p.s * 1e20).mulDown(p.s).mulXp(d.tauBeta.y);
+    //     d.v = d.v.add((p.c * 1e20).mulDown(p.c).mulXp(d.tauAlpha.y));
+    // }
 
     /** @dev Given price on a circle, gives the normalized corresponding point on the circle centered at the origin
      *  pxc = price of asset x in terms of asset y (measured on the circle)
@@ -267,7 +270,7 @@ library GyroCEMMMath {
         int256 AtAChi = calcAtAChi(vbalances.x, vbalances.y, params, derived);
         int256 sqrt = calcInvariantSqrt(vbalances.x, vbalances.y, params, AChi_x, AChi_y);
         // A chi \cdot A chi > 1, so round it up to round denominator up
-        int256 denominator = calcAChiAChi(params, AChi_x, AChi_y).sub(ONE);
+        int256 denominator = calcAChiAChi(params, derived).sub(ONE);
         int256 invariant = AtAChi.add(sqrt).divDown(denominator);
         return invariant.toUint256();
     }
@@ -327,33 +330,28 @@ library GyroCEMMMath {
         DerivedParams memory d
     ) internal pure returns (int256 val) {
         // (cx - sy) * (w/lambda + z) / lambda
-        int256 term = (d.w.divXp(p.lambda * 1e20).add(d.z)).divXp(p.dSq).divXp(p.dSq).divXp(p.lambda * 1e20);
+        int256 term = (d.w.divDown(p.lambda).add(d.z)).divDown(p.lambda).divXp(d.dSq).divXp(d.dSq);
         val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDownXpToNp(term);
 
         // (x lambda s + y lambda c) * u
         term = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
-        val = val.add(term.mulDownXpToNp(d.u.divXp(p.dSq).divXp(p.dSq)));
+        val = val.add(term.mulDownXpToNp(d.u.divXp(d.dSq).divXp(d.dSq)));
 
         // (sx+cy) * v
         term = x.mulDown(p.s).add(y.mulDown(p.c));
-        val = val.add(term.mulDownXpToNp(d.v.divXp(p.dSq).divXp(p.dSq)));
+        val = val.add(term.mulDownXpToNp(d.v.divXp(d.dSq).divXp(d.dSq)));
     }
 
     /// @dev calculates A chi \cdot A chi, overestimates in signed direction
-    function calcAChiAChi(
-        Params memory p,
-        int256 AChi_x,
-        Vector2 memory AChi_y // x contains terms *lambda, y contains other terms
-    ) internal pure returns (int256 val) {
+    function calcAChiAChi(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // (A chi)_y^2 = lambda^2 v^2 + lambda 2 v w + w^2, where (v,w) = AChi_y
-        // - 3 and 5 to account for rounding error in v, w
-        val = AChi_y.x * AChi_y.y > 0
-            ? p.lambda.mulUp(2 * AChi_y.x).mulUp(AChi_y.y)
-            : p.lambda.mulDown(2 * AChi_y.x.addMag(-3)).mulDown(AChi_y.y.addMag(-5));
-        val = val.add(p.lambda.mulUp(p.lambda).mulUp(AChi_y.x).mulUp(AChi_y.x)).add(AChi_y.y.mulUp(AChi_y.y));
+        // +1, +3 to account for truncation errors (but shouldn't matter)
+        val = d.v * d.w > 0 ? p.lambda.mulUpXpToNp((2 * d.v.mulXp(d.w) + 3).divXp(d.dSq)) : p.lambda.mulDownXpToNp((2 * d.v.mulXp(d.w)).divXp(d.dSq));
+        val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.v + 1).mulXp(d.v + 1).divXp(d.dSq))).add((d.w + 1).mulXp(d.w + 1).divXp(d.dSq) / 1e20);
 
-        // (A chi)_x^2 = ( sc * (tau(beta)_y - tau(alpha)_y) / lambda + tau(beta)_x + tau(alpha)_x ) ^ 2
-        val = val.add(AChi_x.mulUp(AChi_x));
+        // (A chi)_x^2 = (w/lambda + z)^2
+        int256 term = (d.w.divUp(p.lambda).add(d.z)).addMag(3);
+        val = val.add((term.mulXp(term).divXp(d.dSq) - 1) / 1e20 + 1);
     }
 
     /// @dev calculate -(At)_x ^2 (A chi)_y ^2 + (At)_x ^2, rounding down in signed direction

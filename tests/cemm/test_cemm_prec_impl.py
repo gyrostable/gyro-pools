@@ -7,7 +7,7 @@ import pytest
 
 # from pyrsistent import Invariant
 from brownie.test import given
-from hypothesis import assume, example
+from hypothesis import assume, example, settings
 
 from tests.support.util_common import (
     BasicPoolParameters,
@@ -17,6 +17,8 @@ from tests.support.util_common import (
 from tests.cemm import cemm as mimpl
 from tests.cemm import cemm_prec_implementation as prec_impl
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
+from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import *
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.cemm import util
@@ -129,19 +131,20 @@ def test_calcAChi(gyro_cemm_math_testing, params):
     balances=gen_balances(2, bpool_params),
 )
 def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    AChi_x = prec_impl.calcAChi_x(params, derived)
-    AChiDivLambda_y = prec_impl.calcAChiDivLambda_y(params, derived)
-    result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived, AChi_x)
+    # mparams = util.params2MathParams(params)
+    # derived = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
+    result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
     result_sol = gyro_cemm_math_testing.calcAtAChi(
         scale(balances[0]),
         scale(balances[1]),
         scale(params),
-        scale(derived),
-        scale(AChi_x),
+        derived_scaled,
     )
-    assert result_py == unscale(result_sol)
+    # assert result_py == D2(result_sol) / D2("1e38")
+    assert result_py == unscale(result_sol)  # .approxed(abs=D("5e-16"))
 
 
 @given(
@@ -150,13 +153,19 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
 )
 def test_calcAtAChi_sense_check(params, balances):
     mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
-    AChi_x = prec_impl.calcAChi_x(params, derived)
-    AChiDivLambda_y = prec_impl.calcAChiDivLambda_y(params, derived)
-    result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived, AChi_x)
+    derived_m = util.mathParams2DerivedParams(mparams)
+
+    derived = prec_impl.calc_derived_values(params)
+    result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
+
     # test against the old (imprecise) implementation
     At = mparams.A_times(balances[0], balances[1])
-    AtAChi = At[0] * AChi_x + At[1] * AChiDivLambda_y * params.l
+    chi = (
+        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
+        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+    )
+    AChi = mparams.A_times(chi[0], chi[1])
+    AtAChi = At[0] * AChi[0] + At[1] * AChi[1]
     assert AtAChi == result_py.approxed()
 
 
@@ -524,6 +533,7 @@ def test_maxBalances(gyro_cemm_math_testing, params, balances):
     assert yp_py == D(cemm.ymax).approxed()
 
 
+@settings(max_examples=1000)
 @given(
     a=st.integers(min_value=100, max_value=int(D("2e38"))),
     b=st.integers(min_value=100, max_value=int(D("2e38"))),
@@ -533,10 +543,11 @@ def test_mulXp(signed_math_testing, a, b):
     prod_sol = signed_math_testing.mulXp(a, b)
 
     assert prod_py == prod_sol
-    prod_sense = D(a) / D("1e38") * D(b) / D("1e38")
-    assert D(prod_py) / D("1e38") == prod_sense.approxed()
+    prod = (D2(a) / D2("1e38")) * (D2(b) / D2("1e38"))
+    assert D2(prod_py) / D2("1e38") == prod
 
 
+@settings(max_examples=1000)
 @given(
     a=st.integers(min_value=100, max_value=int(D("2e38"))),
     b=st.integers(min_value=100, max_value=int(D("2e38"))),
@@ -546,25 +557,82 @@ def test_divXp(signed_math_testing, a, b):
     div_sol = signed_math_testing.divXp(a, b)
 
     assert div_py == div_sol
-    div_sense = float(a) / float(b)
-    assert D(float(div_py) / float(1e38)) == D(div_sense).approxed()
+    div = (D3(a) / D3("1e38")) / (D3(b) / D3("1e38"))
+    assert D2(div_py) / D2("1e38") == D2(div.raw)
 
 
+# @settings(max_examples=1000)
 @given(
     a=st.decimals(min_value="1", max_value="1e24"),
     b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
 )
 def test_mulXpToNp(signed_math_testing, a, b):
-    prod_down_py = prec_impl.mulDownXpToNp(D(a), b)
+    b_unscale = D2(b) / D2("1e38")
+    prod_down_py = prec_impl.mulDownXpToNp(D(a), b_unscale)
     prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
     assert prod_down_py == unscale(prod_down_sol)
 
-    prod_up_py = prec_impl.mulUpXpToNp(D(a), b)
+    prod_up_py = prec_impl.mulUpXpToNp(D(a), b_unscale)
     prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
     assert prod_up_py == unscale(prod_up_sol)
 
     assert prod_up_py >= prod_down_py
     assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
 
-    prod_sense = float(a) * float(b) / 1e38
-    assert float(prod_up_py) == pytest.approx(prod_sense)
+    prod_sense = D3(a) * D3(b_unscale.raw)
+    prod_sense = D(prod_sense.raw)
+    # prod_sense_fl = float(a) * float(b) / 1e38
+    # assert float(prod_up_py) == pytest.approx(prod_sense_fl)
+    assert prod_down_py == prod_sense.approxed(abs=D("5e-18"))
+
+
+# @settings(max_examples=1000)
+@given(
+    a=st.decimals(min_value="1", max_value="1e24"),
+    b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
+)
+def test_mulXpToNp_nega(signed_math_testing, a, b):
+    a = -a
+    b_unscale = D2(b) / D2("1e38")
+    prod_down_py = prec_impl.mulDownXpToNp(D(a), b_unscale)
+    prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
+    assert prod_down_py == unscale(prod_down_sol)
+
+    prod_up_py = prec_impl.mulUpXpToNp(D(a), b_unscale)
+    prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
+    assert prod_up_py == unscale(prod_up_sol)
+
+    assert prod_up_py >= prod_down_py
+    assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
+
+    prod_sense = D3(a) * D3(b_unscale.raw)
+    prod_sense = D(prod_sense.raw)
+    # prod_sense_fl = float(a) * float(b) / 1e38
+    # assert float(prod_up_py) == pytest.approx(prod_sense_fl)
+    assert prod_down_py == prod_sense.approxed(abs=D("5e-18"))
+
+
+# @settings(max_examples=1000)
+@given(
+    a=st.decimals(min_value="1", max_value="1e24"),
+    b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
+)
+def test_mulXpToNp_negb(signed_math_testing, a, b):
+    b = -b
+    b_unscale = D2(b) / D2("1e38")
+    prod_down_py = prec_impl.mulDownXpToNp(D(a), b_unscale)
+    prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
+    assert prod_down_py == unscale(prod_down_sol)
+
+    prod_up_py = prec_impl.mulUpXpToNp(D(a), b_unscale)
+    prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
+    assert prod_up_py == unscale(prod_up_sol)
+
+    assert prod_up_py >= prod_down_py
+    assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
+
+    prod_sense = D3(a) * D3(b_unscale.raw)
+    prod_sense = D(prod_sense.raw)
+    # prod_sense_fl = float(a) * float(b) / 1e38
+    # assert float(prod_up_py) == pytest.approx(prod_sense_fl)
+    assert prod_down_py == prod_sense.approxed(abs=D("5e-18"))

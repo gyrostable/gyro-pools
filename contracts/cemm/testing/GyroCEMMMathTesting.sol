@@ -171,12 +171,8 @@ contract GyroCEMMMathTesting {
         return GyroCEMMMath.calcAtAChi(x, y, p, d);
     }
 
-    function calcAChiAChi(
-        GyroCEMMMath.Params memory p,
-        int256 AChi_x,
-        GyroCEMMMath.Vector2 memory AChi_y
-    ) external pure returns (int256) {
-        return GyroCEMMMath.calcAChiAChi(p, AChi_x, AChi_y);
+    function calcAChiAChi(GyroCEMMMath.Params memory p, GyroCEMMMath.DerivedParams memory d) external pure returns (int256) {
+        return GyroCEMMMath.calcAChiAChi(p, d);
     }
 
     function calcMinAtxAChiySqPlusAtxSq(
