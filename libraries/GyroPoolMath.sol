@@ -259,7 +259,7 @@ library GyroPoolMath {
         }
     }
 
-    function intLog2Halved(uint256 x) public pure returns (uint256 n) {
+    function _intLog2Halved(uint256 x) public pure returns (uint256 n) {
         if (x >= 1 << 128) {
             x >>= 128;
             n += 64;
@@ -288,29 +288,5 @@ library GyroPoolMath {
             x >>= 2;
             n += 1;
         }
-    }
-
-    /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
-     * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
-     * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
-     * See the writeup, Corollary 3 in Section 2.1.5.
-     */
-    function liquidityInvariantUpdate(
-        uint256[] memory balances,
-        uint256 uinvariant,
-        uint256[] memory deltaBalances,
-        bool isIncreaseLiq
-    ) internal pure returns (uint256 unewInvariant) {
-        uint256 largestBalanceIndex;
-        uint256 largestBalance;
-        for (uint256 i = 0; i < balances.length; i++) {
-            if (balances[i] > largestBalance) {
-                largestBalance = balances[i];
-                largestBalanceIndex = i;
-            }
-        }
-
-        uint256 deltaInvariant = uinvariant.mulDown(deltaBalances[largestBalanceIndex]).divDown(balances[largestBalanceIndex]);
-        unewInvariant = isIncreaseLiq ? uinvariant.add(deltaInvariant) : uinvariant.sub(deltaInvariant);
     }
 }
