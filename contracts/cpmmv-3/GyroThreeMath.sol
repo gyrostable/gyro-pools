@@ -168,10 +168,11 @@ library GyroThreeMath {
         uint256 dfRootEst;
         {
             uint256 rootEst2 = rootEst.mulDown(rootEst);
-            dfRootEst = (3 * rootEst2).sub(
-                (3 * rootEst2).mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
+            dfRootEst = Math.mul(3, rootEst2);
+            dfRootEst = dfRootEst.sub(
+                dfRootEst.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
             );
-            dfRootEst = dfRootEst.sub(rootEst.mulDown(mb) * 2).sub(mc);
+            dfRootEst = dfRootEst.sub(Math.mul(2, rootEst.mulDown(mb))).sub(mc);
         }
 
         // Note: We know that a * rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
