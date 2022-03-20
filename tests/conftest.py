@@ -255,7 +255,7 @@ def cemm_pool(
         beta=D("1.02") * 10**18,
         c=D("0.2") * 10**18,
         s=D("0.1") * 10**18,
-        l=2,
+        l=D("2") * 10**18,
     )
     derived_cemm_params = calc_derived_values(cemm_params)
     args = CEMMPoolParams(two_pool_base_params, cemm_params, derived_cemm_params)
