@@ -15,19 +15,31 @@ class BasicPoolParameters:
     max_out_ratio: D
     min_balance_ratio: D
     min_fee: D
-
-billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
+    max_balances: int = 1_000_000_000  # Max balances to test
 
 @st.composite
 def gen_balances(draw, n: int, bparams: BasicPoolParameters):
-    balances = [draw(billion_balance_strategy) for _ in range(n)]
+    """Draw n balances respecting max_balances and min_balance_ratio. Only implemented for n = 1, 2, 3"""
+    mbr = bparams.min_balance_ratio
+    x = D(draw(qdecimals(1, bparams.max_balances)))
+    if n == 1:
+        return [x]
 
-    for i in range(n):
-        for j in range(n):
-            assume(balances[j] > 0)
-            assume(balances[i] / balances[j] > bparams.min_balance_ratio)
+    y = draw(qdecimals(
+        x * mbr,
+        min(x / mbr, bparams.max_balances)
+    ))
+    if n == 2:
+        return [x, y]
 
-    return balances
+    z = draw(qdecimals(
+        max(x, y) * mbr,
+        min(min(x, y) / mbr, bparams.max_balances)
+    ))
+    if n == 3:
+        return [x, y, z]
+
+    raise NotImplementedError("generating > 3 assets is not implemented")
 
 
 def gen_balances_vector(bparams: BasicPoolParameters):

@@ -149,7 +149,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, uint256 virtualOffset) = _calculateCurrentValues();
+        uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
@@ -158,38 +158,44 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, uint256 virtualOffset) = _calculateCurrentValues();
+        uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
-    /** @dev Calculate the invariant and the offset that takes real reserves to virtual reserves.
-     * Note that, because our price bounds are symmetric, the offset is the same for the three assets.
-     */
-    function _calculateCurrentValues() private view returns (uint256 invariant, uint256 virtualOffset) {
+    /** @dev Calculate the offset that that takes real reserves to virtual reserves.
+      */
+    function _calculateVirtualOffset() private view returns (
+            uint256 virtualOffset) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         _upscaleArray(balances, _scalingFactors());
-
         uint256 root3Alpha = _root3Alpha;
-        invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
+        uint256 invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
         virtualOffset = invariant.mulDown(root3Alpha);
+    }
+
+    /** @dev Calculate the invariant. */
+    function _calculateInvariant() private view returns (uint256 invariant) {
+        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        _upscaleArray(balances, _scalingFactors());
+        return GyroThreeMath._calculateInvariant(balances, _root3Alpha);
     }
 
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffset
     ) private pure returns (uint256) {
-        return GyroThreeMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetInOut);
+        return GyroThreeMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffset);
     }
 
     function _onSwapGivenOut(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffset
     ) private pure returns (uint256) {
-        return GyroThreeMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetInOut);
+        return GyroThreeMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffset);
     }
 
     /**
@@ -375,7 +381,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * @dev Returns the current value of the invariant.
      */
     function getInvariant() public view override returns (uint256 invariant) {
-        (invariant, ) = _calculateCurrentValues();
+        return _calculateInvariant();
     }
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)
