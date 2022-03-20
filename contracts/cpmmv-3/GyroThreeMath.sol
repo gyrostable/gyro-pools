@@ -45,6 +45,7 @@ library GyroThreeMath {
     uint8 internal constant _INVARIANT_MIN_ITERATIONS = 5;
 
     uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31; // 4.87e13 scaled; source: Theory
+    uint256 internal constant MIDDECIMAL = 1e9;  // splits the fixed point decimals into two.
 
     // Invariant is used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
@@ -200,17 +201,7 @@ library GyroThreeMath {
         }
 
         // Note: We know that a rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
-        uint256 deltaMinus;
-        {
-            uint256 rootEst3 = _safeLargePow3Down(rootEst);
-            deltaMinus = rootEst3.sub(
-                rootEst3.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
-            );
-            deltaMinus = deltaMinus.divDown(dfRootEst);
-        // == deltaMinus.mulUp(a), but with an optimized order of operations against errors
-//            deltaMinus = deltaMinus.sub(deltaMinus.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
-//            deltaMinus = deltaMinus.divUp(dfRootEst);
-        }
+        uint256 deltaMinus = _safeLargePow3ADown(rootEst, root3Alpha, dfRootEst);
 
         // TODO if needed, we can pull root3Alpha^2 out of mb and root3Alpha out of mc to avoid another 1e-18 error. But it's prob not worth it b/c these calculations have errors anyways.
         uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
@@ -260,19 +251,44 @@ library GyroThreeMath {
         uint256 fLSub = rootEst.mulDown(rootEst).mulDown(mb).add(rootEst.mulDown(mc)).add(md);
         // flPos = L^3 * a, but optimized against rounding errors.
         // TODO maybe add a _safeLargePow3Up()
-        uint256 fLPos = _safeLargePow3Down(rootEst);
-        fLPos = fLPos.sub(fLPos.mulUp(root3Alpha).mulUp(root3Alpha).mulUp(root3Alpha));
+        uint256 fLPos = _safeLargePow3ADown(rootEst, root3Alpha, FixedPoint.ONE);
+        // fLPos = fLPos.sub(fLPos.mulUp(root3Alpha).mulUp(root3Alpha).mulUp(root3Alpha));
         isUnderestimated = (fLPos <= fLSub);
     }
 
-    /// @dev x^3 when x can be so large that two `mulDown` calls would overflow.
-    function _safeLargePow3Down(uint256 x) internal pure returns (uint256 ret) {
-        ret = x.mulDown(x);
-        // TODO Maybe just do without this check.
-        if (x > _SAFE_LARGE_POW3_THRESHOLD)
-            ret = Math.mul(ret, x / FixedPoint.ONE).add(ret.mulDown(x % FixedPoint.ONE));
-        else
-            ret = ret.mulDown(x);
+    /** @dev Equal to l^3 * (1 - root3Alpha^3) / d. However, we ensure the order of
+      * operations is such that rounding errors are minimized AND this also works in a
+      * scenario where these operations would overflow, i.e., when l^3 * 10^36 does not
+      * fit into uint256.
+      * We assume d >= ONE and, of course, root3Alpha < ONE. In practice, d ~ l^2 */
+    function _safeLargePow3ADown(uint256 l, uint256 root3Alpha, uint256 d) internal pure returns (uint256 ret) {
+        if (l <= _SAFE_LARGE_POW3_THRESHOLD) {
+            // Simple case where there is no overflow
+            ret = l.mulDown(l).mulDown(l);
+            ret = ret.sub(ret.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
+            ret = ret.divDown(d);
+        } else {
+            ret = l.mulDown(l);
+            // These products split up the factors into different groups of decimal places to reduce temorary blowup.
+            ret = Math.mul(ret, l / FixedPoint.ONE).add(ret.mulDown(l % FixedPoint.ONE));
+            uint256 x = ret;
+            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
+                x.mulDown(root3Alpha % MIDDECIMAL)
+            );
+            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
+                x.mulDown(root3Alpha % MIDDECIMAL)
+            );
+            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
+                x.mulDown(root3Alpha % MIDDECIMAL)
+            );
+            ret = ret.sub(x);
+
+            // We perform half-precision division to reduce blowup.
+            // In contrast to the above multiplications, this precision if d is small.
+            // However, tests show that, for the l and d values considered here, no precision
+            // is actually lost.
+            ret = Math.divDown(Math.mul(ret, MIDDECIMAL), Math.divDown(d, MIDDECIMAL));
+        }
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the

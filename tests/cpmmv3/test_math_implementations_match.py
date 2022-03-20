@@ -264,6 +264,32 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
 
 
 @given(
+    l=qdecimals('1e12', '1e16'),
+    root_three_alpha=st.decimals(
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+    ),
+)
+@example(
+    l=D('651894673872645.123456789012345678'),
+    root_three_alpha=D(ROOT_ALPHA_MAX)
+)
+def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
+    l3 = l * l * l
+    res_math_nod = l3 - l3 * root_three_alpha * root_three_alpha * root_three_alpha
+    res_sol_nod = unscale(gyro_three_math_testing.safeLargePow3ADown(
+        scale(l), scale(root_three_alpha), scale(1)
+    ))
+    assert res_math_nod == res_sol_nod.approxed(abs=D('2e-18'))
+
+    d = l * l * D('0.973894092617384965')  # We only test the right order of magnitude
+    res_math_d = res_math_nod / d
+    res_sol_d = unscale(gyro_three_math_testing.safeLargePow3ADown(
+        scale(l), scale(root_three_alpha), scale(d)
+    ))
+    assert res_math_d == res_sol_d
+
+
+@given(
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     ),
