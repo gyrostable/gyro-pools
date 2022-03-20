@@ -257,7 +257,7 @@ library GyroThreeMath {
             uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
 
-            amountOut = virtOutUnder.mulUp(amountIn).divDown(virtInOver.add(amountIn));
+            amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
         _require(amountOut < balanceOut, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
