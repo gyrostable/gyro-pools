@@ -39,9 +39,10 @@ library GyroCEMMMath {
         int256 beta;
         // Rotation vector:
         // phi in (-90 degrees, 0] is the implicit rotation vector. It's stored as a point:
-        int256 c; // c = cos(-phi) >= 0.
-        int256 s; //  s = sin(-phi) >= 0.
+        int256 c; // c = cos(-phi) >= 0. rounded to 18 decimals
+        int256 s; //  s = sin(-phi) >= 0. rounded to 18 decimals
         // Invariant: c^2 + s^2 == 1, i.e., the point (c, s) is normalized.
+        // due to rounding, this may not = 1. The term dSq in DerivedParams corrects for this in extra precision
 
         // Stretching factor:
         int256 lambda; // lambda >= 1 where lambda == 1 is the circle.
@@ -53,19 +54,21 @@ library GyroCEMMMath {
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
-        validateNormed(Vector2(params.c, params.s), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
+        // rescale s,c b/c validateNormed performed in higher precision
+        validateNormed(Vector2(params.c * 1e20, params.s * 1e20), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
 
+    // terms in this struct are stored in extra precision (38 decimals)
     struct DerivedParams {
         Vector2 tauAlpha;
         Vector2 tauBeta;
-        int256 u;
-        int256 v;
-        int256 w;
-        int256 z;
-        int256 dSq;
-        int256 dAlpha;
-        int256 dBeta;
+        int256 u; // from (A chi)_y = lambda * u + v
+        int256 v; // from (A chi)_y = lambda * u + v
+        int256 w; // from (A chi)_x = w / lambda + z
+        int256 z; // from (A chi)_x = w / lambda + z
+        int256 dSq; // error in c^2 + s^2 = dSq, used to correct errors in c, s, tau, u,v,w,z calculations
+        //int256 dAlpha; // normalization constant for tau(alpha)
+        //int256 dBeta; // normalization constant for tau(beta)
     }
 
     struct Vector2 {
@@ -80,12 +83,13 @@ library GyroCEMMMath {
     }
 
     /// @dev Ensures that `v` is approximately normed (i.e., lies on the unit circle).
-    function validateNormed(Vector2 memory v, uint256 error_code) internal pure {
-        int256 norm = v.x.mulDown(v.x);
-        norm = norm.add(v.y.mulDown(v.y));
+    /// performed in extra precision (38 decimals) to accomodate tauAlpha, tauBeta
+    function validateNormed(Vector2 memory v, uint256 errorCode) internal pure {
+        int256 norm = v.x.mulXp(v.x);
+        norm = norm.add(v.y.mulXp(v.y));
         _require(
-            SignedFixedPoint.ONE - VALIDATION_PRECISION_NORMED_INPUT <= norm && norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_NORMED_INPUT,
-            error_code
+            SignedFixedPoint.ONE_XP - VALIDATION_PRECISION_NORMED_INPUT <= norm && norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_NORMED_INPUT,
+            errorCode
         );
     }
 
@@ -112,6 +116,8 @@ library GyroCEMMMath {
             pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
             GyroCEMMPoolErrors.DERIVED_ZETA_WRONG
         );
+        // TODO: check that dSq is consistent with c^2 + s^2
+        // TODO: check that u,v,w,z are consistent
     }
 
     function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
@@ -534,7 +540,8 @@ library GyroCEMMMath {
     }
 
     /** @dev Variables are named for calculating y given x
-     *  to calculate x given y, change x->y, s->c, c->s, a_>b, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y */
+     *  to calculate x given y, change x->y, s->c, c->s, a_>b, b->a, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y
+     *  calculates an overestimate of calculated reserve post-swap */
     function solveQuadraticSwap(
         int256 lambda,
         int256 x,
@@ -564,7 +571,7 @@ library GyroCEMMMath {
         // account for 1 factor of dSq (2 s,c factors)
         Vector2 memory sTerm;
         sTerm.x = lamBar.y.mulDown(s).mulDown(s).divXp(dSq);
-        sTerm.y = lamBar.x.mulUp(s).mulUp(s).divXp(dSq) + 1; // account for rounding error in divXp
+        sTerm.y = lamBar.x.mulUp(s).mulUp(s).divXp(dSq + 1) + 1; // account for rounding error in dSq, divXp
         sTerm = Vector2(SignedFixedPoint.ONE_XP.sub(sTerm.x), SignedFixedPoint.ONE_XP.sub(sTerm.y));
 
         // now compute the argument of the square root
@@ -608,7 +615,7 @@ library GyroCEMMMath {
         int256 termXp = tauBeta.x.mulXp(tauBeta.y).divXp(dSq).divXp(dSq);
         if (termXp > 0) {
             q.a = r.x.mulUp(r.x).mulUp(2 * s);
-            q.a = q.a.mulUp(c).mulUpXpToNp(termXp);
+            q.a = q.a.mulUp(c).mulUpXpToNp(termXp + 7); // +7 account for rounding in termXp
         } else {
             q.a = r.y.mulDown(r.y).mulDown(2 * s);
             q.a = q.a.mulDown(c).mulUpXpToNp(termXp);
@@ -617,7 +624,8 @@ library GyroCEMMMath {
         // -rx 2c tau(beta)_x
         //      account for 1 factor of dSq (2 s,c factors)
         if (tauBeta.x < 0) {
-            q.b = r.x.mulUp(x).mulUp(2 * c).mulUpXpToNp(-tauBeta.x.divXp(dSq));
+            // +3 account for rounding in extra precision terms
+            q.b = r.x.mulUp(x).mulUp(2 * c).mulUpXpToNp(-tauBeta.x.divXp(dSq) + 3);
         } else {
             q.b = (-r.y).mulDown(x).mulDown(2 * c).mulUpXpToNp(tauBeta.x.divXp(dSq));
         }
@@ -626,7 +634,7 @@ library GyroCEMMMath {
 
         // q.b = r^2 s^2 tau(beta)_y^2
         //      account for 2 factors of dSq (4 s,c factors)
-        termXp = tauBeta.y.mulXp(tauBeta.y).divXp(dSq).divXp(dSq);
+        termXp = tauBeta.y.mulXp(tauBeta.y).divXp(dSq).divXp(dSq) + 7; // +7 account for rounding in termXp
         q.b = r.x.mulUp(r.x).mulUp(s);
         q.b = q.b.mulUp(s).mulUpXpToNp(termXp);
 
@@ -644,7 +652,7 @@ library GyroCEMMMath {
 
         // + r^2 c^2 tau(beta)_x^2
         //      account for 2 factors of dSq (4 s,c factors)
-        termXp = tauBeta.x.mulXp(tauBeta.x).divXp(dSq).divXp(dSq);
+        termXp = tauBeta.x.mulXp(tauBeta.x).divXp(dSq).divXp(dSq) + 7; // +7 account for rounding in termXp
         int256 val = r.x.mulUp(r.x).mulUp(c).mulUp(c);
         return (val.mulUpXpToNp(termXp)).add(q.a);
     }

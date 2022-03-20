@@ -47,6 +47,11 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     int256 public immutable _tauAlphaY;
     int256 public immutable _tauBetaX;
     int256 public immutable _tauBetaY;
+    int256 public immutable _u;
+    int256 public immutable _v;
+    int256 public immutable _w;
+    int256 public immutable _z;
+    int256 public immutable _dSq;
 
     IGyroConfig public gyroConfig;
 
@@ -67,20 +72,26 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         );
 
         GyroCEMMMath.validateDerivedParams(params.cemmParams, params.derivedCemmParams);
-        (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY) = (
+        (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY, _u, _v, _w, _z, _dSq) = (
             params.derivedCemmParams.tauAlpha.x,
             params.derivedCemmParams.tauAlpha.y,
             params.derivedCemmParams.tauBeta.x,
-            params.derivedCemmParams.tauBeta.y
+            params.derivedCemmParams.tauBeta.y,
+            params.derivedCemmParams.u,
+            params.derivedCemmParams.v,
+            params.derivedCemmParams.w,
+            params.derivedCemmParams.z,
+            params.derivedCemmParams.dSq
         );
 
         gyroConfig = IGyroConfig(configAddress);
     }
 
     /** @dev reconstructs CEMM params structs from immutable arrays */
-    function reconstructCEMMParams() internal view returns (GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory derived) {
+    function reconstructCEMMParams() internal view returns (GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory d) {
         (params.alpha, params.beta, params.c, params.s, params.lambda) = (_paramsAlpha, _paramsBeta, _paramsC, _paramsS, _paramsLambda);
-        (derived.tauAlpha.x, derived.tauAlpha.y, derived.tauBeta.x, derived.tauBeta.y) = (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY);
+        (d.tauAlpha.x, d.tauAlpha.y, d.tauBeta.x, d.tauBeta.y) = (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY);
+        (d.u, d.v, d.w, d.z, d.dSq) = (_u, _v, _w, _z, _dSq);
     }
 
     /**

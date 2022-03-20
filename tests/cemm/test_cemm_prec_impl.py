@@ -538,8 +538,8 @@ def test_solveQuadraticSwap_sense_check(params, balances):
 # also tests calcXGivenY
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
     invariant = prec_impl.calculateInvariant(balances, params, derived)
 
     error_tolx = max(
@@ -551,28 +551,43 @@ def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(balances[0]), scale(params), scale(derived), scale(invariant)
+        scale(balances[0]), scale(params), derived_scaled, scale(invariant)
     )
     assert y_py <= unscale(y_sol)
     assert y_py == unscale(y_sol).approxed(abs=error_tolx)
+    assert y_py >= balances[1]
 
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(balances[1]), scale(params), scale(derived), scale(invariant)
+        scale(balances[1]), scale(params), derived_scaled, scale(invariant)
     )
     assert x_py <= unscale(x_sol)
     assert x_py == unscale(x_sol).approxed(abs=error_toly)
+    assert x_py >= balances[0]
+
+
+@settings(max_examples=1000)
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_calcYGivenX_property(params, balances):
+    derived = prec_impl.calc_derived_values(params)
+    invariant = prec_impl.calculateInvariant(balances, params, derived)
+
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
+    assert y_py >= balances[1]
+
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
+    assert x_py >= balances[0]
 
 
 @given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX_sense_check(params, balances):
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
     invariant = prec_impl.calculateInvariant(balances, params, derived)
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
 
+    mparams = util.params2MathParams(params)
     # sense test against old implementation
     midprice = (params.alpha + params.beta) / 2
     cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.

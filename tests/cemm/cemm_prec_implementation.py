@@ -28,8 +28,8 @@ class DerivedParams(NamedTuple):
     w: D2
     z: D2
     dSq: D2
-    dAlpha: D2
-    dBeta: D2
+    # dAlpha: D2
+    # dBeta: D2
 
 
 class Vector2(NamedTuple):
@@ -216,12 +216,12 @@ def calcXpXpDivLambdaLambda(
     x: D, r: Iterable[D], lam: D, s: D, c: D, tauBeta: Iterable[D2], dSq: D2
 ) -> D:
     val = D(r[0]).mul_up(r[0]).mul_up(c).mul_up(c)
-    val = mulUpXpToNp(val, tauBeta[0] * tauBeta[0] / dSq / dSq)
+    val = mulUpXpToNp(val, tauBeta[0] * tauBeta[0] / dSq / dSq + D2("7e-38"))
 
     termXp = tauBeta[0] * tauBeta[1] / dSq / dSq
     if termXp > 0:
         q_a = D(r[0]).mul_up(r[0]).mul_up(2 * s).mul_up(c)
-        q_a = mulUpXpToNp(q_a, termXp)
+        q_a = mulUpXpToNp(q_a, termXp + D2("7e-38"))
     else:
         q_a = D(r[1]) * r[1] * (2 * s) * c
         q_a = mulUpXpToNp(q_a, termXp)
@@ -229,13 +229,13 @@ def calcXpXpDivLambdaLambda(
     termXp = tauBeta[0] / dSq
     if tauBeta[0] < 0:
         q_b = D(r[0]).mul_up(x).mul_up(2 * c)
-        q_b = mulUpXpToNp(q_b, -termXp)
+        q_b = mulUpXpToNp(q_b, -termXp + D2("3e-38"))
     else:
         q_b = -D(r[1]) * x * (2 * c)
         q_b = mulUpXpToNp(q_b, termXp)
     q_a = q_a + q_b
 
-    termXp = tauBeta[1] * tauBeta[1] / dSq / dSq
+    termXp = tauBeta[1] * tauBeta[1] / dSq / dSq + D2("7e-38")
     q_b = D(r[0]).mul_up(r[0]).mul_up(s).mul_up(s)
     q_b = mulUpXpToNp(q_b, termXp)
 
@@ -274,7 +274,7 @@ def solveQuadraticSwap(
     s2 = D2(D(s).raw)
     sTerm = (
         D2(1) - lamBar[1] * s2 * s2 / dSq,
-        D2(1) - lamBar[0].mul_up(s2).mul_up(s2) / dSq - D2("1e-38"),
+        D2(1) - lamBar[0].mul_up(s2).mul_up(s2) / (dSq + D2("1e-38")) - D2("1e-38"),
     )
 
     qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, tauBeta, dSq)
@@ -295,7 +295,7 @@ def calcYGivenX(x: D, p: Params, d: DerivedParams, invariant: D) -> D:
     r = (invariantOverestimate(invariant), invariant)
     a = virtualOffset0(p, d, r)
     b = virtualOffset1(p, d, r)
-    y = solveQuadraticSwap(p.l, x, p.s, p.c, invariant, (a, b), d.tauBeta)
+    y = solveQuadraticSwap(p.l, x, p.s, p.c, r, (a, b), d.tauBeta, d.dSq)
     return y
 
 
@@ -304,49 +304,8 @@ def calcXGivenY(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
     a = virtualOffset0(p, d, r)
     b = virtualOffset1(p, d, r)
     tau_beta = (-d.tauAlpha[0], d.tauAlpha[1])
-    x = solveQuadraticSwap(p.l, y, p.c, p.s, invariant, (b, a), tau_beta)
+    x = solveQuadraticSwap(p.l, y, p.c, p.s, r, (b, a), tau_beta, d.dSq)
     return x
-
-
-# for true value of invariant r
-def calcYGivenX_true(x: D, p: Params, d: DerivedParams, invariant: D) -> D:
-    r = (invariant + D("1e-18"), invariant)
-    a = virtualOffset0(p, d, r)
-    b = virtualOffset1(p, d, r)
-    y = solveQuadraticSwap_true(p.l, x, p.s, p.c, invariant, (a, b), d.tauBeta)
-    return y
-
-
-def calcXGivenY_true(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
-    r = (invariant + D("1e-18"), invariant)
-    a = virtualOffset0(p, d, r)
-    b = virtualOffset1(p, d, r)
-    tau_beta = (-d.tauAlpha[0], d.tauAlpha[1])
-    x = solveQuadraticSwap_true(p.l, y, p.c, p.s, r, (b, a), tau_beta)
-    return x
-
-
-def solveQuadraticSwap_true(
-    lam: D, x: D, s: D, c: D, r: Iterable[D], ab: Iterable[D], tauBeta: Iterable[D]
-) -> D:
-    lamBar = (D(1) - (D(1) / lam / lam), D(1) - D(1).div_up(lam).div_up(lam))
-    xp = x - ab[0]
-    if xp > 0:
-        qb = -xp * lamBar[1] * s * c
-    else:
-        qb = -D(xp).mul_up(lamBar[0]).mul_up(s).mul_up(c)
-
-    sTerm = (D(1) - lamBar[1] * s * s, D(1) - lamBar[0].mul_up(s).mul_up(s))
-
-    qc = -calcXpXpDivLambdaLambda(x, r, lam, s, c, tauBeta) + r[1] * r[1] * sTerm[0]
-    if qc < 0:
-        qc = 0
-    qc = D(qc).sqrt()
-
-    if qb - qc > 0:
-        return D(qb - qc).div_up(sTerm[1]) + ab[1]
-    else:
-        return (qb - qc) / (sTerm[0]) + ab[1]
 
 
 def invariantOverestimate(rDown: D) -> D:
@@ -448,8 +407,8 @@ def calc_derived_values(p: Params) -> DerivedParams:
         w=D2(w.raw),
         z=D2(z.raw),
         dSq=D2(dSq.raw),
-        dAlpha=D2(dAlpha.raw),
-        dBeta=D2(dBeta.raw),
+        # dAlpha=D2(dAlpha.raw),
+        # dBeta=D2(dBeta.raw),
     )
     return derived
 
@@ -463,8 +422,8 @@ def scale_derived_values(d: DerivedParams) -> DerivedParams:
         w=d.w * D2("1e38"),
         z=d.z * D2("1e38"),
         dSq=d.dSq * D2("1e38"),
-        dAlpha=d.dAlpha * D2("1e38"),
-        dBeta=d.dBeta * D2("1e38"),
+        # dAlpha=d.dAlpha * D2("1e38"),
+        # dBeta=d.dBeta * D2("1e38"),
     )
     return derived
 
