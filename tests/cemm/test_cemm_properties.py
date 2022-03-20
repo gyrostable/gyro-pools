@@ -35,7 +35,12 @@ DP_IN_SOL = False
 
 
 bpool_params = BasicPoolParameters(
-    MIN_PRICE_SEPARATION, MAX_IN_RATIO, MAX_OUT_RATIO, MIN_BALANCE_RATIO, MIN_FEE
+    MIN_PRICE_SEPARATION,
+    MAX_IN_RATIO,
+    MAX_OUT_RATIO,
+    MIN_BALANCE_RATIO,
+    MIN_FEE,
+    int(D("1e11")),
 )
 
 
@@ -111,7 +116,6 @@ def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
 ### test liquidityInvariantUpdate for L change
 
 
-@pytest.mark.skip(reason="Data generation slow")
 @given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
 def test_invariant_across_liquidityInvariantUpdate(
     gyro_cemm_math_testing, params_cemm_dinvariant

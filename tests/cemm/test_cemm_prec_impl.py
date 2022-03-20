@@ -37,7 +37,12 @@ MIN_FEE = D("0.0002")
 
 
 bpool_params = BasicPoolParameters(
-    MIN_PRICE_SEPARATION, MAX_IN_RATIO, MAX_OUT_RATIO, MIN_BALANCE_RATIO, MIN_FEE
+    MIN_PRICE_SEPARATION,
+    MAX_IN_RATIO,
+    MAX_OUT_RATIO,
+    MIN_BALANCE_RATIO,
+    MIN_FEE,
+    int(D("1e11")),
 )
 
 
@@ -272,11 +277,14 @@ def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
 def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-    result_py = prec_impl.calcInvariantSqrt(balances[0], balances[1], params, derived)
-    result_sol = gyro_cemm_math_testing.calcInvariantSqrt(
+    result_py, err_py = prec_impl.calcInvariantSqrt(
+        balances[0], balances[1], params, derived
+    )
+    result_sol, err_sol = gyro_cemm_math_testing.calcInvariantSqrt(
         scale(balances[0]), scale(balances[1]), scale(params), derived_scaled
     )
     assert result_py == unscale(result_sol).approxed(abs=D("5e-18"))  # (rel=D("1e-13"))
+    assert err_py == unscale(err_sol)
 
 
 @given(
@@ -286,13 +294,14 @@ def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
 def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-    result_py = prec_impl.calculateInvariant(balances, params, derived)
-    result_sol = gyro_cemm_math_testing.calculateInvariant(
+    result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
+    result_sol, err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
     denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
     err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
     assert result_py == unscale(result_sol).approxed(abs=err)
+    assert err_py == unscale(err_sol)
 
 
 @given(
@@ -342,8 +351,8 @@ def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    r = (prec_impl.invariantOverestimate(invariant), invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
     XpXp_py = prec_impl.calcXpXpDivLambdaLambda(
         balances[0], r, params.l, params.s, params.c, derived.tauBeta, derived.dSq
@@ -364,8 +373,8 @@ def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
 def test_calcXpXpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    r = (prec_impl.invariantOverestimate(invariant), invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
     XpXp_py = prec_impl.calcXpXpDivLambdaLambda(
         balances[0], r, params.l, params.s, params.c, derived.tauBeta, derived.dSq
@@ -382,8 +391,8 @@ def test_calcYpYpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    r = (prec_impl.invariantOverestimate(invariant), invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
     tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
     tau_beta_scaled = Vector2(-derived_scaled.tauAlpha[0], derived_scaled.tauAlpha[1])
@@ -406,8 +415,8 @@ def test_calcYpYpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
 def test_calcYpYpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    r = (prec_impl.invariantOverestimate(invariant), invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
     tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
     YpYp_py = prec_impl.calcXpXpDivLambdaLambda(
@@ -435,8 +444,8 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    r = (prec_impl.invariantOverestimate(invariant), invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
     a = prec_impl.virtualOffset0(params, derived, r)
     b = prec_impl.virtualOffset1(params, derived, r)
     # the error comes from the square root and from the square root in r (in the offset)
@@ -500,8 +509,8 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
 def test_solveQuadraticSwap_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    r = (prec_impl.invariantOverestimate(invariant), invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
     a = prec_impl.virtualOffset0(params, derived, r)
     b = prec_impl.virtualOffset1(params, derived, r)
 
@@ -543,52 +552,53 @@ def test_solveQuadraticSwap_sense_check(params, balances):
 def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
-    error_tolx = max(
-        invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
-    ) * D("5e-13")
-    error_toly = max(
-        invariant * params.l * params.c, invariant, balances[1] / params.l / params.l
-    ) * D("5e-13")
+    # error_tolx = max(
+    #     invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
+    # ) * D("5e-13")
+    # error_toly = max(
+    #     invariant * params.l * params.c, invariant, balances[1] / params.l / params.l
+    # ) * D("5e-13")
 
-    y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(balances[0]), scale(params), derived_scaled, scale(invariant)
+        scale(balances[0]), scale(params), derived_scaled, scale(r)
     )
     assert y_py <= unscale(y_sol)
-    assert y_py == unscale(y_sol).approxed(abs=error_tolx)
-    assert y_py >= balances[1]
+    assert y_py == unscale(y_sol).approxed(abs=D("5e-18"))  # .approxed(abs=error_tolx)
 
-    x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(balances[1]), scale(params), derived_scaled, scale(invariant)
+        scale(balances[1]), scale(params), derived_scaled, scale(r)
     )
     assert x_py <= unscale(x_sol)
-    assert x_py == unscale(x_sol).approxed(abs=error_toly)
-    assert x_py >= balances[0]
+    assert x_py == unscale(x_sol).approxed(abs=D("5e-18"))  # .approxed(abs=error_toly)
 
 
 # @settings(max_examples=1000)
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX_property(params, balances):
     derived = prec_impl.calc_derived_values(params)
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
-    y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     assert y_py >= balances[1]
 
-    x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
     assert x_py >= balances[0]
 
 
 @given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
-    y_py = prec_impl.calcYGivenX(balances[0], params, derived, invariant)
-    x_py = prec_impl.calcXGivenY(balances[1], params, derived, invariant)
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
 
     mparams = util.params2MathParams(params)
     # sense test against old implementation
@@ -612,15 +622,16 @@ def test_calcYGivenX_sense_check(params, balances):
 def test_maxBalances(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
 
-    xp_py = prec_impl.maxBalances0(params, derived, invariant)
-    yp_py = prec_impl.maxBalances1(params, derived, invariant)
+    xp_py = prec_impl.maxBalances0(params, derived, r)
+    yp_py = prec_impl.maxBalances1(params, derived, r)
     xp_sol = gyro_cemm_math_testing.maxBalances0(
-        scale(params), derived_scaled, scale(invariant)
+        scale(params), derived_scaled, scale(r)
     )
     yp_sol = gyro_cemm_math_testing.maxBalances1(
-        scale(params), derived_scaled, scale(invariant)
+        scale(params), derived_scaled, scale(r)
     )
     assert xp_py == unscale(xp_sol)
     assert yp_py == unscale(yp_sol)

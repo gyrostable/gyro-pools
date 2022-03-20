@@ -59,19 +59,21 @@ def virtualOffset1(p: Params, d: DerivedParams, r: Iterable[D]) -> D:
     return b
 
 
-def maxBalances0(p: Params, d: DerivedParams, r: D) -> D:
+def maxBalances0(p: Params, d: DerivedParams, r: Iterable[D]) -> D:
     termXp1 = (D2(d.tauBeta[0]) - d.tauAlpha[0]) / d.dSq
     termXp2 = (D2(d.tauBeta[1]) - d.tauAlpha[1]) / d.dSq
-    xp = mulDownXpToNp(D(r) * p.l * p.c, termXp1)
-    xp += mulDownXpToNp(D(r) * p.s, termXp2)
+    xp = mulDownXpToNp(D(r[1]) * p.l * p.c, termXp1)
+    termNp = D(r[1]) * p.s if termXp2 > 0 else D(r[0]).mul_up(p.s)
+    xp += mulDownXpToNp(termNp, termXp2)
     return xp
 
 
-def maxBalances1(p: Params, d: DerivedParams, r: D) -> D:
+def maxBalances1(p: Params, d: DerivedParams, r: Iterable[D]) -> D:
     termXp1 = (D2(d.tauBeta[0]) - d.tauAlpha[0]) / d.dSq
     termXp2 = (D2(d.tauAlpha[1]) - d.tauBeta[1]) / d.dSq
-    yp = mulDownXpToNp(D(r) * p.l * p.s, termXp1)
-    yp += mulDownXpToNp(D(r) * p.c, termXp2)
+    yp = mulDownXpToNp(D(r[1]) * p.l * p.s, termXp1)
+    termNp = D(r[1]) * p.c if termXp2 > 0 else D(r[0]).mul_up(p.c)
+    yp += mulDownXpToNp(termNp, termXp2)
     return yp
 
 
@@ -154,7 +156,9 @@ def calc2AtxAtyAChixAChiy(x: D, y: D, p: Params, d: DerivedParams) -> D:
         D2(d.dSq),
     )
     xy = D(y) * (2 * D(x))
-    termNp = (D(x) * x - D(y) * y) * (2 * p.c) * p.s + xy * p.c * p.c - xy * p.s * p.s
+    termNp = (
+        (D(x) * x - D(y).mul_up(y)) * (2 * p.c) * p.s + xy * p.c * p.c - xy * p.s * p.s
+    )
 
     termXp = z * u + (w * u + z * v) / lam + w * v / lam / lam
     termXp = termXp / dSq / dSq / dSq / dSq
@@ -186,30 +190,40 @@ def calcMinAtyAChixSqPlusAtySq(x: D, y: D, p: Params, d: DerivedParams) -> D:
     return val
 
 
-def calcInvariantSqrt(x: D, y: D, p: Params, d: DerivedParams) -> D:
+def calcInvariantSqrt(x: D, y: D, p: Params, d: DerivedParams) -> tuple[D, D]:
     val = (
         calcMinAtxAChiySqPlusAtxSq(x, y, p, d)
         + calc2AtxAtyAChixAChiy(x, y, p, d)
         + calcMinAtyAChixSqPlusAtySq(x, y, p, d)
     )
     if D(x) > D("1e11") or D(y) > D("1e11"):
-        err = (D(x) * x + D(y) * y) / D("1e38") * D("100e-18")
+        err = (D(x).mul_up(x) + D(y).mul_up(y)) / D("1e38") * D("100e-18")
     else:
         err = D("100e-18")
 
     val -= err
     if val < 0:
         val = 0
-    return D(val).sqrt()
+    return D(val).sqrt(), err
+
+
+def calculateInvariantWithError(
+    balances: Iterable[D], p: Params, d: DerivedParams
+) -> tuple[D, D]:
+    x, y = (D(balances[0]), D(balances[1]))
+    AtAChi = calcAtAChi(x, y, p, d)
+    sqrt, err = calcInvariantSqrt(x, y, p, d)
+    denominator = calcAChiAChi(p, d) - D(1)
+    assert denominator > 0
+    err = D(err) * 1000  # error in sqrt is O(error in square)
+    # error scales if denominator is small
+    err = err if denominator > 1 else err.div_up(D(denominator))
+    return (AtAChi - D("100e-18") + sqrt) / denominator, err
 
 
 def calculateInvariant(balances: Iterable[D], p: Params, d: DerivedParams) -> D:
-    x, y = (D(balances[0]), D(balances[1]))
-    AtAChi = calcAtAChi(x, y, p, d)
-    sqrt = calcInvariantSqrt(x, y, p, d)
-    denominator = calcAChiAChi(p, d) - D(1)
-    assert denominator > 0
-    return (AtAChi + sqrt) / denominator
+    invariant, err = calculateInvariantWithError(balances, p, d)
+    return invariant
 
 
 def calcXpXpDivLambdaLambda(
@@ -291,16 +305,14 @@ def solveQuadraticSwap(
         return qa + ab[1]
 
 
-def calcYGivenX(x: D, p: Params, d: DerivedParams, invariant: D) -> D:
-    r = (invariantOverestimate(invariant), invariant)
+def calcYGivenX(x: D, p: Params, d: DerivedParams, r: Iterable[D]) -> D:
     a = virtualOffset0(p, d, r)
     b = virtualOffset1(p, d, r)
     y = solveQuadraticSwap(p.l, x, p.s, p.c, r, (a, b), d.tauBeta, d.dSq)
     return y
 
 
-def calcXGivenY(y: D, p: Params, d: DerivedParams, invariant: D) -> D:
-    r = (invariantOverestimate(invariant), invariant)
+def calcXGivenY(y: D, p: Params, d: DerivedParams, r: Iterable[D]) -> D:
     a = virtualOffset0(p, d, r)
     b = virtualOffset1(p, d, r)
     tau_beta = (-d.tauAlpha[0], d.tauAlpha[1])
@@ -434,7 +446,7 @@ def calc_invariant_error(params, derived, balances):
         err = (D(x) * x + D(y) * y) / D("1e38") * D("100e-18")
     else:
         err = D("100e-18")
-    err = err * 5  # error in sqrt is O(error in square)
+    err = err * 10  # error in sqrt is O(error in square)
     denominator = calcAChiAChi(params, derived) - D(1)
     # error scales if denominator is small
     err = err if denominator > 1 else err / D(denominator)

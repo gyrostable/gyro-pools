@@ -248,53 +248,66 @@ library GyroCEMMMath {
 
     /** Maximal value for the real reserves x when the respective other balance is 0 for given invariant
      *  See calculation in Section 2.1.2. Calculation is ordered here for precision, but erorr in r is magnified by lambda
-     *  Rounding direction is ignored and is corrected for later in MIN_BAL_RATIO */
+     *  Rounds down in signed direction */
     function maxBalances0(
         Params memory p,
         DerivedParams memory d,
-        int256 r
+        Vector2 memory r // overestimate in x-component, underestimate in y-component
     ) internal pure returns (int256 xp) {
         // x^+ = r lambda c (tau(beta)_x - tau(alpha)_x) + rs (tau(beta)_y - tau(alpha)_y)
         //      account for 1 factors of dSq (2 s,c factors)
-        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq);
+        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x
         int256 termXp2 = (d.tauBeta.y.sub(d.tauAlpha.y)).divXp(d.dSq);
-        xp = r.mulDown(p.lambda).mulDown(p.c).mulDownXpToNp(termXp1);
-        xp = xp.add(r.mulDown(p.s).mulDownXpToNp(termXp2));
+        xp = r.y.mulDown(p.lambda).mulDown(p.c).mulDownXpToNp(termXp1);
+        xp = xp.add((termXp2 > 0 ? r.y.mulDown(p.s) : r.x.mulUp(p.s)).mulDownXpToNp(termXp2));
     }
 
     /** Maximal value for the real reserves y when the respective other balance is 0 for given invariant
      *  See calculation in Section 2.1.2. Calculation is ordered here for precision, but erorr in r is magnified by lambda
-     *  Rounding direction is ignored and is corrected for later in MIN_BAL_RATIO */
+     *  Rounds down in signed direction */
     function maxBalances1(
         Params memory p,
         DerivedParams memory d,
-        int256 r
+        Vector2 memory r // overestimate in x-component, underestimate in y-component
     ) internal pure returns (int256 yp) {
         // y^+ = r lambda s (tau(beta)_x - tau(alpha)_x) + rc (tau(alpha)_y - tau(beta)_y)
         //      account for 1 factors of dSq (2 s,c factors)
-        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq);
+        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x
         int256 termXp2 = (d.tauAlpha.y.sub(d.tauBeta.y)).divXp(d.dSq);
-        yp = r.mulDown(p.lambda).mulDown(p.s).mulDownXpToNp(termXp1);
-        yp = yp.add(r.mulDown(p.c).mulDownXpToNp(termXp2));
+        yp = r.y.mulDown(p.lambda).mulDown(p.s).mulDownXpToNp(termXp1);
+        yp = yp.add((termXp2 > 0 ? r.y.mulDown(p.c) : r.x.mulUp(p.c)).mulDownXpToNp(termXp2));
     }
 
     /** @dev Compute the invariant 'r' corresponding to the given values. The invariant can't be negative, but
      *  we use a signed value to store it because all the other calculations are happening with signed ints, too.
      *  Computes r according to Prop 13 in 2.2.1 Initialization from Real Reserves
      *  orders operations to achieve best precision
-     *  computes an underestimate */
+     *  Returns an underestimate and a bound on error size */
+    function calculateInvariantWithError(
+        uint256[] memory balances,
+        Params memory params,
+        DerivedParams memory derived
+    ) internal pure returns (int256, int256) {
+        (int256 x, int256 y) = (balances[0].toInt256(), balances[1].toInt256());
+        int256 AtAChi = calcAtAChi(x, y, params, derived);
+        (int256 sqrt, int256 err) = calcInvariantSqrt(x, y, params, derived);
+        // A chi \cdot A chi > 1, so round it up to round denominator up
+        int256 denominator = calcAChiAChi(params, derived).sub(ONE);
+        // account for rounding errors in AtAchi (but these shouldn't scale b/c balances won't be big enough for extra precision rounding error to scale)
+        int256 invariant = (AtAChi - 100).add(sqrt).divDown(denominator);
+        // error in sqrt is O(error in square) and is the largest error term, so scale by 100
+        // error also scales if denominator is small
+        err = denominator > ONE ? err * 1000 : (err * 1000).divUp(denominator);
+        return (invariant, err);
+    }
+
     function calculateInvariant(
         uint256[] memory balances,
         Params memory params,
         DerivedParams memory derived
     ) internal pure returns (uint256 uinvariant) {
-        (int256 x, int256 y) = (balances[0].toInt256(), balances[1].toInt256());
-        int256 AtAChi = calcAtAChi(x, y, params, derived);
-        int256 sqrt = calcInvariantSqrt(x, y, params, derived);
-        // A chi \cdot A chi > 1, so round it up to round denominator up
-        int256 denominator = calcAChiAChi(params, derived).sub(ONE);
-        int256 invariant = AtAChi.add(sqrt).divDown(denominator);
-        return invariant.toUint256();
+        (int256 invariant, ) = calculateInvariantWithError(balances, params, derived);
+        uinvariant = invariant.toUint256();
     }
 
     /// @dev calculate At \cdot A chi, ignores rounding direction
@@ -310,11 +323,11 @@ library GyroCEMMMath {
         int256 termXp = (d.w.divDown(p.lambda).add(d.z)).divDown(p.lambda).divXp(d.dSq).divXp(d.dSq);
         val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDownXpToNp(termXp);
 
-        // (x lambda s + y lambda c) * u
+        // (x lambda s + y lambda c) * u, note u > 0
         int256 termNp = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
         val = val.add(termNp.mulDownXpToNp(d.u.divXp(d.dSq).divXp(d.dSq)));
 
-        // (sx+cy) * v
+        // (sx+cy) * v, note v > 0
         termNp = x.mulDown(p.s).add(y.mulDown(p.c));
         val = val.add(termNp.mulDownXpToNp(d.v.divXp(d.dSq).divXp(d.dSq)));
     }
@@ -415,11 +428,11 @@ library GyroCEMMMath {
         int256 y,
         Params memory p,
         DerivedParams memory d
-    ) internal pure returns (int256 val) {
+    ) internal pure returns (int256 val, int256 err) {
         val = calcMinAtxAChiySqPlusAtxSq(x, y, p, d).add(calc2AtxAtyAChixAChiy(x, y, p, d));
         val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, d));
         // if balances are > 100b, then error in extra precision terms propagates to higher decimals, if not, then O(eps) error propagation
-        int256 err = (x > 1e29 || y > 1e29) ? (x.mulUp(x).add(y.mulUp(y)) / 1e38) * 100 : 100;
+        err = (x > 1e29 || y > 1e29) ? (x.mulUp(x).add(y.mulUp(y)) / 1e38) * 100 : 100;
         val = val.sub(err); // correct to downside for rounding error
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         val = val > 0 ? GyroPoolMath._sqrt(val.toUint256(), 5).toInt256() : 0;
@@ -454,7 +467,7 @@ library GyroCEMMMath {
     function checkAssetBounds(
         Params memory params,
         DerivedParams memory derived,
-        int256 invariant,
+        Vector2 memory invariant,
         int256 newBal,
         uint8 assetIndex
     ) internal pure {
@@ -474,9 +487,9 @@ library GyroCEMMMath {
         bool tokenInIsToken0,
         Params memory params,
         DerivedParams memory derived,
-        uint256 uinvariant
+        Vector2 memory invariant
     ) internal pure returns (uint256 amountOut) {
-        function(int256, Params memory, DerivedParams memory, int256) pure returns (int256) calcGiven;
+        function(int256, Params memory, DerivedParams memory, Vector2 memory) pure returns (int256) calcGiven;
         uint8 ixIn;
         uint8 ixOut;
         if (tokenInIsToken0) {
@@ -491,8 +504,8 @@ library GyroCEMMMath {
 
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         int256 balInNew = balances[ixIn].add(amountIn).toInt256();
-        checkAssetBounds(params, derived, uinvariant.toInt256(), balInNew, ixIn);
-        int256 balOutNew = calcGiven(balInNew, params, derived, uinvariant.toInt256());
+        checkAssetBounds(params, derived, invariant, balInNew, ixIn);
+        int256 balOutNew = calcGiven(balInNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
         _require(balOutNew.toUint256() < balances[ixOut], assetBoundError);
         if (balOutNew >= balInNew) {
@@ -510,9 +523,9 @@ library GyroCEMMMath {
         bool tokenInIsToken0,
         Params memory params,
         DerivedParams memory derived,
-        uint256 uinvariant
+        Vector2 memory invariant
     ) internal pure returns (uint256 amountIn) {
-        function(int256, Params memory, DerivedParams memory, int256) pure returns (int256) calcGiven;
+        function(int256, Params memory, DerivedParams memory, Vector2 memory) pure returns (int256) calcGiven;
         uint8 ixIn;
         uint8 ixOut;
         if (tokenInIsToken0) {
@@ -527,10 +540,10 @@ library GyroCEMMMath {
 
         _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         int256 balOutNew = balances[ixOut].sub(amountOut).toInt256();
-        int256 balInNew = calcGiven(balOutNew, params, derived, uinvariant.toInt256());
+        int256 balInNew = calcGiven(balOutNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
         _require(balInNew.toUint256() > balances[ixIn], assetBoundError);
-        checkAssetBounds(params, derived, uinvariant.toInt256(), balInNew, ixIn);
+        checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         if (balOutNew >= balInNew) {
             _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
         } else {
@@ -664,12 +677,12 @@ library GyroCEMMMath {
         int256 x,
         Params memory params,
         DerivedParams memory d,
-        int256 invariant
+        Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 y) {
         // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
         // note that the error correction here should more than make up for rounding directions in virtual offset functions
         // overestimate in x component, underestimate in y
-        Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
+        //Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
         Vector2 memory ab = Vector2(virtualOffset0(params, d, r), virtualOffset1(params, d, r));
         y = solveQuadraticSwap(params.lambda, x, params.s, params.c, r, ab, d.tauBeta, d.dSq);
@@ -679,12 +692,12 @@ library GyroCEMMMath {
         int256 y,
         Params memory params,
         DerivedParams memory d,
-        int256 invariant
+        Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 x) {
         // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
         // note that the error correction here should more than make up for rounding directions in virtual offset functions
         // overestimate in x component, underestimate in y
-        Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
+        //Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
         Vector2 memory ba = Vector2(virtualOffset1(params, d, r), virtualOffset0(params, d, r));
         // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX

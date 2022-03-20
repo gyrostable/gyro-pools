@@ -70,17 +70,25 @@ contract GyroCEMMMathTesting {
     function maxBalances0(
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant
+        GyroCEMMMath.Vector2 memory r
     ) external pure returns (int256) {
-        return GyroCEMMMath.maxBalances0(params, derived, invariant);
+        return GyroCEMMMath.maxBalances0(params, derived, r);
     }
 
     function maxBalances1(
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant
+        GyroCEMMMath.Vector2 memory r
     ) external pure returns (int256) {
-        return GyroCEMMMath.maxBalances1(params, derived, invariant);
+        return GyroCEMMMath.maxBalances1(params, derived, r);
+    }
+
+    function calculateInvariantWithError(
+        uint256[] memory balances,
+        GyroCEMMMath.Params memory params,
+        GyroCEMMMath.DerivedParams memory derived
+    ) external pure returns (int256, int256) {
+        return GyroCEMMMath.calculateInvariantWithError(balances, params, derived);
     }
 
     function calculateInvariant(
@@ -103,7 +111,7 @@ contract GyroCEMMMathTesting {
     function checkAssetBounds(
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant,
+        GyroCEMMMath.Vector2 memory invariant,
         int256 newBalance,
         uint8 assetIndex
     ) external pure {
@@ -116,9 +124,9 @@ contract GyroCEMMMathTesting {
         bool tokenInIsToken0,
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        uint256 uinvariant
+        GyroCEMMMath.Vector2 memory invariant
     ) external pure returns (uint256 amountOut) {
-        amountOut = GyroCEMMMath.calcOutGivenIn(balances, amountIn, tokenInIsToken0, params, derived, uinvariant);
+        amountOut = GyroCEMMMath.calcOutGivenIn(balances, amountIn, tokenInIsToken0, params, derived, invariant);
     }
 
     function calcInGivenOut(
@@ -127,16 +135,16 @@ contract GyroCEMMMathTesting {
         bool tokenInIsToken0,
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        uint256 uinvariant
+        GyroCEMMMath.Vector2 memory invariant
     ) external pure returns (uint256 amountIn) {
-        amountIn = GyroCEMMMath.calcInGivenOut(balances, amountOut, tokenInIsToken0, params, derived, uinvariant);
+        amountIn = GyroCEMMMath.calcInGivenOut(balances, amountOut, tokenInIsToken0, params, derived, invariant);
     }
 
     function calcYGivenX(
         int256 x,
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant
+        GyroCEMMMath.Vector2 memory invariant
     ) external pure returns (int256 y) {
         y = GyroCEMMMath.calcYGivenX(x, params, derived, invariant);
     }
@@ -145,7 +153,7 @@ contract GyroCEMMMathTesting {
         int256 y,
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
-        int256 invariant
+        GyroCEMMMath.Vector2 memory invariant
     ) external pure returns (int256 x) {
         x = GyroCEMMMath.calcXGivenY(y, params, derived, invariant);
     }
@@ -195,7 +203,7 @@ contract GyroCEMMMathTesting {
         int256 y,
         GyroCEMMMath.Params memory p,
         GyroCEMMMath.DerivedParams memory d
-    ) external pure returns (int256) {
+    ) external pure returns (int256, int256) {
         return GyroCEMMMath.calcInvariantSqrt(x, y, p, d);
     }
 
