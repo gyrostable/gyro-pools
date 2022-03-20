@@ -290,9 +290,8 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     result_sol = gyro_cemm_math_testing.calculateInvariant(
         scale(balances), scale(params), derived_scaled
     )
-    err = prec_impl.calc_invariant_error(params, derived, balances)
-    # err = D("1e-12") if denominator > 1 else D("1e-12") / D(denominator)
-    # assert result_py == unscale(result_sol).approxed(rel=err)
+    denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
+    err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
     assert result_py == unscale(result_sol).approxed(abs=err)
 
 

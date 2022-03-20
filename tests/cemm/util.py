@@ -55,8 +55,7 @@ def gen_params(draw):
 @st.composite
 def gen_params_cemm_dinvariant(draw):
     params = draw(gen_params())
-    mparams = params2MathParams(params)
-    derived = mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
     balances = draw(gen_balances(2, bpool_params))
     assume(balances[0] > 0 and balances[1] > 0)
     r = prec_impl.calculateInvariant(balances, params, derived)
@@ -120,11 +119,13 @@ def mtest_tau(params_px, gyro_cemm_math_testing):
     assert int(res_sol[1]) == scale(res_math[1]).approxed(abs=D("1e5"), rel=D("1e-16"))
 
 
+# TODO: this is out of date with new refactor
 def mk_CEMMMathDerivedParams_from_brownie(args):
     apair, bpair = args
     return CEMMMathDerivedParams(Vector2(*apair), Vector2(*bpair))
 
 
+# TODO: this is out of date with new refactor
 def mtest_mkDerivedParams(params, gyro_cemm_math_testing):
     # Accuracy of the derived params is that of tau.
     mparams = params2MathParams(params)
@@ -145,6 +146,7 @@ def mtest_mkDerivedParams(params, gyro_cemm_math_testing):
     )
 
 
+# TODO: this is out of date with new refactor
 def mtest_validateParamsAll(params, gyro_cemm_math_testing):
     mparams = params2MathParams(params)
     derived = mathParams2DerivedParams(mparams)
@@ -199,6 +201,7 @@ def gen_synthetic_invariant():
     return qdecimals(1, 100_000_000_000)
 
 
+# TODO: this is out of date with new refactor
 def gtest_virtualOffsets(params, invariant, derived, gyro_cemm_math_testing, abs, rel):
     mparams = params2MathParams(params)
     a_sol = gyro_cemm_math_testing.virtualOffset0(
@@ -216,6 +219,7 @@ def gtest_virtualOffsets(params, invariant, derived, gyro_cemm_math_testing, abs
     assert int(b_sol) == scale(b_py).approxed(abs=abs, rel=rel)
 
 
+# TODO: this is out of date with new refactor
 def mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     """Test Calculation of just the virtual offsets, not including the derived params calculation. This is exact."""
     derived = mathParams2DerivedParams(params2MathParams(params))
@@ -224,6 +228,7 @@ def mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     )
 
 
+# TODO: this is out of date with new refactor
 def mtest_virtualOffsets_with_derived(params, invariant, gyro_cemm_math_testing):
     """Test Calculation of just the virtual offsets, not including the derived params calculation. This is exact."""
     derived_scaled = mk_CEMMMathDerivedParams_from_brownie(
@@ -239,19 +244,13 @@ def mtest_virtualOffsets_with_derived(params, invariant, gyro_cemm_math_testing)
 
 
 def mtest_maxBalances(params, invariant, gyro_cemm_math_testing):
-    mparams = params2MathParams(params)
-    derived_sol = mk_CEMMMathDerivedParams_from_brownie(
-        gyro_cemm_math_testing.mkDerivedParams(scale(params))
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
     x_plus_sol = gyro_cemm_math_testing.maxBalances0(
-        scale(params), derived_sol, scale(invariant)
+        scale(params), derived_scaled, scale(invariant)
     )
     y_plus_sol = gyro_cemm_math_testing.maxBalances1(
-        scale(params), derived_sol, scale(invariant)
-    )
-    derived = CEMMMathDerivedParams(
-        Vector2(unscale(derived_sol[0][0]), unscale(derived_sol[0][1])),
-        Vector2(unscale(derived_sol[1][0]), unscale(derived_sol[1][1])),
+        scale(params), derived_scaled, scale(invariant)
     )
     xp_py = prec_impl.maxBalances0(params, derived, invariant)
     yp_py = prec_impl.maxBalances1(params, derived, invariant)
@@ -262,18 +261,17 @@ def mtest_maxBalances(params, invariant, gyro_cemm_math_testing):
 
 #####################################################################
 ### for testing the main math library functions
+# note in new implementation, derivedparams_is_sol is not possible
 
 
 def mtest_calculateInvariant(
     params, balances, derivedparams_is_sol: bool, gyro_cemm_math_testing
 ):
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     uinvariant_sol = gyro_cemm_math_testing.calculateInvariant(
-        scale(balances), scale(params), scale(derived)
+        scale(balances), scale(params), derived_scaled
     )
     result_py = prec_impl.calculateInvariant(balances, params, derived)
 
@@ -289,14 +287,13 @@ def mtest_calculatePrice(
     assume(balances != (0, 0))
 
     mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
 
     price_sol = gyro_cemm_math_testing.calculatePrice(
-        scale(balances), scale(params), scale(derived), scale(cemm.r)
+        scale(balances), scale(params), derived_scaled, scale(cemm.r)
     )
 
     return cemm.px, to_decimal(price_sol)
@@ -307,21 +304,21 @@ def mtest_calcYGivenX(
 ):
     assume(x == 0 if invariant == 0 else True)
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     y = prec_impl.calcYGivenX(x, params, derived, invariant)
     y_plus = prec_impl.maxBalances1(params, derived, invariant)
 
-    assume(y < y_plus * (D(1) - D("1e-5")))  # O/w out of bounds for this invariant
+    assume(
+        y < y_plus * (D(1) - bpool_params.min_balance_ratio)
+    )  # O/w out of bounds for this invariant
     assume(x > 0 and y > 0)
-    assume(x / y > D("1e-5"))
-    assume(y / x > D("1e-5"))
+    assume(x / y > bpool_params.min_balance_ratio)
+    assume(y / x > bpool_params.min_balance_ratio)
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(x), scale(params), scale(derived), scale(invariant)
+        scale(x), scale(params), derived_scaled, scale(invariant)
     )
     return y, to_decimal(y_sol)
 
@@ -331,21 +328,21 @@ def mtest_calcXGivenY(
 ):
     assume(y == 0 if invariant == 0 else True)
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     x = prec_impl.calcXGivenY(y, params, derived, invariant)
     x_plus = prec_impl.maxBalances0(params, derived, invariant)
 
-    assume(x < x_plus * (D(1) - D("1e-5")))  # O/w out of bounds for this invariant
+    assume(
+        x < x_plus * (D(1) - bpool_params.min_balance_ratio)
+    )  # O/w out of bounds for this invariant
     assume(x > 0 and y > 0)
-    assume(x / y > D("1e-5"))
-    assume(y / x > D("1e-5"))
+    assume(x / y > bpool_params.min_balance_ratio)
+    assume(y / x > bpool_params.min_balance_ratio)
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(y), scale(params), scale(derived), scale(invariant)  # scale(cemm.r)
+        scale(y), scale(params), derived_scaled, scale(invariant)  # scale(cemm.r)
     )
     return x, to_decimal(x_sol)
 
@@ -363,10 +360,8 @@ def mtest_calcOutGivenIn(
 
     assume(amountIn <= to_decimal("0.3") * balances[ixIn])
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     r = prec_impl.calculateInvariant(balances, params, derived)
     if tokenInIsToken0:
@@ -402,14 +397,21 @@ def mtest_calcOutGivenIn(
 
     revertCode = None
     if amountIn + balances[ixIn] > (
-        x_plus * (D(1) - D("1e-5")) if tokenInIsToken0 else y_plus * (D(1) - D("1e-5"))
+        x_plus * (D(1) - bpool_params.min_balance_ratio)
+        if tokenInIsToken0
+        else y_plus * (D(1) - bpool_params.min_balance_ratio)
     ):
         revertCode = "BAL#357"
     elif unscale(balOutNew_sol) > balances[ixOut]:
         revertCode = "BAL#357"
-    elif (balances[ixIn] + amountIn) / unscale(balOutNew_sol) < D("1e-5"):
+    elif (balances[ixIn] + amountIn) / unscale(
+        balOutNew_sol
+    ) < bpool_params.min_balance_ratio:
         revertCode = "BAL#357"
-    elif unscale(balOutNew_sol) / (balances[ixIn] + amountIn) < D("1e-5"):
+    elif (
+        unscale(balOutNew_sol) / (balances[ixIn] + amountIn)
+        < bpool_params.min_balance_ratio
+    ):
         revertCode = "BAL#357"
     elif balances[ixOut] - unscale(balOutNew_sol) > to_decimal("0.3") * balances[ixOut]:
         revertCode = "BAL#305"  # MAX_OUT_RATIO
@@ -421,7 +423,7 @@ def mtest_calcOutGivenIn(
                 scale(amountIn),
                 tokenInIsToken0,
                 scale(params),
-                scale(derived),
+                derived_scaled,
                 scale(r),
             )
         return 0, 0
@@ -433,7 +435,7 @@ def mtest_calcOutGivenIn(
         scale(amountIn),
         tokenInIsToken0,
         scale(params),
-        derived,
+        derived_scaled,
         scale(r),
     )
 
@@ -453,10 +455,8 @@ def mtest_calcInGivenOut(
 
     assume(amountOut <= to_decimal("0.3") * balances[ixOut])
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     r = prec_impl.calculateInvariant(balances, params, derived)
     if tokenInIsToken0:
@@ -494,14 +494,21 @@ def mtest_calcInGivenOut(
     if amountIn is None:
         revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
     elif unscale(balInNew_sol) > (
-        x_plus * (D(1) - D("1e-5")) if tokenInIsToken0 else y_plus * (D(1) - D("1e-5"))
+        x_plus * (D(1) - bpool_params.min_balance_ratio)
+        if tokenInIsToken0
+        else y_plus * (D(1) - bpool_params.min_balance_ratio)
     ):
         revertCode = "BAL#357"
     elif unscale(balInNew_sol) < balances[ixIn]:
         revertCode = "BAL#357"
-    elif unscale(balInNew_sol) / (balances[ixOut] - amountOut) < D("1e-5"):
+    elif (
+        unscale(balInNew_sol) / (balances[ixOut] - amountOut)
+        < bpool_params.min_balance_ratio
+    ):
         revertCode = "BAL#357"
-    elif (balances[ixOut] - amountOut) / unscale(balInNew_sol) < D("1e-5"):
+    elif (balances[ixOut] - amountOut) / unscale(
+        balInNew_sol
+    ) < bpool_params.min_balance_ratio:
         revertCode = "BAL#357"
     elif unscale(balInNew_sol) - balances[ixIn] > to_decimal("0.3") * balances[ixIn]:
         revertCode = "BAL#304"  # MAX_IN_RATIO
@@ -513,7 +520,7 @@ def mtest_calcInGivenOut(
                 scale(amountOut),
                 tokenInIsToken0,
                 scale(params),
-                scale(derived),
+                derived_scaled,
                 scale(r),
             )
         return 0, 0
@@ -523,7 +530,7 @@ def mtest_calcInGivenOut(
         scale(amountOut),
         tokenInIsToken0,
         scale(params),
-        scale(derived),
+        derived_scaled,
         scale(r),
     )
     return amountIn, to_decimal(amountIn_sol)
@@ -531,8 +538,8 @@ def mtest_calcInGivenOut(
 
 def mtest_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     params, balances, dinvariant = params_cemm_dinvariant
-    mparams = params2MathParams(params)
-    derived = mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
     invariant = prec_impl.calculateInvariant(balances, params, derived)
     deltaBalances = (
         dinvariant / invariant * balances[0],
@@ -607,15 +614,12 @@ def mtest_invariant_across_calcOutGivenIn(
     fees = bpool_params.min_fee * amountIn
     amountIn -= fees
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
-    derived = CEMMMathDerivedParams(derived.tauAlpha, derived.tauBeta)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant_before = prec_impl.calculateInvariant(balances, params, derived)
     invariant_sol = gyro_cemm_math_testing.calculateInvariant(
-        scale(balances), scale(params), scale(derived)
+        scale(balances), scale(params), derived_scaled
     )
 
     if tokenInIsToken0:
@@ -687,7 +691,7 @@ def mtest_invariant_across_calcOutGivenIn(
     #             scale(amountIn),
     #             tokenInIsToken0,
     #             scale(params),
-    #             scale(derived),
+    #             derived_scaled,
     #             invariant_sol,
     #         )
     #     return (0, 0), (0, 0)
@@ -705,7 +709,7 @@ def mtest_invariant_across_calcOutGivenIn(
         scale(amountIn),
         tokenInIsToken0,
         scale(params),
-        scale(derived),
+        derived_scaled,
         invariant_sol,
     )
 
@@ -731,7 +735,7 @@ def mtest_invariant_across_calcOutGivenIn(
     )
 
     invariant_sol_after = gyro_cemm_math_testing.calculateInvariant(
-        scale(new_balances), scale(params), scale(derived)
+        scale(new_balances), scale(params), derived_scaled
     )
 
     # Event to tell these apart from (checked) error cases.
@@ -770,15 +774,12 @@ def mtest_invariant_across_calcInGivenOut(
 
     assume(amountOut <= to_decimal("0.3") * balances[ixOut])
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
-    derived = CEMMMathDerivedParams(derived.tauAlpha, derived.tauBeta)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant_before = prec_impl.calculateInvariant(balances, params, derived)
     invariant_sol = gyro_cemm_math_testing.calculateInvariant(
-        scale(balances), scale(params), scale(derived)
+        scale(balances), scale(params), derived_scaled
     )
 
     if tokenInIsToken0:
@@ -853,7 +854,7 @@ def mtest_invariant_across_calcInGivenOut(
     #             scale(amountOut),
     #             tokenInIsToken0,
     #             scale(params),
-    #             scale(derived),
+    #             derived_scaled,
     #             invariant_sol,
     #         )
     #     return (0, 0), (0, 0)
@@ -869,7 +870,7 @@ def mtest_invariant_across_calcInGivenOut(
         scale(amountOut),
         tokenInIsToken0,
         scale(params),
-        scale(derived),
+        derived_scaled,
         invariant_sol,
     )
 
@@ -890,7 +891,7 @@ def mtest_invariant_across_calcInGivenOut(
         [new_balances[0], new_balances[1]], params, derived
     )
     invariant_sol_after = gyro_cemm_math_testing.calculateInvariant(
-        scale(new_balances), scale(params), scale(derived)
+        scale(new_balances), scale(params), derived_scaled
     )
 
     if (
@@ -923,10 +924,8 @@ def mtest_invariant_across_liquidityInvariantUpdate(
 ):
     params, balances, dinvariant = params_cemm_dinvariant
 
-    mparams = params2MathParams(params)
-    derived = get_derived_parameters(
-        params, derivedparams_is_sol, gyro_cemm_math_testing
-    )
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant = prec_impl.calculateInvariant(balances, params, derived)
     deltaBalances = (
@@ -953,32 +952,37 @@ def mtest_invariant_across_liquidityInvariantUpdate(
         new_balances = (balances[0] - deltaBalances[0], balances[1] - deltaBalances[1])
 
     rnew_sol2 = gyro_cemm_math_testing.calculateInvariant(
-        scale(new_balances), scale(params), scale(derived)
+        scale(new_balances), scale(params), derived_scaled
     )
 
     rnew2 = prec_impl.calculateInvariant(new_balances, params, derived)
 
-    assert D(rnew) >= D(rnew2) * (D(1) - D("1e-12"))
-    assert D(rnew) == D(rnew2).approxed(rel=D("1e-16"))
+    # assert D(rnew) >= D(rnew2) - D("5e-17")  # * (D(1) - D("1e-12"))
+    assert D(rnew) == D(rnew2).approxed(
+        abs=D("5e-17"), rel=D("5e-16")
+    )  # .approxed(rel=D("1e-16"))
     # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
-    assert unscale(D(rnew_sol)).approxed(rel=D("1e-10")) >= unscale(
-        D(rnew_sol2)
-    ).approxed(rel=D("1e-10"))
+    # assert unscale(D(rnew_sol)).approxed(rel=D("1e-10")) >= unscale(
+    #     D(rnew_sol2)
+    # ).approxed(rel=D("1e-10"))
+    assert unscale(D(rnew_sol)) == unscale(D(rnew_sol2)).approxed(
+        abs=D("5e-17"), rel=D("5e-16")
+    )
 
 
 def mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances):
-    mparams = params2MathParams(params)
-    derived = mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
+    derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant_sol = gyro_cemm_math_testing.calculateInvariant(
-        scale(balances), scale(params), scale(derived)
+        scale(balances), scale(params), derived_scaled
     )
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(balances[0]), scale(params), scale(derived), invariant_sol
+        scale(balances[0]), scale(params), derived_scaled, invariant_sol
     )
     assert balances[1] <= unscale(y_sol)
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(balances[1]), scale(params), scale(derived), invariant_sol
+        scale(balances[1]), scale(params), derived_scaled, invariant_sol
     )
     assert balances[0] <= unscale(x_sol)

@@ -15,6 +15,7 @@ import pytest
 
 from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.cemm import cemm as mimpl
+from tests.cemm import cemm_prec_implementation as prec_impl
 from tests.cemm import util
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
@@ -65,8 +66,8 @@ def test_invariant_across_calcOutGivenIn(
     # compare upper bound on loss in y terms
     loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
     loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
-    assert loss_py_ub <= 0  # D("5e-2")
-    assert loss_sol_ub <= 0  # D("5e-2")
+    assert loss_py_ub == 0  # D("5e-2")
+    assert loss_sol_ub == 0  # D("5e-2")
 
 
 ################################################################################
@@ -95,8 +96,8 @@ def test_invariant_across_calcInGivenOut(
     # compare upper bound on loss in y terms
     loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
     loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
-    assert loss_py_ub <= 0  # D("5e-2")
-    assert loss_sol_ub <= 0  # D("5e-2")
+    assert loss_py_ub == 0  # D("5e-2")
+    assert loss_sol_ub == 0  # D("5e-2")
 
 
 ################################################################################
@@ -110,6 +111,7 @@ def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
 ### test liquidityInvariantUpdate for L change
 
 
+@pytest.mark.skip(reason="Data generation slow")
 @given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
 def test_invariant_across_liquidityInvariantUpdate(
     gyro_cemm_math_testing, params_cemm_dinvariant

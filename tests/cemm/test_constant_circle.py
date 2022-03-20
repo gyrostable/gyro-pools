@@ -5,8 +5,10 @@ import hypothesis.strategies as st
 # from pyrsistent import Invariant
 from brownie.test import given
 from hypothesis import assume, example
+import pytest
 
 from tests.cemm import cemm as mimpl
+from tests.cemm import cemm_prec_implementation as prec_impl
 from tests.cemm import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import *
@@ -51,8 +53,7 @@ def gen_params(draw):
 @st.composite
 def gen_params_cemm_dinvariant(draw):
     params = draw(gen_params())
-    mparams = util.params2MathParams(params)
-    derived = util.mathParams2DerivedParams(mparams)
+    derived = prec_impl.calc_derived_values(params)
     balances = draw(gen_balances(2, bpool_params))
     assume(balances[0] > 0 and balances[1] > 0)
     r = util.prec_impl.calculateInvariant(balances, params, derived)
@@ -101,8 +102,8 @@ def test_invariant_across_calcOutGivenIn(
     # compare upper bound on loss in y terms
     loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
     loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
-    assert loss_py_ub < D("5e-4")
-    assert loss_sol_ub < D("5e-4")
+    assert loss_py_ub == 0  # < D("5e-4")
+    assert loss_sol_ub == 0  # < D("5e-4")
 
 
 ################################################################################
@@ -130,8 +131,8 @@ def test_invariant_across_calcInGivenOut(
     # compare upper bound on loss in y terms
     loss_py_ub = -loss_py[0] * params.beta - loss_py[1]
     loss_sol_ub = -loss_sol[0] * params.beta - loss_sol[1]
-    assert loss_py_ub < D("5e-4")
-    assert loss_sol_ub < D("5e-4")
+    assert loss_py_ub == 0  # < D("5e-4")
+    assert loss_sol_ub == 0  # < D("5e-4")
 
 
 ################################################################################
@@ -145,6 +146,7 @@ def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
 ### test liquidityInvariantUpdate for L change
 
 
+@pytest.mark.skip(reason="Data generation slow, to fix")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_invariant_across_liquidityInvariantUpdate(
     gyro_cemm_math_testing, params_cemm_dinvariant
@@ -154,6 +156,7 @@ def test_invariant_across_liquidityInvariantUpdate(
     )
 
 
+@pytest.mark.skip(reason="Not needed if MIN_BAL_RATIO=1e-5")
 def test_subtract_overflow_example(gyro_cemm_math_testing):
     params = CEMMMathParams(
         alpha=D("10.591992670000000000"),
