@@ -25,6 +25,7 @@ def test_calculate_quadratic(gyro_two_math_testing):
     # One should imply the other (up to approximation error), but let's double check.
 
 
+
 def test_calculate_quadratic_terms(gyro_two_math_testing):
     sqrtAlpha = 0.97
     sqrtBeta = 1.02
