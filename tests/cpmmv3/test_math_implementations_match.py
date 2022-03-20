@@ -9,7 +9,6 @@ import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie import reverts
 from brownie.test import given
 
-from tests.cpmmv3.util import calculateInvariantUnderOver
 from tests.support.utils import scale, to_decimal, unscale, qdecimals
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
@@ -131,19 +130,17 @@ def test_calc_in_given_out(
 
     assume(amount_out < to_decimal("0.3") * (balances[1]))
 
-    invariant_under, invariant_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+    invariant = unscale(gyro_three_math_testing.calculateInvariant(
         scale(balances), scale(root_three_alpha)
     ))
 
-    virtual_offset_under = invariant_under * to_decimal(root_three_alpha)
-    virtual_offset_over  = invariant_over * to_decimal(root_three_alpha)
-    virtual_offset_mid = (virtual_offset_under + virtual_offset_over) / D(2)
+    virtual_offset = invariant * to_decimal(root_three_alpha)
 
     in_amount = math_implementation.calcInGivenOut(
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_out),
-        virtual_offset_mid,
+        virtual_offset,
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -153,21 +150,19 @@ def test_calc_in_given_out(
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = gyro_three_math_testing.calcInGivenOut(
+        in_amount_sol = unscale(gyro_three_math_testing.calcInGivenOut(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_out),
-            scale(virtual_offset_under),
-            scale(virtual_offset_over)
-        )
+            scale(virtual_offset)
+        ))
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_three_math_testing.calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset)
             )
         return
     else:
@@ -176,12 +171,14 @@ def test_calc_in_given_out(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset)
             )
         return
 
-    assert to_decimal(in_amount_sol) == scale(in_amount)
+    # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
+    # implemented in python)
+    assert in_amount_sol >= in_amount
+    assert in_amount_sol == in_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
 
 
 @given(
@@ -196,19 +193,17 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     # assume(not faulty_params)
     assume(amount_in < to_decimal("0.3") * (balances[0]))
 
-    invariant_under, invariant_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+    invariant = unscale(gyro_three_math_testing.calculateInvariant(
         scale(balances), scale(root_three_alpha)
     ))
 
-    virtual_offset_under = invariant_under * to_decimal(root_three_alpha)
-    virtual_offset_over  = invariant_over * to_decimal(root_three_alpha)
-    virtual_offset_mid = (virtual_offset_under + virtual_offset_over) / D(2)
+    virtual_offset = invariant * to_decimal(root_three_alpha)
 
     out_amount = math_implementation.calcOutGivenIn(
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_in),
-        virtual_offset_mid
+        virtual_offset
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
@@ -222,21 +217,19 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
         and within_bal_ratio
         and out_amount >= 0
     ):
-        out_amount_sol = gyro_three_math_testing.calcOutGivenIn(
+        out_amount_sol = unscale(gyro_three_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_in),
-            scale(virtual_offset_under),
-            scale(virtual_offset_over)
-        )
+            scale(virtual_offset)
+        ))
     elif out_amount < 0:
         with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset)
             )
         return
     elif not within_bal_ratio:
@@ -245,8 +238,7 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset)
             )
         return
     else:
@@ -255,12 +247,14 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset)
             )
         return
 
-    assert to_decimal(out_amount_sol) == scale(out_amount)
+    # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
+    # implemented in python)
+    assert out_amount_sol <= out_amount
+    assert out_amount_sol == out_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
 
 
 @given(
@@ -281,7 +275,7 @@ def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
     ))
     assert res_math_nod == res_sol_nod.approxed(abs=D('2e-18'))
 
-    d = l * l * D('0.973894092617384965')  # We only test the right order of magnitude
+    d = l * l * D('0.973894092617384965')  # We only test the right order of magnitude. The factor is arbitrary.
     res_math_d = res_math_nod / d
     res_sol_d = unscale(gyro_three_math_testing.safeLargePow3ADown(
         scale(l), scale(root_three_alpha), scale(d)
@@ -317,148 +311,11 @@ def test_calculate_invariant(
 
     roots = np.roots([a, -b, -c, -d])
 
-    invariant_sol_under, invariant_sol_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+    invariant_sol = unscale(gyro_three_math_testing.calculateInvariant(
         scale(balances), scale(root_three_alpha)
     ))
 
-    assert invariant_sol_under.approxed(rel=D("1e-14")) <= invariant.approxed(rel=D("1e-14"))
-    assert invariant_sol_over.approxed(rel=D("1e-14")) >= invariant.approxed(rel=D("1e-14"))
-
-
-# @given(
-#     balances=st.tuples(
-#         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-#     ),
-#     bpt_amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
-#     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4),
-# )
-# def test_all_tokens_in_given_exact_bpt_out(
-#     gyro_three_math_testing, balances: Tuple[int, int, int], bpt_amount_out, total_bpt
-# ):
-
-#     if total_bpt < bpt_amount_out:
-#         return
-
-#     amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
-#         to_decimal(balances), to_decimal(bpt_amount_out), to_decimal(total_bpt)
-#     )
-
-#     amounts_in_sol = gyro_three_math_testing.calcAllTokensInGivenExactBptOut(
-#         scale(balances), scale(bpt_amount_out), scale(total_bpt)
-#     )
-
-#     if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
-#         return
-
-#     assert to_decimal(amounts_in_sol[0]) == scale(amounts_in[0]).approxed()
-#     assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
-
-
-# @given(
-#     balances=st.tuples(
-#         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-#     ),
-#     bpt_amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
-#     total_bpt=st.decimals(min_value="1", max_value="1000000", places=4),
-# )
-# def test_tokens_out_given_exact_bpt_in(
-#     gyro_three_math_testing, balances: Tuple[int, int, int], bpt_amount_in, total_bpt
-# ):
-
-#     if total_bpt < bpt_amount_in:
-#         return
-
-#     amounts_in = math_implementation.calcAllTokensInGivenExactBptOut(
-#         to_decimal(balances), to_decimal(bpt_amount_in), to_decimal(total_bpt)
-#     )
-
-#     amounts_in_sol = gyro_three_math_testing.calcAllTokensInGivenExactBptOut(
-#         scale(balances), scale(bpt_amount_in), scale(total_bpt)
-#     )
-
-#     if amounts_in_sol[0] == 1 or amounts_in_sol[1] == 1:
-#         return
-
-#     assert to_decimal(amounts_in_sol[0]) == scale(amounts_in[0]).approxed()
-#     assert to_decimal(amounts_in_sol[1]) == scale(amounts_in[1]).approxed()
-
-
-# @given(
-#     balances=st.tuples(
-#         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-#     ),
-#     delta_balances=st.tuples(
-#         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-#     ),
-#     protocol_fee_gyro_portion=st.decimals(min_value="0.00", max_value="0.5", places=4),
-#     protocol_swap_fee_percentage=st.decimals(
-#         min_value="0.0", max_value="0.4", places=4
-#     ),
-#     current_bpt_supply=st.decimals(min_value="1", max_value="100000", places=4),
-#     root_three_alpha=st.decimals(
-#         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-#     ),
-# )
-# def test_protocol_fees(
-#     gyro_three_math_testing,
-#     current_bpt_supply: Decimal,
-#     balances: Tuple[int, int, int],
-#     delta_balances: Tuple[int, int, int],
-#     protocol_swap_fee_percentage,
-#     protocol_fee_gyro_portion,
-#     root_three_alpha: Decimal,
-# ):
-
-#     assume(not faulty_params(balances, root_three_alpha))
-
-#     old_invariant = math_implementation.calculateInvariant(
-#         to_decimal(balances), to_decimal(root_three_alpha)
-#     )
-
-#     new_balance_0 = balances[0] + delta_balances[0]
-#     new_balance_1 = balances[1] + delta_balances[1]
-#     new_balance_2 = balances[2] + delta_balances[2]
-
-#     new_balances = (new_balance_0, new_balance_1, new_balance_2)
-
-#     new_invariant = math_implementation.calculateInvariant(
-#         to_decimal(new_balances), to_decimal(root_three_alpha)
-#     )
-
-#     protocol_fees = math_implementation.calcProtocolFees(
-#         to_decimal(old_invariant),
-#         to_decimal(new_invariant),
-#         to_decimal(current_bpt_supply),
-#         to_decimal(protocol_swap_fee_percentage),
-#         to_decimal(protocol_fee_gyro_portion),
-#     )
-
-#     protocol_fees_sol = gyro_three_math_testing.calcProtocolFees(
-#         scale(old_invariant),
-#         scale(new_invariant),
-#         scale(current_bpt_supply),
-#         scale(protocol_swap_fee_percentage),
-#         scale(protocol_fee_gyro_portion),
-#     )
-
-#     assert to_decimal(protocol_fees_sol[0]) == scale(protocol_fees[0])
-#     assert to_decimal(protocol_fees_sol[1]) == scale(protocol_fees[1])
-
-
-@given(
-    balances=gen_balances(),
-    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
-    rootEst=st.decimals(min_value="1", max_value="100000000000", places=4),
-)
-def test_isInvariantUnderestimated(
-    gyro_three_math_testing, balances, root_three_alpha, rootEst
-):
-    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
-    isUnder_py = math_implementation.isInvariantUnderestimated(a, mb, mc, md, rootEst)
-    isUnder_sol = gyro_three_math_testing.isInvariantUnderestimated(
-        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
-    )
-    assert isUnder_py == isUnder_sol
+    assert invariant_sol == invariant.approxed(rel=D("5e-18"), abs=D("5e-18"))
 
 
 @given(
@@ -475,51 +332,8 @@ def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
         a, mb, mc, md, rootEst
     )
     delta_abs_sol, delta_is_pos_sol = gyro_three_math_testing.calcNewtonDelta(
-        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
+        scale(a), scale(mb), scale(mc), scale(md), scale(root_three_alpha), scale(rootEst)
     )
 
     assert delta_abs == unscale(delta_abs_sol)
     assert delta_is_pos == delta_is_pos_sol
-
-
-@given(
-    balances=gen_balances(),
-    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
-)
-def test_finalIteration_1(gyro_three_math_testing, balances, root_three_alpha):
-    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
-    rootEst = math_implementation.calculateCubic(
-        a, mb, mc, md, root_three_alpha, balances
-    )
-
-    # assert math_implementation.isInvariantUnderestimated(a, mb, mc, md, rootEst)
-
-    L_py, isUnder_py = math_implementation.finalIteration(a, mb, mc, md, rootEst)
-    L_sol, isUnder_sol = gyro_three_math_testing.finalIteration(
-        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
-    )
-
-    assert L_py == unscale(L_sol)
-    assert isUnder_py == isUnder_sol
-
-
-@given(
-    balances=gen_balances(),
-    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
-)
-def test_finalIteration_2(gyro_three_math_testing, balances, root_three_alpha):
-    a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
-    rootEst = gyro_three_math_testing.calculateCubic(
-        scale(a), scale(mb), scale(mc), scale(md)
-    )
-    rootEst = unscale(rootEst)
-
-    # assert math_implementation.isInvariantUnderestimated(a, mb, mc, md, rootEst)
-
-    L_py, isUnder_py = math_implementation.finalIteration(a, mb, mc, md, rootEst)
-    L_sol, isUnder_sol = gyro_three_math_testing.finalIteration(
-        scale(a), scale(mb), scale(mc), scale(md), scale(rootEst)
-    )
-
-    assert L_py == unscale(L_sol)
-    assert isUnder_py == isUnder_sol

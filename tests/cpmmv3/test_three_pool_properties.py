@@ -5,7 +5,7 @@ from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example, HealthCheck
 import tests.cpmmv3.v3_math_implementation as math_implementation
-from tests.cpmmv3.util import calculateInvariantUnderOver, gen_synthetic_balances, gen_synthetic_balances_1asset, \
+from tests.cpmmv3.util import gen_synthetic_balances, gen_synthetic_balances_1asset, \
     gen_synthetic_balances_2assets
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
@@ -65,18 +65,7 @@ def gen_bounds():
 
 
 ###############################################################################################
-# Test calculateInvariant is an underestimate
-@given(
-    balances=gen_balances(),
-    root_three_alpha=gen_bounds(),
-)
-def test_invariant_sol_inv_below_py_inv(
-    gyro_three_math_testing, balances, root_three_alpha
-):
-    mtest_invariant_sol_inv_below_py_inv(
-        gyro_three_math_testing, balances, root_three_alpha
-    )
-
+# Test invariant correctness via being an approximate root of a certain cubic polynomial.
 
 # @settings(max_examples=1_000)
 @given(
@@ -84,12 +73,10 @@ def test_invariant_sol_inv_below_py_inv(
     root_three_alpha=gen_bounds(),
 )
 @example(balances=(D('1e10'), D(0), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
-# Same thing:
-# @example(balances=(10_000_000_000, 0, 0), root_three_alpha=D(ROOT_ALPHA_MAX).raw)
-def test_sol_invariant_underestimated(
+def test_sol_invariant_cubic(
     gyro_three_math_testing, balances, root_three_alpha
 ):
-    mtest_sol_invariant_underestimated(
+    mtest_sol_invariant_cubic(
         gyro_three_math_testing, balances, root_three_alpha
     )
 
@@ -132,7 +119,6 @@ def test_invariant_across_calcOutGivenIn(
     gyro_three_math_testing, root_three_alpha, setup
 ):
     balances, amount_in = setup
-
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
         gyro_three_math_testing, balances, amount_in, root_three_alpha, False
     )
@@ -143,30 +129,15 @@ def test_invariant_across_calcOutGivenIn(
 # mtest functions
 
 
-def mtest_invariant_sol_inv_below_py_inv(
+def mtest_sol_invariant_cubic(
     gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
 ):
-    invariant = math_implementation.calculateInvariant(
-        to_decimal(balances), to_decimal(root_three_alpha)
-    )
-
-    invariant_sol_under, _ = calculateInvariantUnderOver(gyro_three_math_testing,
-        scale(balances), scale(root_three_alpha)
-    )
-
-    assert unscale(D(invariant_sol_under)) <= invariant
-
-
-def mtest_sol_invariant_underestimated(
-    gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
-):
-    # TODO Perhaps remove this test. It's a bit trivial now since we also check underestimation in solidity.
     (a, mb, mc, md) = math_implementation.calculateCubicTerms(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
     (b, c, d) = (-mb, -mc, -md)
-    L, _ = unscale(
-        calculateInvariantUnderOver(gyro_three_math_testing,
+    L = unscale(
+        gyro_three_math_testing.calculateInvariant(
             scale(balances), scale(root_three_alpha)
         )
     )
@@ -174,7 +145,10 @@ def mtest_sol_invariant_underestimated(
     # f_L_prime_float = calculate_f_L_prime_float(L, balances, root_three_alpha)
     f_L_decimal = calculate_f_L_decimal(L, a, b, c, d)
     # assert f_L_float + f_L_prime_float * 1e-18 <= 0
-    assert f_L_decimal <= 0
+
+    # NOTE That the function f has an extremely steep slope, so the following is already very good for an approximate
+    # root. The coefficients a..d also have rounding errors attached, so this won't (and shouldn't) be very close to 0.
+    assert abs(f_L_decimal) <= D('1e26')
 
 
 def calculate_cubic_terms_float(balances: Tuple[int, int, int], root_three_alpha: D):
@@ -215,25 +189,21 @@ def mtest_invariant_across_calcInGivenOut(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
 
-    invariant_sol_under, invariant_sol_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+    invariant_sol = unscale(gyro_three_math_testing.calculateInvariant(
         scale(balances), scale(root_three_alpha)
     ))
 
-    assert invariant_sol_under <= invariant.approxed(abs=D('5e-18'))
-    assert invariant <= invariant_sol_over.approxed(abs=D('5e-18'))
+    # assert invariant_sol_under <= invariant.approxed(abs=D('5e-18'))
+    # assert invariant <= invariant_sol_over.approxed(abs=D('5e-18'))
 
-    virtual_offset_under = invariant_sol_under * to_decimal(root_three_alpha)
-    virtual_offset_over  = invariant_sol_over * to_decimal(root_three_alpha)
-    virtual_offset_mid = (virtual_offset_under + virtual_offset_over) / D(2)
-
-    # Q: Should we only use this one here?
+    virtual_offset_sol = invariant_sol * to_decimal(root_three_alpha)
     virtual_offset = invariant * to_decimal(root_three_alpha)
 
     in_amount = math_implementation.calcInGivenOut(
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_out),
-        virtual_offset_mid,
+        virtual_offset,
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
@@ -247,8 +217,7 @@ def mtest_invariant_across_calcInGivenOut(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_out),
-            scale(virtual_offset_under),
-            scale(virtual_offset_over)
+            scale(virtual_offset_sol)
         ))
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
@@ -256,22 +225,20 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset_sol)
             )
-        return 0, 0
+        return D(0), D(0)
     else:
         with reverts("BAL#304"):  # MAX_IN_RATIO
             gyro_three_math_testing.calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset_under),
-                scale(virtual_offset_over)
+                scale(virtual_offset_sol)
             )
-        return 0, 0
+        return D(0), D(0)
 
-    # Sanity check. Note that the two values use slightly different invariants, so they're not gonna be equal!
+    # Sanity check.
     assert to_decimal(in_amount_sol) == in_amount.approxed()
 
     balances_after = balances_after = (
@@ -285,11 +252,12 @@ def mtest_invariant_across_calcInGivenOut(
     )
 
     if check_sol_inv:
-        invariant_sol_after_under, invariant_sol_after_over = calculateInvariantUnderOver(gyro_three_math_testing,
+        invariant_sol_after = gyro_three_math_testing.calcualteInvariant(
             scale(balances_after), scale(root_three_alpha)
         )
 
-        assert unscale(invariant_sol_after_over) >= invariant_sol_under  # TODO should this be `invariant` or so??
+        # Tolerance is taken from test_calculateInvariant_reconstruction().
+        assert unscale(invariant_sol_after) >= invariant_sol.approxed(abs=D('6e-18'), rel=D('6e-18'))
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
@@ -298,8 +266,9 @@ def mtest_invariant_across_calcInGivenOut(
     partial_invariant_from_offsets_after = calculate_partial_invariant_from_offsets(
         balances_after, virtual_offset
     )
-    partial_invariant_from_sol = invariant_sol_under / (D(balances[2]) + D(virtual_offset))
-    assert partial_invariant_from_offsets >= partial_invariant_from_sol
+
+    # partial_invariant_from_sol = invariant_sol**3 / (D(balances[2]) + D(virtual_offset))
+    # assert partial_invariant_from_offsets >= partial_invariant_from_sol
     # assert invariant_from_offsets >= invariant_sol
     return partial_invariant_from_offsets_after, partial_invariant_from_offsets
 
@@ -315,13 +284,13 @@ def mtest_invariant_across_calcOutGivenIn(
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
-    invariant_sol, is_underestimate = gyro_three_math_testing.underestimateInvariant(
-        scale(balances), scale(root_three_alpha)
-    )
-    invariant_sol = unscale(invariant_sol)
-    assert is_underestimate
 
-    virtual_offset = invariant_sol * to_decimal(root_three_alpha)
+    invariant_sol = unscale(gyro_three_math_testing.calculateInvariant(
+        scale(balances), scale(root_three_alpha)
+    ))
+
+    virtual_offset_sol = invariant_sol * to_decimal(root_three_alpha)
+    virtual_offset = invariant * to_decimal(root_three_alpha)
 
     out_amount = math_implementation.calcOutGivenIn(
         to_decimal(balances[0]),
@@ -348,34 +317,38 @@ def mtest_invariant_across_calcOutGivenIn(
             scale(virtual_offset),
         )
     elif out_amount < 0:
+        if out_amount >= D("-2e-18"):
+            # Negative but insignificant
+            return D(0), D(0)
         with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset),
+                scale(virtual_offset_sol),
             )
-        return 0, 0
+        return D(0), D(0)
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset),
+                scale(virtual_offset_sol),
             )
-        return 0, 0
+        return D(0), D(0)
     else:
         with reverts("BAL#305"):  # MAX_OUT_RATIO
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset),
+                scale(virtual_offset_sol),
             )
-        return 0, 0
+        return D(0), D(0)
 
-    assert to_decimal(out_amount_sol) == scale(out_amount)
+    # Sanity check.
+    assert unscale(to_decimal(out_amount_sol)) == out_amount.approxed()
 
     balances_after = (
         balances[0] + amount_in + fees,
@@ -386,14 +359,13 @@ def mtest_invariant_across_calcOutGivenIn(
         to_decimal(balances_after), to_decimal(root_three_alpha)
     )
 
-    if check_sol_inv:
-        invariant_sol_after_under, invariant_sol_after_over = calculateInvariantUnderOver(gyro_three_math_testing,
-            scale(balances_after), scale(root_three_alpha)
-        )
-
     # assert invariant_after >= invariant
     if check_sol_inv:
-        assert unscale(invariant_sol_after_over) >= invariant_sol
+        invariant_sol_after = gyro_three_math_testing.calcualteInvariant(
+            scale(balances_after), scale(root_three_alpha)
+        )
+        # Tolerance is taken from test_calculateInvariant_reconstruction().
+        assert unscale(invariant_sol_after) >= invariant_sol.approxed(abs=D('6e-18'), rel=D('6e-18'))
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
@@ -402,8 +374,8 @@ def mtest_invariant_across_calcOutGivenIn(
     partial_invariant_from_offsets_after = calculate_partial_invariant_from_offsets(
         balances_after, virtual_offset
     )
-    partial_invariant_from_sol = invariant_sol / (D(balances[2]) + D(virtual_offset))
-    assert partial_invariant_from_offsets >= partial_invariant_from_sol
+    # partial_invariant_from_sol = invariant_sol**3 / (D(balances[2]) + D(virtual_offset))
+    # assert partial_invariant_from_offsets >= partial_invariant_from_sol
     # assert invariant_from_offsets >= invariant_sol
     return partial_invariant_from_offsets_after, partial_invariant_from_offsets
 
@@ -423,7 +395,10 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
         D(balances[1] + D(virtual_offset))
     )
 
-@settings(max_examples=1000)
+###############################################################################################
+# Test reconstruction of synthetic invariant
+
+# Balances are generated from a chosen invariant. Then we check if `calculateInvariant()` gets that invariant back.
 @given(
     args=st.one_of(
         gen_synthetic_balances_1asset(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(100)),
@@ -438,21 +413,17 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
     D('3812260336.851356457000000000'),
     D('0.200000000181790486')),
 )
-@example(args=((Decimal('728109563488.263687529903349137'),
-      Decimal('7281095.634882636875299036'),
-      Decimal('1724716619.689367265339564601')),
+@example(args=(
+        (Decimal('728109563488.263687529903349137'),
+         Decimal('7281095.634882636875299036'),
+         Decimal('1724716619.689367265339564601')),
      Decimal('36417643407.707023648100000000'),
      Decimal('0.200000000021982758')))
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     balances, invariant, root3Alpha = args
 
-    invariant_re_under, invariant_re_over = unscale(calculateInvariantUnderOver(gyro_three_math_testing,
+    invariant_re = unscale(gyro_three_math_testing.calculateInvariant(
         scale(balances),
         scale(root3Alpha)))
 
-    assert invariant_re_under <= invariant.approxed(rel=D('5e-18'))
-    assert invariant_re_over  >= invariant.approxed(rel=D('5e-16'))
-    # assert invariant_re_under == invariant_re_over.approxed(rel=D('5e-14'))
-    assert invariant_re_under == invariant.approxed(abs=D('3e-18'), rel=D('3e-18'))
-    # assert invariant_re_under == invariant.approxed(abs=D('5e-16'))
-    # assert invariant_re_over  == invariant.approxed(rel=D('1e-12'))
+    assert invariant_re == invariant.approxed(abs=D('3e-18'), rel=D('3e-18'))

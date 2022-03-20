@@ -27,7 +27,7 @@ bpool_params = BasicPoolParameters(
     max_balances=100_000_000_000
 )
 
-@settings(max_examples=5_000)
+@settings(max_examples=500)
 @given(
     balances=gen_balances(3, bpool_params),
     root3Alpha=qdecimals(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX)
@@ -47,9 +47,9 @@ def test_calculateInvariant_match(balances: Iterable[D], root3Alpha: D):
 
     assert diff == pytest.approx(0.0, abs=1e-13)
 
-@settings(max_examples=5_000)
+@settings(max_examples=500)
 @given(
-    args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
 )
 @example(args=(
     (D('16743757275.452039152786685295'),
@@ -66,9 +66,9 @@ def test_calculateInvariant_reconstruction(args):
     assert invariant_re == invariant.approxed(rel=D('5e-16'))
 
 
-@settings(max_examples=5_000)
+@settings(max_examples=500)
 @given(
-    args=gen_synthetic_balances(ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
+    args=gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX),
 )
 def test_calculateInvariant_reconstruction_alt(args):
     balances, invariant, root3Alpha = args
