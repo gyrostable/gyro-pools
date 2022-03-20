@@ -87,7 +87,7 @@ def calculateInvariantNewton(
         f_l = l3 - l3 * alpha1 * alpha1 * alpha1 + l2 * b + c * l + d
 
         # Compute derived values for comparison:
-        # TESTING only; could base the exit condition on this if I really wanted
+        # (slightly more involved exit condition here)
         dx, dy, dz = invariantErrorsInAssets(l, balances, alpha1)
 
         log.append(dict(l=l, delta=delta, f_l=f_l, dx=dx, dy=dy, dz=dz))
@@ -234,27 +234,20 @@ def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) 
     return amountIn
 
 
-def calcNewtonDelta(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
-    (a, mb, mc, md, rootEst) = (D(a), D(mb), D(mc), D(md), D(rootEst))
-    dfRootEst = rootEst * rootEst * (D(3) * a) - rootEst.mul_up(D(2) * mb) - mc
-    deltaMinus = rootEst.mul_up(rootEst).mul_up(rootEst).mul_up(a).div_up(dfRootEst)
-    deltaPlus = (rootEst * rootEst * mb + rootEst * mc) / dfRootEst + md / dfRootEst
-    # dfRootEst = rootEst.mul_up(rootEst).mul_up(D(3) * a) - rootEst.mul_down(D(2) * mb) - mc
-    # deltaMinus = rootEst.mul_down(rootEst).mul_down(rootEst).mul_down(a).div_down(dfRootEst)
-    # deltaPlus = (rootEst.mul_up(rootEst).mul_up(mb) + rootEst.mul_up(mc)).div_up(dfRootEst) + md.div_up(dfRootEst)
+def calcNewtonDelta(a: D, mb: D, mc: D, md: D, alpha1: D, l: D) -> tuple[D, bool]:
+    a, mb, mc, md, l = map(to_decimal, (a, mb, mc, md, l))
 
-    # DEBUG
-    print(f"df        = {dfRootEst}")
-    print(f"deltaPlus = {deltaPlus}")
-    print(f"deltaMinus= {deltaMinus}")
+    # Copied from the Newton iteration.
 
-    if deltaPlus >= deltaMinus:
-        deltaAbs = deltaPlus - deltaMinus
-        deltaIsPos = True
-    else:
-        deltaAbs = deltaMinus - deltaPlus
-        deltaIsPos = False
-    return deltaAbs, deltaIsPos
+    b, c, d = -mb, -mc, -md
+
+    l3 = l ** 3
+    l2 = l ** 2
+    f_l = l3 - l3 * alpha1 * alpha1 * alpha1 + l2 * b + c * l + d
+    df_l = 3 * l2 - 3 * l2 * alpha1 * alpha1 * alpha1 + l * b * 2 + c
+    delta = - f_l / df_l
+
+    return abs(delta), delta >= 0
 
 
 def calcNewtonDeltaDown(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:

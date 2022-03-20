@@ -329,11 +329,12 @@ def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
         a, mb, mc, md, root_three_alpha, balances
     )
     delta_abs, delta_is_pos = math_implementation.calcNewtonDelta(
-        a, mb, mc, md, rootEst
+        a, mb, mc, md, root_three_alpha, rootEst
     )
     delta_abs_sol, delta_is_pos_sol = gyro_three_math_testing.calcNewtonDelta(
         scale(a), scale(mb), scale(mc), scale(md), scale(root_three_alpha), scale(rootEst)
     )
+    delta_abs_sol = unscale(delta_abs_sol)
 
-    assert delta_abs == unscale(delta_abs_sol)
-    assert delta_is_pos == delta_is_pos_sol
+    assert delta_abs_sol == delta_abs.approxed(abs=D('2e-18'))
+    assert delta_is_pos == delta_is_pos_sol or delta_abs <= D('2e-18')
