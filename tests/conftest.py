@@ -1,7 +1,14 @@
-from tests.support.quantized_decimal import QuantizedDecimal as D
 import pytest
 
-from tests.support.types import TwoPoolBaseParams, TwoPoolParams, ThreePoolParams
+from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.types import (
+    CEMMMathParams,
+    CEMMPoolParams,
+    GyroCEMMMathDerivedParams,
+    ThreePoolParams,
+    TwoPoolBaseParams,
+    TwoPoolParams,
+)
 
 TOKENS_PER_USER = 1000 * 10**18
 
@@ -38,13 +45,16 @@ def gyro_three_math_testing(admin, GyroThreeMathTesting):
 def mock_gyro_config(admin, MockGyroConfig):
     return admin.deploy(MockGyroConfig)
 
+
 @pytest.fixture
 def gyro_erc20_empty(admin, SimpleERC20):
     return (admin.deploy(SimpleERC20), admin.deploy(SimpleERC20))
 
+
 @pytest.fixture
 def gyro_erc20_empty3(admin, SimpleERC20):
     return tuple(admin.deploy(SimpleERC20) for _ in range(3))
+
 
 @pytest.fixture
 def gyro_erc20_funded(admin, SimpleERC20, users):
@@ -62,6 +72,7 @@ def gyro_erc20_funded(admin, SimpleERC20, users):
     else:
         return (gyro_erc20_1, gyro_erc20_0)
 
+
 @pytest.fixture
 def gyro_erc20_funded3(admin, SimpleERC20, users):
     npools = 3
@@ -77,14 +88,17 @@ def gyro_erc20_funded3(admin, SimpleERC20, users):
 def authorizer(admin, Authorizer):
     return admin.deploy(Authorizer, admin)
 
+
 @pytest.fixture
 def mock_vault(admin, MockVault, authorizer):
     return admin.deploy(MockVault, authorizer)
+
 
 @pytest.fixture(scope="module")
 def balancer_vault(admin, BalancerVault, SimpleERC20, authorizer):
     weth9 = admin.deploy(SimpleERC20)
     return admin.deploy(BalancerVault, authorizer.address, weth9.address, 0, 0)
+
 
 @pytest.fixture
 def balancer_vault_pool(
@@ -92,10 +106,8 @@ def balancer_vault_pool(
     GyroTwoPool,
     gyro_erc20_funded,
     balancer_vault,
-    QueryProcessor,
     mock_gyro_config,
 ):
-    admin.deploy(QueryProcessor)
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=balancer_vault.address,
@@ -116,11 +128,11 @@ def balancer_vault_pool(
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
+
 @pytest.fixture
 def mock_vault_pool(
-    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProcessor, mock_gyro_config
+    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config
 ):
-    admin.deploy(QueryProcessor)
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=mock_vault.address,
@@ -141,11 +153,15 @@ def mock_vault_pool(
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
+
 @pytest.fixture
 def mock_vault_pool3(
-    admin, GyroThreePool, gyro_erc20_funded3, mock_vault, QueryProcessor, mock_gyro_config
+    admin,
+    GyroThreePool,
+    gyro_erc20_funded3,
+    mock_vault,
+    mock_gyro_config,
 ):
-    admin.deploy(QueryProcessor)
     args = ThreePoolParams(
         vault=mock_vault.address,
         name="GyroThreePool",  # string
@@ -160,16 +176,15 @@ def mock_vault_pool3(
     )
     return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
 
+
 @pytest.fixture
 def balancer_vault_pool3(
     admin,
     GyroThreePool,
     gyro_erc20_funded3,
     balancer_vault,
-    QueryProcessor,
     mock_gyro_config,
 ):
-    admin.deploy(QueryProcessor)
     args = ThreePoolParams(
         vault=balancer_vault.address,
         name="GyroThreePool",  # string
@@ -210,6 +225,95 @@ def pool_factory(admin, GyroTwoPoolFactory, gyro_config):
     return admin.deploy(GyroTwoPoolFactory, balancer_vault, gyro_config.address)
 
 
+@pytest.fixture
+def cemm_pool(
+    admin,
+    GyroCEMMPool,
+    gyro_erc20_funded,
+    balancer_vault,
+    mock_gyro_config,
+    QueryProcessor,
+):
+    admin.deploy(QueryProcessor)
+    two_pool_base_params = TwoPoolBaseParams(
+        vault=balancer_vault.address,
+        name="GyroTwoPool",  # string
+        symbol="GTP",  # string
+        token0=gyro_erc20_funded[0].address,  # IERC20
+        token1=gyro_erc20_funded[1].address,  # IERC20
+        normalizedWeight0=D("0.6") * 10**18,  # uint256
+        normalizedWeight1=D("0.4") * 10**18,  # uint256
+        swapFeePercentage=1 * 10**15,  # 0.5%
+        pauseWindowDuration=0,  # uint256
+        bufferPeriodDuration=0,  # uint256
+        oracleEnabled=False,  # bool
+        owner=admin,  # address
+    )
+
+    cemm_params = CEMMMathParams(
+        alpha=D("0.97") * 10**18,
+        beta=D("1.02") * 10**18,
+        c=D("0.2") * 10**18,
+        s=D("0.1") * 10**18,
+        l=2,
+    )
+    derived_cemm_params = calc_derived_values(cemm_params)
+    args = CEMMPoolParams(two_pool_base_params, cemm_params, derived_cemm_params)
+    return admin.deploy(GyroCEMMPool, args, mock_gyro_config.address)
+
+
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):
     pass
+
+
+def calc_derived_values(p: CEMMMathParams):
+    s, c, lam, alpha, beta = (
+        D(p.s).raw,
+        D(p.c).raw,
+        D(p.l).raw,
+        D(p.alpha).raw,
+        D(p.beta).raw,
+    )
+    s, c, lam, alpha, beta = (
+        D(s),
+        D(c),
+        D(lam),
+        D(alpha),
+        D(beta),
+    )
+    dSq = c * c + s * s
+    d = dSq.sqrt()
+    dAlpha = D(1) / (
+        ((c / d + alpha * s / d) ** 2 / lam**2 + (alpha * c / d - s / d) ** 2).sqrt()
+    )
+    dBeta = D(1) / (
+        ((c / d + beta * s / d) ** 2 / lam**2 + (beta * c / d - s / d) ** 2).sqrt()
+    )
+    tauAlpha = [0, 0]
+    tauAlpha[0] = (alpha * c - s) * dAlpha
+    tauAlpha[1] = (c + s * alpha) * dAlpha / lam
+
+    tauBeta = [0, 0]
+    tauBeta[0] = (beta * c - s) * dBeta
+    tauBeta[1] = (c + s * beta) * dBeta / lam
+
+    w = s * c * (tauBeta[1] - tauAlpha[1])
+    z = c * c * tauBeta[0] + s * s * tauAlpha[0]
+    u = s * c * (tauBeta[0] - tauAlpha[0])
+    v = s * s * tauBeta[1] + c * c * tauAlpha[1]
+
+    tauAlpha38 = (D(tauAlpha[0].raw), D(tauAlpha[1].raw))
+    tauBeta38 = (D(tauBeta[0].raw), D(tauBeta[1].raw))
+    derived = GyroCEMMMathDerivedParams(
+        tauAlpha=(tauAlpha38[0], tauAlpha38[1]),
+        tauBeta=(tauBeta38[0], tauBeta38[1]),
+        u=D(u.raw),
+        v=D(v.raw),
+        w=D(w.raw),
+        z=D(z.raw),
+        dSq=D(dSq.raw),
+        # dAlpha=D(dAlpha.raw),
+        # dBeta=D(dBeta.raw),
+    )
+    return derived

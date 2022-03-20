@@ -69,7 +69,7 @@ class ThreePoolParams(NamedTuple):
     # configAddress listed separately
 
 
-class CEMMMathParams(NamedTuple):
+class GyroCEMMMathParams(NamedTuple):
     alpha: DecimalLike
     beta: DecimalLike
     c: DecimalLike
@@ -82,12 +82,31 @@ class Vector2(NamedTuple):
     y: DecimalLike
 
 
-class CEMMMathDerivedParams(NamedTuple):
-    tauAlpha: Vector2
-    tauBeta: Vector2
+class CEMMMathParams(NamedTuple):
+    alpha: DecimalLike
+    beta: DecimalLike
+    c: DecimalLike
+    s: DecimalLike
+    l: DecimalLike
 
 
 class CEMMMathQParams(NamedTuple):
     a: DecimalLike
     b: DecimalLike
     c: DecimalLike
+
+
+class GyroCEMMMathDerivedParams(NamedTuple):
+    tauAlpha: Vector2
+    tauBeta: CEMMMathQParams
+    u: DecimalLike
+    v: DecimalLike
+    w: DecimalLike
+    z: DecimalLike
+    dSq: DecimalLike
+
+
+class CEMMPoolParams(NamedTuple):
+    baseParams: TwoPoolBaseParams
+    cemmParams: GyroCEMMMathParams
+    derivedCEMMParams: GyroCEMMMathDerivedParams
