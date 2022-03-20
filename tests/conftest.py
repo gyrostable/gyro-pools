@@ -117,10 +117,8 @@ def balancer_vault_pool(
     GyroTwoPool,
     gyro_erc20_funded,
     balancer_vault,
-    QueryProcessor,
     mock_gyro_config,
 ):
-    admin.deploy(QueryProcessor)
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=balancer_vault.address,
@@ -143,9 +141,8 @@ def balancer_vault_pool(
 
 @pytest.fixture
 def mock_vault_pool(
-    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, QueryProcessor, mock_gyro_config
+    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config
 ):
-    admin.deploy(QueryProcessor)
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=mock_vault.address,
@@ -168,9 +165,8 @@ def mock_vault_pool(
 
 @pytest.fixture
 def mock_vault_pool3(
-    admin, GyroThreePool, gyro_erc20_funded3, mock_vault, QueryProcessor, mock_gyro_config
+    admin, GyroThreePool, gyro_erc20_funded3, mock_vault, mock_gyro_config
 ):
-    admin.deploy(QueryProcessor)
     args = ThreePoolParams(
         vault=mock_vault.address,
         name="GyroThreePool",  # string
@@ -191,10 +187,8 @@ def balancer_vault_pool3(
     GyroThreePool,
     gyro_erc20_funded3,
     balancer_vault,
-    QueryProcessor,
     mock_gyro_config,
 ):
-    admin.deploy(QueryProcessor)
     args = ThreePoolParams(
         vault=balancer_vault.address,
         name="GyroThreePool",  # string
