@@ -428,6 +428,19 @@ def scale_derived_values(d: DerivedParams) -> DerivedParams:
     return derived
 
 
+def calc_invariant_error(params, derived, balances):
+    x, y = (D(balances[0]), D(balances[1]))
+    if D(x) > D("1e11") or D(y) > D("1e11"):
+        err = (D(x) * x + D(y) * y) / D("1e38") * D("100e-18")
+    else:
+        err = D("100e-18")
+    err = err * 5  # error in sqrt is O(error in square)
+    denominator = calcAChiAChi(params, derived) - D(1)
+    # error scales if denominator is small
+    err = err if denominator > 1 else err / D(denominator)
+    return err
+
+
 # def mkDerivedParmasXp(p: Params) -> DerivedParams:
 #     tauAlpha = tauXp(p, p.alpha, p.dAlpha)
 #     tauBeta = tauXp(p, p.beta, p.dBeta)

@@ -2,6 +2,7 @@ pragma solidity ^0.7.0;
 
 import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/SignedFixedPoint.sol";
+import "../../libraries/GyroPoolMath.sol";
 import "./GyroCEMMPoolErrors.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
@@ -199,7 +200,7 @@ library GyroCEMMMath {
      *  Notice that the eta function does not depend on Params.
      *  See Definition 2 in Section 2.1.1 */
     function eta(int256 pxc) internal pure returns (Vector2 memory tpp) {
-        int256 z = FixedPoint.powDown(FixedPoint.ONE.add(uint256(pxc.mulDown(pxc))), ONEHALF).toInt256();
+        int256 z = GyroPoolMath._sqrt(FixedPoint.ONE.add(uint256(pxc.mulDown(pxc))), 5).toInt256();
         tpp = eta(pxc, z);
     }
 
@@ -418,10 +419,10 @@ library GyroCEMMMath {
         val = calcMinAtxAChiySqPlusAtxSq(x, y, p, d).add(calc2AtxAtyAChixAChiy(x, y, p, d));
         val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, d));
         // if balances are > 100b, then error in extra precision terms propagates to higher decimals, if not, then O(eps) error propagation
-        int256 err = (x > 1e11 || y > 1e11) ? (x.mulUp(x).add(y.mulUp(y)) / 1e38) * 100 : 100;
+        int256 err = (x > 1e29 || y > 1e29) ? (x.mulUp(x).add(y.mulUp(y)) / 1e38) * 100 : 100;
         val = val.sub(err); // correct to downside for rounding error
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
-        val = val > 0 ? FixedPoint.powDown(val.toUint256(), ONEHALF).toInt256() : 0;
+        val = val > 0 ? GyroPoolMath._sqrt(val.toUint256(), 5).toInt256() : 0;
     }
 
     /** @dev Instantanteous price.
@@ -579,7 +580,7 @@ library GyroCEMMMath {
         q.c = q.c.add(r.y.mulDown(r.y).mulDownXpToNp(sTerm.y));
         // the square root is always being subtracted, so round it down to overestimate the end balance
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
-        q.c = q.c > 0 ? FixedPoint.powDown(q.c.toUint256(), ONEHALF).toInt256() : 0;
+        q.c = q.c > 0 ? GyroPoolMath._sqrt(q.c.toUint256(), 5).toInt256() : 0;
 
         // calculate the result in q.a
         if (q.b - q.c > 0) {

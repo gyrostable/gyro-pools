@@ -276,7 +276,7 @@ def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
     result_sol = gyro_cemm_math_testing.calcInvariantSqrt(
         scale(balances[0]), scale(balances[1]), scale(params), derived_scaled
     )
-    assert result_py == unscale(result_sol).approxed(rel=D("1e-13"))
+    assert result_py == unscale(result_sol).approxed(abs=D("5e-18"))  # (rel=D("1e-13"))
 
 
 @given(
@@ -290,10 +290,10 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     result_sol = gyro_cemm_math_testing.calculateInvariant(
         scale(balances), scale(params), derived_scaled
     )
-    denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
-    # erorr scales if denominator is small
-    err = D("1e-12") if denominator > 1 else D("1e-12") / D(denominator)
-    assert result_py == unscale(result_sol).approxed(rel=err)
+    err = prec_impl.calc_invariant_error(params, derived, balances)
+    # err = D("1e-12") if denominator > 1 else D("1e-12") / D(denominator)
+    # assert result_py == unscale(result_sol).approxed(rel=err)
+    assert result_py == unscale(result_sol).approxed(abs=err)
 
 
 @given(
@@ -443,12 +443,12 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
     # the error comes from the square root and from the square root in r (in the offset)
     # these are amplified by the invariant, lambda, and/or balances
     # note that r can be orders of magnitude greater than balances
-    error_tolx = max(
-        invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
-    ) * D("5e-13")
-    error_toly = max(
-        invariant * params.l * params.c, invariant, balances[1] / params.l / params.l
-    ) * D("5e-13")
+    # error_tolx = max(
+    #     invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
+    # ) * D("5e-13")
+    # error_toly = max(
+    #     invariant * params.l * params.c, invariant, balances[1] / params.l / params.l
+    # ) * D("5e-13")
 
     val_py = prec_impl.solveQuadraticSwap(
         params.l,
@@ -471,7 +471,9 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
         derived_scaled.dSq,
     )
     assert val_py <= unscale(val_sol)
-    assert val_py == unscale(val_sol).approxed(abs=error_tolx)
+    assert val_py == unscale(val_sol).approxed(
+        abs=D("5e-18")
+    )  # .approxed(abs=error_tolx)
 
     tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
     tau_beta_scaled = Vector2(-derived_scaled.tauAlpha[0], derived_scaled.tauAlpha[1])
@@ -489,7 +491,9 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
         derived_scaled.dSq,
     )
     assert val_y_py <= unscale(val_y_sol)
-    assert val_y_py == unscale(val_y_sol).approxed(abs=error_toly)
+    assert val_y_py == unscale(val_y_sol).approxed(
+        abs=D("5e-18")
+    )  # .approxed(abs=error_toly)
 
 
 # note: only test this for conservative parameters b/c old implementation is so imprecise
@@ -566,7 +570,7 @@ def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
     assert x_py >= balances[0]
 
 
-@settings(max_examples=1000)
+# @settings(max_examples=1000)
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX_property(params, balances):
     derived = prec_impl.calc_derived_values(params)
