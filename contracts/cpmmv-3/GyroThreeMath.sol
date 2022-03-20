@@ -26,6 +26,14 @@ import "../../libraries/GyroPoolMath.sol";
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
+/** @dev Math routines for the "symmetric" CPMMv3, i.e., the price bounds are [alpha, 1/alpha] for all three asset
+  * pairs. We pass the parameter root3Alpha = 3rd root of alpha. We don't need to compute root3Alpha; instead, we
+  * take this as the fundamental parameter and compute alpha = root3Alpha^3 where needed.
+  *
+  * A large part of this code is concerned with computing the invariant L from the real reserves, via Newton's method.
+  * can be rather large and we need it to high precision. We apply various techniques to prevent an accumulation of
+  * errors.
+  */
 library GyroThreeMath {
     using FixedPoint for uint256;
     using GyroPoolMath for uint256;  // number._sqrt(tolerance)
@@ -44,29 +52,21 @@ library GyroThreeMath {
     uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 8;
     uint8 internal constant _INVARIANT_MIN_ITERATIONS = 5;
 
-    uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31; // 4.87e13 scaled; source: Theory
-    uint256 internal constant MIDDECIMAL = 1e9;  // splits the fixed point decimals into two.
+    // Threshold of x where the normal method of computing x^3 would overflow and we need a workaround.
+    // Equal to 4.87e13 scaled; 4.87e13 is the point x where x**3 * 10**36 = (x**2 native) * (x native) ~ 2**256
+    uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31;
+    uint256 internal constant MIDDECIMAL = 1e9;  // splits the fixed point decimals into two equal parts.
 
-    // Invariant is used to collect protocol swap fees by comparing its value between two times.
-    // So we can round always to the same direction. It is also used to initiate the BPT amount
-    // and, because there is a minimum BPT, we round down the invariant.
-    // Argument root3Alpha = cube root of the lower price bound (symmetric across assets)
-    // Note: all price bounds for the pool are alpha and 1/alpha
-
-    /** @dev This provides an underestimate of the invariant or else signals that a swap should revert
-     *  Not getting an underestimate is highly unlikely as 2* newton step should be sufficient, but this isn't provable
-     *  This gives an extra step to finding an underestimate but will revert swaps if it is not an underestimate
-     *  but liquidity can still be added and removed from the pool, which will change the pool state to something workable again */
-    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
+    /** @dev The invariant L corresponding to the given balances and alpha. */
+    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure
+            returns (uint256 rootEst) {
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
 
-    /** @dev Prepares quadratic terms for input to _calculateCubic
-     *  assumes a > 0, b < 0, c <= 0, and d <= 0 and returns a, -b, -c, -d
-     *  terms come from cubic in Section 3.1.1
-     *  argument root3Alpha = cube root of alpha
-     */
+    /** @dev Prepares cubic coefficients for input to _calculateCubic.
+     *  We will have a > 0, b < 0, c <= 0, and d <= 0 and return a, -b, -c, -d, all >= 0
+     *  Terms come from cubic in Section 3.1.1.*/
     function _calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
         internal
         pure
@@ -77,6 +77,7 @@ library GyroThreeMath {
             uint256 md
         )
     {
+        // Order of operations is chosen to minimize error amplification.
         a = FixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
         mb = bterm.mulDown(root3Alpha).mulDown(root3Alpha);
@@ -87,7 +88,9 @@ library GyroThreeMath {
 
     /** @dev Calculate the maximal root of the polynomial a L^3 - mb L^2 - mc L - md.
      *  This root is always non-negative, and it is the unique positive root unless mb == mc == md == 0.
-     *  Returns: Overestimate (!) of the root, final step width; usually rootEst - deltaAbs is an underestimate. */
+     *  This function and all following ones require that a = 1 - root3Alpha^3 like in _calculateCubicTerms(), i.e.,
+     *  this *cannot* be used for *any* cubic equation. We do this because `a` carries an error and to be able to
+     *  rearrange operations to reduce error accumulation.*/
     function _calculateCubic(
         uint256 a,
         uint256 mb,
@@ -99,8 +102,8 @@ library GyroThreeMath {
         rootEst = _runNewtonIteration(a, mb, mc, md, root3Alpha, rootEst);
     }
 
-    /** @dev Starting point for Newton iteration. Safe with all cubic polynomials where the coefficients have the appropriate
-     *   signs, but calibrated to the particular polynomial for computing the invariant. */
+    /** @dev Starting point for Newton iteration. Safe with all cubic polynomials where the coefficients have the
+     *  appropriate signs and a in [0, 1], but calibrated to the particular polynomial for computing the invariant. */
     function _calculateCubicStartingPoint(
         uint256 a,
         uint256 mb,
@@ -109,8 +112,8 @@ library GyroThreeMath {
     ) internal pure returns (uint256 l0) {
         uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
         uint256 lmin = mb.divUp(a * 3).add(radic._sqrt(5).divUp(a * 3));
-        // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All factors > 1 are safe.
-        // For small alpha values, it is more efficient to fallback to a larger factor.
+        // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All
+        // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
         uint256 alpha = FixedPoint.ONE.sub(a);  // We know that a is in [0, 1].
         uint256 factor = alpha >= 0.5e18 ? 1.5e18 : 2e18;
         l0 = lmin.mulUp(factor);
@@ -120,10 +123,7 @@ library GyroThreeMath {
      *   Safe iff l > the local minimum.
      *   Note that f(l) may be negative for the first iteration and will then be positive (up to rounding errors).
      *   f'(l) is always positive for the range of values we consider.
-     *   See write-up, Appendix A.
-     *   This returns an overestimate (!) of the true l and the step width deltaAbs. Usually, rootEst - deltaAbs will be an underestimate.
-     *   Returns: overestimate l, final step width
-     */
+     *   See write-up, Appendix A.*/
     function _runNewtonIteration(
         uint256 a,
         uint256 mb,
@@ -134,17 +134,18 @@ library GyroThreeMath {
     ) internal pure returns (uint256) {
         uint256 deltaAbsPrev = 0;
         for (uint256 iteration = 0; iteration < 255; ++iteration) {
-            // The delta to the next step can be positive or negative, so we represent a positive and a negative part
-            // separately. The signed delta is delta_plus - delta_minus, but we only ever consider its absolute value.
+            // The delta to the next step can be positive or negative, and we represent its sign separately.
             (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, root3Alpha, rootEst);
-            // ^ Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
+
+            // Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
             if (deltaAbs <= 1)
                 return rootEst;
             if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos)
-                // numerical error dominates
+                // This should mathematically never happen. Thus, the numerical error dominates at this point.
                 return rootEst;
-            if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {
-                // stalled
+            if (iteration >= _INVARIANT_MIN_ITERATIONS &&
+                deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {
+                // The iteration has stalled and isn't making significant progress anymore.
                 return rootEst;
             }
             deltaAbsPrev = deltaAbs;
@@ -154,7 +155,8 @@ library GyroThreeMath {
         _revert(GyroThreePoolErrors.INVARIANT_DIDNT_CONVERGE);
     }
 
-    // -f(l)/f'(l), represented as an absolute value and a sign. Require that l is sufficiently large so that f is strictly increasing.
+    /** @dev The Newton step -f(l)/f'(l), represented by its absolute value and its sign.
+      * Requires that l is sufficiently large (right of the local minimum) so that f' > 0.*/
     function _calcNewtonDelta(
         uint256 a,
         uint256 mb,
@@ -175,11 +177,10 @@ library GyroThreeMath {
             dfRootEst = dfRootEst.sub(Math.mul(2, rootEst.mulDown(mb))).sub(mc);
         }
 
-        // Note: We know that a * rootEst^2 / dfRootEst ~ 1. (see the Mathematica notebook).
         uint256 deltaMinus = _safeLargePow3ADown(rootEst, root3Alpha, dfRootEst);
 
-        // NB: We could the order of operations here in much the same way we did above. But tests showed that
-        // this has no significant effect, and it would lead to more complex code.
+        // NB: We could order the operations here in much the same way we did above to reduce errors. But tests show
+        // that this has no significant effect, and it would lead to more complex code.
         uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
         deltaPlus = deltaPlus.add(rootEst.mulDown(mc)).divDown(dfRootEst);
         deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
@@ -188,11 +189,10 @@ library GyroThreeMath {
         deltaAbs = (deltaIsPos ? deltaPlus.sub(deltaMinus) : deltaMinus.sub(deltaPlus));
     }
 
-    /** @dev Equal to l^3 * (1 - root3Alpha^3) / d. However, we ensure that (1) the order of
-      * operations is such that rounding errors are minimized AND (2) this also works in a
-      * scenario where these operations would overflow, i.e., when l^3 * 10^36 does not
-      * fit into uint256.
-      * We assume d >= ONE and, of course, root3Alpha < ONE. In practice, d ~ l^2 */
+    /** @dev Equal to l^3 * (1 - root3Alpha^3) / d = l^3 * a / d. However, we ensure that (1) the order of operations is
+     * such that rounding errors are minimized AND (2) this also works in a scenario where these operations would
+     * overflow naively, i.e., when l^3 * 10^36 does not fit into uint256.
+     * We assume d >= ONE and, of course, root3Alpha < ONE. In practice, expect d ~ a * l^2. (tested experimentally) */
     function _safeLargePow3ADown(uint256 l, uint256 root3Alpha, uint256 d) internal pure returns (uint256 ret) {
         if (l <= _SAFE_LARGE_POW3_THRESHOLD) {
             // Simple case where there is no overflow
@@ -201,8 +201,13 @@ library GyroThreeMath {
             ret = ret.divDown(d);
         } else {
             ret = l.mulDown(l);
-            // These products split up the factors into different groups of decimal places to reduce temorary blowup.
+
+            // Compute l^2 * l * (1 - root3Alpha^3)
+            // The following products split up the factors into different groups of decimal places to reduce temorary
+            // blowup and prevent overflow.
+            // No precision is lost.
             ret = Math.mul(ret, l / FixedPoint.ONE).add(ret.mulDown(l % FixedPoint.ONE));
+
             uint256 x = ret;
             x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
                 x.mulDown(root3Alpha % MIDDECIMAL)
@@ -223,12 +228,12 @@ library GyroThreeMath {
         }
     }
 
-    /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the
-     * current balances and weights.
-     * Given an underestimated invariant L, the virtual offset is underestimated, which means that price impacts are greater than for an exact L
-     * This combined with rounding directions ensures a swap is calculated in the pool's favor
-     * Changed signs compared to original algorithm to account for amountOut < 0.
-     * See Proposition 12 in 3.1.4.*/
+    /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the current balances and
+     * price bounds.
+     * See Proposition 13 in 3.1.4. In contrast to the proposition, we use two separate functions for trading given the
+     * out-amount and the in-amount, respectively.
+     * The virtualOffset argument depends on the computed invariant. While the calculation is very precise, small errors
+     * can occur. We add a very small margin to ensure that such errors are not to the detriment of the pool. */
     function _calcOutGivenIn(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -242,11 +247,12 @@ library GyroThreeMath {
         // x = balanceIn             x' = x +  virtualOffset                                         //
         // z = balanceOut            z' = z +  virtualOffset                                         //
         // L  = inv.Liq                   /            x' * z'          \          z' * dX           //
-        //                   |dZ| = z' - |   --------------------------  |   = -------------------   //
+        //                   |dZ| = z' - |   --------------------------  |   = ---------------       //
         //  x' = virtIn                   \          ( x' + dX)         /          x' + dX           //
         //  z' = virtOut                                                                             //
         // Note that -dz > 0 is what the trader receives.                                            //
-        // We exploit the fact that this formula is symmetric up to virtualParam{X,Y,Z}.             //
+        // We exploit the fact that this formula is symmetric and does not depend on which asset is  //
+        // which.
         // We assume that the virtualOffset carries a relative +/- 3e-18 error due to the invariant  //
         // calculation add an appropriate safety margin.                                             //
         **********************************************************************************************/
@@ -254,7 +260,8 @@ library GyroThreeMath {
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
-            // very slightly larger than 3e-18.
+            // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
+            // computation.
             uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
 
@@ -275,11 +282,8 @@ library GyroThreeMath {
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
 
-    /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
-     * currhent balances and weights.
-     * Given an underestimated invariant L, the virtual offset is underestimated, which means that price impacts are greater than for an exact L
-     * This combined with rounding directions ensures a swap is calculated in the pool's favor
-     * Similar to the one before but adapting bc negative values (amountOut would be negative).*/
+    /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the current balances
+     * and price bounds. See documentation for _calcOutGivenIn(), too. */
     function _calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -293,12 +297,14 @@ library GyroThreeMath {
         // x = balanceIn             x' = x +  virtualOffset                                         //
         // z = balanceOut            z' = z +  virtualOffset                                         //
         // L  = inv.Liq            /            x' * z'          \             x' * dZ               //
-        //                   dX = |   --------------------------  | - x' = -------------------       //
+        //                   dX = |   --------------------------  | - x' = ---------------           //
         //  x' = virtIn            \          ( z' + dZ)         /             z' - dZ               //
         //  z' = virtOut                                                                             //
         // Note that dz < 0 < dx.                                                                    //
-        // We exploit the fact that this formula is symmetric up to virtualParam{X,Y,Z}.             //
-        // We use over/underestimated version of the virtualOffset to overestimate the in-amount.    //
+        // We exploit the fact that this formula is symmetric and does not depend on which asset is  //
+        // which.
+        // We assume that the virtualOffset carries a relative +/- 3e-18 error due to the invariant  //
+        // calculation add an appropriate safety margin.                                             //
         **********************************************************************************************/
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
@@ -307,7 +313,8 @@ library GyroThreeMath {
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
-            // very slightly larger than 3e-18.
+            // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
+            // computation.
             uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
 
