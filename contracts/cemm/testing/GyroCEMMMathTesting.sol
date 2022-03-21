@@ -233,13 +233,22 @@ contract GyroCEMMMathTesting {
     }
 
     function liquidityInvariantUpdate(
-        uint256[] memory balances,
         uint256 uinvariant,
-        uint256[] memory deltaBalances,
+        uint256 changeBptSupply,
+        uint256 currentBptSupply,
         bool isIncreaseLiq
     ) external pure returns (uint256 unewInvariant) {
-        unewInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, uinvariant, deltaBalances, isIncreaseLiq);
+        unewInvariant = GyroPoolMath.liquidityInvariantUpdate(uinvariant, changeBptSupply, currentBptSupply, isIncreaseLiq);
     }
+
+    // function liquidityInvariantUpdate(
+    //     uint256[] memory balances,
+    //     uint256 uinvariant,
+    //     uint256[] memory deltaBalances,
+    //     bool isIncreaseLiq
+    // ) external pure returns (uint256 unewInvariant) {
+    //     unewInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, uinvariant, deltaBalances, isIncreaseLiq);
+    // }
 
     function _calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,

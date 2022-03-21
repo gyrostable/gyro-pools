@@ -72,6 +72,19 @@ def gen_params_cemm_dinvariant(draw):
     return params, balances, dinvariant
 
 
+@st.composite
+def gen_params_cemm_liquidityUpdate(draw):
+    params = draw(gen_params())
+    balances = draw(gen_balances(2, bpool_params))
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
+    isIncrease = draw(st.booleans())
+    if isIncrease:
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
+    else:
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
+    return params, balances, bpt_supply, isIncrease, dsupply
+
+
 def get_derived_parameters(params, is_solidity: bool, gyro_cemm_math_testing):
     if is_solidity:
         derived_sol = mk_CEMMMathDerivedParams_from_brownie(
@@ -548,6 +561,7 @@ def mtest_calcInGivenOut(
     return amountIn, to_decimal(amountIn_sol)
 
 
+# TODO: needs refactor
 def mtest_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     params, balances, dinvariant = params_cemm_dinvariant
     derived = prec_impl.calc_derived_values(params)
@@ -926,59 +940,112 @@ def mtest_invariant_across_calcInGivenOut(
 
 
 def mtest_invariant_across_liquidityInvariantUpdate(
-    gyro_cemm_math_testing, params_cemm_dinvariant, derivedparams_is_sol: bool
+    params_cemm_invariantUpdate, gyro_cemm_math_testing
 ):
-    params, balances, dinvariant = params_cemm_dinvariant
-
+    params, balances, bpt_supply, isIncrease, dsupply = params_cemm_invariantUpdate
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-
-    invariant, inv_err = prec_impl.calculateInvariantWithError(
+    invariant_before, err_before = prec_impl.calculateInvariantWithError(
         balances, params, derived
     )
-    deltaBalances = (
-        dinvariant / invariant * balances[0],
-        dinvariant / invariant * balances[1],
-    )
-
-    deltaBalances = (
-        abs(deltaBalances[0]),
-        abs(deltaBalances[1]),
-    )  # b/c solidity function takes uint inputs for this
-
-    rnew = invariant + dinvariant
-    rnew_sol = gyro_cemm_math_testing.liquidityInvariantUpdate(
-        scale(balances),
-        scale(invariant),
-        scale(deltaBalances),
-        (dinvariant >= 0),
-    )
-
-    if dinvariant >= 0:
-        new_balances = (balances[0] + deltaBalances[0], balances[1] + deltaBalances[1])
+    if isIncrease:
+        dBalances = gyro_cemm_math_testing._calcAllTokensInGivenExactBptOut(
+            scale(balances), scale(dsupply), scale(bpt_supply)
+        )
+        new_balances = [
+            balances[0] + unscale(dBalances[0]),
+            balances[1] + unscale(dBalances[1]),
+        ]
     else:
-        new_balances = (balances[0] - deltaBalances[0], balances[1] - deltaBalances[1])
+        dBalances = gyro_cemm_math_testing._calcTokensOutGivenExactBptIn(
+            scale(balances), scale(dsupply), scale(bpt_supply)
+        )
+        new_balances = [
+            balances[0] - unscale(dBalances[0]),
+            balances[1] - unscale(dBalances[1]),
+        ]
 
-    rnew_sol2 = gyro_cemm_math_testing.calculateInvariant(
-        scale(new_balances), scale(params), derived_scaled
+    invariant_updated = unscale(
+        gyro_cemm_math_testing.liquidityInvariantUpdate(
+            scale(invariant_before), scale(dsupply), scale(bpt_supply), isIncrease
+        )
     )
-
-    rnew2, rnew2_err = prec_impl.calculateInvariantWithError(
+    invariant_after, err_after = prec_impl.calculateInvariantWithError(
         new_balances, params, derived
     )
+    abs_tol = D(2) * (
+        D(err_before) + D(err_after) + (D("1e-18") * invariant_before) / bpt_supply
+    )
+    rel_tol = D("1e-16") / min(D(1), bpt_supply)
+    # if D(invariant_updated) != D(invariant_after).approxed(abs=abs_tol, rel=rel_tol):
+    if isIncrease and invariant_updated < invariant_after:
+        loss = calculate_loss(
+            invariant_updated - invariant_after, invariant_after, new_balances
+        )
+    elif not isIncrease and invariant_updated > invariant_after:
+        loss = calculate_loss(
+            invariant_after - invariant_updated, invariant_after, new_balances
+        )
+    else:
+        loss = (D(0), D(0))
+    loss_ub = loss[0] * params.beta + loss[1]
+    assert abs(loss_ub) < D("1e-1")
 
-    assert D(rnew).approxed(abs=D(inv_err)) == D(rnew2).approxed(abs=D(rnew2_err))
-    # assert D(rnew) >= D(rnew2) - D("5e-17")  # * (D(1) - D("1e-12"))
-    # assert D(rnew) == D(rnew2).approxed(
-    #     abs=D("5e-17"), rel=D("5e-16")
-    # )  # .approxed(rel=D("1e-16"))
-    # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
-    # assert unscale(D(rnew_sol)).approxed(rel=D("1e-10")) >= unscale(
-    #     D(rnew_sol2)
-    # ).approxed(rel=D("1e-10"))
-    # assert unscale(D(rnew_sol)) == unscale(D(rnew_sol2)).approxed(
-    #     abs=D("5e-17"), rel=D("5e-16")
-    # )
+
+# def mtest_invariant_across_liquidityInvariantUpdate(
+#     gyro_cemm_math_testing, params_cemm_dinvariant, derivedparams_is_sol: bool
+# ):
+#     params, balances, dinvariant = params_cemm_dinvariant
+
+#     derived = prec_impl.calc_derived_values(params)
+#     derived_scaled = prec_impl.scale_derived_values(derived)
+
+#     invariant, inv_err = prec_impl.calculateInvariantWithError(
+#         balances, params, derived
+#     )
+#     deltaBalances = (
+#         dinvariant / invariant * balances[0],
+#         dinvariant / invariant * balances[1],
+#     )
+
+#     deltaBalances = (
+#         abs(deltaBalances[0]),
+#         abs(deltaBalances[1]),
+#     )  # b/c solidity function takes uint inputs for this
+
+#     rnew = invariant + dinvariant
+#     rnew_sol = gyro_cemm_math_testing.liquidityInvariantUpdate(
+#         scale(balances),
+#         scale(invariant),
+#         scale(deltaBalances),
+#         (dinvariant >= 0),
+#     )
+
+#     if dinvariant >= 0:
+#         new_balances = (balances[0] + deltaBalances[0], balances[1] + deltaBalances[1])
+#     else:
+#         new_balances = (balances[0] - deltaBalances[0], balances[1] - deltaBalances[1])
+
+#     rnew_sol2 = gyro_cemm_math_testing.calculateInvariant(
+#         scale(new_balances), scale(params), derived_scaled
+#     )
+
+#     rnew2, rnew2_err = prec_impl.calculateInvariantWithError(
+#         new_balances, params, derived
+#     )
+
+#     assert D(rnew).approxed(abs=D(inv_err)) == D(rnew2).approxed(abs=D(rnew2_err))
+# assert D(rnew) >= D(rnew2) - D("5e-17")  # * (D(1) - D("1e-12"))
+# assert D(rnew) == D(rnew2).approxed(
+#     abs=D("5e-17"), rel=D("5e-16")
+# )  # .approxed(rel=D("1e-16"))
+# the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
+# assert unscale(D(rnew_sol)).approxed(rel=D("1e-10")) >= unscale(
+#     D(rnew_sol2)
+# ).approxed(rel=D("1e-10"))
+# assert unscale(D(rnew_sol)) == unscale(D(rnew_sol2)).approxed(
+#     abs=D("5e-17"), rel=D("5e-16")
+# )
 
 
 def mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances):

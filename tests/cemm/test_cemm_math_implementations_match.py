@@ -283,6 +283,7 @@ def test_calcInGivenOut(
     )
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
@@ -293,6 +294,7 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     assert unscale(rnew_sol) == rnew_py.approxed()
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdateEquivalence(

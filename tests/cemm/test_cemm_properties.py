@@ -138,10 +138,10 @@ def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
 ### test liquidityInvariantUpdate for L change
 
 
-@given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
+@given(params_cemm_invariantUpdate=util.gen_params_cemm_liquidityUpdate())
 def test_invariant_across_liquidityInvariantUpdate(
-    gyro_cemm_math_testing, params_cemm_dinvariant
+    gyro_cemm_math_testing, params_cemm_invariantUpdate
 ):
     util.mtest_invariant_across_liquidityInvariantUpdate(
-        gyro_cemm_math_testing, params_cemm_dinvariant, DP_IN_SOL
+        params_cemm_invariantUpdate, gyro_cemm_math_testing
     )

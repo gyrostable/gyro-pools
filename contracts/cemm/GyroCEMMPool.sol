@@ -282,7 +282,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         // re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
-        _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, invariantBeforeAction, amountsIn, true);
+        _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountOut, totalSupply(), true);
 
         // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountOut, amountsIn, new uint256[](2));
@@ -373,7 +373,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             // re-computation.
             // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
             // protocol fee factor.
-            _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, invariantBeforeAction, amountsOut, false);
+            _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountIn, totalSupply(), false);
         } else {
             // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.

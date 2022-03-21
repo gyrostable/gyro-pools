@@ -69,6 +69,19 @@ def gen_params_cemm_dinvariant(draw):
 
 
 @st.composite
+def gen_params_cemm_liquidityUpdate(draw):
+    params = draw(gen_params())
+    balances = draw(gen_balances(2, bpool_params))
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
+    isIncrease = draw(st.booleans())
+    if isIncrease:
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
+    else:
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
+    return params, balances, bpt_supply, isIncrease, dsupply
+
+
+@st.composite
 def gen_params_swap_given_in(draw):
     params = draw(gen_params())
     balances = draw(gen_balances(2, bpool_params))
@@ -158,12 +171,12 @@ def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
 ### test liquidityInvariantUpdate for L change
 
 
-@given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
+@given(params_cemm_invariantUpdate=gen_params_cemm_liquidityUpdate())
 def test_invariant_across_liquidityInvariantUpdate(
-    gyro_cemm_math_testing, params_cemm_dinvariant
+    gyro_cemm_math_testing, params_cemm_invariantUpdate
 ):
     util.mtest_invariant_across_liquidityInvariantUpdate(
-        gyro_cemm_math_testing, params_cemm_dinvariant, DP_IN_SOL
+        params_cemm_invariantUpdate, gyro_cemm_math_testing
     )
 
 

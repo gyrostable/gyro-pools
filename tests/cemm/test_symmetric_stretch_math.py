@@ -16,6 +16,7 @@ from tests.support.util_common import (
     gen_balances_vector,
 )
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
+import pytest
 
 billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
 
@@ -100,6 +101,7 @@ def test_tau(params_px, gyro_cemm_math_testing):
     util.mtest_tau(params_px, gyro_cemm_math_testing)
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params=gen_params(), invariant=util.gen_synthetic_invariant())
 def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     util.mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing)
@@ -208,6 +210,7 @@ def test_calcInGivenOut(
     )
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     rnew_py, rnew_sol = util.mtest_liquidityInvariantUpdate(
@@ -217,6 +220,7 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     assert unscale(rnew_sol) == rnew_py.approxed()
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdateEquivalence(
     params_cemm_dinvariant, gyro_cemm_math_testing

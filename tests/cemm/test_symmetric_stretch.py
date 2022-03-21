@@ -60,17 +60,16 @@ def gen_params(draw):
 
 
 @st.composite
-def gen_params_cemm_dinvariant(draw):
+def gen_params_cemm_liquidityUpdate(draw):
     params = draw(gen_params())
-    derived = prec_impl.calc_derived_values(params)
     balances = draw(gen_balances(2, bpool_params))
-    # assume(balances[0] > 0 and balances[1] > 0)
-    r = prec_impl.calculateInvariant(balances, params, derived)
-    dinvariant = draw(
-        qdecimals(-r * (D(1) - D("1e-5")), 2 * r)
-    )  # Upper bound kinda arbitrary
-    # assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
-    return params, balances, dinvariant
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
+    isIncrease = draw(st.booleans())
+    if isIncrease:
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
+    else:
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
+    return params, balances, bpt_supply, isIncrease, dsupply
 
 
 @st.composite
@@ -165,10 +164,10 @@ def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
 ### test liquidityInvariantUpdate for L change
 
 
-@given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
+@given(params_cemm_invariantUpdate=gen_params_cemm_liquidityUpdate())
 def test_invariant_across_liquidityInvariantUpdate(
-    gyro_cemm_math_testing, params_cemm_dinvariant
+    gyro_cemm_math_testing, params_cemm_invariantUpdate
 ):
     util.mtest_invariant_across_liquidityInvariantUpdate(
-        gyro_cemm_math_testing, params_cemm_dinvariant, DP_IN_SOL
+        params_cemm_invariantUpdate, gyro_cemm_math_testing
     )
