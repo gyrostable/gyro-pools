@@ -29,7 +29,6 @@ library GyroCEMMMath {
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-    uint256 internal constant _MIN_BAL_RATIO = 0; //1e13; // 1e-5
 
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are
@@ -377,7 +376,7 @@ library GyroCEMMMath {
     }
 
     /// @dev calculate 2(At)_x * (At)_y * (A chi)_x * (A chi)_y, ignores rounding direction
-    // TODO: make this round down
+    //  Note: this ignores rounding direction and is corrected for later
     function calc2AtxAtyAChixAChiy(
         int256 x,
         int256 y,
@@ -425,7 +424,7 @@ library GyroCEMMMath {
         val = val.add((termNp - 9).mulDownXpToNp(SignedFixedPoint.ONE_XP.divXp(d.dSq)));
     }
 
-    // TODO: properly account for any residual rounding error
+    /// Rounds down
     function calcInvariantSqrt(
         int256 x,
         int256 y,
@@ -450,7 +449,7 @@ library GyroCEMMMath {
         int256 invariant
     ) internal pure returns (uint256 px) {
         // shift by virtual offsets to get v(t)
-        Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
+        Vector2 memory r = Vector2(invariant, invariant); // ignore r rounding for spot price, precision will be lost in TWAP anyway
         Vector2 memory ab = Vector2(virtualOffset0(params, derived, r), virtualOffset1(params, derived, r));
         Vector2 memory vec = Vector2(balances[0].toInt256().sub(ab.x), balances[1].toInt256().sub(ab.y));
 
@@ -474,13 +473,12 @@ library GyroCEMMMath {
         int256 newBal,
         uint8 assetIndex
     ) internal pure {
-        int256 factor = ONE.sub(_MIN_BAL_RATIO.toInt256());
         if (assetIndex == 0) {
             int256 xPlus = maxBalances0(params, derived, invariant);
-            _require(newBal < xPlus.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(newBal < xPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
             int256 yPlus = maxBalances1(params, derived, invariant);
-            _require(newBal < yPlus.mulDown(factor), GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(newBal < yPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
     }
 
@@ -511,11 +509,6 @@ library GyroCEMMMath {
         int256 balOutNew = calcGiven(balInNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
         _require(balOutNew.toUint256() < balances[ixOut], assetBoundError);
-        if (balOutNew >= balInNew) {
-            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
-        } else {
-            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
-        }
         amountOut = balances[ixOut].sub(balOutNew.toUint256());
         _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
@@ -547,11 +540,6 @@ library GyroCEMMMath {
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
         _require(balInNew.toUint256() > balances[ixIn], assetBoundError);
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
-        if (balOutNew >= balInNew) {
-            _require(balInNew.divUp(balOutNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
-        } else {
-            _require(balOutNew.divUp(balInNew) > _MIN_BAL_RATIO.toInt256(), assetBoundError);
-        }
         amountIn = balInNew.toUint256().sub(balances[ixIn]);
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
@@ -682,11 +670,8 @@ library GyroCEMMMath {
         DerivedParams memory d,
         Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 y) {
-        // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
-        // note that the error correction here should more than make up for rounding directions in virtual offset functions
-        // overestimate in x component, underestimate in y
-        //Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
+        // note that the error correction in the invariant should more than make up for uncaught rounding directions (in 38 decimals) in virtual offsets
         Vector2 memory ab = Vector2(virtualOffset0(params, d, r), virtualOffset1(params, d, r));
         y = solveQuadraticSwap(params.lambda, x, params.s, params.c, r, ab, d.tauBeta, d.dSq);
     }
@@ -697,18 +682,10 @@ library GyroCEMMMath {
         DerivedParams memory d,
         Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 x) {
-        // calculate an overestimate of invariant, which has relative error 1e-14, take two extra decimal places to be safe
-        // note that the error correction here should more than make up for rounding directions in virtual offset functions
-        // overestimate in x component, underestimate in y
-        //Vector2 memory r = Vector2(invariantOverestimate(invariant), invariant);
         // want to overestimate the virtual offsets except in a particular setting that will be corrected for later
+        // note that the error correction in the invariant should more than make up for uncaught rounding directions (in 38 decimals) in virtual offsets
         Vector2 memory ba = Vector2(virtualOffset1(params, d, r), virtualOffset0(params, d, r));
         // change x->y, s->c, c->s, b->a, a->b, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y vs calcYGivenX
         x = solveQuadraticSwap(params.lambda, y, params.c, params.s, r, ba, Vector2(-d.tauAlpha.x, d.tauAlpha.y), d.dSq);
-    }
-
-    /// @dev Given an underestimate of invariant, calculate an overestimate by accounting for error
-    function invariantOverestimate(int256 rDown) internal pure returns (int256 rUp) {
-        rUp = rDown.add(rDown.mulUp(1e6));
     }
 }

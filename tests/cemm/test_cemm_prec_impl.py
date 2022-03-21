@@ -51,7 +51,7 @@ bpool_params_conservative = BasicPoolParameters(
     MAX_OUT_RATIO,
     to_decimal("1e-5"),
     MIN_FEE,
-    int(D("1e11")),
+    int(D("1e8")),
 )
 
 
@@ -141,7 +141,7 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
 
 @given(
     params=gen_params_conservative(),
-    balances=gen_balances(2, bpool_params),
+    balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calcAtAChi_sense_check(params, balances):
     mparams = util.params2MathParams(params)
@@ -179,7 +179,7 @@ def test_calcMinAtxAChiySqPlusAtxSq(gyro_cemm_math_testing, params, balances):
 
 @given(
     params=gen_params_conservative(),
-    balances=gen_balances(2, bpool_params),
+    balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
     mparams = util.params2MathParams(params)
@@ -219,7 +219,7 @@ def test_calc2AtxAtyAChixAChiy(gyro_cemm_math_testing, params, balances):
 
 @given(
     params=gen_params_conservative(),
-    balances=gen_balances(2, bpool_params),
+    balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
     mparams = util.params2MathParams(params)
@@ -258,7 +258,7 @@ def test_calcMinAtyAChixSqPlusAtySq(gyro_cemm_math_testing, params, balances):
 
 @given(
     params=gen_params_conservative(),
-    balances=gen_balances(2, bpool_params),
+    balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
     mparams = util.params2MathParams(params)
@@ -316,7 +316,7 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
 
 @given(
     params=gen_params_conservative(),
-    balances=gen_balances(2, bpool_params),
+    balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calculateInvariant_sense_check(params, balances):
     mparams = util.params2MathParams(params)
@@ -379,7 +379,10 @@ def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     assert XpXp_py == unscale(XpXp_sol)
 
 
-@given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params_conservative),
+)
 def test_calcXpXpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
@@ -421,7 +424,10 @@ def test_calcYpYpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     assert YpYp_py == unscale(YpYp_sol)
 
 
-@given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params_conservative),
+)
 def test_calcYpYpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
@@ -515,7 +521,10 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
 
 
 # note: only test this for conservative parameters b/c old implementation is so imprecise
-@given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params_conservative),
+)
 def test_solveQuadraticSwap_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
@@ -601,7 +610,10 @@ def test_calcYGivenX_property(params, balances):
     assert x_py >= balances[0]
 
 
-@given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params_conservative),
+)
 def test_calcYGivenX_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
@@ -647,7 +659,10 @@ def test_maxBalances(gyro_cemm_math_testing, params, balances):
     assert yp_py == unscale(yp_sol)
 
 
-@given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
+@given(
+    params=gen_params_conservative(),
+    balances=gen_balances(2, bpool_params_conservative),
+)
 def test_maxBalances_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)

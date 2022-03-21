@@ -16,7 +16,12 @@ MIN_PRICE_SEPARATION = D("0.001")
 MIN_BALANCE_RATIO = D(0)  # D("1e-5")
 
 bpool_params = BasicPoolParameters(
-    MIN_PRICE_SEPARATION, D("0.3"), D("0.3"), MIN_BALANCE_RATIO, D("0.0001"), int(D("1e11"))
+    MIN_PRICE_SEPARATION,
+    D("0.3"),
+    D("0.3"),
+    MIN_BALANCE_RATIO,
+    D("0.0001"),
+    int(D("1e11")),
 )
 
 
@@ -928,7 +933,9 @@ def mtest_invariant_across_liquidityInvariantUpdate(
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, inv_err = prec_impl.calculateInvariantWithError(
+        balances, params, derived
+    )
     deltaBalances = (
         dinvariant / invariant * balances[0],
         dinvariant / invariant * balances[1],
@@ -956,19 +963,22 @@ def mtest_invariant_across_liquidityInvariantUpdate(
         scale(new_balances), scale(params), derived_scaled
     )
 
-    rnew2 = prec_impl.calculateInvariant(new_balances, params, derived)
+    rnew2, rnew2_err = prec_impl.calculateInvariantWithError(
+        new_balances, params, derived
+    )
 
+    assert D(rnew).approxed(abs=D(inv_err)) == D(rnew2).approxed(abs=D(rnew2_err))
     # assert D(rnew) >= D(rnew2) - D("5e-17")  # * (D(1) - D("1e-12"))
-    assert D(rnew) == D(rnew2).approxed(
-        abs=D("5e-17"), rel=D("5e-16")
-    )  # .approxed(rel=D("1e-16"))
+    # assert D(rnew) == D(rnew2).approxed(
+    #     abs=D("5e-17"), rel=D("5e-16")
+    # )  # .approxed(rel=D("1e-16"))
     # the following assertion can fail if square root in solidity has error, but consequence is small (some small protocol fees)
     # assert unscale(D(rnew_sol)).approxed(rel=D("1e-10")) >= unscale(
     #     D(rnew_sol2)
     # ).approxed(rel=D("1e-10"))
-    assert unscale(D(rnew_sol)) == unscale(D(rnew_sol2)).approxed(
-        abs=D("5e-17"), rel=D("5e-16")
-    )
+    # assert unscale(D(rnew_sol)) == unscale(D(rnew_sol2)).approxed(
+    #     abs=D("5e-17"), rel=D("5e-16")
+    # )
 
 
 def mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances):
