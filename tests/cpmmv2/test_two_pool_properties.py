@@ -87,9 +87,9 @@ def gen_params_dinvariant(draw):
     balances=gen_balances(),
     params=gen_params(),
 )
-def test_invariant_underestimated(gyro_two_math_testing, balances, params):
+def test_invariant_match(gyro_two_math_testing, balances, params):
     sqrt_alpha, sqrt_beta = params
-    mtest_invariant_underestimated(
+    mtest_invariant_match(
         gyro_two_math_testing,
         balances,
         sqrt_alpha,
@@ -101,9 +101,9 @@ def test_invariant_underestimated(gyro_two_math_testing, balances, params):
     balances=gen_balances(),
     params=gen_params_stable(),
 )
-def test_invariant_underestimated_stable(gyro_two_math_testing, balances, params):
+def test_invariant_match_stable(gyro_two_math_testing, balances, params):
     sqrt_alpha, sqrt_beta = params
-    mtest_invariant_underestimated(
+    mtest_invariant_match(
         gyro_two_math_testing,
         balances,
         sqrt_alpha,
@@ -115,9 +115,9 @@ def test_invariant_underestimated_stable(gyro_two_math_testing, balances, params
     balances=gen_balances(),
     params=gen_params_eth_btc(),
 )
-def test_invariant_underestimated_eth_btc(gyro_two_math_testing, balances, params):
+def test_invariant_match_eth_btc(gyro_two_math_testing, balances, params):
     sqrt_alpha, sqrt_beta = params
-    mtest_invariant_underestimated(
+    mtest_invariant_match(
         gyro_two_math_testing,
         balances,
         sqrt_alpha,
@@ -301,13 +301,13 @@ def mtest_invariant_across_calcInGivenOut(
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = gyro_two_math_testing.calcInGivenOut(
+        in_amount_sol = unscale(gyro_two_math_testing.calcInGivenOut(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_out),
             scale(virtual_param_in),
             scale(virtual_param_out),
-        )
+        ))
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_two_math_testing.calcInGivenOut(
@@ -317,7 +317,7 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(virtual_param_in),
                 scale(virtual_param_out),
             )
-        return 0, 0
+        return D(0), D(0)
     else:
         with reverts("BAL#304"):  # MAX_IN_RATIO
             gyro_two_math_testing.calcInGivenOut(
@@ -327,13 +327,13 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(virtual_param_in),
                 scale(virtual_param_out),
             )
-        return 0, 0
+        return D(0), D(0)
 
-    # assert to_decimal(in_amount_sol) >= scale(in_amount)
-    assert to_decimal(in_amount_sol) == scale(in_amount)
+    # Sanity check.
+    assert in_amount_sol == in_amount.approxed()
 
     balances_after = (
-        balances[0] + unscale(in_amount_sol) * (1 + MIN_FEE),
+        balances[0] + in_amount_sol / (1 - MIN_FEE),
         balances[1] - amount_out,
     )
     invariant_after = math_implementation.calculateInvariant(
@@ -344,9 +344,6 @@ def mtest_invariant_across_calcInGivenOut(
         invariant_sol_after = gyro_two_math_testing.calculateInvariant(
             scale(balances_after), scale(sqrt_alpha), scale(sqrt_beta)
         )
-
-    # assert invariant_after >= invariant
-    if check_sol_inv:
         assert invariant_sol_after >= invariant_sol
 
     return invariant_after, invariant
@@ -443,8 +440,8 @@ def mtest_invariant_across_calcOutGivenIn(
             )
         return 0, 0
 
-    # assert to_decimal(out_amount_sol) <= scale(out_amount)
-    assert to_decimal(out_amount_sol) == scale(out_amount)
+    # sanity check.
+    assert to_decimal(out_amount_sol) == scale(out_amount).approxed()
 
     balances_after = (
         balances[0] + amount_in + fees,
@@ -466,7 +463,7 @@ def mtest_invariant_across_calcOutGivenIn(
     return invariant_after, invariant
 
 
-def mtest_invariant_underestimated(
+def mtest_invariant_match(
     gyro_two_math_testing,
     balances: Tuple[int, int],
     sqrt_alpha,
@@ -482,4 +479,4 @@ def mtest_invariant_underestimated(
         scale(balances), scale(sqrt_alpha), scale(sqrt_beta)
     )
 
-    assert unscale(D(invariant_sol)) <= invariant
+    assert unscale(D(invariant_sol)) == invariant.approxed(abs=D('2e-18'))
