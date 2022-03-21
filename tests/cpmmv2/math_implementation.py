@@ -75,16 +75,18 @@ def calcOutGivenIn(
     assert amountIn <= balanceIn * _MAX_IN_RATIO
     virtIn = balanceIn + virtualParamIn
     virtOut = balanceOut + virtualParamOut
-    return virtOut - virtIn.mul_up(virtOut).div_up(virtIn + amountIn)
+    amountOut = virtOut.mul_down(amountIn).div_up(virtIn + amountIn)
+    return amountOut
 
 
 def calcInGivenOut(
     balanceIn: D, balanceOut: D, amountOut: D, virtualParamIn: D, virtualParamOut: D
 ) -> D:
     assert amountOut <= balanceOut * _MAX_OUT_RATIO
-    virtOut = balanceOut + virtualParamOut
     virtIn = balanceIn + virtualParamIn
-    return virtIn.mul_up(virtOut).div_up(virtOut - amountOut) - virtIn
+    virtOut = balanceOut + virtualParamOut
+    amountIn = virtIn.mul_up(amountOut).div_up(virtOut - amountOut)
+    return amountIn
 
 
 def calculateVirtualParameter0(invariant: D, sqrtBeta: D) -> D:

@@ -142,13 +142,20 @@ library GyroTwoMath {
      *   virtualParamOut = virtual reserve offset for output token
      *   Offsets are L/sqrt(beta) and L*sqrt(alpha) depending on what the `in' and `out' tokens are respectively
      *   Note signs are changed compared to Prop. 4 in Section 2.2.4 Trade (Swap) Exeuction to account for dy < 0
+     *
+     *   The virtualOffset argument depends on the computed invariant. We add a very small margin to ensure that
+     *   potential small errors are not to the detriment of the pool.
+     *
+     *   This is the same function as the respective function for the CPMMV3, except for two points: (1) we allow two
+     *   different virtual offsets for the in- and out-asset, respectively; (2) we do not implement a minimum balance
+     *   ratio.
      */
     function _calcOutGivenIn(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountIn,
-        uint256 virtualParamIn,
-        uint256 virtualParamOut
+        uint256 virtualOffsetIn,
+        uint256 virtualOffsetOut
     ) internal pure returns (uint256 amountOut) {
         /**********************************************************************************************
       // Described for X = `in' asset and Y = `out' asset, but equivalent for the other case       //
@@ -156,22 +163,24 @@ library GyroTwoMath {
       // dY = incrY = amountOut < 0                                                                //
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
-      // L  = inv.Liq                   /            x' * y'          \                            //
-      //                   |dy| = y' - |   --------------------------  |                           //
-      //  x' = virtIn                   \          ( x' + dX)         /                            //
+      // L  = inv.Liq                   /            x' * y'          \          z' * dX           //
+      //                   |dy| = y' - |   --------------------------  |   = --------------  -     //
+      //  x' = virtIn                   \          ( x' + dX)         /          x' + dX           //
       //  y' = virtOut                                                                             //
       // Note that -dy > 0 is what the trader receives.                                            //
-      // We exploit the fact that this formula is symmetric up to virtualParam{X,Y}.               //
-      // Note since L is an underestimate, x'*y' is used instead of L^2 to remove error            //
+      // We exploit the fact that this formula is symmetric up to virtualOffset{X,Y}.               //
+      // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.      //
+      // We add a very small safety margin to compensate for potential errors in the invariant.     //
       **********************************************************************************************/
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         {
-            uint256 virtIn = balanceIn.add(virtualParamIn);
-            uint256 virtOut = balanceOut.add(virtualParamOut);
-            uint256 denominator = virtIn.add(amountIn);
-            uint256 subtrahend = virtIn.mulUp(virtOut).divUp(denominator);
-            amountOut = virtOut.sub(subtrahend);
+            // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
+            // very slightly larger than 3e-18.
+            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
+
+            amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
@@ -184,12 +193,14 @@ library GyroTwoMath {
     // current balances and weights.
     // Similar to the one before but adapting bc negative values
 
+    /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances.
+      * See _calcOutGivenIn(). */
     function _calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountOut,
-        uint256 virtualParamIn,
-        uint256 virtualParamOut
+        uint256 virtualOffsetIn,
+        uint256 virtualOffsetOut
     ) internal pure returns (uint256 amountIn) {
         /**********************************************************************************************
       // dX = incrX  = amountIn  > 0                                                               //
@@ -202,16 +213,19 @@ library GyroTwoMath {
       // x' = virtIn                \           ( y' + dy)         /                               //
       // y' = virtOut                                                                              //
       // Note that dy < 0 < dx.                                                                    //
-      // Note since L is an underestimate, x'*y' is used instead of L^2 to remove error            //
+      // We exploit the fact that this formula is symmetric up to virtualOffset{X,Y}.               //
+      // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.      //
+      // We add a very small safety margin to compensate for potential errors in the invariant.     //
       **********************************************************************************************/
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         {
-            uint256 virtIn = balanceIn.add(virtualParamIn);
-            uint256 virtOut = balanceOut.add(virtualParamOut);
-            uint256 denominator = virtOut.sub(amountOut);
-            uint256 term = virtIn.mulUp(virtOut).divUp(denominator);
-            amountIn = term.sub(virtIn);
+            // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
+            // very slightly larger than 3e-18.
+            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
+
+            amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
