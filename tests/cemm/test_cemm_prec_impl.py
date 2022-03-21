@@ -32,7 +32,7 @@ MIN_PRICE_SEPARATION = to_decimal("0.0001")
 MAX_IN_RATIO = to_decimal("0.3")
 MAX_OUT_RATIO = to_decimal("0.3")
 
-MIN_BALANCE_RATIO = to_decimal("5e-5")
+MIN_BALANCE_RATIO = to_decimal("0")  # to_decimal("5e-5")
 MIN_FEE = D("0.0002")
 
 
@@ -41,6 +41,15 @@ bpool_params = BasicPoolParameters(
     MAX_IN_RATIO,
     MAX_OUT_RATIO,
     MIN_BALANCE_RATIO,
+    MIN_FEE,
+    int(D("1e11")),
+)
+
+bpool_params_conservative = BasicPoolParameters(
+    MIN_PRICE_SEPARATION,
+    MAX_IN_RATIO,
+    MAX_OUT_RATIO,
+    to_decimal("1e-5"),
     MIN_FEE,
     int(D("1e11")),
 )
@@ -641,9 +650,10 @@ def test_maxBalances(gyro_cemm_math_testing, params, balances):
 @given(params=gen_params_conservative(), balances=gen_balances(2, bpool_params))
 def test_maxBalances_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
-    invariant = prec_impl.calculateInvariant(balances, params, derived)
-    xp_py = prec_impl.maxBalances0(params, derived, invariant)
-    yp_py = prec_impl.maxBalances1(params, derived, invariant)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + err, invariant)
+    xp_py = prec_impl.maxBalances0(params, derived, r)
+    yp_py = prec_impl.maxBalances1(params, derived, r)
     # sense test against old implementation
     mparams = util.params2MathParams(params)
     midprice = (mparams.alpha + mparams.beta) / D(2)
@@ -653,7 +663,7 @@ def test_maxBalances_sense_check(params, balances):
     assert yp_py == D(cemm.ymax).approxed()
 
 
-@settings(max_examples=1000)
+# @settings(max_examples=1000)
 @given(
     a=st.integers(min_value=100, max_value=int(D("2e38"))),
     b=st.integers(min_value=100, max_value=int(D("2e38"))),

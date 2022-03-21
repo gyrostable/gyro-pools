@@ -29,7 +29,7 @@ library GyroCEMMMath {
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-    uint256 internal constant _MIN_BAL_RATIO = 1e13; // 1e-5
+    uint256 internal constant _MIN_BAL_RATIO = 0; //1e13; // 1e-5
 
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are

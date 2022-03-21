@@ -136,8 +136,10 @@ def test_calculatePrice(params, balances, gyro_cemm_math_testing):
 )
 @pytest.mark.skip(reason="Imprecision error to fix")
 def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
     y_py, y_sol = util.mtest_calcYGivenX(
-        params, x, invariant, DP_IN_SOL, gyro_cemm_math_testing
+        params, x, r, DP_IN_SOL, gyro_cemm_math_testing
     )
     assert y_sol == scale(y_py).approxed_scaled()
 
@@ -149,8 +151,10 @@ def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
 )
 @pytest.mark.skip(reason="Imprecision error to fix")
 def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
     x_py, x_sol = util.mtest_calcXGivenY(
-        params, y, invariant, DP_IN_SOL, gyro_cemm_math_testing
+        params, y, r, DP_IN_SOL, gyro_cemm_math_testing
     )
     assert x_sol == scale(x_py).approxed_scaled()
 

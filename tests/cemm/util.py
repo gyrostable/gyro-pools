@@ -13,9 +13,10 @@ from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
 MIN_PRICE_SEPARATION = D("0.001")
+MIN_BALANCE_RATIO = D(0)  # D("1e-5")
 
 bpool_params = BasicPoolParameters(
-    MIN_PRICE_SEPARATION, D("0.3"), D("0.3"), D("1E-5"), D("0.0001"), int(D("1e11"))
+    MIN_PRICE_SEPARATION, D("0.3"), D("0.3"), MIN_BALANCE_RATIO, D("0.0001"), int(D("1e11"))
 )
 
 
@@ -301,16 +302,12 @@ def mtest_calculatePrice(
     return cemm.px, to_decimal(price_sol)
 
 
-def mtest_calcYGivenX(
-    params, x, invariant, derivedparams_is_sol: bool, gyro_cemm_math_testing
-):
-    assume(x == 0 if invariant == 0 else True)
+# note r argument is tuple
+def mtest_calcYGivenX(params, x, r, derivedparams_is_sol: bool, gyro_cemm_math_testing):
+    assume(x == 0 if r[1] == 0 else True)
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-
-    # just pick something for overestimate
-    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
 
     y = prec_impl.calcYGivenX(x, params, derived, r)
     y_plus = prec_impl.maxBalances1(params, derived, r)
@@ -328,16 +325,12 @@ def mtest_calcYGivenX(
     return y, to_decimal(y_sol)
 
 
-def mtest_calcXGivenY(
-    params, y, invariant, derivedparams_is_sol: bool, gyro_cemm_math_testing
-):
-    assume(y == 0 if invariant == 0 else True)
+# note r argument is tuple
+def mtest_calcXGivenY(params, y, r, derivedparams_is_sol: bool, gyro_cemm_math_testing):
+    assume(y == 0 if r[1] == 0 else True)
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-
-    # just pick something for overestimate
-    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
 
     x = prec_impl.calcXGivenY(y, params, derived, r)
     x_plus = prec_impl.maxBalances0(params, derived, r)
