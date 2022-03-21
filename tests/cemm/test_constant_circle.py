@@ -74,7 +74,12 @@ def gen_params_swap_given_in(draw):
     balances = draw(gen_balances(2, bpool_params))
     tokenInIsToken0 = draw(st.booleans())
     i = 0 if tokenInIsToken0 else 1
-    amountIn = draw(qdecimals(min_value=1, max_value=D("0.3") * balances[i], places=4))
+    amountIn = draw(
+        qdecimals(
+            min_value=min(1, D("0.2") * balances[i]),
+            max_value=D("0.3") * balances[i],
+        )
+    )
     return params, balances, tokenInIsToken0, amountIn
 
 
@@ -84,7 +89,12 @@ def gen_params_swap_given_out(draw):
     balances = draw(gen_balances(2, bpool_params))
     tokenInIsToken0 = draw(st.booleans())
     i = 1 if tokenInIsToken0 else 0
-    amountOut = draw(qdecimals(min_value=1, max_value=D("0.3") * balances[i], places=4))
+    amountOut = draw(
+        qdecimals(
+            min_value=min(1, D("0.2") * balances[i]),
+            max_value=D("0.3") * balances[i],
+        )
+    )
     return params, balances, tokenInIsToken0, amountOut
 
 

@@ -300,7 +300,7 @@ library GyroCEMMMath {
         err = denominator > ONE ? err * 10 : (err * 10).divUp(denominator);
         // account for relative error due to error in division by denominator
         // error in denominator is O(epsilon) if lambda<1e11
-        err = err + (invariant * 10).divUp(denominator);
+        err = err + (invariant * 10).divUp(denominator) / 1e18;
         return (invariant, err);
     }
 

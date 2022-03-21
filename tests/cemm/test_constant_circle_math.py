@@ -2,6 +2,7 @@ from math import sin, cos
 
 import hypothesis.strategies as st
 import pytest
+
 # from pyrsistent import Invariant
 from brownie.test import given
 from hypothesis import assume
@@ -10,7 +11,11 @@ from tests.cemm import cemm as mimpl
 from tests.cemm import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import *
-from tests.support.util_common import BasicPoolParameters, gen_balances, gen_balances_vector
+from tests.support.util_common import (
+    BasicPoolParameters,
+    gen_balances,
+    gen_balances_vector,
+)
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
 billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
@@ -71,11 +76,6 @@ def gen_params_cemm_dinvariant(draw):
 
 
 @given(params=gen_params(), t=gen_balances_vector(bpool_params))
-def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
-    util.mtest_mulAinv(params, t, gyro_cemm_math_testing)
-
-
-@given(params=gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulA(params, t, gyro_cemm_math_testing)
 
@@ -97,6 +97,7 @@ def test_tau(params_px, gyro_cemm_math_testing):
     util.mtest_tau(params_px, gyro_cemm_math_testing)
 
 
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(params=gen_params(), invariant=util.gen_synthetic_invariant())
 def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     util.mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing)
@@ -115,9 +116,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
 
     # We now require that the invariant is underestimated and allow ourselves a bit of slack in the other direction.
     assert invariant_sol.approxed_scaled() <= scale(invariant_py).approxed_scaled()
-    assert invariant_sol == scale(invariant_py).approxed(
-        abs=1e12, rel=to_decimal("1E-9")
-    )
+    assert invariant_sol == scale(invariant_py).approxed(abs=D(5))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))

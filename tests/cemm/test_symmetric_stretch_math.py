@@ -79,11 +79,6 @@ def gen_params_cemm_dinvariant(draw):
 
 
 @given(params=gen_params(), t=gen_balances_vector(bpool_params))
-def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
-    util.mtest_mulAinv(params, t, gyro_cemm_math_testing)
-
-
-@given(params=gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulA(params, t, gyro_cemm_math_testing)
 
@@ -123,9 +118,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
 
     # We now require that the invariant is underestimated and allow ourselves a bit of slack in the other direction.
     assert invariant_sol.approxed_scaled() <= scale(invariant_py).approxed_scaled()
-    assert invariant_sol == scale(invariant_py).approxed(
-        abs=1e12, rel=to_decimal("1E-9")
-    )
+    assert invariant_sol == scale(invariant_py).approxed(abs=D(5))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))

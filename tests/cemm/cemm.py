@@ -17,6 +17,11 @@ from tests.support.dfuzzy import (
     prec_input,
 )
 
+##################################################################################################################
+### Note this is an old implementation with low precision, see cemm_prec_implementation for new implementation ###
+##################################################################################################################
+
+
 Vector = tuple[
     D, D
 ]  # Purely a shorthand. We don't use any vector math libraries in this code!

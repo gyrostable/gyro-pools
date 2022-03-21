@@ -246,14 +246,16 @@ def mtest_virtualOffsets_with_derived(params, invariant, gyro_cemm_math_testing)
 def mtest_maxBalances(params, invariant, gyro_cemm_math_testing):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
     x_plus_sol = gyro_cemm_math_testing.maxBalances0(
-        scale(params), derived_scaled, scale(invariant)
+        scale(params), derived_scaled, scale(r)
     )
     y_plus_sol = gyro_cemm_math_testing.maxBalances1(
-        scale(params), derived_scaled, scale(invariant)
+        scale(params), derived_scaled, scale(r)
     )
-    xp_py = prec_impl.maxBalances0(params, derived, invariant)
-    yp_py = prec_impl.maxBalances1(params, derived, invariant)
+    xp_py = prec_impl.maxBalances0(params, derived, r)
+    yp_py = prec_impl.maxBalances1(params, derived, r)
 
     assert int(x_plus_sol) == scale(xp_py)
     assert int(y_plus_sol) == scale(yp_py)
@@ -307,8 +309,11 @@ def mtest_calcYGivenX(
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    y = prec_impl.calcYGivenX(x, params, derived, invariant)
-    y_plus = prec_impl.maxBalances1(params, derived, invariant)
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
+
+    y = prec_impl.calcYGivenX(x, params, derived, r)
+    y_plus = prec_impl.maxBalances1(params, derived, r)
 
     assume(
         y < y_plus * (D(1) - bpool_params.min_balance_ratio)
@@ -318,7 +323,7 @@ def mtest_calcYGivenX(
     assume(y / x > bpool_params.min_balance_ratio)
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(x), scale(params), derived_scaled, scale(invariant)
+        scale(x), scale(params), derived_scaled, scale(r)
     )
     return y, to_decimal(y_sol)
 
@@ -331,8 +336,11 @@ def mtest_calcXGivenY(
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    x = prec_impl.calcXGivenY(y, params, derived, invariant)
-    x_plus = prec_impl.maxBalances0(params, derived, invariant)
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
+
+    x = prec_impl.calcXGivenY(y, params, derived, r)
+    x_plus = prec_impl.maxBalances0(params, derived, r)
 
     assume(
         x < x_plus * (D(1) - bpool_params.min_balance_ratio)
@@ -342,7 +350,7 @@ def mtest_calcXGivenY(
     assume(y / x > bpool_params.min_balance_ratio)
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(y), scale(params), derived_scaled, scale(invariant)  # scale(cemm.r)
+        scale(y), scale(params), derived_scaled, scale(r)  # scale(cemm.r)
     )
     return x, to_decimal(x_sol)
 

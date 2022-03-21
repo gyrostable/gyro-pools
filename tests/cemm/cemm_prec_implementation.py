@@ -219,7 +219,7 @@ def calculateInvariantWithError(
     err = D(err) * 10  # error in sqrt is O(error in square)
     # error scales if denominator is small
     err = err if denominator > 1 else err.div_up(D(denominator))
-    err = err + (D(invariant) * 10).div_up(denominator)
+    err = err + (D(invariant) * 10).div_up(denominator) / D("1e18")
     return invariant, err
 
 

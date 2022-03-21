@@ -302,6 +302,7 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
     assert result_py == unscale(result_sol).approxed(abs=err)
     assert err_py == unscale(err_sol)
+    # assert result_py == (result_py + err_py).approxed(rel=D("1e-12"), abs=D("1e-12"))
 
 
 @given(

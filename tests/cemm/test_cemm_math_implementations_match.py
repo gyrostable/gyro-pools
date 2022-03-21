@@ -10,7 +10,12 @@ from tests.cemm import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal import QuantizedDecimal as Decimal
 from tests.support.types import *
-from tests.support.util_common import gen_balances, gen_balances_vector, BasicPoolParameters
+from tests.support.util_common import (
+    gen_balances,
+    gen_balances_vector,
+    BasicPoolParameters,
+)
+
 # from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector, \
 #    gen_params_cemm_dinvariant
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
@@ -20,7 +25,7 @@ from tests.support.utils import scale, to_decimal, qdecimals, unscale
 MIN_PRICE_SEPARATION = to_decimal("0.0001")
 
 bpool_params = BasicPoolParameters(
-    MIN_PRICE_SEPARATION, D('0.3'), D('0.3'), D('1e-5'), D('0.0001')
+    MIN_PRICE_SEPARATION, D("0.3"), D("0.3"), D("1e-5"), D("0.0001")
 )
 
 # this determines whether derivedParameters are calculated in solidity or not
@@ -44,6 +49,7 @@ D.approxed_scaled = lambda self: self.approxed(abs=D("1E6"), rel=D("1E-6"))
 D.our_approxed_scaled = lambda self: self.approxed(abs=D("1E15"), rel=D("1E-6"))
 
 
+@pytest.mark.skip(reason="No longer implemented")
 @given(params=util.gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulAinv(params, t, gyro_cemm_math_testing)
@@ -81,12 +87,13 @@ def test_tau(params_px, gyro_cemm_math_testing):
     util.mtest_tau(params_px, gyro_cemm_math_testing)
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params=util.gen_params())
 def test_mkDerivedParams(params, gyro_cemm_math_testing):
     util.mtest_mkDerivedParams(params, gyro_cemm_math_testing)
 
 
-@pytest.mark.skip(reason="Imprecision error to fix")
+@pytest.mark.skip(reason="Needs refactor")
 @given(params=util.gen_params())
 def test_validateParamsAll(params, gyro_cemm_math_testing):
     util.mtest_validateParamsAll(params, gyro_cemm_math_testing)
@@ -95,6 +102,7 @@ def test_validateParamsAll(params, gyro_cemm_math_testing):
 ### Virtual Offsets and Max Balances ###
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params=util.gen_params(), invariant=util.gen_synthetic_invariant())
 @example(
     params=CEMMMathParams(
@@ -110,7 +118,7 @@ def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     util.mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing)
 
 
-@pytest.mark.skip(reason="Imprecision error to fix")
+@pytest.mark.skip(reason="Needs refactor")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params=util.gen_params(), invariant=util.gen_synthetic_invariant())
 @example(
@@ -127,7 +135,6 @@ def test_virtualOffsets_with_derived(params, invariant, gyro_cemm_math_testing):
     util.mtest_virtualOffsets_with_derived(params, invariant, gyro_cemm_math_testing)
 
 
-# @pytest.mark.skip(reason="Imprecision error to fix")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params=util.gen_params(), invariant=util.gen_synthetic_invariant())
 def test_maxBalances(params, invariant, gyro_cemm_math_testing):
@@ -169,6 +176,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
 #     assert int(xminus_sol) == scale(xminus).approxed(abs=1e15)
 
 
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
 def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
@@ -177,10 +185,8 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
     )
 
     # We now require that the invariant is underestimated and allow ourselves a bit of slack in the other direction.
-    assert invariant_sol.approxed_scaled() <= scale(invariant_py).approxed_scaled()
-    assert invariant_sol == scale(invariant_py).approxed(
-        abs=1e15, rel=to_decimal("1E-6")
-    )
+    assert invariant_sol <= scale(invariant_py)
+    assert invariant_sol == scale(invariant_py).approxed(abs=D(5))
 
 
 @settings(max_examples=MAX_EXAMPLES)
