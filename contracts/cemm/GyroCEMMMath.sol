@@ -59,7 +59,7 @@ library GyroCEMMMath {
         validateNormed(Vector2(params.c * 1e20, params.s * 1e20), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
 
-    // terms in this struct are stored in extra precision (38 decimals)
+    // terms in this struct are stored in extra precision (38 decimals) with final decimal rounded down
     struct DerivedParams {
         Vector2 tauAlpha;
         Vector2 tauBeta;
@@ -295,9 +295,12 @@ library GyroCEMMMath {
         int256 denominator = calcAChiAChi(params, derived).sub(ONE);
         // account for rounding errors in AtAchi (but these shouldn't scale b/c balances won't be big enough for extra precision rounding error to scale)
         int256 invariant = (AtAChi - 100).add(sqrt).divDown(denominator);
-        // error in sqrt is O(error in square) and is the largest error term, so scale by 100
+        // error in sqrt is O(error in square) and is the largest error term, so scale by 10
         // error also scales if denominator is small
-        err = denominator > ONE ? err * 1000 : (err * 1000).divUp(denominator);
+        err = denominator > ONE ? err * 10 : (err * 10).divUp(denominator);
+        // account for relative error due to error in division by denominator
+        // error in denominator is O(epsilon) if lambda<1e11
+        err = err + (invariant * 10).divUp(denominator);
         return (invariant, err);
     }
 

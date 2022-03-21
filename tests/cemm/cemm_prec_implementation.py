@@ -215,10 +215,12 @@ def calculateInvariantWithError(
     sqrt, err = calcInvariantSqrt(x, y, p, d)
     denominator = calcAChiAChi(p, d) - D(1)
     assert denominator > 0
-    err = D(err) * 1000  # error in sqrt is O(error in square)
+    invariant = (AtAChi - D("100e-18") + sqrt) / denominator
+    err = D(err) * 10  # error in sqrt is O(error in square)
     # error scales if denominator is small
     err = err if denominator > 1 else err.div_up(D(denominator))
-    return (AtAChi - D("100e-18") + sqrt) / denominator, err
+    err = err + (D(invariant) * 10).div_up(denominator)
+    return invariant, err
 
 
 def calculateInvariant(balances: Iterable[D], p: Params, d: DerivedParams) -> D:

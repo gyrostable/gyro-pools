@@ -68,30 +68,32 @@ def gen_params_cemm_dinvariant(draw):
     return params, balances, dinvariant
 
 
+@st.composite
+def gen_params_swap_given_in(draw):
+    params = draw(gen_params())
+    balances = draw(gen_balances(2, bpool_params))
+    tokenInIsToken0 = draw(st.booleans())
+    i = 0 if tokenInIsToken0 else 1
+    amountIn = draw(qdecimals(min_value=1, max_value=D("0.3") * balances[i], places=4))
+    return params, balances, tokenInIsToken0, amountIn
+
+
+@st.composite
+def gen_params_swap_given_out(draw):
+    params = draw(gen_params())
+    balances = draw(gen_balances(2, bpool_params))
+    tokenInIsToken0 = draw(st.booleans())
+    i = 1 if tokenInIsToken0 else 0
+    amountOut = draw(qdecimals(min_value=1, max_value=D("0.3") * balances[i], places=4))
+    return params, balances, tokenInIsToken0, amountOut
+
+
 ################################################################################
 ### test calcOutGivenIn for invariant change
 # @settings(max_examples=1_000)
-@given(
-    params=gen_params(),
-    balances=gen_balances(2, bpool_params),
-    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
-    tokenInIsToken0=st.booleans(),
-)
-@example(
-    params=CEMMMathParams(
-        alpha=D("10.591992670000000000"),
-        beta=D("10.593727349591836734"),
-        c=D("1.000000000000000000"),
-        s=D("0E-18"),
-        l=D("1.000000000000000000"),
-    ),
-    balances=(13849421, 1022),
-    amountIn=D("1.000000000000000000"),
-    tokenInIsToken0=False,
-)
-def test_invariant_across_calcOutGivenIn(
-    params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
-):
+@given(params_swap_given_in=gen_params_swap_given_in())
+def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_testing):
+    params, balances, tokenInIsToken0, amountIn = params_swap_given_in
     # the difference is whether invariant is calculated in python or solidity, but swap calculation still in solidity
     loss_py, loss_sol = util.mtest_invariant_across_calcOutGivenIn(
         params,
@@ -113,14 +115,10 @@ def test_invariant_across_calcOutGivenIn(
 ################################################################################
 ### test calcInGivenOut for invariant change
 @given(
-    params=gen_params(),
-    balances=gen_balances(2, bpool_params),
-    amountOut=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
-    tokenInIsToken0=st.booleans(),
+    params_swap_given_out=gen_params_swap_given_out(),
 )
-def test_invariant_across_calcInGivenOut(
-    params, balances, amountOut, tokenInIsToken0, gyro_cemm_math_testing
-):
+def test_invariant_across_calcInGivenOut(params_swap_given_out, gyro_cemm_math_testing):
+    params, balances, tokenInIsToken0, amountOut = params_swap_given_out
     # the difference is whether invariant is calculated in python or solidity, but swap calculation still in solidity
     loss_py, loss_sol = util.mtest_invariant_across_calcInGivenOut(
         params,

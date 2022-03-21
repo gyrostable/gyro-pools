@@ -363,7 +363,10 @@ def mtest_calcOutGivenIn(
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    r = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, inv_err = prec_impl.calculateInvariantWithError(
+        balances, params, derived
+    )
+    r = (invariant + inv_err, invariant)
     if tokenInIsToken0:
         mamountOut = (
             prec_impl.calcYGivenX(balances[0] + amountIn, params, derived, r)
@@ -458,7 +461,10 @@ def mtest_calcInGivenOut(
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    r = prec_impl.calculateInvariant(balances, params, derived)
+    invariant, inv_err = prec_impl.calculateInvariantWithError(
+        balances, params, derived
+    )
+    r = (invariant + inv_err, invariant)
     if tokenInIsToken0:
         amountIn = (
             prec_impl.calcXGivenY(balances[1] - amountOut, params, derived, r)
@@ -609,7 +615,7 @@ def mtest_invariant_across_calcOutGivenIn(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    assume(amountIn <= to_decimal("0.3") * balances[ixIn])
+    # assume(amountIn <= to_decimal("0.3") * balances[ixIn])
 
     fees = bpool_params.min_fee * amountIn
     amountIn -= fees
@@ -618,33 +624,30 @@ def mtest_invariant_across_calcOutGivenIn(
     derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant_before = prec_impl.calculateInvariant(balances, params, derived)
-    invariant_sol = gyro_cemm_math_testing.calculateInvariant(
+    invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
+    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
 
     if tokenInIsToken0:
         mamountOut = (
-            prec_impl.calcYGivenX(
-                balances[0] + amountIn, params, derived, unscale(invariant_sol)
-            )
+            prec_impl.calcYGivenX(balances[0] + amountIn, params, derived, r)
             - balances[1]
         )
     else:
         mamountOut = (
-            prec_impl.calcXGivenY(
-                balances[1] + amountIn, params, derived, unscale(invariant_sol)
-            )
+            prec_impl.calcXGivenY(balances[1] + amountIn, params, derived, r)
             - balances[0]
         )
-    x_plus = prec_impl.maxBalances0(params, derived, unscale(invariant_sol))
-    y_plus = prec_impl.maxBalances1(params, derived, unscale(invariant_sol))
+    x_plus = prec_impl.maxBalances0(params, derived, r)
+    y_plus = prec_impl.maxBalances1(params, derived, r)
 
     # calculate balanceOut after swap to determine if a revert could happen
     if ixOut == 0:
         x, balOutNew_sol = mtest_calcXGivenY(
             params,
             balances[ixIn] + amountIn,
-            unscale(invariant_sol),
+            r,
             derivedparams_is_sol,
             gyro_cemm_math_testing,
         )
@@ -652,7 +655,7 @@ def mtest_invariant_across_calcOutGivenIn(
         y, balOutNew_sol = mtest_calcYGivenX(
             params,
             balances[ixIn] + amountIn,
-            unscale(invariant_sol),
+            r,
             derivedparams_is_sol,
             gyro_cemm_math_testing,
         )
@@ -692,7 +695,7 @@ def mtest_invariant_across_calcOutGivenIn(
     #             tokenInIsToken0,
     #             scale(params),
     #             derived_scaled,
-    #             invariant_sol,
+    #             scale(r),
     #         )
     #     return (0, 0), (0, 0)
 
@@ -710,7 +713,7 @@ def mtest_invariant_across_calcOutGivenIn(
         tokenInIsToken0,
         scale(params),
         derived_scaled,
-        invariant_sol,
+        scale(r),
     )
 
     if tokenInIsToken0:
@@ -772,39 +775,36 @@ def mtest_invariant_across_calcInGivenOut(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    assume(amountOut <= to_decimal("0.3") * balances[ixOut])
+    # assume(amountOut <= to_decimal("0.3") * balances[ixOut])
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant_before = prec_impl.calculateInvariant(balances, params, derived)
-    invariant_sol = gyro_cemm_math_testing.calculateInvariant(
+    invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
+    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
 
     if tokenInIsToken0:
         amountIn = (
-            prec_impl.calcXGivenY(
-                balances[1] - amountOut, params, derived, unscale(invariant_sol)
-            )
+            prec_impl.calcXGivenY(balances[1] - amountOut, params, derived, r)
             - balances[0]
         )
     else:
         amountIn = (
-            prec_impl.calcYGivenX(
-                balances[0] - amountOut, params, derived, unscale(invariant_sol)
-            )
+            prec_impl.calcYGivenX(balances[0] - amountOut, params, derived, r)
             - balances[1]
         )
-    x_plus = prec_impl.maxBalances0(params, derived, unscale(invariant_sol))
-    y_plus = prec_impl.maxBalances1(params, derived, unscale(invariant_sol))
+    x_plus = prec_impl.maxBalances0(params, derived, r)
+    y_plus = prec_impl.maxBalances1(params, derived, r)
 
     # calculate balanceIn after swap to determine if a revert could happen
     if ixIn == 0:
         x, balInNew_sol = mtest_calcXGivenY(
             params,
             balances[ixOut] - amountOut,
-            unscale(invariant_sol),
+            r,
             derivedparams_is_sol,
             gyro_cemm_math_testing,
         )
@@ -812,7 +812,7 @@ def mtest_invariant_across_calcInGivenOut(
         y, balInNew_sol = mtest_calcYGivenX(
             params,
             balances[ixOut] - amountOut,
-            unscale(invariant_sol),
+            r,
             derivedparams_is_sol,
             gyro_cemm_math_testing,
         )
@@ -855,7 +855,7 @@ def mtest_invariant_across_calcInGivenOut(
     #             tokenInIsToken0,
     #             scale(params),
     #             derived_scaled,
-    #             invariant_sol,
+    #             scale(r),
     #         )
     #     return (0, 0), (0, 0)
 
@@ -871,7 +871,7 @@ def mtest_invariant_across_calcInGivenOut(
         tokenInIsToken0,
         scale(params),
         derived_scaled,
-        invariant_sol,
+        scale(r),
     )
 
     if tokenInIsToken0:
@@ -974,15 +974,16 @@ def mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    invariant_sol = gyro_cemm_math_testing.calculateInvariant(
+    invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
+    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
-        scale(balances[0]), scale(params), derived_scaled, invariant_sol
+        scale(balances[0]), scale(params), derived_scaled, scale(r)
     )
     assert balances[1] <= unscale(y_sol)
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(balances[1]), scale(params), derived_scaled, invariant_sol
+        scale(balances[1]), scale(params), derived_scaled, scale(r)
     )
     assert balances[0] <= unscale(x_sol)
