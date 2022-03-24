@@ -16,6 +16,7 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/IERC20.sol";
+import "@balancer-labs/v2-pool-utils/contracts/oracle/QueryProcessor.sol";
 
 import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "@balancer-labs/v2-vault/contracts/interfaces/IBasePool.sol";
@@ -50,6 +51,10 @@ contract MockVault is IPoolSwapStructs {
     );
 
     constructor(IAuthorizer authorizer) {
+        // NOTE: terrible workaround Brownie not adding library to current project
+        // unless it is explicitly used somewhere
+        QueryProcessor.findNearestSample;
+
         _authorizer = authorizer;
     }
 
