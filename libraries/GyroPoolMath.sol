@@ -265,10 +265,33 @@ library GyroPoolMath {
         }
     }
 
+    /** @dev If liquidity update is proportional so that price stays the same ("balanced liquidity update"), then this
+     *  returns the invariant after that change. This is more efficient than calling `calculateInvariant()` on the updated balances.
+     *  `isIncreaseLiq` denotes the sign of the update. See the writeup, Corollary 3 in Section 2.1.5. */
+    function liquidityInvariantUpdate(
+        uint256 uinvariant,
+        uint256 changeBptSupply,
+        uint256 currentBptSupply,
+        bool isIncreaseLiq
+    ) internal pure returns (uint256 unewInvariant) {
+        //  change in invariant
+        if (isIncreaseLiq) {
+            // round new invariant up so that protocol fees not triggered
+            uint256 dL = uinvariant.mulUp(changeBptSupply).divUp(currentBptSupply);
+            unewInvariant = uinvariant.add(dL);
+        } else {
+            // round new invariant up (and so round dL down) so that protocol fees not triggered
+            uint256 dL = uinvariant.mulDown(changeBptSupply).divDown(currentBptSupply);
+            unewInvariant = uinvariant.sub(dL);
+        }
+    }
+
     /** @dev If `deltaBalances` are such that, when changing `balances` by it, the price stays the same ("balanced
      * liquidity update"), then this returns the invariant after that change. This is more efficient than calling
      * `calculateInvariant()` on the updated balances. `isIncreaseLiq` denotes the sign of the update.
      * See the writeup, Corollary 3 in Section 2.1.5.
+     *
+     * DEPRECATED and will go out of use and be removed once pending changes to the CEMM are merged. Use the other liquidityInvariantUpdate() function instead!
      */
     function liquidityInvariantUpdate(
         uint256[] memory balances,

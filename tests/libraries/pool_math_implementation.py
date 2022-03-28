@@ -3,7 +3,7 @@ from typing import Iterable
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
 
-def liquidityInvariantUpdate(
+def liquidityInvariantUpdate_deltaBalances(
     balances: Iterable[D],
     lastInvariant: D,
     deltaBalances: Iterable[D],
@@ -26,6 +26,16 @@ def liquidityInvariantUpdate(
     else:
         invariant = lastInvariant - delta_invariant
     return invariant
+
+
+def liquidityInvariantUpdate_deltaBptTokens(
+    uinvariant: D,
+    changeBptSupply: D,
+    currentBptSupply: D,
+    isIncreaseLiq: bool
+) -> D:
+    dL = (1 if isIncreaseLiq else -1) * uinvariant * changeBptSupply / currentBptSupply
+    return uinvariant + dL
 
 
 def calcAllTokensInGivenExactBptOut(
