@@ -76,4 +76,4 @@ def test_calculateInvariant_reconstruction_alt(args):
     invariant_re = mimpl.calculateInvariantAltFloat(balances, root3Alpha)
 
     invariant = float(invariant)
-    assert invariant_re == approx(invariant, rel=1e-13)
+    assert invariant_re == approx(invariant, rel=1e-12)
