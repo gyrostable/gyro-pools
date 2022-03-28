@@ -55,20 +55,6 @@ def gen_params(draw):
 
 
 @st.composite
-def gen_params_cemm_dinvariant(draw):
-    params = draw(gen_params())
-    derived = prec_impl.calc_derived_values(params)
-    balances = draw(gen_balances(2, bpool_params))
-    # assume(balances[0] > 0 and balances[1] > 0)
-    r = util.prec_impl.calculateInvariant(balances, params, derived)
-    dinvariant = draw(
-        qdecimals(-r * (D(1) - D("1e-5")), 2 * r)
-    )  # Upper bound kinda arbitrary
-    # assume(abs(dinvariant) > D("1E-10"))  # Only relevant updates
-    return params, balances, dinvariant
-
-
-@st.composite
 def gen_params_cemm_liquidityUpdate(draw):
     params = draw(gen_params())
     balances = draw(gen_balances(2, bpool_params))
