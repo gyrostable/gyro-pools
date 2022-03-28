@@ -278,11 +278,11 @@ library GyroPoolMath {
         //  change in invariant
         if (isIncreaseLiq) {
             // round new invariant up so that protocol fees not triggered
-            uint256 dL = uinvariant.mulUp((changeBptSupply).divUp(currentBptSupply));
+            uint256 dL = uinvariant.mulUp(changeBptSupply).divUp(currentBptSupply);
             unewInvariant = uinvariant.add(dL);
         } else {
             // round new invariant up (and so round dL down) so that protocol fees not triggered
-            uint256 dL = uinvariant.mulDown((changeBptSupply).divDown(currentBptSupply));
+            uint256 dL = uinvariant.mulDown(changeBptSupply).divDown(currentBptSupply);
             unewInvariant = uinvariant.sub(dL);
         }
     }
