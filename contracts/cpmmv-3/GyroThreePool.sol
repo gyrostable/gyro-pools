@@ -289,7 +289,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         // re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
-        _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, invariantBeforeJoin, amountsIn, true);
+        _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeJoin, bptAmountOut, totalSupply(), true);
 
         // returns a new uint256[](3) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountOut, amountsIn, new uint256[](3));
@@ -360,7 +360,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             // re-computation.
             // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the
             // total protocol fee factor.
-            _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, invariantBeforeExit, amountsOut, false);
+            _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeExit, bptAmountIn, totalSupply(), false);
         } else {
             // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.
