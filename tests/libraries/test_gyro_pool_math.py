@@ -40,7 +40,7 @@ def test_liquidity_invariant_update_add(
     assume(not faulty_params(balances))
     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
 
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate(
+    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
         to_decimal(balances),
         to_decimal(last_invariant),
         to_decimal(delta_balances),
@@ -75,7 +75,7 @@ def test_liquidity_invariant_update_remove(
     assume(not faulty_params(balances))
     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
 
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate(
+    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
         to_decimal(balances),
         to_decimal(last_invariant),
         to_decimal(delta_balances),
@@ -203,7 +203,7 @@ def test_liquidity_invariant_update_add_3(
     assume(not faulty_params(balances))
     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
 
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate(
+    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
         to_decimal(balances),
         to_decimal(last_invariant),
         to_decimal(delta_balances),
@@ -240,7 +240,7 @@ def test_liquidity_invariant_update_remove_3(
     assume(not faulty_params(balances))
     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
 
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate(
+    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
         to_decimal(balances),
         to_decimal(last_invariant),
         to_decimal(delta_balances),
