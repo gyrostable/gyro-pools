@@ -43,7 +43,6 @@ library GyroThreeMath {
     // it's <= ONE)
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-    uint256 internal constant _MIN_BAL_RATIO = 0; //1e13; // 1e-5
 
     // Stopping criterion for the Newton iteration that computes the invariant:
     // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
@@ -261,15 +260,6 @@ library GyroThreeMath {
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
-        _require(amountOut < balanceOut, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
-        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
-
-        if (balOutNew >= balInNew) {
-            _require(balInNew.divDown(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
-        } else {
-            _require(balOutNew.divDown(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
-        }
-
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
@@ -312,14 +302,6 @@ library GyroThreeMath {
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
-        }
-
-        (uint256 balOutNew, uint256 balInNew) = (balanceOut.sub(amountOut), balanceIn.add(amountIn));
-
-        if (balOutNew >= balInNew) {
-            _require(balInNew.divDown(balOutNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
-        } else {
-            _require(balOutNew.divDown(balInNew) > _MIN_BAL_RATIO, GyroThreePoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
 
         _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);

@@ -17,7 +17,7 @@ billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 
 ROOT_ALPHA_MAX = "0.99996666555"
 ROOT_ALPHA_MIN = "0.2"
-MIN_BAL_RATIO = to_decimal("1e-5")
+MIN_BAL_RATIO = D(0)  # to_decimal("1e-5")
 
 
 def faulty_params(balances, root_three_alpha):
@@ -130,9 +130,11 @@ def test_calc_in_given_out(
 
     assume(amount_out < to_decimal("0.3") * (balances[1]))
 
-    invariant = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root_three_alpha)
-    ))
+    invariant = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances), scale(root_three_alpha)
+        )
+    )
 
     virtual_offset = invariant * to_decimal(root_three_alpha)
 
@@ -144,41 +146,43 @@ def test_calc_in_given_out(
     )
 
     bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
-    if bal_out_new > bal_in_new:
-        within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    else:
-        within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
+    # if bal_out_new > bal_in_new:
+    #     within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
+    # else:
+    #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
-    if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = unscale(gyro_three_math_testing.calcInGivenOut(
-            scale(balances[0]),
-            scale(balances[1]),
-            scale(amount_out),
-            scale(virtual_offset)
-        ))
-    elif not within_bal_ratio:
-        with reverts("BAL#357"):  # MIN_BAL_RATIO
+    if in_amount <= to_decimal("0.3") * balances[0]:  # and within_bal_ratio:
+        in_amount_sol = unscale(
             gyro_three_math_testing.calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset)
+                scale(virtual_offset),
             )
-        return
+        )
+    # elif not within_bal_ratio:
+    #     with reverts("BAL#357"):  # MIN_BAL_RATIO
+    #         gyro_three_math_testing.calcInGivenOut(
+    #             scale(balances[0]),
+    #             scale(balances[1]),
+    #             scale(amount_out),
+    #             scale(virtual_offset),
+    #         )
+    #     return
     else:
         with reverts("BAL#304"):  # MAX_IN_RATIO
             gyro_three_math_testing.calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset)
+                scale(virtual_offset),
             )
         return
 
     # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
     # implemented in python)
     assert in_amount_sol >= in_amount
-    assert in_amount_sol == in_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
+    assert in_amount_sol == in_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))
 
 
 @given(
@@ -193,9 +197,11 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     # assume(not faulty_params)
     assume(amount_in < to_decimal("0.3") * (balances[0]))
 
-    invariant = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root_three_alpha)
-    ))
+    invariant = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances), scale(root_three_alpha)
+        )
+    )
 
     virtual_offset = invariant * to_decimal(root_three_alpha)
 
@@ -203,83 +209,88 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
         to_decimal(balances[0]),
         to_decimal(balances[1]),
         to_decimal(amount_in),
-        virtual_offset
+        virtual_offset,
     )
 
     bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
-    if bal_out_new > bal_in_new:
-        within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    else:
-        within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
+    # if bal_out_new > bal_in_new:
+    #     within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
+    # else:
+    #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if (
         out_amount <= to_decimal("0.3") * balances[1]
-        and within_bal_ratio
+        # and within_bal_ratio
         and out_amount >= 0
     ):
-        out_amount_sol = unscale(gyro_three_math_testing.calcOutGivenIn(
-            scale(balances[0]),
-            scale(balances[1]),
-            scale(amount_in),
-            scale(virtual_offset)
-        ))
+        out_amount_sol = unscale(
+            gyro_three_math_testing.calcOutGivenIn(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_in),
+                scale(virtual_offset),
+            )
+        )
     elif out_amount < 0:
         with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset)
+                scale(virtual_offset),
             )
         return
-    elif not within_bal_ratio:
-        with reverts("BAL#357"):  # MIN_BAL_RATIO
-            gyro_three_math_testing.calcOutGivenIn(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_in),
-                scale(virtual_offset)
-            )
-        return
+    # elif not within_bal_ratio:
+    #     with reverts("BAL#357"):  # MIN_BAL_RATIO
+    #         gyro_three_math_testing.calcOutGivenIn(
+    #             scale(balances[0]),
+    #             scale(balances[1]),
+    #             scale(amount_in),
+    #             scale(virtual_offset),
+    #         )
+    #     return
     else:
         with reverts("BAL#305"):  # MAX_OUT_RATIO
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_in),
-                scale(virtual_offset)
+                scale(virtual_offset),
             )
         return
 
     # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
     # implemented in python)
     assert out_amount_sol <= out_amount
-    assert out_amount_sol == out_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
+    assert out_amount_sol == out_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))
 
 
 @given(
-    l=qdecimals('1e12', '1e16'),
+    l=qdecimals("1e12", "1e16"),
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
     ),
 )
-@example(
-    l=D('651894673872645.123456789012345678'),
-    root_three_alpha=D(ROOT_ALPHA_MAX)
-)
+@example(l=D("651894673872645.123456789012345678"), root_three_alpha=D(ROOT_ALPHA_MAX))
 def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
     l3 = l * l * l
     res_math_nod = l3 - l3 * root_three_alpha * root_three_alpha * root_three_alpha
-    res_sol_nod = unscale(gyro_three_math_testing.safeLargePow3ADown(
-        scale(l), scale(root_three_alpha), scale(1)
-    ))
-    assert res_math_nod == res_sol_nod.approxed(abs=D('2e-18'))
+    res_sol_nod = unscale(
+        gyro_three_math_testing.safeLargePow3ADown(
+            scale(l), scale(root_three_alpha), scale(1)
+        )
+    )
+    assert res_math_nod == res_sol_nod.approxed(abs=D("2e-18"))
 
-    d = l * l * D('0.973894092617384965')  # We only test the right order of magnitude. The factor is arbitrary.
+    d = (
+        l * l * D("0.973894092617384965")
+    )  # We only test the right order of magnitude. The factor is arbitrary.
     res_math_d = res_math_nod / d
-    res_sol_d = unscale(gyro_three_math_testing.safeLargePow3ADown(
-        scale(l), scale(root_three_alpha), scale(d)
-    ))
+    res_sol_d = unscale(
+        gyro_three_math_testing.safeLargePow3ADown(
+            scale(l), scale(root_three_alpha), scale(d)
+        )
+    )
     assert res_math_d == res_sol_d
 
 
@@ -289,7 +300,7 @@ def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
     ),
     root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
 )
-@example(balances=[D('1e10'), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 # L = Decimal('99993316741847.981485422976711167')
 # This is also *approximately* computed by Solidity. Wtf.
 # Crash on L^3, but why?!
@@ -311,9 +322,11 @@ def test_calculate_invariant(
 
     roots = np.roots([a, -b, -c, -d])
 
-    invariant_sol = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root_three_alpha)
-    ))
+    invariant_sol = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances), scale(root_three_alpha)
+        )
+    )
 
     assert invariant_sol == invariant.approxed(rel=D("5e-18"), abs=D("5e-18"))
 
@@ -332,9 +345,14 @@ def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
         a, mb, mc, md, root_three_alpha, rootEst
     )
     delta_abs_sol, delta_is_pos_sol = gyro_three_math_testing.calcNewtonDelta(
-        scale(a), scale(mb), scale(mc), scale(md), scale(root_three_alpha), scale(rootEst)
+        scale(a),
+        scale(mb),
+        scale(mc),
+        scale(md),
+        scale(root_three_alpha),
+        scale(rootEst),
     )
     delta_abs_sol = unscale(delta_abs_sol)
 
-    assert delta_abs_sol == delta_abs.approxed(abs=D('2e-18'))
-    assert delta_is_pos == delta_is_pos_sol or delta_abs <= D('2e-18')
+    assert delta_abs_sol == delta_abs.approxed(abs=D("2e-18"))
+    assert delta_is_pos == delta_is_pos_sol or delta_abs <= D("2e-18")
