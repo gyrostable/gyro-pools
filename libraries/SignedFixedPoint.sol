@@ -22,6 +22,8 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
 /// @dev Signed fixed point operations based on Balancer's FixedPoint library.
 library SignedFixedPoint {
     int256 internal constant ONE = 1e18; // 18 decimal places
+    // setting extra precision at 38 decimals, which is the most we can get w/o overflowing on normal multiplication
+    // this allows 20 extra digits to absorb error when multiplying by large numbers
     int256 internal constant ONE_XP = 1e38; // 38 decimal places
     int256 internal constant MAX_POW_RELATIVE_ERROR = 10000; // 10^(-14)
 
@@ -103,7 +105,7 @@ library SignedFixedPoint {
     }
 
     /// @dev multiplies two extra precision numbers (with 38 decimals)
-    /// rounds down but this shouldn't matter
+    /// rounds down in magnitude but this shouldn't matter
     /// multiplication can overflow if a,b are > 2 in magnitude
     function mulXp(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
@@ -113,7 +115,7 @@ library SignedFixedPoint {
     }
 
     /// @dev divides two extra precision numbers (with 38 decimals)
-    /// rounds down but this shouldn't matter
+    /// rounds down in magnitude but this shouldn't matter
     /// can overflow if a > 2 or b << 1 in magnitude
     function divXp(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
@@ -129,6 +131,7 @@ library SignedFixedPoint {
     }
 
     /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
+    /// Rounds down in signed direction
     /// returns normal precision of the product
     function mulDownXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
@@ -140,6 +143,9 @@ library SignedFixedPoint {
         return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
     }
 
+    /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
+    /// Rounds up in signed direction
+    /// returns normal precision of the product
     function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
         int256 b2 = b1 != 0 ? b - b1 * 1e19 : b;

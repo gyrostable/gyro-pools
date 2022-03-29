@@ -53,7 +53,7 @@ library GyroCEMMMath {
         _require(params.beta > params.alpha, GyroCEMMPoolErrors.PRICE_BOUNDS_WRONG);
         _require(params.c >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
         _require(params.s >= 0, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
-        _require(params.lambda >= 1, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
+        _require(params.lambda >= ONE, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
         // rescale s,c b/c validateNormed performed in higher precision
         validateNormed(Vector2(params.c * 1e20, params.s * 1e20), GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
     }
