@@ -27,23 +27,23 @@ import "../../libraries/GyroPoolMath.sol";
 // solhint-disable private-vars-leading-underscore
 
 /** @dev Math routines for the "symmetric" CPMMv3, i.e., the price bounds are [alpha, 1/alpha] for all three asset
-  * pairs. We pass the parameter root3Alpha = 3rd root of alpha. We don't need to compute root3Alpha; instead, we
-  * take this as the fundamental parameter and compute alpha = root3Alpha^3 where needed.
-  *
-  * A large part of this code is concerned with computing the invariant L from the real reserves, via Newton's method.
-  * can be rather large and we need it to high precision. We apply various techniques to prevent an accumulation of
-  * errors.
-  */
+ * pairs. We pass the parameter root3Alpha = 3rd root of alpha. We don't need to compute root3Alpha; instead, we
+ * take this as the fundamental parameter and compute alpha = root3Alpha^3 where needed.
+ *
+ * A large part of this code is concerned with computing the invariant L from the real reserves, via Newton's method.
+ * can be rather large and we need it to high precision. We apply various techniques to prevent an accumulation of
+ * errors.
+ */
 library GyroThreeMath {
     using FixedPoint for uint256;
-    using GyroPoolMath for uint256;  // number._sqrt(tolerance)
+    using GyroPoolMath for uint256; // number._sqrt(tolerance)
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
     // _MAX_OUT_RATIO also ensures that we never compute swaps that take more out than is in the pool. (because
     // it's <= ONE)
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-    uint256 internal constant _MIN_BAL_RATIO = 1e13; // 1e-5
+    uint256 internal constant _MIN_BAL_RATIO = 0; //1e13; // 1e-5
 
     // Stopping criterion for the Newton iteration that computes the invariant:
     // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
@@ -55,11 +55,10 @@ library GyroThreeMath {
     // Threshold of x where the normal method of computing x^3 would overflow and we need a workaround.
     // Equal to 4.87e13 scaled; 4.87e13 is the point x where x**3 * 10**36 = (x**2 native) * (x native) ~ 2**256
     uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31;
-    uint256 internal constant MIDDECIMAL = 1e9;  // splits the fixed point decimals into two equal parts.
+    uint256 internal constant MIDDECIMAL = 1e9; // splits the fixed point decimals into two equal parts.
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
-    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure
-            returns (uint256 rootEst) {
+    function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
@@ -114,7 +113,7 @@ library GyroThreeMath {
         uint256 lmin = mb.divUp(a * 3).add(radic._sqrt(5).divUp(a * 3));
         // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All
         // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
-        uint256 alpha = FixedPoint.ONE.sub(a);  // We know that a is in [0, 1].
+        uint256 alpha = FixedPoint.ONE.sub(a); // We know that a is in [0, 1].
         uint256 factor = alpha >= 0.5e18 ? 1.5e18 : 2e18;
         l0 = lmin.mulUp(factor);
     }
@@ -138,13 +137,11 @@ library GyroThreeMath {
             (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, root3Alpha, rootEst);
 
             // Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
-            if (deltaAbs <= 1)
-                return rootEst;
+            if (deltaAbs <= 1) return rootEst;
             if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaIsPos)
                 // This should mathematically never happen. Thus, the numerical error dominates at this point.
                 return rootEst;
-            if (iteration >= _INVARIANT_MIN_ITERATIONS &&
-                deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {
+            if (iteration >= _INVARIANT_MIN_ITERATIONS && deltaAbs >= deltaAbsPrev / _INVARIANT_SHRINKING_FACTOR_PER_STEP) {
                 // The iteration has stalled and isn't making significant progress anymore.
                 return rootEst;
             }
@@ -156,7 +153,7 @@ library GyroThreeMath {
     }
 
     /** @dev The Newton step -f(l)/f'(l), represented by its absolute value and its sign.
-      * Requires that l is sufficiently large (right of the local minimum) so that f' > 0.*/
+     * Requires that l is sufficiently large (right of the local minimum) so that f' > 0.*/
     function _calcNewtonDelta(
         uint256 a,
         uint256 mb,
@@ -171,9 +168,7 @@ library GyroThreeMath {
         {
             uint256 rootEst2 = rootEst.mulDown(rootEst);
             dfRootEst = Math.mul(3, rootEst2);
-            dfRootEst = dfRootEst.sub(
-                dfRootEst.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha)
-            );
+            dfRootEst = dfRootEst.sub(dfRootEst.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
             dfRootEst = dfRootEst.sub(Math.mul(2, rootEst.mulDown(mb))).sub(mc);
         }
 
@@ -193,7 +188,11 @@ library GyroThreeMath {
      * such that rounding errors are minimized AND (2) this also works in a scenario where these operations would
      * overflow naively, i.e., when l^3 * 10^36 does not fit into uint256.
      * We assume d >= ONE and, of course, root3Alpha < ONE. In practice, expect d ~ a * l^2. (tested experimentally) */
-    function _safeLargePow3ADown(uint256 l, uint256 root3Alpha, uint256 d) internal pure returns (uint256 ret) {
+    function _safeLargePow3ADown(
+        uint256 l,
+        uint256 root3Alpha,
+        uint256 d
+    ) internal pure returns (uint256 ret) {
         if (l <= _SAFE_LARGE_POW3_THRESHOLD) {
             // Simple case where there is no overflow
             ret = l.mulDown(l).mulDown(l);
@@ -209,15 +208,9 @@ library GyroThreeMath {
             ret = Math.mul(ret, l / FixedPoint.ONE).add(ret.mulDown(l % FixedPoint.ONE));
 
             uint256 x = ret;
-            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
-                x.mulDown(root3Alpha % MIDDECIMAL)
-            );
-            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
-                x.mulDown(root3Alpha % MIDDECIMAL)
-            );
-            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
-                x.mulDown(root3Alpha % MIDDECIMAL)
-            );
+            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(x.mulDown(root3Alpha % MIDDECIMAL));
+            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(x.mulDown(root3Alpha % MIDDECIMAL));
+            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(x.mulDown(root3Alpha % MIDDECIMAL));
             ret = ret.sub(x);
 
             // We perform half-precision division to reduce blowup.
@@ -262,7 +255,7 @@ library GyroThreeMath {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
-            uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
+            uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
 
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
@@ -315,7 +308,7 @@ library GyroThreeMath {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
-            uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
+            uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));

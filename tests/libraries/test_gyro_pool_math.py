@@ -6,7 +6,9 @@ from brownie import reverts
 from brownie.test import given
 from hypothesis import assume
 from tests.libraries import pool_math_implementation
-from tests.support.utils import scale, to_decimal
+from tests.support.utils import scale, to_decimal, qdecimals, unscale
+from tests.support.quantized_decimal import QuantizedDecimal as D
+
 
 billion_balance_strategy = st.integers(min_value=0, max_value=1_000_000_000)
 
@@ -22,74 +24,107 @@ def calc_delta_balances(balances, delta_bal_scaling):
     return tuple(delta_balances)
 
 
-#######################################
-@given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    last_invariant=st.decimals(
-        min_value="100", max_value="1000000000000000000", places=4
-    ),
-    delta_bal_scaling=st.decimals(min_value="0", max_value="10", places=4),
-)
-def test_liquidity_invariant_update_add(
-    gyro_two_math_testing,
-    balances: Tuple[int, int],
-    last_invariant,
-    delta_bal_scaling,
-):
-
+@st.composite
+def gen_params_liquidityUpdate(draw):
+    balances = draw(st.tuples(billion_balance_strategy, billion_balance_strategy))
     assume(not faulty_params(balances))
-    delta_balances = calc_delta_balances(balances, delta_bal_scaling)
-
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
-        to_decimal(balances),
-        to_decimal(last_invariant),
-        to_decimal(delta_balances),
-        True,
-    )
-
-    new_invariant_sol = gyro_two_math_testing.liquidityInvariantUpdate(
-        scale(balances),
-        scale(last_invariant),
-        scale(delta_balances),
-        True,
-    )
-
-    assert to_decimal(new_invariant_sol) == scale(new_invariant)
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
+    isIncrease = draw(st.booleans())
+    if isIncrease:
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
+    else:
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
+    return balances, bpt_supply, isIncrease, dsupply
 
 
 #######################################
 @given(
-    balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    last_invariant=st.decimals(
-        min_value="100", max_value="1000000000000000000", places=4
-    ),
-    delta_bal_scaling=st.decimals(min_value="0", max_value="0.99", places=4),
+    params=gen_params_liquidityUpdate(),
+    invariant=st.decimals(min_value="100", max_value="1000000000000000000", places=4),
 )
-def test_liquidity_invariant_update_remove(
-    gyro_two_math_testing,
-    balances: Tuple[int, int],
-    last_invariant,
-    delta_bal_scaling,
+def test_liquidity_invariant_update_deltaBptTokens(
+    gyro_two_math_testing, params, invariant
 ):
-
-    assume(not faulty_params(balances))
-    delta_balances = calc_delta_balances(balances, delta_bal_scaling)
-
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
-        to_decimal(balances),
-        to_decimal(last_invariant),
-        to_decimal(delta_balances),
-        False,
+    balances, bpt_supply, isIncrease, dsupply = params
+    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBptTokens(
+        invariant, dsupply, bpt_supply, isIncrease
     )
 
     new_invariant_sol = gyro_two_math_testing.liquidityInvariantUpdate(
-        scale(balances),
-        scale(last_invariant),
-        scale(delta_balances),
-        False,
+        scale(invariant), scale(dsupply), scale(bpt_supply), isIncrease
     )
 
-    assert to_decimal(new_invariant_sol) == scale(new_invariant)
+    assert unscale(new_invariant_sol) == D(new_invariant)
+
+
+# #######################################
+# @given(
+#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+#     last_invariant=st.decimals(
+#         min_value="100", max_value="1000000000000000000", places=4
+#     ),
+#     delta_bal_scaling=st.decimals(min_value="0", max_value="10", places=4),
+# )
+# def test_liquidity_invariant_update_add(
+#     gyro_two_math_testing,
+#     balances: Tuple[int, int],
+#     last_invariant,
+#     delta_bal_scaling,
+# ):
+
+#     assume(not faulty_params(balances))
+#     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
+
+#     new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
+#         to_decimal(balances),
+#         to_decimal(last_invariant),
+#         to_decimal(delta_balances),
+#         True,
+#     )
+
+#     new_invariant_sol = gyro_two_math_testing.liquidityInvariantUpdate(
+#         scale(balances),
+#         scale(last_invariant),
+#         scale(delta_balances),
+#         True,
+#     )
+
+#     assert to_decimal(new_invariant_sol) == scale(new_invariant)
+
+
+# #######################################
+# @given(
+#     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
+#     last_invariant=st.decimals(
+#         min_value="100", max_value="1000000000000000000", places=4
+#     ),
+#     delta_bal_scaling=st.decimals(min_value="0", max_value="0.99", places=4),
+# )
+# def test_liquidity_invariant_update_remove(
+#     gyro_two_math_testing,
+#     balances: Tuple[int, int],
+#     last_invariant,
+#     delta_bal_scaling,
+# ):
+
+#     assume(not faulty_params(balances))
+#     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
+
+#     new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
+#         to_decimal(balances),
+#         to_decimal(last_invariant),
+#         to_decimal(delta_balances),
+#         False,
+#     )
+
+#     new_invariant_sol = gyro_two_math_testing.liquidityInvariantUpdate(
+#         scale(balances),
+#         scale(last_invariant),
+#         scale(delta_balances),
+#         False,
+#     )
+
+#     assert to_decimal(new_invariant_sol) == scale(new_invariant)
 
 
 #######################################
@@ -184,77 +219,77 @@ def test_protocol_fees(
 
 ########### also test with 3 assets
 #######################################
-@given(
-    balances=st.tuples(
-        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-    ),
-    last_invariant=st.decimals(
-        min_value="100", max_value="1000000000000000000", places=4
-    ),
-    delta_bal_scaling=st.decimals(min_value="0", max_value="10", places=4),
-)
-def test_liquidity_invariant_update_add_3(
-    gyro_three_math_testing,
-    balances: Tuple[int, int, int],
-    last_invariant,
-    delta_bal_scaling,
-):
+# @given(
+#     balances=st.tuples(
+#         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+#     ),
+#     last_invariant=st.decimals(
+#         min_value="100", max_value="1000000000000000000", places=4
+#     ),
+#     delta_bal_scaling=st.decimals(min_value="0", max_value="10", places=4),
+# )
+# def test_liquidity_invariant_update_add_3(
+#     gyro_three_math_testing,
+#     balances: Tuple[int, int, int],
+#     last_invariant,
+#     delta_bal_scaling,
+# ):
 
-    assume(not faulty_params(balances))
-    delta_balances = calc_delta_balances(balances, delta_bal_scaling)
+#     assume(not faulty_params(balances))
+#     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
 
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
-        to_decimal(balances),
-        to_decimal(last_invariant),
-        to_decimal(delta_balances),
-        True,
-    )
+#     new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
+#         to_decimal(balances),
+#         to_decimal(last_invariant),
+#         to_decimal(delta_balances),
+#         True,
+#     )
 
-    new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
-        scale(balances),
-        scale(last_invariant),
-        scale(delta_balances),
-        True,
-    )
+#     new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
+#         scale(balances),
+#         scale(last_invariant),
+#         scale(delta_balances),
+#         True,
+#     )
 
-    assert to_decimal(new_invariant_sol) == scale(new_invariant)
+#     assert to_decimal(new_invariant_sol) == scale(new_invariant)
 
 
-#######################################
-@given(
-    balances=st.tuples(
-        billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
-    ),
-    last_invariant=st.decimals(
-        min_value="100", max_value="1000000000000000000", places=4
-    ),
-    delta_bal_scaling=st.decimals(min_value="0", max_value="0.99", places=4),
-)
-def test_liquidity_invariant_update_remove_3(
-    gyro_three_math_testing,
-    balances: Tuple[int, int, int],
-    last_invariant,
-    delta_bal_scaling,
-):
+# #######################################
+# @given(
+#     balances=st.tuples(
+#         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+#     ),
+#     last_invariant=st.decimals(
+#         min_value="100", max_value="1000000000000000000", places=4
+#     ),
+#     delta_bal_scaling=st.decimals(min_value="0", max_value="0.99", places=4),
+# )
+# def test_liquidity_invariant_update_remove_3(
+#     gyro_three_math_testing,
+#     balances: Tuple[int, int, int],
+#     last_invariant,
+#     delta_bal_scaling,
+# ):
 
-    assume(not faulty_params(balances))
-    delta_balances = calc_delta_balances(balances, delta_bal_scaling)
+#     assume(not faulty_params(balances))
+#     delta_balances = calc_delta_balances(balances, delta_bal_scaling)
 
-    new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
-        to_decimal(balances),
-        to_decimal(last_invariant),
-        to_decimal(delta_balances),
-        False,
-    )
+#     new_invariant = pool_math_implementation.liquidityInvariantUpdate_deltaBalances(
+#         to_decimal(balances),
+#         to_decimal(last_invariant),
+#         to_decimal(delta_balances),
+#         False,
+#     )
 
-    new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
-        scale(balances),
-        scale(last_invariant),
-        scale(delta_balances),
-        False,
-    )
+#     new_invariant_sol = gyro_three_math_testing.liquidityInvariantUpdate(
+#         scale(balances),
+#         scale(last_invariant),
+#         scale(delta_balances),
+#         False,
+#     )
 
-    assert to_decimal(new_invariant_sol) == scale(new_invariant)
+#     assert to_decimal(new_invariant_sol) == scale(new_invariant)
 
 
 #######################################

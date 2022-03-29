@@ -5,27 +5,36 @@ from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example, HealthCheck
 import tests.cpmmv3.v3_math_implementation as math_implementation
-from tests.cpmmv3.util import gen_synthetic_balances, gen_synthetic_balances_1asset, \
-    gen_synthetic_balances_2assets
+from tests.libraries import pool_math_implementation
+from tests.cpmmv3.util import (
+    gen_synthetic_balances,
+    gen_synthetic_balances_1asset,
+    gen_synthetic_balances_2assets,
+)
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
+
 Decimal = D
 
 billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
 
 ROOT_ALPHA_MAX = "0.99996666555"
 ROOT_ALPHA_MIN = "0.2"
-MIN_BAL_RATIO = to_decimal("1e-5")
+MIN_BAL_RATIO = D(0)  # to_decimal("1e-5")
 MIN_FEE = D("0.0002")
 
 bpool_params = BasicPoolParameters(
-    D(ROOT_ALPHA_MAX)**3 - 1/D(ROOT_ALPHA_MIN)**3,
-    D("0.3"), D("0.3"),
-    MIN_BAL_RATIO,
-    MIN_FEE
+    D(ROOT_ALPHA_MAX) ** 3 - 1 / D(ROOT_ALPHA_MIN) ** 3,
+    D("0.3"),
+    D("0.3"),
+    D(
+        "1e-18"
+    ),  # need min_bal_ratio > 0 for generating synthetic balances for testing calculateInvariant, but 0 ok elsewhere
+    MIN_FEE,
 )
+
 
 def gen_balances_raw():
     return st.tuples(
@@ -36,7 +45,7 @@ def gen_balances_raw():
 @st.composite
 def gen_balances(draw):
     balances = draw(gen_balances_raw())
-    assume(balances[0] > 0 and balances[1] > 0 and balances[2] > 0)
+    assume(balances[0] > 0 or balances[1] > 0 or balances[2] > 0)
     if balances[0] > 0:
         assume(min(balances[1], balances[2]) / balances[0] > MIN_BAL_RATIO)
     if balances[1] > 0:
@@ -64,6 +73,23 @@ def gen_bounds():
     return st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4)
 
 
+@st.composite
+def gen_params_liquidityUpdate(draw):
+    balances = draw(
+        st.tuples(
+            billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
+        )
+    )
+    assume(sum(balances) != 0)
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
+    isIncrease = draw(st.booleans())
+    if isIncrease:
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
+    else:
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
+    return balances, bpt_supply, isIncrease, dsupply
+
+
 ###############################################################################################
 # Test invariant correctness via being an approximate root of a certain cubic polynomial.
 
@@ -72,13 +98,9 @@ def gen_bounds():
     balances=gen_balances(),
     root_three_alpha=gen_bounds(),
 )
-@example(balances=(D('1e10'), D(0), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
-def test_sol_invariant_cubic(
-    gyro_three_math_testing, balances, root_three_alpha
-):
-    mtest_sol_invariant_cubic(
-        gyro_three_math_testing, balances, root_three_alpha
-    )
+@example(balances=(D("1e10"), D(0), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
+def test_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha):
+    mtest_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha)
 
 
 ###############################################################################################
@@ -125,6 +147,24 @@ def test_invariant_across_calcOutGivenIn(
     assert invariant_after >= invariant
 
 
+################################################################################
+### test liquidity invariant update for invariant change
+
+
+@given(
+    params_invariantUpdate=gen_params_liquidityUpdate(),
+    root_three_alpha=st.decimals(
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+    ),
+)
+def test_invariant_across_liquidityInvariantUpdate(
+    gyro_two_math_testing, root_three_alpha, params_invariantUpdate
+):
+    mtest_invariant_across_liquidityInvariantUpdate(
+        gyro_two_math_testing, root_three_alpha, params_invariantUpdate
+    )
+
+
 ###############################################################################################
 # mtest functions
 
@@ -148,7 +188,7 @@ def mtest_sol_invariant_cubic(
 
     # NOTE That the function f has an extremely steep slope, so the following is already very good for an approximate
     # root. The coefficients a..d also have rounding errors attached, so this won't (and shouldn't) be very close to 0.
-    assert abs(f_L_decimal) <= D('1e26')
+    assert abs(f_L_decimal) <= D("1e26")
 
 
 def calculate_cubic_terms_float(balances: Tuple[int, int, int], root_three_alpha: D):
@@ -189,9 +229,11 @@ def mtest_invariant_across_calcInGivenOut(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
 
-    invariant_sol = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root_three_alpha)
-    ))
+    invariant_sol = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances), scale(root_three_alpha)
+        )
+    )
 
     # assert invariant_sol_under <= invariant.approxed(abs=D('5e-18'))
     # assert invariant <= invariant_sol_over.approxed(abs=D('5e-18'))
@@ -213,19 +255,21 @@ def mtest_invariant_across_calcInGivenOut(
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = unscale(gyro_three_math_testing.calcInGivenOut(
-            scale(balances[0]),
-            scale(balances[1]),
-            scale(amount_out),
-            scale(virtual_offset_sol)
-        ))
+        in_amount_sol = unscale(
+            gyro_three_math_testing.calcInGivenOut(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_out),
+                scale(virtual_offset_sol),
+            )
+        )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_three_math_testing.calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset_sol)
+                scale(virtual_offset_sol),
             )
         return D(0), D(0)
     else:
@@ -234,7 +278,7 @@ def mtest_invariant_across_calcInGivenOut(
                 scale(balances[0]),
                 scale(balances[1]),
                 scale(amount_out),
-                scale(virtual_offset_sol)
+                scale(virtual_offset_sol),
             )
         return D(0), D(0)
 
@@ -257,7 +301,9 @@ def mtest_invariant_across_calcInGivenOut(
         )
 
         # Tolerance is taken from test_calculateInvariant_reconstruction().
-        assert unscale(invariant_sol_after) >= invariant_sol.approxed(abs=D('6e-18'), rel=D('6e-18'))
+        assert unscale(invariant_sol_after) >= invariant_sol.approxed(
+            abs=D("6e-18"), rel=D("6e-18")
+        )
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
@@ -285,9 +331,11 @@ def mtest_invariant_across_calcOutGivenIn(
         to_decimal(balances), to_decimal(root_three_alpha)
     )
 
-    invariant_sol = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root_three_alpha)
-    ))
+    invariant_sol = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances), scale(root_three_alpha)
+        )
+    )
 
     virtual_offset_sol = invariant_sol * to_decimal(root_three_alpha)
     virtual_offset = invariant * to_decimal(root_three_alpha)
@@ -365,7 +413,9 @@ def mtest_invariant_across_calcOutGivenIn(
             scale(balances_after), scale(root_three_alpha)
         )
         # Tolerance is taken from test_calculateInvariant_reconstruction().
-        assert unscale(invariant_sol_after) >= invariant_sol.approxed(abs=D('6e-18'), rel=D('6e-18'))
+        assert unscale(invariant_sol_after) >= invariant_sol.approxed(
+            abs=D("6e-18"), rel=D("6e-18")
+        )
 
     # return invariant_after, invariant
     partial_invariant_from_offsets = calculate_partial_invariant_from_offsets(
@@ -395,35 +445,110 @@ def calculate_partial_invariant_from_offsets(balances, virtual_offset):
         D(balances[1] + D(virtual_offset))
     )
 
+
+def mtest_invariant_across_liquidityInvariantUpdate(
+    gyro_three_math_testing, root_three_alpha, params_invariantUpdate
+):
+    balances, bpt_supply, isIncrease, dsupply = params_invariantUpdate
+    invariant_before = math_implementation.calculateInvariant(
+        balances, root_three_alpha
+    )
+    if isIncrease:
+        dBalances = pool_math_implementation.calcAllTokensInGivenExactBptOut(
+            balances, dsupply, bpt_supply
+        )
+        new_balances = [
+            balances[0] + dBalances[0],
+            balances[1] + dBalances[1],
+            balances[2] + dBalances[2],
+        ]
+    else:
+        dBalances = pool_math_implementation.calcTokensOutGivenExactBptIn(
+            balances, dsupply, bpt_supply
+        )
+        new_balances = [
+            balances[0] - dBalances[0],
+            balances[1] - dBalances[1],
+            balances[2] - dBalances[2],
+        ]
+
+    invariant_updated = unscale(
+        gyro_three_math_testing.liquidityInvariantUpdate(
+            scale(invariant_before), scale(dsupply), scale(bpt_supply), isIncrease
+        )
+    )
+
+    invariant_after = math_implementation.calculateInvariant(
+        new_balances, root_three_alpha
+    )
+    if isIncrease and invariant_updated < invariant_after:
+        loss = calculate_loss(
+            invariant_updated - invariant_after, invariant_after, new_balances
+        )
+    elif not isIncrease and invariant_updated > invariant_after:
+        loss = calculate_loss(
+            invariant_after - invariant_updated, invariant_after, new_balances
+        )
+    else:
+        loss = (D(0), D(0), D(0))
+    loss_ub = (
+        loss[0] * (D(1) / (root_three_alpha ** 3))
+        + loss[1] * (1 / (root_three_alpha ** 3))
+        + loss[2]
+    )
+    assert abs(loss_ub) < D("1e-5")
+
+
+def calculate_loss(delta_invariant, invariant, balances):
+    # delta_balance_A = delta_invariant / invariant * balance_A
+    factor = to_decimal(delta_invariant / invariant)
+    return (D(balances[0]) * factor, D(balances[1]) * factor, D(balances[2]) * factor)
+
+
 ###############################################################################################
 # Test reconstruction of synthetic invariant
 
 # Balances are generated from a chosen invariant. Then we check if `calculateInvariant()` gets that invariant back.
 @given(
     args=st.one_of(
-        gen_synthetic_balances_1asset(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(100)),
-        gen_synthetic_balances_2assets(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)),
-        gen_synthetic_balances(bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)),
+        gen_synthetic_balances_1asset(
+            bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(100)
+        ),
+        gen_synthetic_balances_2assets(
+            bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)
+        ),
+        gen_synthetic_balances(
+            bpool_params, ROOT_ALPHA_MIN, ROOT_ALPHA_MAX, min_balance=D(10)
+        ),
     )
 )
-@example(args=(
-    (D('16743757275.452039152786685295'),
-     D('1967668306.780847696789534899'),
-     D('396788946.610986231634363959')),
-    D('3812260336.851356457000000000'),
-    D('0.200000000181790486')),
+@example(
+    args=(
+        (
+            D("16743757275.452039152786685295"),
+            D("1967668306.780847696789534899"),
+            D("396788946.610986231634363959"),
+        ),
+        D("3812260336.851356457000000000"),
+        D("0.200000000181790486"),
+    ),
 )
-@example(args=(
-        (Decimal('728109563488.263687529903349137'),
-         Decimal('7281095.634882636875299036'),
-         Decimal('1724716619.689367265339564601')),
-     Decimal('36417643407.707023648100000000'),
-     Decimal('0.200000000021982758')))
+@example(
+    args=(
+        (
+            Decimal("728109563488.263687529903349137"),
+            Decimal("7281095.634882636875299036"),
+            Decimal("1724716619.689367265339564601"),
+        ),
+        Decimal("36417643407.707023648100000000"),
+        Decimal("0.200000000021982758"),
+    )
+)
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     balances, invariant, root3Alpha = args
 
-    invariant_re = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances),
-        scale(root3Alpha)))
+    invariant_re = unscale(
+        gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha))
+    )
 
-    assert invariant_re == invariant.approxed(abs=D('3e-18'), rel=D('3e-18'))
+    assert invariant_re == invariant.approxed(abs=D("3e-18"), rel=D("3e-18"))
