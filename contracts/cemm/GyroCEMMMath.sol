@@ -341,6 +341,7 @@ library GyroCEMMMath {
         val = p.lambda.mulUpXpToNp((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
         // for lambda^2 u^2 factor in rounding error in u since lambda could be big
         val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)));
+        // the next line converts from extre precision to normal precision post-computation while rounding up
         val = val.add(((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
 
         // (A chi)_x^2 = (w/lambda + z)^2
@@ -415,7 +416,7 @@ library GyroCEMMMath {
         termNp = termNp.add(x.mulUp(y).mulUp(p.s * 2).mulUp(p.c));
 
         int256 termXp = d.z.mulXp(d.z).add(d.w.mulXp(d.w).divDown(p.lambda).divDown(p.lambda));
-        termXp = (termXp.add((2 * d.z).mulXp(d.w).divDown(p.lambda)));
+        termXp = termXp.add((2 * d.z).mulXp(d.w).divDown(p.lambda));
         termXp = termXp.divXp(d.dSq).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq);
         val = (-termNp).mulDownXpToNp(termXp);
 
