@@ -476,10 +476,10 @@ library GyroCEMMMath {
     ) internal pure {
         if (assetIndex == 0) {
             int256 xPlus = maxBalances0(params, derived, invariant);
-            _require(newBal < xPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(newBal <= xPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
             int256 yPlus = maxBalances1(params, derived, invariant);
-            _require(newBal < yPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _require(newBal <= yPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
     }
 
@@ -562,6 +562,7 @@ library GyroCEMMMath {
         Vector2 memory lamBar;
         lamBar.x = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divDown(lambda).divDown(lambda));
         lamBar.y = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divUp(lambda).divUp(lambda));
+        // using qparams struct to avoid "stack too deep"
         QParams memory q;
         // shift by the virtual offsets
         // note that we want an overestimate of offset here so that -x'*lambar*s*c is overestimated in signed direction
@@ -576,6 +577,7 @@ library GyroCEMMMath {
         // x component will round up, y will round down, use extra precision
         // account for 1 factor of dSq (2 s,c factors)
         Vector2 memory sTerm;
+        // we wil take sTerm = 1 - sTerm below, using multiple lines to avoid "stack too deep"
         sTerm.x = lamBar.y.mulDown(s).mulDown(s).divXp(dSq);
         sTerm.y = lamBar.x.mulUp(s).mulUp(s).divXp(dSq + 1) + 1; // account for rounding error in dSq, divXp
         sTerm = Vector2(SignedFixedPoint.ONE_XP.sub(sTerm.x), SignedFixedPoint.ONE_XP.sub(sTerm.y));
@@ -664,6 +666,7 @@ library GyroCEMMMath {
     }
 
     /** @dev compute y such that (x, y) satisfy the invariant at the given parameters.
+     *  Note that we calculate an overestimate of y
      *   See Prop 14 in section 2.2.2 Trade Execution */
     function calcYGivenX(
         int256 x,
