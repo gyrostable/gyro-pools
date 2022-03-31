@@ -316,7 +316,8 @@ def mtest_invariant_across_calcInGivenOut(
     if check_price_impact_direction:
         # Price of out-asset in units of in-asset
         px = (balances[0] + virtual_offset) / (balances[1] + virtual_offset)
-        assert amount_out * px <= in_amount / (1 - MIN_FEE)
+        in_amount_instprice = amount_out * px
+        assert in_amount_instprice <= in_amount_sol / (1 - MIN_FEE)
 
     balances_after = (
         balances[0] + in_amount / (1 - MIN_FEE),
@@ -437,7 +438,7 @@ def mtest_invariant_across_calcOutGivenIn(
     if check_price_impact_direction:
         # Price of out-asset in units of in-asset
         px = (balances[0] + virtual_offset) / (balances[1] + virtual_offset)
-        assert out_amount * px <= amount_in + fees
+        assert unscale(out_amount_sol) * px <= amount_in + fees
 
     balances_after = (
         balances[0] + amount_in + fees,
