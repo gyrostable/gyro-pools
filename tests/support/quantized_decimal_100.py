@@ -3,6 +3,9 @@
 #
 # This is different from Decimal in that (say) if DECIMAL_PRECISION=3, then QuantizedDecimal('0.0005') == 0. This is
 # the behavior we'd expect from a fixed-point implementation.
+#
+# THIS VARIANT of the code is set up for very high precision (300 places overall with 100 decimals).
+# See MAX_PREC_VALUE and the call to set_decimals().
 
 from __future__ import annotations
 
@@ -13,7 +16,7 @@ from typing import Any, Optional, Union
 
 import pytest
 
-# v Total number of decimal places. This matches uint256, to the degree possible (max uint256 ≈ 1.16e+77).
+# v Total number of decimal places.
 MAX_PREC_VALUE = 300
 
 # Workaround a brownie issue:

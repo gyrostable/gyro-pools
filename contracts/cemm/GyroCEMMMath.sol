@@ -297,7 +297,7 @@ library GyroCEMMMath {
         // error in sqrt is O(error in square) and is the largest error term, so scale by 10
         // error also scales if denominator is small
         err = denominator > ONE ? err * 10 : (err * 10).divUp(denominator);
-        // account for relative error due to error in division by denominator
+        // account for relative error due to error in the denominator
         // error in denominator is O(epsilon) if lambda<1e11
         err = err + (invariant * 10).divUp(denominator) / 1e18;
         return (invariant, err);
@@ -312,8 +312,7 @@ library GyroCEMMMath {
         uinvariant = invariant.toUint256();
     }
 
-    /// @dev calculate At \cdot A chi, ignores rounding direction
-    // TODO: make this round down
+    /// @dev calculate At \cdot A chi, ignores rounding direction. We will later compensate for the rounding error.
     function calcAtAChi(
         int256 x,
         int256 y,
@@ -436,7 +435,7 @@ library GyroCEMMMath {
         val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, d));
         // if balances are > 100b, then error in extra precision terms propagates to higher decimals, if not, then O(eps) error propagation
         err = (x > 1e29 || y > 1e29) ? (x.mulUp(x).add(y.mulUp(y)) / 1e38) * 100 : 100;
-        val = val.sub(err); // correct to downside for rounding error
+        val = val.sub(err); // correct to downside for rounding error in calc2AtxAtyAChixAChiy()
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         val = val > 0 ? GyroPoolMath._sqrt(val.toUint256(), 5).toInt256() : 0;
     }

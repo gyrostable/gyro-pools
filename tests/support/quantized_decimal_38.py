@@ -3,6 +3,12 @@
 #
 # This is different from Decimal in that (say) if DECIMAL_PRECISION=3, then QuantizedDecimal('0.0005') == 0. This is
 # the behavior we'd expect from a fixed-point implementation.
+#
+#
+# THIS VARIANT of the code is set up for extra precision decimals: We use the same number of places overall (an
+# approximation of uint256), but with 38 instead of 18 decimals after the point.
+#
+# See the call to set_decimals().
 
 from __future__ import annotations
 
