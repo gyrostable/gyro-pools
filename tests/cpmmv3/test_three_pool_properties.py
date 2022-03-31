@@ -3,7 +3,7 @@ from typing import Tuple
 import hypothesis.strategies as st
 from brownie.test import given
 from brownie import reverts
-from hypothesis import assume, settings, example, HealthCheck
+from hypothesis import assume, settings, example, HealthCheck, event
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from tests.libraries import pool_math_implementation
 from tests.cpmmv3.util import (
@@ -105,7 +105,8 @@ def test_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha
 
 ###############################################################################################
 # test calcInGivenOut for invariant change
-
+# This also ensures that the price impact goes in the right direction and, more specifically, no money can be extracted
+# without putting any in.
 
 # @settings(max_examples=1_000)
 @given(
@@ -121,7 +122,8 @@ def test_invariant_across_calcInGivenOut(
 ):
     balances, amount_out = setup
     invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
-        gyro_three_math_testing, balances, amount_out, root_three_alpha, False
+        gyro_three_math_testing, balances, amount_out, root_three_alpha, False,
+            check_price_impact_direction=True
     )
     assert invariant_after >= invariant
 
@@ -142,7 +144,29 @@ def test_invariant_across_calcOutGivenIn(
 ):
     balances, amount_in = setup
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
-        gyro_three_math_testing, balances, amount_in, root_three_alpha, False
+        gyro_three_math_testing, balances, amount_in, root_three_alpha, False,
+        check_price_impact_direction=True
+    )
+    assert invariant_after >= invariant
+
+
+# Explicitly test zero in-amounts.
+# This is likely subsumed by test_invariant_across_calcOutGivenIn() but there doesn't seem to be an easy way to specify
+# that `amount_in=0` should in particular be tested.
+@settings(max_examples=10)
+@given(
+    balances=gen_balances(),
+    root_three_alpha=st.decimals(
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+    ),
+)
+def test_invariant_across_calcOutGivenIn_zeroin(
+    gyro_three_math_testing, root_three_alpha, balances
+):
+    amount_in = 0
+    invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
+        gyro_three_math_testing, balances, amount_in, root_three_alpha, False,
+        check_price_impact_direction=True
     )
     assert invariant_after >= invariant
 
@@ -219,9 +243,11 @@ def calculate_f_L_prime_float(
 def calculate_f_L_decimal(L: D, a: D, b: D, c: D, d: D):
     return L.mul_up(L).mul_up(L).mul_up(a) + L * L * b + L * c + d
 
-
+# check_price_impact_direction: Test if the avg price is worse than the instantaneous price at the beginning of the trade.
+# This also ensures that no money can be extracted without putting anything in.
 def mtest_invariant_across_calcInGivenOut(
-    gyro_three_math_testing, balances, amount_out, root_three_alpha, check_sol_inv
+    gyro_three_math_testing, balances, amount_out, root_three_alpha, check_sol_inv,
+        check_price_impact_direction=False
 ):
     assume(amount_out < to_decimal("0.3") * (balances[1]))
 
@@ -282,10 +308,17 @@ def mtest_invariant_across_calcInGivenOut(
             )
         return D(0), D(0)
 
+    event("3Pool-InGivenOut-NoErr")
+
     # Sanity check.
     assert to_decimal(in_amount_sol) == in_amount.approxed()
 
-    balances_after = balances_after = (
+    if check_price_impact_direction:
+        # Price of out-asset in units of in-asset
+        px = (balances[0] + virtual_offset) / (balances[1] + virtual_offset)
+        assert amount_out * px <= in_amount / (1 - MIN_FEE)
+
+    balances_after = (
         balances[0] + in_amount / (1 - MIN_FEE),
         balances[1] - amount_out,
         balances[2],
@@ -320,7 +353,8 @@ def mtest_invariant_across_calcInGivenOut(
 
 
 def mtest_invariant_across_calcOutGivenIn(
-    gyro_three_math_testing, balances, amount_in, root_three_alpha, check_sol_inv
+    gyro_three_math_testing, balances, amount_in, root_three_alpha, check_sol_inv,
+        check_price_impact_direction=False
 ):
     assume(amount_in < to_decimal("0.3") * (balances[0]))
 
@@ -395,8 +429,15 @@ def mtest_invariant_across_calcOutGivenIn(
             )
         return D(0), D(0)
 
+    event("3Pool-OutGivenIn-NoErr")
+
     # Sanity check.
     assert unscale(to_decimal(out_amount_sol)) == out_amount.approxed()
+
+    if check_price_impact_direction:
+        # Price of out-asset in units of in-asset
+        px = (balances[0] + virtual_offset) / (balances[1] + virtual_offset)
+        assert out_amount * px <= amount_in + fees
 
     balances_after = (
         balances[0] + amount_in + fees,
