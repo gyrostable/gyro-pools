@@ -4,7 +4,7 @@ from typing import Tuple
 import hypothesis.strategies as st
 from brownie.test import given
 from brownie import reverts
-from hypothesis import assume, settings
+from hypothesis import assume, settings, event
 from tests.cpmmv2 import math_implementation
 from tests.libraries import pool_math_implementation
 from tests.support.util_common import BasicPoolParameters
@@ -303,6 +303,7 @@ def mtest_invariant_across_calcInGivenOut(
     sqrt_alpha,
     sqrt_beta,
     check_sol_inv: bool,
+    check_price_impact_direction: bool = True
 ):
     assume(amount_out <= to_decimal("0.3") * (balances[1]))
     assume(balances[0] > 0 and balances[1] > 0)
@@ -372,8 +373,15 @@ def mtest_invariant_across_calcInGivenOut(
             )
         return D(0), D(0)
 
+    event("2Pool-InGivenOut-NoErr")
+
     # Sanity check.
     assert in_amount_sol == in_amount.approxed()
+
+    if check_price_impact_direction:
+        # Price of out-asset in units of in-asset
+        px = (balances[0] + virtual_param_in) / (balances[1] + virtual_param_out)
+        assert amount_out * px <= in_amount_sol / (1 - MIN_FEE)
 
     balances_after = (
         balances[0] + in_amount_sol / (1 - MIN_FEE),
@@ -399,6 +407,7 @@ def mtest_invariant_across_calcOutGivenIn(
     sqrt_alpha,
     sqrt_beta,
     check_sol_inv: bool,
+    check_price_impact_direction: bool = True,
 ):
     assume(amount_in <= to_decimal("0.3") * (balances[0]))
     assume(balances[0] > 0 and balances[1] > 0)
@@ -483,8 +492,15 @@ def mtest_invariant_across_calcOutGivenIn(
             )
         return 0, 0
 
+    event("2Pool-OutGivenIn-NoErr")
+
     # sanity check.
     assert to_decimal(out_amount_sol) == scale(out_amount).approxed()
+
+    if check_price_impact_direction:
+        # Price of out-asset in units of in-asset
+        px = (balances[0] + virtual_param_in) / (balances[1] + virtual_param_out)
+        assert unscale(out_amount_sol) * px <= amount_in + fees
 
     balances_after = (
         balances[0] + amount_in + fees,
