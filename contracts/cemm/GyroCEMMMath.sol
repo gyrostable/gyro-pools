@@ -290,15 +290,26 @@ library GyroCEMMMath {
         (int256 x, int256 y) = (balances[0].toInt256(), balances[1].toInt256());
         int256 AtAChi = calcAtAChi(x, y, params, derived);
         (int256 sqrt, int256 err) = calcInvariantSqrt(x, y, params, derived);
+        // calculate the error in the square root term, separates cases based on sqrt >= 1/2
+        // TODO: is there a way to avoid the sqrt in the second case?
+        // TODO: is 1/2 the best separating case?
+        if (sqrt >= 5e17) {
+            // err + 1 to account for O(eps_np) term ignored before
+            err = (err + 1).divUp(2 * sqrt);
+        } else {
+            // in the false case here, the extra precision error does not magnify, and so the error inside the sqrt is O(1e-18)
+            err = err > 0 ? GyroPoolMath._sqrt(err.toUint256(), 5).toInt256() : 1e9;
+        }
+        // calculate the error in the numerator, scale the error by 100 to be sure all possible terms accounted for
+        err = ((params.lambda.mulUp(x.add(y)) / 1e38).add(err) + 1) * 100;
+
         // A chi \cdot A chi > 1, so round it up to round denominator up
         int256 denominator = calcAChiAChi(params, derived).sub(ONE);
-        // account for rounding errors in AtAchi (but these shouldn't scale b/c balances won't be big enough for extra precision rounding error to scale)
-        int256 invariant = (AtAChi - 100).add(sqrt).divDown(denominator);
-        // error in sqrt is O(error in square) and is the largest error term, so scale by 10
-        // error also scales if denominator is small
-        err = denominator > ONE ? err * 10 : (err * 10).divUp(denominator);
+        int256 invariant = (AtAChi.add(sqrt) - err).divDown(denominator);
+        // error scales if denominator is small
+        err = denominator > ONE ? err : err.divUp(denominator);
         // account for relative error due to error in the denominator
-        // error in denominator is O(epsilon) if lambda<1e11
+        // error in denominator is O(epsilon) if lambda<1e11, scale up by 10 to be sure we catch it
         err = err + (invariant * 10).divUp(denominator) / 1e18;
         return (invariant, err);
     }
@@ -433,9 +444,13 @@ library GyroCEMMMath {
     ) internal pure returns (int256 val, int256 err) {
         val = calcMinAtxAChiySqPlusAtxSq(x, y, p, d).add(calc2AtxAtyAChixAChiy(x, y, p, d));
         val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, d));
-        // if balances are > 100b, then error in extra precision terms propagates to higher decimals, if not, then O(eps) error propagation
-        err = (x > 1e29 || y > 1e29) ? (x.mulUp(x).add(y.mulUp(y)) / 1e38) * 100 : 100;
-        val = val.sub(err); // correct to downside for rounding error in calc2AtxAtyAChixAChiy()
+        // error inside the square root is O((x^2 + y^2) * eps_xp) + O(eps_np), where eps_xp=1e-38, eps_np=1e-18
+        // note that in terms of rounding down, error corrects for calc2AtxAtyAChixAChiy()
+        // however, we also use this error to correct the invariant for an overestimate in swaps, it is all the same order though
+        // Note the O(eps_np) term will be dealt with later, so not included yet
+        // Note that the extra precision term doesn't propagate unless balances are > 100b
+        err = (x.mulUp(x).add(y.mulUp(y))) / 1e38;
+        // we will account for the error later after the square root
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         val = val > 0 ? GyroPoolMath._sqrt(val.toUint256(), 5).toInt256() : 0;
     }

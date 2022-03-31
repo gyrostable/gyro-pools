@@ -309,8 +309,8 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     )
     denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
     err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
-    assert result_py == unscale(result_sol).approxed(abs=err)
-    assert err_py == unscale(err_sol)
+    assert result_py == unscale(result_sol).approxed(abs=(err + D("500e-18")))
+    assert err_py == unscale(err_sol).approxed(abs=D("500e-18"))
     # assert result_py == (result_py + err_py).approxed(rel=D("1e-12"), abs=D("1e-12"))
 
 
@@ -322,10 +322,11 @@ def test_calculateInvariant_sense_check(params, balances):
     mparams = util.params2MathParams(params)
 
     derived = prec_impl.calc_derived_values(params)
-    result_py = prec_impl.calculateInvariant(balances, params, derived)
+    result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
     # test against the old (imprecise) implementation
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     assert cemm.r == result_py.approxed()
+    assert cemm.r == D(result_py + err_py).approxed()
 
 
 @given(
