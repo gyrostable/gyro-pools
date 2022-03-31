@@ -22,8 +22,8 @@ MAX_PREC_VALUE = 300
 # Workaround a brownie issue:
 # - In Brownie, prec is already set to 78 and you can't set it. (through vyper for some reason)
 # - Outside brownie, prec is lower than that and you should set it.
-if decimal.getcontext().prec != MAX_PREC_VALUE:
-    decimal.getcontext().prec = MAX_PREC_VALUE
+decimal.setcontext(decimal.Context(prec=78))
+decimal.getcontext().prec = MAX_PREC_VALUE
 
 
 def set_decimals(ndecimals: int):
