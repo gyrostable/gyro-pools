@@ -31,8 +31,8 @@ from tests.support.types import CEMMMathParams
 from tests.support.utils import qdecimals
 import pytest
 
-import cemm as mimpl
-import cemm_float as mimpl_float
+from tests.cemm import cemm as mimpl
+from tests.cemm import cemm_float as mimpl_float
 
 MIN_BALANCE_RATIO = D("1E-5")
 MIN_FEE = D("0.0001")
