@@ -593,3 +593,33 @@ def calculate_loss(delta_invariant, invariant, balances):
     # delta_balance_A = delta_invariant / invariant * balance_A
     factor = to_decimal(delta_invariant / invariant)
     return (to_decimal(balances[0]) * factor, to_decimal(balances[1]) * factor)
+
+def test_calc_out_given_in_tob(gyro_two_math_testing):
+    """One specific test by ToB that failed at some earlier point due to rounding issues.
+
+    Adapted to fit the changed call signature of calcOutGivenIn()."""
+    balanceIn = 3
+    balanceOut = 200847740110042258154349940970401
+    amountIn = 0  # token0
+
+    sqrtAlpha = 0.97
+    sqrtBeta = 1.02
+
+    currentInvariant = gyro_two_math_testing.calculateInvariant(
+        [balanceIn, balanceOut],  # balances
+        sqrtAlpha * 10 ** 18,  # sqrtAlpha
+        sqrtBeta * 10 ** 18,  # sqrtBeta
+    )
+
+    virtualParamIn = currentInvariant / sqrtBeta
+    virtualParamOut = currentInvariant * sqrtAlpha
+
+    result = gyro_two_math_testing.calcOutGivenIn(
+        balanceIn,  # balanceIn,
+        balanceOut,  # balanceOut,
+        amountIn * 10 ** 18,  # amountIn,
+        virtualParamIn,  # virtualParamIn,
+        virtualParamOut,  # virtualParamOut,
+    )
+
+    assert result < 10 ** 18
