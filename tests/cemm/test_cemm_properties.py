@@ -27,8 +27,8 @@ MIN_PRICE_SEPARATION = to_decimal("0.0001")
 MAX_IN_RATIO = to_decimal("0.3")
 MAX_OUT_RATIO = to_decimal("0.3")
 
-MIN_BALANCE_RATIO = to_decimal("5e-5")
-MIN_FEE = D("0.0002")
+MIN_BALANCE_RATIO = D(0)  # to_decimal("5e-5")
+MIN_FEE = D(0)  # D("0.0002")
 
 # this determines whether derivedParameters are calculated in solidity or not
 DP_IN_SOL = False
@@ -147,3 +147,23 @@ def test_invariant_across_liquidityInvariantUpdate(
     util.mtest_invariant_across_liquidityInvariantUpdate(
         params_cemm_invariantUpdate, gyro_cemm_math_testing
     )
+
+
+################################################################################
+### test reconstruction of invariant
+
+
+@pytest.mark.skip(reason="Not a good test")
+@given(
+    params=util.gen_params(),
+    balances=gen_balances(2, bpool_params),
+)
+def test_reconstruct_invariant(params, balances):
+    derived = prec_impl.calc_derived_values(params)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + 2 * err, invariant + 2 * err)
+    x = balances[0]
+    y = prec_impl.calcYGivenX(x, params, derived, r)
+    r_reconstruct, err = prec_impl.calculateInvariantWithError([x, y], params, derived)
+    assert D(invariant) == D(r_reconstruct).approxed(rel=D("1e-6"))
+    # assert D(invariant) == D(r_reconstruct).approxed(abs=D(err))

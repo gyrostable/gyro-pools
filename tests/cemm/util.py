@@ -385,7 +385,7 @@ def mtest_calcOutGivenIn(
     invariant, inv_err = prec_impl.calculateInvariantWithError(
         balances, params, derived
     )
-    r = (invariant + inv_err, invariant)
+    r = (invariant + 2 * D(inv_err), invariant)
     if tokenInIsToken0:
         mamountOut = (
             prec_impl.calcYGivenX(balances[0] + amountIn, params, derived, r)
@@ -483,7 +483,7 @@ def mtest_calcInGivenOut(
     invariant, inv_err = prec_impl.calculateInvariantWithError(
         balances, params, derived
     )
-    r = (invariant + inv_err, invariant)
+    r = (invariant + 2 * D(inv_err), invariant)
     if tokenInIsToken0:
         amountIn = (
             prec_impl.calcXGivenY(balances[1] - amountOut, params, derived, r)
@@ -647,7 +647,7 @@ def mtest_invariant_across_calcOutGivenIn(
     invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
+    r = (unscale(invariant_sol) + 2 * D(unscale(inv_err_sol)), unscale(invariant_sol))
 
     if tokenInIsToken0:
         mamountOut = (
@@ -804,7 +804,7 @@ def mtest_invariant_across_calcInGivenOut(
     invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
+    r = (unscale(invariant_sol) + 2 * D(unscale(inv_err_sol)), unscale(invariant_sol))
 
     if tokenInIsToken0:
         amountIn = (
@@ -1055,7 +1055,7 @@ def mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances):
     invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
+    r = (unscale(invariant_sol) + 2 * D(unscale(inv_err_sol)), unscale(invariant_sol))
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
         scale(balances[0]), scale(params), derived_scaled, scale(r)

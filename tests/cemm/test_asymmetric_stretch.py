@@ -23,8 +23,8 @@ MIN_PRICE_SEPARATION = D("0.001")
 MAX_IN_RATIO = D("0.3")
 MAX_OUT_RATIO = D("0.3")
 
-MIN_BALANCE_RATIO = D("1e-5")
-MIN_FEE = D("0.0002")
+MIN_BALANCE_RATIO = D(0) # D("1e-5")
+MIN_FEE = D(0)  # D("0.0002")
 
 # this determines whether derivedParameters are calculated in solidity or not
 DP_IN_SOL = False

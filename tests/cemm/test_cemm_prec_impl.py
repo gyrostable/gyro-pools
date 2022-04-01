@@ -33,7 +33,7 @@ MAX_IN_RATIO = to_decimal("0.3")
 MAX_OUT_RATIO = to_decimal("0.3")
 
 MIN_BALANCE_RATIO = to_decimal("0")  # to_decimal("5e-5")
-MIN_FEE = D("0.0002")
+MIN_FEE = D(0) # D("0.0002")
 
 
 bpool_params = BasicPoolParameters(
@@ -363,7 +363,7 @@ def test_calcXpXpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     XpXp_py = prec_impl.calcXpXpDivLambdaLambda(
         balances[0], r, params.l, params.s, params.c, derived.tauBeta, derived.dSq
@@ -388,7 +388,7 @@ def test_calcXpXpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     XpXp_py = prec_impl.calcXpXpDivLambdaLambda(
         balances[0], r, params.l, params.s, params.c, derived.tauBeta, derived.dSq
@@ -406,7 +406,7 @@ def test_calcYpYpDivLambdaLambda(gyro_cemm_math_testing, params, balances):
     derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
     tau_beta_scaled = Vector2(-derived_scaled.tauAlpha[0], derived_scaled.tauAlpha[1])
@@ -433,7 +433,7 @@ def test_calcYpYpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     tau_beta = Vector2(-derived.tauAlpha[0], derived.tauAlpha[1])
     YpYp_py = prec_impl.calcXpXpDivLambdaLambda(
@@ -462,7 +462,7 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
     derived_scaled = prec_impl.scale_derived_values(derived)
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
     a = prec_impl.virtualOffset0(params, derived, r)
     b = prec_impl.virtualOffset1(params, derived, r)
     # the error comes from the square root and from the square root in r (in the offset)
@@ -530,7 +530,7 @@ def test_solveQuadraticSwap_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
     a = prec_impl.virtualOffset0(params, derived, r)
     b = prec_impl.virtualOffset1(params, derived, r)
 
@@ -573,7 +573,7 @@ def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     # error_tolx = max(
     #     invariant * params.l * params.s, invariant, balances[0] / params.l / params.l
@@ -602,7 +602,7 @@ def test_calcYGivenX(gyro_cemm_math_testing, params, balances):
 def test_calcYGivenX_property(params, balances):
     derived = prec_impl.calc_derived_values(params)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     assert y_py >= balances[1]
@@ -618,7 +618,7 @@ def test_calcYGivenX_property(params, balances):
 def test_calcYGivenX_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
@@ -646,7 +646,7 @@ def test_maxBalances(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
 
     xp_py = prec_impl.maxBalances0(params, derived, r)
     yp_py = prec_impl.maxBalances1(params, derived, r)
@@ -667,7 +667,7 @@ def test_maxBalances(gyro_cemm_math_testing, params, balances):
 def test_maxBalances_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + err, invariant)
+    r = (invariant + 2 * D(err), invariant)
     xp_py = prec_impl.maxBalances0(params, derived, r)
     yp_py = prec_impl.maxBalances1(params, derived, r)
     # sense test against old implementation
@@ -678,107 +678,3 @@ def test_maxBalances_sense_check(params, balances):
     assert xp_py == D(cemm.xmax).approxed()
     assert yp_py == D(cemm.ymax).approxed()
 
-
-# @settings(max_examples=1000)
-@given(
-    a=st.integers(min_value=100, max_value=int(D("2e38"))),
-    b=st.integers(min_value=100, max_value=int(D("2e38"))),
-)
-def test_mulXp(signed_math_testing, a, b):
-    prod_py = prec_impl.mulXp(a, b)
-    prod_sol = signed_math_testing.mulXp(a, b)
-
-    assert prod_py == prod_sol
-    prod = (D2(a) / D2("1e38")) * (D2(b) / D2("1e38"))
-    assert D2(prod_py) / D2("1e38") == prod
-
-
-@settings(max_examples=1000)
-@given(
-    a=st.integers(min_value=100, max_value=int(D("2e38"))),
-    b=st.integers(min_value=100, max_value=int(D("2e38"))),
-)
-def test_divXp(signed_math_testing, a, b):
-    div_py = prec_impl.divXp(a, b)
-    div_sol = signed_math_testing.divXp(a, b)
-
-    assert div_py == div_sol
-    div = (D3(a) / D3("1e38")) / (D3(b) / D3("1e38"))
-    assert D2(div_py) / D2("1e38") == D2(div.raw)
-
-
-# @settings(max_examples=1000)
-@given(
-    a=st.decimals(min_value="1", max_value="1e24"),
-    b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
-)
-def test_mulXpToNp(signed_math_testing, a, b):
-    b_unscale = D2(b) / D2("1e38")
-    prod_down_py = prec_impl.mulDownXpToNp(D(a), b_unscale)
-    prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
-    assert prod_down_py == unscale(prod_down_sol)
-
-    prod_up_py = prec_impl.mulUpXpToNp(D(a), b_unscale)
-    prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
-    assert prod_up_py == unscale(prod_up_sol)
-
-    assert prod_up_py >= prod_down_py
-    assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
-
-    prod_sense = D3(a) * D3(b_unscale.raw)
-    prod_sense = D(prod_sense.raw)
-    # prod_sense_fl = float(a) * float(b) / 1e38
-    # assert float(prod_up_py) == pytest.approx(prod_sense_fl)
-    assert prod_down_py == prod_sense.approxed(abs=D("5e-18"))
-
-
-# @settings(max_examples=1000)
-@given(
-    a=st.decimals(min_value="1", max_value="1e24"),
-    b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
-)
-def test_mulXpToNp_nega(signed_math_testing, a, b):
-    a = -a
-    b_unscale = D2(b) / D2("1e38")
-    prod_down_py = prec_impl.mulDownXpToNp(D(a), b_unscale)
-    prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
-    assert prod_down_py == unscale(prod_down_sol)
-
-    prod_up_py = prec_impl.mulUpXpToNp(D(a), b_unscale)
-    prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
-    assert prod_up_py == unscale(prod_up_sol)
-
-    assert prod_up_py >= prod_down_py
-    assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
-
-    prod_sense = D3(a) * D3(b_unscale.raw)
-    prod_sense = D(prod_sense.raw)
-    # prod_sense_fl = float(a) * float(b) / 1e38
-    # assert float(prod_up_py) == pytest.approx(prod_sense_fl)
-    assert prod_down_py == prod_sense.approxed(abs=D("5e-18"))
-
-
-# @settings(max_examples=1000)
-@given(
-    a=st.decimals(min_value="1", max_value="1e24"),
-    b=st.integers(min_value=int(D("1e16")), max_value=int(D("5e38"))),
-)
-def test_mulXpToNp_negb(signed_math_testing, a, b):
-    b = -b
-    b_unscale = D2(b) / D2("1e38")
-    prod_down_py = prec_impl.mulDownXpToNp(D(a), b_unscale)
-    prod_down_sol = signed_math_testing.mulDownXpToNp(scale(D(a)), b)
-    assert prod_down_py == unscale(prod_down_sol)
-
-    prod_up_py = prec_impl.mulUpXpToNp(D(a), b_unscale)
-    prod_up_sol = signed_math_testing.mulUpXpToNp(scale(D(a)), b)
-    assert prod_up_py == unscale(prod_up_sol)
-
-    assert prod_up_py >= prod_down_py
-    assert prod_up_py == prod_down_py.approxed(abs=D("5e-18"))
-
-    prod_sense = D3(a) * D3(b_unscale.raw)
-    prod_sense = D(prod_sense.raw)
-    # prod_sense_fl = float(a) * float(b) / 1e38
-    # assert float(prod_up_py) == pytest.approx(prod_sense_fl)
-    assert prod_down_py == prod_sense.approxed(abs=D("5e-18"))
