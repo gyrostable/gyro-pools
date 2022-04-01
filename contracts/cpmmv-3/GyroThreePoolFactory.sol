@@ -25,9 +25,7 @@ import "./GyroThreePool.sol";
 contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
-    constructor(IVault vault, address _gyroConfigAddress)
-        BasePoolSplitCodeFactory(vault, type(GyroThreePool).creationCode)
-    {
+    constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroThreePool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
 
@@ -38,7 +36,7 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
         string memory name,
         string memory symbol,
         IERC20[] memory tokens,
-        uint256[] memory weights,
+        uint256 root3Alpha,
         address[] memory assetManagers,
         uint256 swapFeePercentage,
         address owner
@@ -52,7 +50,7 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
                     name,
                     symbol,
                     tokens,
-                    weights,
+                    root3Alpha,
                     assetManagers,
                     swapFeePercentage,
                     pauseWindowDuration,
