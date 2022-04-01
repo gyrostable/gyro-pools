@@ -1,6 +1,10 @@
 import pytest
+from typing import NamedTuple, Tuple
+
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
+from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import (
     CEMMMathParams,
     CEMMPoolParams,
@@ -253,8 +257,8 @@ def cemm_pool(
     cemm_params = CEMMMathParams(
         alpha=D("0.97") * 10**18,
         beta=D("1.02") * 10**18,
-        c=D("0.2") * 10**18,
-        s=D("0.1") * 10**18,
+        c=D("0.86602540378") * 10**18,
+        s=D("0.5") * 10**18,
         l=D("2") * 10**18,
     )
     derived_cemm_params = calc_derived_values(cemm_params)
@@ -267,7 +271,27 @@ def isolation(fn_isolation):
     pass
 
 
-def calc_derived_values(p: CEMMMathParams):
+class Params(NamedTuple):
+    alpha: D
+    beta: D
+    c: D
+    s: D
+    l: D
+
+
+class DerivedParams(NamedTuple):
+    tauAlpha: Tuple[D2, D2]
+    tauBeta: Tuple[D2, D2]
+    u: D2
+    v: D2
+    w: D2
+    z: D2
+    dSq: D2
+    # dAlpha: D2
+    # dBeta: D2
+
+
+def calc_derived_values(p: Params) -> DerivedParams:
     s, c, lam, alpha, beta = (
         D(p.s).raw,
         D(p.c).raw,
@@ -276,18 +300,18 @@ def calc_derived_values(p: CEMMMathParams):
         D(p.beta).raw,
     )
     s, c, lam, alpha, beta = (
-        D(s),
-        D(c),
-        D(lam),
-        D(alpha),
-        D(beta),
+        D3(s),
+        D3(c),
+        D3(lam),
+        D3(alpha),
+        D3(beta),
     )
     dSq = c * c + s * s
     d = dSq.sqrt()
-    dAlpha = D(1) / (
+    dAlpha = D3(1) / (
         ((c / d + alpha * s / d) ** 2 / lam**2 + (alpha * c / d - s / d) ** 2).sqrt()
     )
-    dBeta = D(1) / (
+    dBeta = D3(1) / (
         ((c / d + beta * s / d) ** 2 / lam**2 + (beta * c / d - s / d) ** 2).sqrt()
     )
     tauAlpha = [0, 0]
@@ -303,17 +327,17 @@ def calc_derived_values(p: CEMMMathParams):
     u = s * c * (tauBeta[0] - tauAlpha[0])
     v = s * s * tauBeta[1] + c * c * tauAlpha[1]
 
-    tauAlpha38 = (D(tauAlpha[0].raw), D(tauAlpha[1].raw))
-    tauBeta38 = (D(tauBeta[0].raw), D(tauBeta[1].raw))
-    derived = GyroCEMMMathDerivedParams(
+    tauAlpha38 = (D2(tauAlpha[0].raw), D2(tauAlpha[1].raw))
+    tauBeta38 = (D2(tauBeta[0].raw), D2(tauBeta[1].raw))
+    derived = DerivedParams(
         tauAlpha=(tauAlpha38[0], tauAlpha38[1]),
         tauBeta=(tauBeta38[0], tauBeta38[1]),
-        u=D(u.raw),
-        v=D(v.raw),
-        w=D(w.raw),
-        z=D(z.raw),
-        dSq=D(dSq.raw),
-        # dAlpha=D(dAlpha.raw),
-        # dBeta=D(dBeta.raw),
+        u=D2(u.raw),
+        v=D2(v.raw),
+        w=D2(w.raw),
+        z=D2(z.raw),
+        dSq=D2(dSq.raw),
+        # dAlpha=D2(dAlpha.raw),
+        # dBeta=D2(dBeta.raw),
     )
     return derived

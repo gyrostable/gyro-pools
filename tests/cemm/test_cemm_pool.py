@@ -36,9 +36,9 @@ def test_pool_reg(balancer_vault, cemm_pool, gyro_erc20_funded):
         assert token_balances[token] == 0
 
 
-# def test_pool_constructor(mock_vault_pool):
-#     assert mock_vault_pool.getSwapFeePercentage() == 1 * 10**15
-#     assert mock_vault_pool.getNormalizedWeights() == (0.6 * 10**18, 0.4 * 10**18)
+# def test_pool_constructor(cemm_pool):
+#     assert cemm_pool.getSwapFeePercentage() == 1 * 10**15
+#     assert cemm_pool.getNormalizedWeights() == (0.6 * 10**18, 0.4 * 10**18)
 
 
 def join_pool(
@@ -70,13 +70,13 @@ def join_pool(
     )
 
 
-def test_pool_on_initialize(users, mock_vault_pool, mock_vault):
+def test_pool_on_initialize(users, cemm_pool, mock_vault):
     balances = (0, 0)
     amountIn = 100 * 10**18
 
-    tx = join_pool(mock_vault, mock_vault_pool.address, users[0], balances, amountIn)
+    tx = join_pool(mock_vault, cemm_pool.address, users[0], balances, amountIn)
 
-    poolId = mock_vault_pool.getPoolId()
+    poolId = cemm_pool.getPoolId()
 
     # Check Pool balance change
     assert tx.events["PoolBalanceChanged"]["poolId"] == poolId
@@ -97,28 +97,28 @@ def test_pool_on_initialize(users, mock_vault_pool, mock_vault):
     assert initial_balances[1] == amountIn
 
 
-def test_pool_on_join(users, mock_vault_pool, mock_vault):
+def test_pool_on_join(users, cemm_pool, mock_vault):
     amount_in = 100 * 10**18
 
-    tx = join_pool(mock_vault, mock_vault_pool.address, users[0], (0, 0), amount_in)
+    tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
 
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
 
-    sqrtParams = mock_vault_pool.getSqrtParameters()
+    sqrtParams = cemm_pool.getSqrtParameters()
     sqrtAlpha = sqrtParams[0] / (10**18)
     sqrtBeta = sqrtParams[1] / (10**18)
 
     # Check pool's invariant after initialization
     # NOTE: Calculation is completely unscaled; this is not the math that is actually done by anyone, but it works as a
     # check.
-    currentInvariant = mock_vault_pool.getLastInvariant()
+    currentInvariant = cemm_pool.getLastInvariant()
     squareInvariant = (amount_in + currentInvariant / sqrtBeta) * (
         amount_in + currentInvariant * sqrtAlpha
     )
     actualSquareInvariant = currentInvariant * currentInvariant
     assert squareInvariant == pytest.approx(actualSquareInvariant)
 
-    poolId = mock_vault_pool.getPoolId()
+    poolId = cemm_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
 
     ##################################################
@@ -126,11 +126,11 @@ def test_pool_on_join(users, mock_vault_pool, mock_vault):
     ##################################################
     tx = join_pool(
         mock_vault,
-        mock_vault_pool.address,
+        cemm_pool.address,
         users[1],
         initial_balances,
         amount_in,
-        amount_out=mock_vault_pool.totalSupply(),
+        amount_out=cemm_pool.totalSupply(),
     )
 
     ## Check Pool balance Change
@@ -151,10 +151,10 @@ def test_pool_on_join(users, mock_vault_pool, mock_vault):
     assert balancesAfterJoin[1] == amount_in * 2
 
     ## Check new pool's invariant
-    newInvariant = mock_vault_pool.getLastInvariant()
+    newInvariant = cemm_pool.getLastInvariant()
     assert newInvariant > currentInvariant
 
-    currentInvariant = mock_vault_pool.getLastInvariant()
+    currentInvariant = cemm_pool.getLastInvariant()
     squareInvariant = (balancesAfterJoin[0] + currentInvariant / sqrtBeta) * (
         balancesAfterJoin[1] + currentInvariant * sqrtAlpha
     )
@@ -162,37 +162,37 @@ def test_pool_on_join(users, mock_vault_pool, mock_vault):
     assert squareInvariant == pytest.approx(actualSquareInvariant)
 
 
-def test_exit_pool(users, mock_vault_pool, mock_vault):
+def test_exit_pool(users, cemm_pool, mock_vault):
     amount_in = 100 * 10**18
 
-    tx = join_pool(mock_vault, mock_vault_pool.address, users[0], (0, 0), amount_in)
+    tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
 
-    poolId = mock_vault_pool.getPoolId()
+    poolId = cemm_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
     tx = join_pool(
         mock_vault,
-        mock_vault_pool.address,
+        cemm_pool.address,
         users[1],
         initial_balances,
         amount_in,
-        amount_out=mock_vault_pool.totalSupply(),
+        amount_out=cemm_pool.totalSupply(),
     )
 
     amountOut = 5 * 10**18
 
-    total_supply_before_exit = mock_vault_pool.totalSupply()
+    total_supply_before_exit = cemm_pool.totalSupply()
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
-    invariant_after_join = mock_vault_pool.getLastInvariant()
+    invariant_after_join = cemm_pool.getLastInvariant()
 
     tx = mock_vault.callExitPoolGyro(
-        mock_vault_pool.address,
+        cemm_pool.address,
         0,
         users[0],
         users[0],
         balances_after_join,
         0,
         0,
-        mock_vault_pool.balanceOf(users[0]) * amountOut // amount_in,
+        cemm_pool.balanceOf(users[0]) * amountOut // amount_in,
     )
 
     assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(
@@ -217,10 +217,10 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
         total_supply_before_exit * (amountOut / balances_after_join[0])
     )
 
-    sqrt_alpha, sqrtBeta = [v / 10**18 for v in mock_vault_pool.getSqrtParameters()]
+    sqrt_alpha, sqrtBeta = [v / 10**18 for v in cemm_pool.getSqrtParameters()]
 
     ## Check new pool's invariant
-    invariant_after_exit = mock_vault_pool.getLastInvariant()
+    invariant_after_exit = cemm_pool.getLastInvariant()
     assert invariant_after_join > invariant_after_exit
     square_invariant = (balancesAfterExit[0] + invariant_after_exit / sqrtBeta) * (
         balancesAfterExit[1] + invariant_after_exit * sqrt_alpha
@@ -228,22 +228,20 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
     assert square_invariant == pytest.approx(invariant_after_exit**2)
 
 
-def test_swap(
-    users, mock_vault_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing
-):
+def test_swap(users, cemm_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing):
     amount_in = 100 * 10**18
 
-    tx = join_pool(mock_vault, mock_vault_pool.address, users[0], (0, 0), amount_in)
+    tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
 
-    poolId = mock_vault_pool.getPoolId()
+    poolId = cemm_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
     tx = join_pool(
         mock_vault,
-        mock_vault_pool.address,
+        cemm_pool.address,
         users[1],
         initial_balances,
         amount_in,
-        amount_out=mock_vault_pool.totalSupply(),
+        amount_out=cemm_pool.totalSupply(),
     )
 
     amount_out = 5 * 10**18
@@ -251,14 +249,14 @@ def test_swap(
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
 
     tx = mock_vault.callExitPoolGyro(
-        mock_vault_pool.address,
+        cemm_pool.address,
         0,
         users[0],
         users[0],
         balances_after_join,
         0,
         0,
-        mock_vault_pool.balanceOf(users[0]) * amount_out // amount_in,
+        cemm_pool.balanceOf(users[0]) * amount_out // amount_in,
     )
 
     (_, balances_after_exit) = mock_vault.getPoolTokens(poolId)
@@ -268,7 +266,7 @@ def test_swap(
         current_invariant,
         virtual_param_in,
         virtual_param_out,
-    ) = mock_vault_pool.calculateCurrentValues(*balances_after_exit, True)
+    ) = cemm_pool.calculateCurrentValues(*balances_after_exit, True)
 
     fees = amount_to_swap * (0.1 / 100)
     amountToSwapMinusFees = amount_to_swap - fees
@@ -293,7 +291,7 @@ def test_swap(
     )
 
     tx = mock_vault.callMinimalGyroPoolSwap(
-        mock_vault_pool.address,
+        cemm_pool.address,
         swapRequest,
         balances_after_exit[0],
         balances_after_exit[1],
