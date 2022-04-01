@@ -435,7 +435,8 @@ library GyroCEMMMath {
         val = val.add((termNp - 9).mulDownXpToNp(SignedFixedPoint.ONE_XP.divXp(d.dSq)));
     }
 
-    /// Rounds down
+    /// @dev Rounds down. Also returns an estimate for the error of the term under the sqrt (!) and without the regular
+    /// normal-precision error of O(1e-18).
     function calcInvariantSqrt(
         int256 x,
         int256 y,
