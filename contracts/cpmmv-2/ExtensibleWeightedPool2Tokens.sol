@@ -88,8 +88,6 @@ abstract contract ExtensibleWeightedPool2Tokens is
         string symbol;
         IERC20 token0;
         IERC20 token1;
-        uint256 normalizedWeight0;
-        uint256 normalizedWeight1;
         uint256 swapFeePercentage;
         uint256 pauseWindowDuration;
         uint256 bufferPeriodDuration;

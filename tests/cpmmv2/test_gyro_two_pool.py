@@ -35,13 +35,17 @@ def test_pool_reg(balancer_vault, balancer_vault_pool, gyro_erc20_funded):
         assert token_balances[token] == 0
 
 
+def test_pool_factory(mock_pool_from_factory):
+    print(mock_pool_from_factory)
+
+
 def test_pool_constructor(mock_vault_pool):
-    assert mock_vault_pool.getSwapFeePercentage() == 1 * 10 ** 15
-    assert mock_vault_pool.getNormalizedWeights() == (0.6 * 10 ** 18, 0.4 * 10 ** 18)
+    assert mock_vault_pool.getSwapFeePercentage() == 1 * 10**15
+    assert mock_vault_pool.getNormalizedWeights() == (0.6 * 10**18, 0.4 * 10**18)
 
     sqrtParams = mock_vault_pool.getSqrtParameters()
-    assert sqrtParams[0] == 0.97 * 10 ** 18
-    assert sqrtParams[1] == 1.02 * 10 ** 18
+    assert sqrtParams[0] == 0.97 * 10**18
+    assert sqrtParams[1] == 1.02 * 10**18
 
 
 def join_pool(
@@ -75,7 +79,7 @@ def join_pool(
 
 def test_pool_on_initialize(users, mock_vault_pool, mock_vault):
     balances = (0, 0)
-    amountIn = 100 * 10 ** 18
+    amountIn = 100 * 10**18
 
     tx = join_pool(mock_vault, mock_vault_pool.address, users[0], balances, amountIn)
 
@@ -101,15 +105,15 @@ def test_pool_on_initialize(users, mock_vault_pool, mock_vault):
 
 
 def test_pool_on_join(users, mock_vault_pool, mock_vault):
-    amount_in = 100 * 10 ** 18
+    amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, mock_vault_pool.address, users[0], (0, 0), amount_in)
 
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
 
     sqrtParams = mock_vault_pool.getSqrtParameters()
-    sqrtAlpha = sqrtParams[0] / (10 ** 18)
-    sqrtBeta = sqrtParams[1] / (10 ** 18)
+    sqrtAlpha = sqrtParams[0] / (10**18)
+    sqrtBeta = sqrtParams[1] / (10**18)
 
     # Check pool's invariant after initialization
     # NOTE: Calculation is completely unscaled; this is not the math that is actually done by anyone, but it works as a
@@ -166,7 +170,7 @@ def test_pool_on_join(users, mock_vault_pool, mock_vault):
 
 
 def test_exit_pool(users, mock_vault_pool, mock_vault):
-    amount_in = 100 * 10 ** 18
+    amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, mock_vault_pool.address, users[0], (0, 0), amount_in)
 
@@ -181,7 +185,7 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
         amount_out=mock_vault_pool.totalSupply(),
     )
 
-    amountOut = 5 * 10 ** 18
+    amountOut = 5 * 10**18
 
     total_supply_before_exit = mock_vault_pool.totalSupply()
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
@@ -198,7 +202,9 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
         mock_vault_pool.balanceOf(users[0]) * amountOut // amount_in,
     )
 
-    assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(unscale((amountOut, amountOut)))
+    assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(
+        unscale((amountOut, amountOut))
+    )
 
     (_, balancesAfterExit) = mock_vault.getPoolTokens(poolId)
     assert int(balancesAfterExit[0]) == pytest.approx(
@@ -218,7 +224,7 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
         total_supply_before_exit * (amountOut / balances_after_join[0])
     )
 
-    sqrt_alpha, sqrtBeta = [v / 10 ** 18 for v in mock_vault_pool.getSqrtParameters()]
+    sqrt_alpha, sqrtBeta = [v / 10**18 for v in mock_vault_pool.getSqrtParameters()]
 
     ## Check new pool's invariant
     invariant_after_exit = mock_vault_pool.getLastInvariant()
@@ -226,13 +232,13 @@ def test_exit_pool(users, mock_vault_pool, mock_vault):
     square_invariant = (balancesAfterExit[0] + invariant_after_exit / sqrtBeta) * (
         balancesAfterExit[1] + invariant_after_exit * sqrt_alpha
     )
-    assert square_invariant == pytest.approx(invariant_after_exit ** 2)
+    assert square_invariant == pytest.approx(invariant_after_exit**2)
 
 
 def test_swap(
     users, mock_vault_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing
 ):
-    amount_in = 100 * 10 ** 18
+    amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, mock_vault_pool.address, users[0], (0, 0), amount_in)
 
@@ -247,7 +253,7 @@ def test_swap(
         amount_out=mock_vault_pool.totalSupply(),
     )
 
-    amount_out = 5 * 10 ** 18
+    amount_out = 5 * 10**18
 
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
 
@@ -264,7 +270,7 @@ def test_swap(
 
     (_, balances_after_exit) = mock_vault.getPoolTokens(poolId)
 
-    amount_to_swap = 10 * 10 ** 18
+    amount_to_swap = 10 * 10**18
     (
         current_invariant,
         virtual_param_in,

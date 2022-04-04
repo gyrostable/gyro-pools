@@ -7,6 +7,7 @@ from tests.support.types import (
     TwoPoolParams,
     ThreePoolParams,
     ThreePoolFactoryCreateParams,
+    TwoPoolFactoryCreateParams,
 )
 
 TOKENS_PER_USER = 1000 * 10**18
@@ -193,26 +194,28 @@ def mock_pool_from_factory(
     GyroTwoPool,
     mock_vault,
     mock_gyro_config,
-    gyro_erc20_funded3,
+    gyro_erc20_funded,
+    QueryProcessor,
 ):
+    admin.deploy(QueryProcessor)
     factory = admin.deploy(GyroTwoPoolFactory, mock_vault, mock_gyro_config.address)
 
-    args = ThreePoolFactoryCreateParams(
-        name="GyroThreePoolFromFactory",
-        symbol="G3PF",
-        tokens=[gyro_erc20_funded3[i].address for i in range(3)],
-        root3Alpha=D("0.97") * 10**18,
-        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
+    args = TwoPoolFactoryCreateParams(
+        name="GyroTwoPoolFromFactory",
+        symbol="G2PF",
+        tokens=[gyro_erc20_funded[i].address for i in range(2)],
+        sqrts=[D("0.97"), D("1.02")],
         swapFeePercentage=D(1) * 10**15,
+        oracleEnabled=False,
         owner=admin,
     )
 
     tx = factory.create(*args)
-    pool3_from_factory = Contract.from_abi(
-        "GyroThreePool", tx.return_value, GyroThreePool.abi
+    pool_from_factory = Contract.from_abi(
+        "GyroTwoPool", tx.return_value, GyroTwoPool.abi
     )
 
-    return pool3_from_factory
+    return factory
 
 
 @pytest.fixture

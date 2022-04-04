@@ -49,6 +49,16 @@ class TwoPoolBaseParams(NamedTuple):
     owner: str
 
 
+class TwoPoolFactoryCreateParams(NamedTuple):
+    name: str
+    symbol: str
+    tokens: list[str]
+    sqrts: list[DecimalLike]
+    swapFeePercentage: DecimalLike
+    oracleEnabled: bool
+    owner: address
+
+
 class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     sqrtAlpha: DecimalLike  # should already be upscaled
