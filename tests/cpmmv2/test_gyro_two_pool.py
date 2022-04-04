@@ -1,5 +1,6 @@
 import pytest
 from brownie import ZERO_ADDRESS
+from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.conftest import TOKENS_PER_USER
 from tests.cpmmv2 import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
@@ -36,7 +37,13 @@ def test_pool_reg(balancer_vault, balancer_vault_pool, gyro_erc20_funded):
 
 
 def test_pool_factory(mock_pool_from_factory):
-    print(mock_pool_from_factory)
+    assert mock_pool_from_factory.name() == "GyroTwoPoolFromFactory"
+    assert mock_pool_from_factory.symbol() == "G2PF"
+    assert mock_pool_from_factory.getSwapFeePercentage() == D(1) * 10**15
+
+    sqrtParams = mock_pool_from_factory.getSqrtParameters()
+    assert sqrtParams[0] == 0.97 * 10**18
+    assert sqrtParams[1] == 1.02 * 10**18
 
 
 def test_pool_constructor(mock_vault_pool):

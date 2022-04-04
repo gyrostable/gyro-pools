@@ -204,7 +204,7 @@ def mock_pool_from_factory(
         name="GyroTwoPoolFromFactory",
         symbol="G2PF",
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
-        sqrts=[D("0.97"), D("1.02")],
+        sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
         swapFeePercentage=D(1) * 10**15,
         oracleEnabled=False,
         owner=admin,
@@ -215,7 +215,7 @@ def mock_pool_from_factory(
         "GyroTwoPool", tx.return_value, GyroTwoPool.abi
     )
 
-    return factory
+    return pool_from_factory
 
 
 @pytest.fixture
