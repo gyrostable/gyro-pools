@@ -91,3 +91,13 @@ class CEMMMathQParams(NamedTuple):
     a: DecimalLike
     b: DecimalLike
     c: DecimalLike
+
+
+class ThreePoolFactoryCreateParams(NamedTuple):
+    name: str
+    symbol: str
+    tokens: list[str]
+    root3Alpha: DecimalLike
+    assetManagers: list[str]  # Usually all zero addresses
+    swapFeePercentage: DecimalLike
+    owner: address
