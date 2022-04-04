@@ -241,8 +241,8 @@ def cemm_pool(
     admin.deploy(QueryProcessor)
     two_pool_base_params = TwoPoolBaseParams(
         vault=balancer_vault.address,
-        name="GyroTwoPool",  # string
-        symbol="GTP",  # string
+        name="GyroCEMMTwoPool",  # string
+        symbol="GCTP",  # string
         token0=gyro_erc20_funded[0].address,  # IERC20
         token1=gyro_erc20_funded[1].address,  # IERC20
         normalizedWeight0=D("0.6") * 10**18,  # uint256
@@ -257,9 +257,9 @@ def cemm_pool(
     cemm_params = CEMMMathParams(
         alpha=D("0.97") * 10**18,
         beta=D("1.02") * 10**18,
-        c=D("0.86602540378") * 10**18,
-        s=D("0.5") * 10**18,
-        l=D("2") * 10**18,
+        c=D("1") * 10**18,
+        s=D("0") * 10**18,
+        l=D("1") * 10**18,
     )
     derived_cemm_params = calc_derived_values(cemm_params)
     args = CEMMPoolParams(two_pool_base_params, cemm_params, derived_cemm_params)
