@@ -10,19 +10,22 @@ import pytest
 from brownie.test import given
 from hypothesis import assume, example, settings
 
+from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
+
 from tests.support.util_common import (
     BasicPoolParameters,
     gen_balances,
     gen_balances_vector,
 )
-from tests.cemm import cemm as mimpl
+from tests.cemm import cemm_100 as mimpl
 from tests.cemm import cemm_prec_implementation as prec_impl
-from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import *
 from tests.support.utils import scale, to_decimal, qdecimals, unscale, apply_deep
 from tests.cemm import util
+
+util.mimpl = mimpl  # Monkey patching in the higher-prec impl. Sorry...
 
 from math import pi, sin, cos, tan, acos
 
@@ -35,6 +38,8 @@ MAX_OUT_RATIO = to_decimal("0.3")
 MIN_BALANCE_RATIO = to_decimal("0")  # to_decimal("5e-5")
 MIN_FEE = D(0) # D("0.0002")
 
+def test_dummy():
+    print(decimal.getcontext().prec)
 
 def convert_deep_decimals(x, totype, dofloat=True, dostr=True):
     """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
@@ -56,6 +61,16 @@ def convert_deep_decimals(x, totype, dofloat=True, dostr=True):
         else:
             return y
     return apply_deep(x, go)
+
+
+def paramsTo100(params: CEMMMathParams) -> CEMMMathParams:
+    """Convert params to a high-precision version. This is more than just type conversion, we also re-normalize!"""
+    params = convert_deep_decimals(params, D3)
+    pd = params._asdict()
+    d = (params.s**2 + params.c**2).sqrt()
+    pd['s'] /= d
+    pd['c'] /= d
+    return CEMMMathParams(**pd)
 
 
 bpool_params = BasicPoolParameters(
@@ -123,7 +138,7 @@ def gen_params_conservative(draw):
 
 @given(params=gen_params())
 def test_calcAChiAChi(gyro_cemm_math_testing, params):
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     derived_m = util.mathParams2DerivedParams(mparams)
 
     derived = prec_impl.calc_derived_values(params)
@@ -141,7 +156,7 @@ def test_calcAChiAChi(gyro_cemm_math_testing, params):
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
-    assert result_py == AChiAChi.approxed()
+    assert result_py == convert_deep_decimals(AChiAChi, D).approxed()
 
 
 @given(
