@@ -87,10 +87,11 @@ def approxed(x, abs=None, rel=None):
     return to_decimal(x).approxed()
 
 def apply_deep(x, f):
-    if isinstance(x, (list, tuple)):
-        return type(x)([apply_deep(y, f) for y in x])
+    # Order matters b/c named tuples are tuples.
     if isinstance_namedtuple(x):
         return type(x)(*[apply_deep(y, f) for y in x])
+    if isinstance(x, (list, tuple)):
+        return type(x)([apply_deep(y, f) for y in x])
     return f(x)
 
 
