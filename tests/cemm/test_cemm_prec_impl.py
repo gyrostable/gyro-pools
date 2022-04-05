@@ -41,14 +41,14 @@ MIN_FEE = D(0) # D("0.0002")
 def test_dummy():
     print(decimal.getcontext().prec)
 
-def convert_deep_decimals(x, totype, dofloat=True, dostr=True):
+def convd(x, totype, dofloat=True, dostr=True):
     """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
 
     `dofloat`: Also convert floats.
 
     `dostr`: Also convert str.
 
-    Example: convert_deep_decimals(x, D3)"""
+    Example: convd(x, D3)"""
     def go(y):
         if isinstance(y, decimal.Decimal):
             return totype(y)
@@ -65,7 +65,7 @@ def convert_deep_decimals(x, totype, dofloat=True, dostr=True):
 
 def paramsTo100(params: CEMMMathParams) -> CEMMMathParams:
     """Convert params to a high-precision version. This is more than just type conversion, we also re-normalize!"""
-    params = convert_deep_decimals(params, D3)
+    params = convd(params, D3)
     pd = params._asdict()
     d = (params.s**2 + params.c**2).sqrt()
     pd['s'] /= d
@@ -156,7 +156,7 @@ def test_calcAChiAChi(gyro_cemm_math_testing, params):
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
-    assert result_py == convert_deep_decimals(AChiAChi, D).approxed()
+    assert result_py == convd(AChiAChi, D).approxed()
 
 
 @given(
@@ -181,21 +181,21 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calcAtAChi_sense_check(params, balances):
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     derived_m = util.mathParams2DerivedParams(mparams)
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
 
     # test against the old (imprecise) implementation
-    At = mparams.A_times(balances[0], balances[1])
+    At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
         mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AtAChi = At[0] * AChi[0] + At[1] * AChi[1]
-    assert AtAChi == result_py.approxed()
+    assert AtAChi == convd(result_py, D).approxed()
 
 
 @given(
@@ -219,7 +219,7 @@ def test_calcMinAtxAChiySqPlusAtxSq(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     derived_m = util.mathParams2DerivedParams(mparams)
 
     derived = prec_impl.calc_derived_values(params)
@@ -227,14 +227,14 @@ def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
         balances[0], balances[1], params, derived
     )
     # test against the old (imprecise) implementation
-    At = mparams.A_times(balances[0], balances[1])
+    At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
         mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     val_sense = At[0] * At[0] * (1 - AChi[1] * AChi[1])
-    assert result_py == val_sense.approxed()
+    assert result_py == convd(val_sense, D).approxed()
 
 
 @given(
@@ -259,7 +259,7 @@ def test_calc2AtxAtyAChixAChiy(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     derived_m = util.mathParams2DerivedParams(mparams)
 
     derived = prec_impl.calc_derived_values(params)
@@ -267,14 +267,14 @@ def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
         balances[0], balances[1], params, derived
     )
     # test against the old (imprecise) implementation
-    At = mparams.A_times(balances[0], balances[1])
+    At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
         mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
-    val_sense = D(2) * At[0] * At[1] * AChi[0] * AChi[1]
-    assert result_py == val_sense.approxed()
+    val_sense = D3(2) * At[0] * At[1] * AChi[0] * AChi[1]
+    assert result_py == convd(val_sense, D).approxed()
 
 
 @given(
@@ -298,7 +298,7 @@ def test_calcMinAtyAChixSqPlusAtySq(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     derived_m = util.mathParams2DerivedParams(mparams)
 
     derived = prec_impl.calc_derived_values(params)
@@ -306,14 +306,14 @@ def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
         balances[0], balances[1], params, derived
     )
     # test against the old (imprecise) implementation
-    At = mparams.A_times(balances[0], balances[1])
+    At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
         mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
-    val_sense = At[1] * At[1] * (D(1) - AChi[0] * AChi[0])
-    assert result_py == val_sense.approxed()
+    val_sense = At[1] * At[1] * (D3(1) - AChi[0] * AChi[0])
+    assert result_py == convd(val_sense, D).approxed()
 
 
 @given(
@@ -356,14 +356,14 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     balances=gen_balances(2, bpool_params_conservative),
 )
 def test_calculateInvariant_sense_check(params, balances):
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
 
     derived = prec_impl.calc_derived_values(params)
     result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
     # test against the old (imprecise) implementation
-    cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
-    assert cemm.r == result_py.approxed()
-    assert cemm.r == D(result_py + err_py).approxed()
+    cemm = mimpl.CEMM.from_x_y(*convd(balances, D3), mparams)
+    assert convd(cemm.r, D) == result_py.approxed()
+    assert convd(cemm.r, D) == D(result_py + err_py).approxed()
 
 
 @given(
@@ -387,11 +387,11 @@ def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
     assert b_py == unscale(b_sol)
 
     # test against the old (imprecise) implementation
-    mparams = util.params2MathParams(params)
-    midprice = (mparams.alpha + mparams.beta) / D(2)
-    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)
-    assert a_py == cemm.a.approxed()
-    assert b_py == cemm.b.approxed()
+    mparams = util.params2MathParams(paramsTo100(params))
+    midprice = (mparams.alpha + mparams.beta) / D3(2)
+    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)
+    assert a_py == convd(cemm.a, D3).approxed()
+    assert b_py == convd(cemm.b, D3).approxed()
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
@@ -586,22 +586,22 @@ def test_solveQuadraticSwap_sense_check(params, balances):
         params.l, balances[1], params.c, params.s, r, [b, a], tau_beta, derived.dSq
     )
 
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     # sense test against old implementation
-    midprice = (params.alpha + params.beta) / 2
-    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
-    y = cemm._compute_y_for_x(balances[0])
+    midprice = (mparams.alpha + mparams.beta) / D3(2)
+    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
+    y = cemm._compute_y_for_x(convd(balances[0], D3))
     assume(y is not None)  # O/w out of bounds for this invariant
     assume(balances[0] > 0 and y > 0)
-    assert y == val_py.approxed(rel=D("1e-5"))
+    assert convd(y, D) == val_py.approxed(rel=D("1e-5"))
 
     # sense test against old implementation
     midprice = (params.alpha + params.beta) / 2
-    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
+    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
     x = cemm._compute_x_for_y(balances[1])
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
-    assert x == val_y_py.approxed(rel=D("1e-5"))
+    assert convd(x, D) == val_y_py.approxed(rel=D("1e-5"))
 
 
 # also tests calcXGivenY
@@ -660,22 +660,22 @@ def test_calcYGivenX_sense_check(params, balances):
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
 
-    mparams = util.params2MathParams(params)
+    mparams = util.params2MathParams(paramsTo100(params))
     # sense test against old implementation
-    midprice = (params.alpha + params.beta) / 2
-    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
-    y = cemm._compute_y_for_x(balances[0])
+    midprice = (mparams.alpha + mparams.beta) / D3(2)
+    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
+    y = cemm._compute_y_for_x(convd(balances[0], D3))
     assume(y is not None)  # O/w out of bounds for this invariant
     assume(balances[0] > 0 and y > 0)
-    assert y == y_py.approxed(rel=D("1e-4"))
+    assert convd(y, D3) == y_py.approxed(rel=D("1e-4"))
 
     # sense test against old implementation
     midprice = (params.alpha + params.beta) / 2
-    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)  # Price doesn't matter.
+    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
     x = cemm._compute_x_for_y(balances[1])
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
-    assert x == x_py.approxed(rel=D("1e-4"))
+    assert convd(y, D3) == x_py.approxed(rel=D("1e-4"))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
@@ -708,10 +708,10 @@ def test_maxBalances_sense_check(params, balances):
     xp_py = prec_impl.maxBalances0(params, derived, r)
     yp_py = prec_impl.maxBalances1(params, derived, r)
     # sense test against old implementation
-    mparams = util.params2MathParams(params)
-    midprice = (mparams.alpha + mparams.beta) / D(2)
-    cemm = mimpl.CEMM.from_px_r(midprice, invariant, mparams)
+    mparams = util.params2MathParams(paramsTo100(params))
+    midprice = (mparams.alpha + mparams.beta) / D3(2)
+    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)
 
-    assert xp_py == D(cemm.xmax).approxed()
-    assert yp_py == D(cemm.ymax).approxed()
+    assert xp_py == convd(cemm.xmax, D3).approxed()
+    assert yp_py == convd(cemm.ymax, D3).approxed()
 
