@@ -20,11 +20,10 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import *
-from tests.support.utils import scale, to_decimal, qdecimals, unscale
+from tests.support.utils import scale, to_decimal, qdecimals, unscale, apply_deep
 from tests.cemm import util
 
 from math import pi, sin, cos, tan, acos
-
 
 from tests.support.types import Vector2
 
@@ -34,6 +33,18 @@ MAX_OUT_RATIO = to_decimal("0.3")
 
 MIN_BALANCE_RATIO = to_decimal("0")  # to_decimal("5e-5")
 MIN_FEE = D(0) # D("0.0002")
+
+
+def convert_deep_decimals(x, totype):
+    """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
+
+    Example: convert_deep_decimals(x, D3)"""
+    def go(y):
+        if isinstance(y, (D, D2, D3)):
+            return totype(y.raw)
+        else:
+            return y
+    return apply_deep(x, go)
 
 
 bpool_params = BasicPoolParameters(
