@@ -1,3 +1,4 @@
+import decimal
 from decimal import Decimal
 from decimal import Decimal
 from math import pi, sin, cos
@@ -35,13 +36,23 @@ MIN_BALANCE_RATIO = to_decimal("0")  # to_decimal("5e-5")
 MIN_FEE = D(0) # D("0.0002")
 
 
-def convert_deep_decimals(x, totype):
+def convert_deep_decimals(x, totype, dofloat=True, dostr=True):
     """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
+
+    `dofloat`: Also convert floats.
+
+    `dostr`: Also convert str.
 
     Example: convert_deep_decimals(x, D3)"""
     def go(y):
-        if isinstance(y, (D, D2, D3)):
+        if isinstance(y, decimal.Decimal):
+            return totype(y)
+        elif isinstance(y, (D, D2, D3)):
             return totype(y.raw)
+        elif dofloat and isinstance(y, float):
+            return totype(y)
+        elif dostr and isinstance(y, str):
+            return totype(y)
         else:
             return y
     return apply_deep(x, go)
