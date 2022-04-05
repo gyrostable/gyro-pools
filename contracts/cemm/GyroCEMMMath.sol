@@ -293,6 +293,7 @@ library GyroCEMMMath {
         // calculate the error in the square root term, separates cases based on sqrt >= 1/2
         // TODO: is there a way to avoid the sqrt in the second case?
         // TODO: is 1/2 the best separating case?
+        // Note: the minimum non-zero value of sqrt is 1e-9
         if (sqrt >= 5e17) {
             // err + 1 to account for O(eps_np) term ignored before
             err = (err + 1).divUp(2 * sqrt);

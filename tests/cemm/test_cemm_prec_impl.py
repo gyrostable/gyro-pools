@@ -36,10 +36,12 @@ MAX_IN_RATIO = to_decimal("0.3")
 MAX_OUT_RATIO = to_decimal("0.3")
 
 MIN_BALANCE_RATIO = to_decimal("0")  # to_decimal("5e-5")
-MIN_FEE = D(0) # D("0.0002")
+MIN_FEE = D(0)  # D("0.0002")
+
 
 def test_dummy():
     print(decimal.getcontext().prec)
+
 
 def convd(x, totype, dofloat=True, dostr=True):
     """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
@@ -49,6 +51,7 @@ def convd(x, totype, dofloat=True, dostr=True):
     `dostr`: Also convert str.
 
     Example: convd(x, D3)"""
+
     def go(y):
         if isinstance(y, decimal.Decimal):
             return totype(y)
@@ -60,6 +63,7 @@ def convd(x, totype, dofloat=True, dostr=True):
             return totype(y)
         else:
             return y
+
     return apply_deep(x, go)
 
 
@@ -67,9 +71,9 @@ def paramsTo100(params: CEMMMathParams) -> CEMMMathParams:
     """Convert params to a high-precision version. This is more than just type conversion, we also re-normalize!"""
     params = convd(params, D3)
     pd = params._asdict()
-    d = (params.s**2 + params.c**2).sqrt()
-    pd['s'] /= d
-    pd['c'] /= d
+    d = (params.s ** 2 + params.c ** 2).sqrt()
+    pd["s"] /= d
+    pd["c"] /= d
     return CEMMMathParams(**pd)
 
 
@@ -136,6 +140,16 @@ def gen_params_conservative(draw):
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
+# def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
+#     """The python math implementation is a bit older and uses its own data structures. This function converts."""
+#     c, s = convert_deep_decimals([D(params.c), D(params.s)], D3)
+#     # c, s = (D3(D(params.c).raw), D3(D(params.s).raw))
+#     d = (c ** 2 + s ** 2).sqrt()
+#     c, s = (c / d, s / d)
+#     return mimpl.Params(D3(params.alpha), D3(params.beta), c, -s, D3(params.l))
+
+
+######################################################################################
 @given(params=gen_params())
 def test_calcAChiAChi(gyro_cemm_math_testing, params):
     mparams = util.params2MathParams(paramsTo100(params))
@@ -433,8 +447,13 @@ def test_calcXpXpDivLambdaLambda_sense_check(params, balances):
 
     # sense test
     a_py = prec_impl.virtualOffset0(params, derived, r)
-    XpXp = (balances[0] - a_py) * (balances[0] - a_py) / params.l / params.l
-    assert XpXp == XpXp_py.approxed()
+    XpXp = (
+        D3(D(balances[0]).raw - D(a_py).raw)
+        * D3(D(balances[0]).raw - D(a_py).raw)
+        / D3(D(params.l).raw)
+        / D3(D(params.l).raw)
+    )
+    assert D(XpXp.raw) == XpXp_py.approxed(rel=D("2e-3"))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
@@ -589,7 +608,9 @@ def test_solveQuadraticSwap_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
     # sense test against old implementation
     midprice = (mparams.alpha + mparams.beta) / D3(2)
-    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
+    cemm = mimpl.CEMM.from_px_r(
+        midprice, convd(invariant, D3), mparams
+    )  # Price doesn't matter.
     y = cemm._compute_y_for_x(convd(balances[0], D3))
     assume(y is not None)  # O/w out of bounds for this invariant
     assume(balances[0] > 0 and y > 0)
@@ -597,7 +618,9 @@ def test_solveQuadraticSwap_sense_check(params, balances):
 
     # sense test against old implementation
     midprice = (params.alpha + params.beta) / 2
-    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
+    cemm = mimpl.CEMM.from_px_r(
+        midprice, convd(invariant, D3), mparams
+    )  # Price doesn't matter.
     x = cemm._compute_x_for_y(balances[1])
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
@@ -641,11 +664,87 @@ def test_calcYGivenX_property(params, balances):
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
     r = (invariant + 2 * D(err), invariant)
 
+    # calculate swap error tolerance
+    swap_err_xy, swap_err_yx = calculate_swap_error(params, balances, r, derived)
+
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     assert y_py >= balances[1]
+    assert y_py == D(balances[1]).approxed(abs=swap_err_xy)
 
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
     assert x_py >= balances[0]
+    assert x_py == D(balances[0]).approxed(abs=swap_err_yx)
+
+
+def calculate_swap_error(params, balances, r, derived):
+    a = prec_impl.virtualOffset0(params, derived, r)
+    b = prec_impl.virtualOffset1(params, derived, r)
+    swap_sqrt = prec_impl.solveQuadraticSwap(
+        params.l,
+        balances[0],
+        params.s,
+        params.c,
+        r,
+        [a, b],
+        derived.tauBeta,
+        derived.dSq,
+    )
+    x, y = (balances[0], balances[1])
+    inv_err = r[0] - r[1]
+    denominator = D(1) - D(params.s) ** 2 + D(params.s) ** 2 / params.l / params.l
+    sqrt_err = (
+        (r[0] + x) * D(inv_err)
+        + D(r[0]) * (r[0] + x / params.l) / D("1e38")
+        + D(x) ** 2 / D(params.l) ** 2 / D("1e38")
+    )
+    if swap_sqrt > D("0.5"):
+        sqrt_err = 10 * sqrt_err / (2 * D(swap_sqrt))
+    else:
+        sqrt_err = 10 * D(sqrt_err).sqrt()
+    swap_err_xy = 10 * (params.l * inv_err + sqrt_err) / denominator
+
+    # now do the other direction swap as well
+    swap_sqrt = prec_impl.solveQuadraticSwap(
+        params.l,
+        balances[1],
+        params.c,
+        params.s,
+        r,
+        [b, a],
+        [-derived.tauAlpha[0], derived.tauAlpha[1]],
+        derived.dSq,
+    )
+    denominator = D(1) - D(params.c) ** 2 + D(params.c) ** 2 / params.l / params.l
+    sqrt_err = (
+        (r[0] + y) * D(inv_err)
+        + D(r[0]) * (r[0] + y / params.l) / D("1e38")
+        + D(y) ** 2 / D(params.l) ** 2 / D("1e38")
+    )
+    if swap_sqrt > D("0.5"):
+        sqrt_err = 10 * sqrt_err / (2 * D(swap_sqrt))
+    else:
+        sqrt_err = 10 * D(sqrt_err).sqrt()
+    swap_err_yx = 10 * (params.l * inv_err + sqrt_err) / denominator
+
+    return swap_err_xy, swap_err_yx
+
+
+@given(params=gen_params(), balances=gen_balances(2, bpool_params))
+def test_calcYGivenX_error_not_too_bad(params, balances):
+    derived = prec_impl.calc_derived_values(params)
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + 2 * D(err), invariant)
+
+    # calculate swap error tolerance
+    swap_err_xy, swap_err_yx = calculate_swap_error(params, balances, r, derived)
+
+    y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
+    assert swap_err_xy < D("1e-3")
+    assert (y_py - balances[1]) < D("1e-3")
+
+    x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
+    assert swap_err_yx < D("1e-3")
+    assert (x_py - balances[0]) < D("1e-3")
 
 
 @given(
@@ -663,7 +762,9 @@ def test_calcYGivenX_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
     # sense test against old implementation
     midprice = (mparams.alpha + mparams.beta) / D3(2)
-    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
+    cemm = mimpl.CEMM.from_px_r(
+        midprice, convd(invariant, D3), mparams
+    )  # Price doesn't matter.
     y = cemm._compute_y_for_x(convd(balances[0], D3))
     assume(y is not None)  # O/w out of bounds for this invariant
     assume(balances[0] > 0 and y > 0)
@@ -671,7 +772,9 @@ def test_calcYGivenX_sense_check(params, balances):
 
     # sense test against old implementation
     midprice = (params.alpha + params.beta) / 2
-    cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)  # Price doesn't matter.
+    cemm = mimpl.CEMM.from_px_r(
+        midprice, convd(invariant, D3), mparams
+    )  # Price doesn't matter.
     x = cemm._compute_x_for_y(balances[1])
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
@@ -714,4 +817,3 @@ def test_maxBalances_sense_check(params, balances):
 
     assert xp_py == convd(cemm.xmax, D3).approxed()
     assert yp_py == convd(cemm.ymax, D3).approxed()
-
