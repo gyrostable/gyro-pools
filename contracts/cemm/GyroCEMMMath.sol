@@ -17,6 +17,7 @@ import "@openzeppelin/contracts/utils/SafeCast.sol";
 library GyroCEMMMath {
     uint256 internal constant ONEHALF = 0.5e18;
     int256 internal constant ONE = 1e18; // 18 decimal places
+    int256 internal constant ONE_XP = 1e38; // 38 decimal places
 
     int256 internal constant VALIDATION_PRECISION_NORMED_INPUT = 500; // 5e-16
     int256 internal constant VALIDATION_PRECISION_ZETA = 500; // 5e-16
@@ -291,27 +292,31 @@ library GyroCEMMMath {
         int256 AtAChi = calcAtAChi(x, y, params, derived);
         (int256 sqrt, int256 err) = calcInvariantSqrt(x, y, params, derived);
         // calculate the error in the square root term, separates cases based on sqrt >= 1/2
-        // TODO: is there a way to avoid the sqrt in the second case?
-        // TODO: is 1/2 the best separating case?
-        // Note: the minimum non-zero value of sqrt is 1e-9
-        if (sqrt >= 5e17) {
+        // TODO: can this be improved for cases of large balances (when xp error magnifies to np)
+        // Note: the minimum non-zero value of sqrt is 1e-9 sinc ethe minimum argument is 1e-18
+        if (sqrt > 0) {
             // err + 1 to account for O(eps_np) term ignored before
             err = (err + 1).divUp(2 * sqrt);
         } else {
             // in the false case here, the extra precision error does not magnify, and so the error inside the sqrt is O(1e-18)
+            // TODO: The true case will almost surely never happen (can it be removed)
             err = err > 0 ? GyroPoolMath._sqrt(err.toUint256(), 5).toInt256() : 1e9;
         }
         // calculate the error in the numerator, scale the error by 100 to be sure all possible terms accounted for
-        err = ((params.lambda.mulUp(x.add(y)) / 1e38).add(err) + 1) * 100;
+        err = ((params.lambda.mulUp(x.add(y)) / ONE_XP).add(err) + 1) * 20;
 
         // A chi \cdot A chi > 1, so round it up to round denominator up
-        int256 denominator = calcAChiAChi(params, derived).sub(ONE);
-        int256 invariant = (AtAChi.add(sqrt) - err).divDown(denominator);
+        // denominator uses extra precision, so we do * 1/denominator so we are sure the calculation doesn't overflow
+        int256 mulDenominator = ONE_XP.divXp(calcAChiAChiInXp(params, derived).sub(ONE_XP));
+        // TODO: as alternative, could do, but could overflow?: invariant = (AtAChi.add(sqrt) - err).divXp(denominator);
+        int256 invariant = (AtAChi.add(sqrt) - err).mulDownXpToNp(mulDenominator);
         // error scales if denominator is small
-        err = denominator > ONE ? err : err.divUp(denominator);
+        // TODO: can this be tightened when denominator > ONE?
+        err = mulDenominator < ONE ? err : err.mulUpXpToNp(mulDenominator);
         // account for relative error due to error in the denominator
         // error in denominator is O(epsilon) if lambda<1e11, scale up by 10 to be sure we catch it
-        err = err + (invariant * 10).divUp(denominator) / 1e18;
+        // TODO: do we need the factor of 10?
+        err = err + (invariant * 10).mulUpXpToNp(mulDenominator) / ONE_XP;
         return (invariant, err);
     }
 
@@ -345,20 +350,40 @@ library GyroCEMMMath {
         val = val.add(termNp.mulDownXpToNp(d.v.divXp(d.dSq).divXp(d.dSq)));
     }
 
-    /// @dev calculates A chi \cdot A chi, overestimates in signed direction
-    function calcAChiAChi(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
+    // /// @dev calculates A chi \cdot A chi, overestimates in signed direction
+    // function calcAChiAChi(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
+    //     // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
+    //     //      account for 3 factors of dSq (6 s,c factors)
+    //     val = p.lambda.mulUpXpToNp((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
+    //     // for lambda^2 u^2 factor in rounding error in u since lambda could be big
+    //     val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)));
+    //     // the next line converts from extre precision to normal precision post-computation while rounding up
+    //     val = val.add(((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
+
+    //     // (A chi)_x^2 = (w/lambda + z)^2
+    //     //      account for 3 factors of dSq (6 s,c factors)
+    //     int256 termXp = d.w.divUp(p.lambda).add(d.z);
+    //     val = val.add((termXp.mulXp(termXp).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
+    // }
+
+    /// @dev calculates A chi \cdot A chi in extra precision
+    /// Note: this can be >1 (and involves factor of lambda^2). We can compute it in extra precision w/o overflowing b/c it will be
+    /// at most 38 + 16 digits (38 from decimals, 2*8 from lambda^2 if lambda=1e8)
+    /// Since we will only divide by this later, we will not need to worry about overflow in that operation if done in the right way
+    /// TODO: is rounding direction ok?
+    function calcAChiAChiInXp(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
         //      account for 3 factors of dSq (6 s,c factors)
-        val = p.lambda.mulUpXpToNp((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
+        val = p.lambda.mulUp((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
         // for lambda^2 u^2 factor in rounding error in u since lambda could be big
-        val = val.add(p.lambda.mulUp(p.lambda).mulUpXpToNp((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)));
+        val = val.add(((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)).mulUp(p.lambda).mulUp(p.lambda));
         // the next line converts from extre precision to normal precision post-computation while rounding up
-        val = val.add(((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
+        val = val.add((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
 
         // (A chi)_x^2 = (w/lambda + z)^2
         //      account for 3 factors of dSq (6 s,c factors)
         int256 termXp = d.w.divUp(p.lambda).add(d.z);
-        val = val.add((termXp.mulXp(termXp).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq) - 1) / 1e20 + 1);
+        val = val.add(termXp.mulXp(termXp).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
     }
 
     /// @dev calculate -(At)_x ^2 (A chi)_y ^2 + (At)_x ^2, rounding down in signed direction
