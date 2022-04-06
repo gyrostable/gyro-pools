@@ -8,7 +8,7 @@ import pytest
 
 # from pyrsistent import Invariant
 from brownie.test import given
-from hypothesis import assume, example, settings
+from hypothesis import assume, example, settings, HealthCheck
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
@@ -150,17 +150,40 @@ def gen_params_conservative(draw):
 
 
 ######################################################################################
+# @given(params=gen_params())
+# def test_calcAChiAChi(gyro_cemm_math_testing, params):
+#     mparams = util.params2MathParams(paramsTo100(params))
+#     derived_m = util.mathParams2DerivedParams(mparams)
+
+#     derived = prec_impl.calc_derived_values(params)
+#     derived_scaled = prec_impl.scale_derived_values(derived)
+
+#     result_py = prec_impl.calcAChiAChi(params, derived)
+#     result_sol = gyro_cemm_math_testing.calcAChiAChi(scale(params), derived_scaled)
+#     assert result_py == unscale(result_sol)
+#     assert result_py > 1
+
+#     # test against the old (imprecise) implementation
+#     chi = (
+#         mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
+#         mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+#     )
+#     AChi = mparams.A_times(chi[0], chi[1])
+#     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
+#     assert result_py == convd(AChiAChi, D).approxed()
+
+
 @given(params=gen_params())
-def test_calcAChiAChi(gyro_cemm_math_testing, params):
+def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
     mparams = util.params2MathParams(paramsTo100(params))
     derived_m = util.mathParams2DerivedParams(mparams)
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
 
-    result_py = prec_impl.calcAChiAChi(params, derived)
-    result_sol = gyro_cemm_math_testing.calcAChiAChi(scale(params), derived_scaled)
-    assert result_py == unscale(result_sol)
+    result_py = prec_impl.calcAChiAChiInXp(params, derived)
+    result_sol = gyro_cemm_math_testing.calcAChiAChiInXp(scale(params), derived_scaled)
+    assert result_py == D2((D3(result_sol) / D3("1e38")).raw)
     assert result_py > 1
 
     # test against the old (imprecise) implementation
@@ -170,7 +193,7 @@ def test_calcAChiAChi(gyro_cemm_math_testing, params):
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
-    assert result_py == convd(AChiAChi, D).approxed()
+    assert result_py == convd(AChiAChi, D2).approxed()
 
 
 @given(
@@ -358,8 +381,11 @@ def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     result_sol, err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
-    err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
+    # denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
+    # err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
+    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    err = D2("5e-18") if denominator > 1 else D2("5e-18") / D2(denominator)
+    err = D(err.raw)
     assert result_py == unscale(result_sol).approxed(abs=(err + D("500e-18")))
     assert err_py == unscale(err_sol).approxed(abs=D("500e-18"))
     # assert result_py == (result_py + err_py).approxed(rel=D("1e-12"), abs=D("1e-12"))
@@ -378,6 +404,19 @@ def test_calculateInvariant_sense_check(params, balances):
     cemm = mimpl.CEMM.from_x_y(*convd(balances, D3), mparams)
     assert convd(cemm.r, D) == result_py.approxed()
     assert convd(cemm.r, D) == D(result_py + err_py).approxed()
+
+
+@given(
+    params=gen_params(),
+    balances=gen_balances(2, bpool_params),
+)
+def test_calculateInvariant_error_not_too_bad(gyro_cemm_math_testing, params, balances):
+    derived = prec_impl.calc_derived_values(params)
+    result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
+    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assert err_py < D("3e-8")
+    assert err_py < D("3e-8") or err_py / result_py < D("1e-24")
 
 
 @given(
@@ -729,22 +768,27 @@ def calculate_swap_error(params, balances, r, derived):
     return swap_err_xy, swap_err_yx
 
 
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX_error_not_too_bad(params, balances):
     derived = prec_impl.calc_derived_values(params)
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
     r = (invariant + 2 * D(err), invariant)
 
+    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(sum(balances) > D(100))
+
     # calculate swap error tolerance
     swap_err_xy, swap_err_yx = calculate_swap_error(params, balances, r, derived)
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
-    assert swap_err_xy < D("1e-3")
-    assert (y_py - balances[1]) < D("1e-3")
+    # assert swap_err_xy < D("1e-3")
+    assert (y_py - balances[1]) < D("1e-8")
 
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
-    assert swap_err_yx < D("1e-3")
-    assert (x_py - balances[0]) < D("1e-3")
+    # assert swap_err_yx < D("1e-3")
+    assert (x_py - balances[0]) < D("1e-8")
 
 
 @given(
