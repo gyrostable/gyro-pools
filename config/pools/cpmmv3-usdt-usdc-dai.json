@@ -1,0 +1,7 @@
+{
+  "name": "Gyroscope C3LP USDT/USDC/DAI",
+  "symbol": "C3LP-USDT-USDC-DAI",
+  "tokens": ["USDT", "USDC", "DAI"],
+  "root_3_alpha": "0.99967",
+  "swap_fee_percentage": "0.0002"
+}

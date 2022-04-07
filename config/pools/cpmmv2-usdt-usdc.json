@@ -1,0 +1,8 @@
+{
+  "name": "Gyroscope C2LP USDT/USDC",
+  "symbol": "C2LP-USDT-USDC",
+  "tokens": ["USDT", "USDC"],
+  "sqrts": ["0.9995", "1.0005"],
+  "swap_fee_percentage": "0.0002",
+  "oracle_enabled": false
+}
