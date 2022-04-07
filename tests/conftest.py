@@ -255,15 +255,21 @@ def cemm_pool(
     )
 
     cemm_params = CEMMMathParams(
-        alpha=D("0.97") * 10**18,
-        beta=D("1.02") * 10**18,
-        c=D("1") * 10**18,
-        s=D("0") * 10**18,
-        l=D("1") * 10**18,
+        alpha=D("0.97"),
+        beta=D("1.02"),
+        c=D("0.7071067811865475244"),
+        s=D("0.7071067811865475244"),
+        l=D("2"),
     )
     derived_cemm_params = calc_derived_values(cemm_params)
-    args = CEMMPoolParams(two_pool_base_params, cemm_params, derived_cemm_params)
-    return admin.deploy(GyroCEMMPool, args, mock_gyro_config.address)
+    args = CEMMPoolParams(
+        two_pool_base_params,
+        scale_cemm_params(cemm_params),
+        scale_derived_values(derived_cemm_params),
+    )
+    return admin.deploy(
+        GyroCEMMPool, args, mock_gyro_config.address, gas_limit=11250000
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -289,6 +295,17 @@ class DerivedParams(NamedTuple):
     dSq: D2
     # dAlpha: D2
     # dBeta: D2
+
+
+def scale_cemm_params(p: Params) -> Params:
+    params = Params(
+        alpha=p.alpha * D("1e18"),
+        beta=p.beta * D("1e18"),
+        c=p.c * D("1e18"),
+        s=p.s * D("1e18"),
+        l=p.l * D("1e18"),
+    )
+    return params
 
 
 def calc_derived_values(p: Params) -> DerivedParams:
@@ -339,5 +356,25 @@ def calc_derived_values(p: Params) -> DerivedParams:
         dSq=D2(dSq.raw),
         # dAlpha=D2(dAlpha.raw),
         # dBeta=D2(dBeta.raw),
+    )
+    return derived
+
+
+class Vector2(NamedTuple):
+    x: D2
+    y: D2
+
+
+def scale_derived_values(d: DerivedParams) -> DerivedParams:
+    derived = DerivedParams(
+        tauAlpha=Vector2(d.tauAlpha[0] * D2("1e38"), d.tauAlpha[1] * D2("1e38")),
+        tauBeta=Vector2(d.tauBeta[0] * D2("1e38"), d.tauBeta[1] * D2("1e38")),
+        u=d.u * D2("1e38"),
+        v=d.v * D2("1e38"),
+        w=d.w * D2("1e38"),
+        z=d.z * D2("1e38"),
+        dSq=d.dSq * D2("1e38"),
+        # dAlpha=d.dAlpha * D2("1e38"),
+        # dBeta=d.dBeta * D2("1e38"),
     )
     return derived

@@ -18,7 +18,7 @@ library GyroCEMMMath {
     uint256 internal constant ONEHALF = 0.5e18;
     int256 internal constant ONE = 1e18; // 18 decimal places
 
-    int256 internal constant VALIDATION_PRECISION_NORMED_INPUT = 500; // 5e-16
+    int256 internal constant VALIDATION_PRECISION_NORMED_INPUT = 5e22; // 500 x 1e20 (XP)
     int256 internal constant VALIDATION_PRECISION_ZETA = 500; // 5e-16
 
     using SignedFixedPoint for int256;
@@ -88,7 +88,8 @@ library GyroCEMMMath {
         int256 norm = v.x.mulXp(v.x);
         norm = norm.add(v.y.mulXp(v.y));
         _require(
-            SignedFixedPoint.ONE_XP - VALIDATION_PRECISION_NORMED_INPUT <= norm && norm <= SignedFixedPoint.ONE + VALIDATION_PRECISION_NORMED_INPUT,
+            SignedFixedPoint.ONE_XP - VALIDATION_PRECISION_NORMED_INPUT <= norm &&
+                norm <= SignedFixedPoint.ONE_XP + VALIDATION_PRECISION_NORMED_INPUT,
             errorCode
         );
     }
