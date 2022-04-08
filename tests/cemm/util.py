@@ -8,6 +8,7 @@ from tests.cemm import cemm as mimpl
 from tests.cemm import cemm_prec_implementation as prec_impl
 from tests.libraries import pool_math_implementation
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.types import CEMMMathParams, CEMMMathDerivedParams, Vector2
 from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
@@ -944,6 +945,11 @@ def mtest_invariant_across_liquidityInvariantUpdate(
 ):
     params, balances, bpt_supply, isIncrease, dsupply = params_cemm_invariantUpdate
     derived = prec_impl.calc_derived_values(params)
+
+    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(sum(balances) > D(100))
+
     derived_scaled = prec_impl.scale_derived_values(derived)
     invariant_before, err_before = prec_impl.calculateInvariantWithError(
         balances, params, derived

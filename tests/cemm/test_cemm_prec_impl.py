@@ -193,7 +193,9 @@ def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
-    assert result_py == convd(AChiAChi, D2).approxed(abs=D2("1e-20"))
+    # Note: expect to agree to 1e-22 if lambda=1e8
+    err_tol = D2(D(params.l).raw) ** 2 * D2("5e-37")
+    assert result_py == convd(AChiAChi, D2).approxed(abs=err_tol)
 
 
 @given(
@@ -425,7 +427,6 @@ def test_calculateInvariant_error_not_too_bad(gyro_cemm_math_testing, params, ba
         assert err_py / result_py < D("1e-8")
 
 
-@settings(suppress_health_check=[HealthCheck.filter_too_much])
 @given(
     params=gen_params(),
     invariant=st.decimals(min_value="1e-5", max_value="1e12", places=4),
@@ -433,9 +434,6 @@ def test_calculateInvariant_error_not_too_bad(gyro_cemm_math_testing, params, ba
 def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
-
-    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
 
     r = (prec_impl.invariantOverestimate(invariant), invariant)
     a_py = prec_impl.virtualOffset0(params, derived, r)
@@ -449,12 +447,30 @@ def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
     assert a_py == unscale(a_sol)
     assert b_py == unscale(b_sol)
 
+
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
+@given(
+    params=gen_params(),
+    invariant=st.decimals(min_value="1e-5", max_value="1e12", places=4),
+)
+def test_virtualOffsets_sense_check(params, invariant):
+    derived = prec_impl.calc_derived_values(params)
+
+    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+
+    # test w/o error in invariant
+    r = (invariant, invariant)
+
+    a_py = prec_impl.virtualOffset0(params, derived, r)
+    b_py = prec_impl.virtualOffset1(params, derived, r)
+
     # test against the old (imprecise) implementation
     mparams = util.params2MathParams(paramsTo100(params))
     midprice = (mparams.alpha + mparams.beta) / D3(2)
     cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)
-    assert a_py == convd(cemm.a, D).approxed()
-    assert b_py == convd(cemm.b, D).approxed()
+    assert a_py == convd(cemm.a, D).approxed(abs=D("1e-17"))
+    assert b_py == convd(cemm.b, D).approxed(abs=D("1e-17"))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
