@@ -194,7 +194,7 @@ def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
     AChi = mparams.A_times(chi[0], chi[1])
     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
     # Note: expect to agree to 1e-22 if lambda=1e8
-    err_tol = D2(D(params.l).raw) ** 2 * D2("5e-37")
+    err_tol = D2(D(params.l).raw) ** 2 * D2("2e-37")
     assert result_py == convd(AChiAChi, D2).approxed(abs=err_tol)
 
 

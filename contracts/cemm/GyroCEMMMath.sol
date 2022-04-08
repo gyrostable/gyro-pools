@@ -315,7 +315,9 @@ library GyroCEMMMath {
         // account for relative error due to error in the denominator
         // error in denominator is O(epsilon) if lambda<1e11, scale up by 10 to be sure we catch it, and add O(eps)
         // TODO: do we need the factor of 10?
-        err = err + (invariant * 10).mulUpXpToNp(mulDenominator) / ONE_XP + 1;
+        // error in denominator is lambda^2 * 2e-37
+        // calculating lambda^2 w/o decimals so that the calculation will never overflow, the lost precision isn't important
+        err = err + (((invariant * 10).mulUpXpToNp(mulDenominator) * ((params.lambda * params.lambda) / 1e36)) * 20) / ONE_XP + 1;
         return (invariant, err);
     }
 
