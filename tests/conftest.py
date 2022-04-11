@@ -234,13 +234,13 @@ def cemm_pool(
     admin,
     GyroCEMMPool,
     gyro_erc20_funded,
-    balancer_vault,
+    mock_vault,
     mock_gyro_config,
     QueryProcessor,
 ):
     admin.deploy(QueryProcessor)
     two_pool_base_params = TwoPoolBaseParams(
-        vault=balancer_vault.address,
+        vault=mock_vault.address,
         name="GyroCEMMTwoPool",  # string
         symbol="GCTP",  # string
         token0=gyro_erc20_funded[0].address,  # IERC20

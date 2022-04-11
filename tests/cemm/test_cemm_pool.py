@@ -22,14 +22,12 @@ def test_funded_erc20s(users, gyro_erc20_funded):
             assert gyro_erc20_funded[token].balanceOf(users[user]) == TOKENS_PER_USER
 
 
-def test_pool_reg(balancer_vault, cemm_pool, gyro_erc20_funded):
+def test_pool_reg(mock_vault, cemm_pool, gyro_erc20_funded):
     poolId = cemm_pool.getPoolId()
     print("Pool ID", poolId)
 
     # Check pool and token registration
-    (token_addresses, token_balances, last_change_block) = balancer_vault.getPoolTokens(
-        poolId
-    )
+    (token_addresses, token_balances) = mock_vault.getPoolTokens(poolId)
 
     for token in range(constants.NUM_TOKENS):
         assert token_addresses[token] == gyro_erc20_funded[token].address
