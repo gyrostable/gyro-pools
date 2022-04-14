@@ -94,6 +94,10 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         (d.u, d.v, d.w, d.z, d.dSq) = (_u, _v, _w, _z, _dSq);
     }
 
+    function getCEMMParams() external view returns (GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory d) {
+        return reconstructCEMMParams();
+    }
+
     /**
      * @dev Returns the current value of the invariant.
      */
