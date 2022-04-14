@@ -1,10 +1,13 @@
 import pytest
 from brownie import ZERO_ADDRESS
+
+from tests.cemm.util import params2MathParams
 from tests.conftest import TOKENS_PER_USER
 from tests.cpmmv2 import constants
-from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
+from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest, CEMMMathParams
 from tests.support.utils import approxed, unscale
 
+from tests.cemm import cemm as math_implementation
 
 def test_empty_erc20s(admin, gyro_erc20_empty):
     for token in range(constants.NUM_TOKENS):
@@ -102,19 +105,15 @@ def test_pool_on_join(users, cemm_pool, mock_vault):
 
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
 
-    sqrtParams = cemm_pool.getSqrtParameters()
-    sqrtAlpha = sqrtParams[0] / (10**18)
-    sqrtBeta = sqrtParams[1] / (10**18)
+    sparams, _ = cemm_pool.getCEMMParams()
+    mparams = params2MathParams(CEMMMathParams(*unscale(sparams)))
 
     # Check pool's invariant after initialization
-    # NOTE: Calculation is completely unscaled; this is not the math that is actually done by anyone, but it works as a
-    # check.
-    currentInvariant = cemm_pool.getLastInvariant()
-    squareInvariant = (amount_in + currentInvariant / sqrtBeta) * (
-        amount_in + currentInvariant * sqrtAlpha
-    )
-    actualSquareInvariant = currentInvariant * currentInvariant
-    assert squareInvariant == pytest.approx(actualSquareInvariant)
+    # NOTE: this is only an approximate check; we have much more detailed checks in the math library tests.
+    currentInvariant = unscale(cemm_pool.getLastInvariant())
+
+    cemm = math_implementation.CEMM.from_x_y(unscale(amount_in), unscale(amount_in), mparams)
+    assert currentInvariant == cemm.r.approxed()
 
     poolId = cemm_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
@@ -149,15 +148,12 @@ def test_pool_on_join(users, cemm_pool, mock_vault):
     assert balancesAfterJoin[1] == amount_in * 2
 
     ## Check new pool's invariant
-    newInvariant = cemm_pool.getLastInvariant()
+    newInvariant = unscale(cemm_pool.getLastInvariant())
     assert newInvariant > currentInvariant
 
-    currentInvariant = cemm_pool.getLastInvariant()
-    squareInvariant = (balancesAfterJoin[0] + currentInvariant / sqrtBeta) * (
-        balancesAfterJoin[1] + currentInvariant * sqrtAlpha
-    )
-    actualSquareInvariant = currentInvariant * currentInvariant
-    assert squareInvariant == pytest.approx(actualSquareInvariant)
+    currentInvariant = newInvariant
+    cemm = math_implementation.CEMM.from_x_y(*unscale(balancesAfterJoin), mparams)
+    assert currentInvariant == cemm.r.approxed()
 
 
 def test_exit_pool(users, cemm_pool, mock_vault):
