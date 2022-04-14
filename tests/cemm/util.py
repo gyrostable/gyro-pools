@@ -8,6 +8,7 @@ from tests.cemm import cemm as mimpl
 from tests.cemm import cemm_prec_implementation as prec_impl
 from tests.libraries import pool_math_implementation
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.types import CEMMMathParams, CEMMMathDerivedParams, Vector2
 from tests.support.util_common import BasicPoolParameters, gen_balances
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
@@ -385,7 +386,7 @@ def mtest_calcOutGivenIn(
     invariant, inv_err = prec_impl.calculateInvariantWithError(
         balances, params, derived
     )
-    r = (invariant + inv_err, invariant)
+    r = (invariant + 2 * D(inv_err), invariant)
     if tokenInIsToken0:
         mamountOut = (
             prec_impl.calcYGivenX(balances[0] + amountIn, params, derived, r)
@@ -483,7 +484,7 @@ def mtest_calcInGivenOut(
     invariant, inv_err = prec_impl.calculateInvariantWithError(
         balances, params, derived
     )
-    r = (invariant + inv_err, invariant)
+    r = (invariant + 2 * D(inv_err), invariant)
     if tokenInIsToken0:
         amountIn = (
             prec_impl.calcXGivenY(balances[1] - amountOut, params, derived, r)
@@ -647,7 +648,7 @@ def mtest_invariant_across_calcOutGivenIn(
     invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
+    r = (unscale(invariant_sol) + 2 * D(unscale(inv_err_sol)), unscale(invariant_sol))
 
     if tokenInIsToken0:
         mamountOut = (
@@ -804,7 +805,7 @@ def mtest_invariant_across_calcInGivenOut(
     invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
+    r = (unscale(invariant_sol) + 2 * D(unscale(inv_err_sol)), unscale(invariant_sol))
 
     if tokenInIsToken0:
         amountIn = (
@@ -944,6 +945,11 @@ def mtest_invariant_across_liquidityInvariantUpdate(
 ):
     params, balances, bpt_supply, isIncrease, dsupply = params_cemm_invariantUpdate
     derived = prec_impl.calc_derived_values(params)
+
+    denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(sum(balances) > D(100))
+
     derived_scaled = prec_impl.scale_derived_values(derived)
     invariant_before, err_before = prec_impl.calculateInvariantWithError(
         balances, params, derived
@@ -1055,7 +1061,7 @@ def mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances):
     invariant_sol, inv_err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
         scale(balances), scale(params), derived_scaled
     )
-    r = (unscale(invariant_sol) + unscale(inv_err_sol), unscale(invariant_sol))
+    r = (unscale(invariant_sol) + 2 * D(unscale(inv_err_sol)), unscale(invariant_sol))
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
         scale(balances[0]), scale(params), derived_scaled, scale(r)

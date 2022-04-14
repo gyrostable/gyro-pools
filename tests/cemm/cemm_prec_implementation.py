@@ -122,6 +122,28 @@ def calcAChiAChi(p: Params, d: DerivedParams) -> D:
     return val
 
 
+def calcAChiAChiInXp(p: Params, d: DerivedParams) -> D2:
+    w, z, u, v, lam, dSq = (
+        D2(d.w),
+        D2(d.z),
+        D2(d.u),
+        D2(d.v),
+        D2(D(p.l).raw),
+        D2(d.dSq),
+    )
+    termXp = ((2 * u) * v) / dSq / dSq / dSq
+    val = lam.mul_up(termXp)
+
+    termXp = (u + D2("1e-38")) * (u + D2("1e-38")) / dSq / dSq / dSq
+    val += termXp.mul_up(lam).mul_up(lam)
+
+    val += v * v / dSq / dSq / dSq
+
+    termXp = w.div_up(lam) + z
+    val += termXp * termXp / dSq / dSq / dSq
+    return val
+
+
 def calcMinAtxAChiySqPlusAtxSq(x: D, y: D, p: Params, d: DerivedParams) -> D:
     w, z, u, v, lam, dSq = (
         D2(d.w),
@@ -196,15 +218,33 @@ def calcInvariantSqrt(x: D, y: D, p: Params, d: DerivedParams) -> tuple[D, D]:
         + calc2AtxAtyAChixAChiy(x, y, p, d)
         + calcMinAtyAChixSqPlusAtySq(x, y, p, d)
     )
-    if D(x) > D("1e11") or D(y) > D("1e11"):
-        err = (D(x).mul_up(x) + D(y).mul_up(y)) / D("1e38") * D("100e-18")
-    else:
-        err = D("100e-18")
 
-    val -= err
+    err = (D(x).mul_up(x) + D(y).mul_up(y)) / D("1e38")
     if val < 0:
         val = 0
     return D(val).sqrt(), err
+
+
+# def calculateInvariantWithError(
+#     balances: Iterable[D], p: Params, d: DerivedParams
+# ) -> tuple[D, D]:
+#     x, y = (D(balances[0]), D(balances[1]))
+#     AtAChi = calcAtAChi(x, y, p, d)
+#     sqrt, err = calcInvariantSqrt(x, y, p, d)
+#     if sqrt > 0:
+#         err = D(err + D("1e-18")).div_up(2 * sqrt)
+#     else:
+#         err = D(err).sqrt() if err > 0 else D("1e-9")
+
+#     err = (D(p.l).mul_up(x + y) / D("1e38") + err + D("1e-18")) * 20
+
+#     denominator = calcAChiAChi(p, d) - D(1)
+#     assert denominator > 0
+#     invariant = (AtAChi + sqrt - err) / denominator
+#     # error scales if denominator is small
+#     err = err if denominator > 1 else err.div_up(D(denominator))
+#     err = err + (D(invariant) * 10).div_up(denominator) / D("1e18")
+#     return invariant, err
 
 
 def calculateInvariantWithError(
@@ -213,13 +253,25 @@ def calculateInvariantWithError(
     x, y = (D(balances[0]), D(balances[1]))
     AtAChi = calcAtAChi(x, y, p, d)
     sqrt, err = calcInvariantSqrt(x, y, p, d)
-    denominator = calcAChiAChi(p, d) - D(1)
+    if sqrt > 0:
+        err = D(err + D("1e-18")).div_up(2 * sqrt)
+    else:
+        err = D(err).sqrt() if err > 0 else D("1e-9")
+
+    err = (D(p.l).mul_up(x + y) / D("1e38") + err + D("1e-18")) * 20
+
+    denominator = calcAChiAChiInXp(p, d) - D2(1)
+    mulDenominator = D2(1) / denominator
     assert denominator > 0
-    invariant = (AtAChi - D("100e-18") + sqrt) / denominator
-    err = D(err) * 10  # error in sqrt is O(error in square)
+    invariant = mulDownXpToNp(AtAChi + sqrt - err, mulDenominator)
     # error scales if denominator is small
-    err = err if denominator > 1 else err.div_up(D(denominator))
-    err = err + (D(invariant) * 10).div_up(denominator) / D("1e18")
+    err = mulUpXpToNp(err, mulDenominator)
+    err_div = int(int(p.l * D("1e18")) * int(p.l * D("1e18")) / int(D("1e36")))
+    err = (
+        err
+        + mulUpXpToNp(D(invariant) * 10, mulDenominator) * err_div * 20 / D("1e38")
+        + D("1e-18")
+    )
     return invariant, err
 
 

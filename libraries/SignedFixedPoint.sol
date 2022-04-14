@@ -135,7 +135,7 @@ library SignedFixedPoint {
     /// returns normal precision of the product
     function mulDownXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
-        int256 b2 = b1 != 0 ? b - b1 * 1e19 : b;
+        int256 b2 = b % 1e19;
         int256 prod1 = a * b1;
         _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
         int256 prod2 = a * b2;
@@ -148,7 +148,7 @@ library SignedFixedPoint {
     /// returns normal precision of the product
     function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
-        int256 b2 = b1 != 0 ? b - b1 * 1e19 : b;
+        int256 b2 = b % 1e19;
         int256 prod1 = a * b1;
         _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
         int256 prod2 = a * b2;

@@ -133,7 +133,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         {
             (int256 currentInvariant, int256 invErr) = GyroCEMMMath.calculateInvariantWithError(balances, cemmParams, derivedCEMMParams);
             // invariant = overestimate in x-component, underestimate in y-component
-            invariant = GyroCEMMMath.Vector2(SignedFixedPoint.add(currentInvariant, invErr), currentInvariant);
+            invariant = GyroCEMMMath.Vector2(SignedFixedPoint.add(currentInvariant, 2 * invErr), currentInvariant);
 
             // Update price oracle with the pre-swap balances. Vs other pools, we need to do this after invariant is calculated
             _updateOracle(request.lastChangeBlock, balances, currentInvariant.toUint256(), cemmParams, derivedCEMMParams);

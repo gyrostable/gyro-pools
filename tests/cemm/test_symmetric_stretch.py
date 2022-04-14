@@ -4,7 +4,7 @@ import hypothesis.strategies as st
 
 # from pyrsistent import Invariant
 from brownie.test import given
-from hypothesis import assume
+from hypothesis import assume, settings, HealthCheck
 import pytest
 
 from tests.cemm import cemm as mimpl
@@ -22,8 +22,8 @@ MIN_PRICE_SEPARATION = D("0.001")
 MAX_IN_RATIO = D("0.3")
 MAX_OUT_RATIO = D("0.3")
 
-MIN_BALANCE_RATIO = D("1e-5")
-MIN_FEE = D("0.0002")
+MIN_BALANCE_RATIO = D(0)  # D("1e-5")
+MIN_FEE = D(0)  # D("0.0002")
 
 # this determines whether derivedParameters are calculated in solidity or not
 DP_IN_SOL = False
@@ -105,6 +105,7 @@ def gen_params_swap_given_out(draw):
 ################################################################################
 ### test calcOutGivenIn for invariant change
 # @settings(max_examples=1_000)
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 @given(
     params_swap_given_in=gen_params_swap_given_in(),
 )
@@ -130,6 +131,7 @@ def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_te
 
 ################################################################################
 ### test calcInGivenOut for invariant change
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 @given(
     params_swap_given_out=gen_params_swap_given_out(),
 )
