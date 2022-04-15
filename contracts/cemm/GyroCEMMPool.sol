@@ -431,6 +431,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 balanceTokenOut,
         bool tokenInIsToken0
     ) internal pure returns (uint256[] memory balances) {
+        balances = new uint256[](2);
         if (tokenInIsToken0) {
             balances[0] = balanceTokenIn;
             balances[1] = balanceTokenOut;
