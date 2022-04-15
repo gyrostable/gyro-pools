@@ -222,7 +222,7 @@ def test_pool_on_exit(users, cemm_pool, mock_vault):
     assert invariant_after_exit == cemm.r.approxed()
 
 
-def test_pool_swap(users, cemm_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing):
+def test_pool_swap(users, cemm_pool, mock_vault, gyro_erc20_funded):
     amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
