@@ -60,12 +60,12 @@ abstract contract ExtensibleWeightedPool2Tokens is
     IERC20 internal immutable _token0;
     IERC20 internal immutable _token1;
 
-    uint256 private immutable _normalizedWeight0 = 5e17;
-    uint256 private immutable _normalizedWeight1 = 5e17;
+    uint256 private immutable _normalizedWeight0;
+    uint256 private immutable _normalizedWeight1;
 
     // The protocol fees will always be charged using the token associated with the max weight in the pool.
     // Since these Pools will register tokens only once, we can assume this index will be constant.
-    uint256 internal immutable _maxWeightTokenIndex = 0;
+    uint256 internal immutable _maxWeightTokenIndex;
 
     // All token balances are normalized to behave as if the token had 18 decimals. We assume a token's decimals will
     // not change throughout its lifetime, and store the corresponding scaling factor for each at construction time.
@@ -88,6 +88,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
         string symbol;
         IERC20 token0;
         IERC20 token1;
+        uint256 normalizedWeight0;
+        uint256 normalizedWeight1;
         uint256 swapFeePercentage;
         uint256 pauseWindowDuration;
         uint256 bufferPeriodDuration;
@@ -125,6 +127,18 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         _scalingFactor0 = _computeScalingFactor(params.token0);
         _scalingFactor1 = _computeScalingFactor(params.token1);
+
+        // Ensure each normalized weight is above them minimum and find the token index of the maximum weight
+        _require(params.normalizedWeight0 >= WeightedMath._MIN_WEIGHT, Errors.MIN_WEIGHT);
+        _require(params.normalizedWeight1 >= WeightedMath._MIN_WEIGHT, Errors.MIN_WEIGHT);
+
+        // Ensure that the normalized weights sum to ONE
+        uint256 normalizedSum = params.normalizedWeight0.add(params.normalizedWeight1);
+        _require(normalizedSum == FixedPoint.ONE, Errors.NORMALIZED_WEIGHT_INVARIANT);
+
+        _normalizedWeight0 = params.normalizedWeight0;
+        _normalizedWeight1 = params.normalizedWeight1;
+        _maxWeightTokenIndex = params.normalizedWeight0 >= params.normalizedWeight1 ? 0 : 1;
     }
 
     // Getters / Setters
@@ -159,7 +173,12 @@ abstract contract ExtensibleWeightedPool2Tokens is
     }
 
     // Caller must be approved by the Vault's Authorizer
-    function setSwapFeePercentage(uint256 swapFeePercentage) public virtual authenticate whenNotPaused {
+    function setSwapFeePercentage(uint256 swapFeePercentage)
+        public
+        virtual
+        authenticate
+        whenNotPaused
+    {
         _setSwapFeePercentage(swapFeePercentage);
     }
 
@@ -267,14 +286,26 @@ abstract contract ExtensibleWeightedPool2Tokens is
             uint256 feeAmount = request.amount.mulUp(getSwapFeePercentage());
             request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
-            uint256 amountOut = _onSwapGivenIn(request, balanceTokenIn, balanceTokenOut, normalizedWeightIn, normalizedWeightOut);
+            uint256 amountOut = _onSwapGivenIn(
+                request,
+                balanceTokenIn,
+                balanceTokenOut,
+                normalizedWeightIn,
+                normalizedWeightOut
+            );
 
             // amountOut tokens are exiting the Pool, so we round down.
             return _downscaleDown(amountOut, scalingFactorTokenOut);
         } else {
             request.amount = _upscale(request.amount, scalingFactorTokenOut);
 
-            uint256 amountIn = _onSwapGivenOut(request, balanceTokenIn, balanceTokenOut, normalizedWeightIn, normalizedWeightOut);
+            uint256 amountIn = _onSwapGivenOut(
+                request,
+                balanceTokenIn,
+                balanceTokenOut,
+                normalizedWeightIn,
+                normalizedWeightOut
+            );
 
             // amountIn tokens are entering the Pool, so we round up.
             amountIn = _downscaleUp(amountIn, scalingFactorTokenIn);
@@ -294,7 +325,13 @@ abstract contract ExtensibleWeightedPool2Tokens is
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return
-            WeightedMath._calcOutGivenIn(currentBalanceTokenIn, normalizedWeightIn, currentBalanceTokenOut, normalizedWeightOut, swapRequest.amount);
+            WeightedMath._calcOutGivenIn(
+                currentBalanceTokenIn,
+                normalizedWeightIn,
+                currentBalanceTokenOut,
+                normalizedWeightOut,
+                swapRequest.amount
+            );
     }
 
     function _onSwapGivenOut(
@@ -306,7 +343,13 @@ abstract contract ExtensibleWeightedPool2Tokens is
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return
-            WeightedMath._calcInGivenOut(currentBalanceTokenIn, normalizedWeightIn, currentBalanceTokenOut, normalizedWeightOut, swapRequest.amount);
+            WeightedMath._calcInGivenOut(
+                currentBalanceTokenIn,
+                normalizedWeightIn,
+                currentBalanceTokenOut,
+                normalizedWeightOut,
+                swapRequest.amount
+            );
     }
 
     // Join Hook
@@ -319,7 +362,14 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 lastChangeBlock,
         uint256 protocolSwapFeePercentage,
         bytes memory userData
-    ) public virtual override onlyVault(poolId) whenNotPaused returns (uint256[] memory amountsIn, uint256[] memory dueProtocolFeeAmounts) {
+    )
+        public
+        virtual
+        override
+        onlyVault(poolId)
+        whenNotPaused
+        returns (uint256[] memory amountsIn, uint256[] memory dueProtocolFeeAmounts)
+    {
         // All joins, including initializations, are disabled while the contract is paused.
 
         uint256 bptAmountOut;
@@ -459,7 +509,11 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // Update current balances by subtracting the protocol fee amounts
         _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
-        (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, normalizedWeights, userData);
+        (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
+            balances,
+            normalizedWeights,
+            userData
+        );
 
         // Update the invariant with the balances the Pool will have after the join, in order to compute the
         // protocol swap fee amounts due in future joins and exits.
@@ -541,7 +595,11 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 bptAmountOut = userData.allTokensInForExactBptOut();
         // Note that there is no maximum amountsIn parameter: this is handled by `IVault.joinPool`.
 
-        uint256[] memory amountsIn = WeightedMath._calcAllTokensInGivenExactBptOut(balances, bptAmountOut, totalSupply());
+        uint256[] memory amountsIn = WeightedMath._calcAllTokensInGivenExactBptOut(
+            balances,
+            bptAmountOut,
+            totalSupply()
+        );
 
         return (bptAmountOut, amountsIn);
     }
@@ -559,15 +617,19 @@ abstract contract ExtensibleWeightedPool2Tokens is
     ) public virtual override onlyVault(poolId) returns (uint256[] memory, uint256[] memory) {
         _upscaleArray(balances);
 
-        (uint256 bptAmountIn, uint256[] memory amountsOut, uint256[] memory dueProtocolFeeAmounts) = _onExitPool(
-            poolId,
-            sender,
-            recipient,
-            balances,
-            lastChangeBlock,
-            protocolSwapFeePercentage,
-            userData
-        );
+        (
+            uint256 bptAmountIn,
+            uint256[] memory amountsOut,
+            uint256[] memory dueProtocolFeeAmounts
+        ) = _onExitPool(
+                poolId,
+                sender,
+                recipient,
+                balances,
+                lastChangeBlock,
+                protocolSwapFeePercentage,
+                userData
+            );
 
         // Note we no longer use `balances` after calling `_onExitPool`, which may mutate it.
 
@@ -632,7 +694,10 @@ abstract contract ExtensibleWeightedPool2Tokens is
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            uint256 invariantBeforeExit = WeightedMath._calculateInvariant(normalizedWeights, balances);
+            uint256 invariantBeforeExit = WeightedMath._calculateInvariant(
+                normalizedWeights,
+                balances
+            );
             dueProtocolFeeAmounts = _getDueProtocolFeeAmounts(
                 balances,
                 normalizedWeights,
@@ -704,7 +769,12 @@ abstract contract ExtensibleWeightedPool2Tokens is
         return (bptAmountIn, amountsOut);
     }
 
-    function _exitExactBPTInForTokensOut(uint256[] memory balances, bytes memory userData) internal view virtual returns (uint256, uint256[] memory) {
+    function _exitExactBPTInForTokensOut(uint256[] memory balances, bytes memory userData)
+        internal
+        view
+        virtual
+        returns (uint256, uint256[] memory)
+    {
         // This exit function is the only one that is not disabled if the contract is paused: it remains unrestricted
         // in an attempt to provide users with a mechanism to retrieve their tokens in case of an emergency.
         // This particular exit function is the only one that remains available because it is the simplest one, and
@@ -713,7 +783,11 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 bptAmountIn = userData.exactBptInForTokensOut();
         // Note that there is no minimum amountOut parameter: this is handled by `IVault.exitPool`.
 
-        uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(balances, bptAmountIn, totalSupply());
+        uint256[] memory amountsOut = WeightedMath._calcTokensOutGivenExactBptIn(
+            balances,
+            bptAmountIn,
+            totalSupply()
+        );
         return (bptAmountIn, amountsOut);
     }
 
@@ -831,7 +905,17 @@ abstract contract ExtensibleWeightedPool2Tokens is
     ) external returns (uint256 bptOut, uint256[] memory amountsIn) {
         InputHelpers.ensureInputLengthMatch(balances.length, 2);
 
-        _queryAction(poolId, sender, recipient, balances, lastChangeBlock, protocolSwapFeePercentage, userData, _onJoinPool, _downscaleUpArray);
+        _queryAction(
+            poolId,
+            sender,
+            recipient,
+            balances,
+            lastChangeBlock,
+            protocolSwapFeePercentage,
+            userData,
+            _onJoinPool,
+            _downscaleUpArray
+        );
 
         // The `return` opcode is executed directly inside `_queryAction`, so execution never reaches this statement,
         // and we don't need to return anything here - it just silences compiler warnings.
@@ -859,7 +943,17 @@ abstract contract ExtensibleWeightedPool2Tokens is
     ) external returns (uint256 bptIn, uint256[] memory amountsOut) {
         InputHelpers.ensureInputLengthMatch(balances.length, 2);
 
-        _queryAction(poolId, sender, recipient, balances, lastChangeBlock, protocolSwapFeePercentage, userData, _onExitPool, _downscaleDownArray);
+        _queryAction(
+            poolId,
+            sender,
+            recipient,
+            balances,
+            lastChangeBlock,
+            protocolSwapFeePercentage,
+            userData,
+            _onExitPool,
+            _downscaleDownArray
+        );
 
         // The `return` opcode is executed directly inside `_queryAction`, so execution never reaches this statement,
         // and we don't need to return anything here - it just silences compiler warnings.
@@ -885,13 +979,14 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // The protocol swap fees are always paid using the token with the largest weight in the Pool. As this is the
         // token that is expected to have the largest balance, using it to pay fees should not unbalance the Pool.
-        dueProtocolFeeAmounts[_maxWeightTokenIndex] = WeightedMath._calcDueTokenProtocolSwapFeeAmount(
-            balances[_maxWeightTokenIndex],
-            normalizedWeights[_maxWeightTokenIndex],
-            previousInvariant,
-            currentInvariant,
-            protocolSwapFeePercentage
-        );
+        dueProtocolFeeAmounts[_maxWeightTokenIndex] = WeightedMath
+            ._calcDueTokenProtocolSwapFeeAmount(
+                balances[_maxWeightTokenIndex],
+                normalizedWeights[_maxWeightTokenIndex],
+                previousInvariant,
+                currentInvariant,
+                protocolSwapFeePercentage
+            );
 
         return dueProtocolFeeAmounts;
     }
@@ -1035,10 +1130,19 @@ abstract contract ExtensibleWeightedPool2Tokens is
                     // We copy the first 4 bytes to check if it matches with the expected signature, otherwise
                     // there was another revert reason and we should forward it.
                     returndatacopy(0, 0, 0x04)
-                    let error := and(mload(0), 0xffffffff00000000000000000000000000000000000000000000000000000000)
+                    let error := and(
+                        mload(0),
+                        0xffffffff00000000000000000000000000000000000000000000000000000000
+                    )
 
                     // If the first 4 bytes don't match with the expected signature, we forward the revert reason.
-                    if eq(eq(error, 0x43adbafb00000000000000000000000000000000000000000000000000000000), 0) {
+                    if eq(
+                        eq(
+                            error,
+                            0x43adbafb00000000000000000000000000000000000000000000000000000000
+                        ),
+                        0
+                    ) {
                         returndatacopy(0, 0, returndatasize())
                         revert(0, returndatasize())
                     }
@@ -1111,7 +1215,10 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
                 // We send one extra value for the error signature "QueryError(uint256,uint256[])" which is 0x43adbafb
                 // We use the previous slot to `bptAmount`.
-                mstore(sub(start, 0x20), 0x0000000000000000000000000000000000000000000000000000000043adbafb)
+                mstore(
+                    sub(start, 0x20),
+                    0x0000000000000000000000000000000000000000000000000000000043adbafb
+                )
                 start := sub(start, 0x04)
 
                 // When copying from `tokenAmounts` into returndata, we copy the additional 68 bytes to also return

@@ -49,16 +49,6 @@ class TwoPoolBaseParams(NamedTuple):
     owner: str
 
 
-class TwoPoolFactoryCreateParams(NamedTuple):
-    name: str
-    symbol: str
-    tokens: list[str]
-    sqrts: list[DecimalLike]
-    swapFeePercentage: DecimalLike
-    oracleEnabled: bool
-    owner: address
-
-
 class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     sqrtAlpha: DecimalLike  # should already be upscaled
@@ -101,13 +91,3 @@ class CEMMMathQParams(NamedTuple):
     a: DecimalLike
     b: DecimalLike
     c: DecimalLike
-
-
-class ThreePoolFactoryCreateParams(NamedTuple):
-    name: str
-    symbol: str
-    tokens: list[str]
-    root3Alpha: DecimalLike
-    assetManagers: list[str]  # Usually all zero addresses
-    swapFeePercentage: DecimalLike
-    owner: address
