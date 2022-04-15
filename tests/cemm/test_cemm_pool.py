@@ -5,7 +5,7 @@ from tests.cemm.util import params2MathParams
 from tests.conftest import TOKENS_PER_USER
 from tests.cpmmv2 import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest, CEMMMathParams
-from tests.support.utils import approxed, unscale
+from tests.support.utils import approxed, unscale, to_decimal
 
 from tests.cemm import cemm as math_implementation
 
@@ -156,7 +156,7 @@ def test_pool_on_join(users, cemm_pool, mock_vault):
     assert currentInvariant == cemm.r.approxed()
 
 
-def test_exit_pool(users, cemm_pool, mock_vault):
+def test_pool_on_exit(users, cemm_pool, mock_vault):
     amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
@@ -176,7 +176,7 @@ def test_exit_pool(users, cemm_pool, mock_vault):
 
     total_supply_before_exit = cemm_pool.totalSupply()
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
-    invariant_after_join = cemm_pool.getLastInvariant()
+    invariant_after_join = unscale(cemm_pool.getLastInvariant())
 
     tx = mock_vault.callExitPoolGyro(
         cemm_pool.address,
@@ -211,18 +211,18 @@ def test_exit_pool(users, cemm_pool, mock_vault):
         total_supply_before_exit * (amountOut / balances_after_join[0])
     )
 
-    sqrt_alpha, sqrtBeta = [v / 10**18 for v in cemm_pool.getSqrtParameters()]
+    sparams, _ = cemm_pool.getCEMMParams()
+    mparams = params2MathParams(CEMMMathParams(*unscale(sparams)))
 
     ## Check new pool's invariant
-    invariant_after_exit = cemm_pool.getLastInvariant()
+    invariant_after_exit = unscale(cemm_pool.getLastInvariant())
     assert invariant_after_join > invariant_after_exit
-    square_invariant = (balancesAfterExit[0] + invariant_after_exit / sqrtBeta) * (
-        balancesAfterExit[1] + invariant_after_exit * sqrt_alpha
-    )
-    assert square_invariant == pytest.approx(invariant_after_exit**2)
+
+    cemm = math_implementation.CEMM.from_x_y(*unscale(balancesAfterExit), mparams)
+    assert invariant_after_exit == cemm.r.approxed()
 
 
-def test_swap(users, cemm_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing):
+def test_pool_swap(users, cemm_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing):
     amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
@@ -256,21 +256,14 @@ def test_swap(users, cemm_pool, mock_vault, gyro_erc20_funded, gyro_two_math_tes
     (_, balances_after_exit) = mock_vault.getPoolTokens(poolId)
 
     amount_to_swap = 10 * 10**18
-    (
-        current_invariant,
-        virtual_param_in,
-        virtual_param_out,
-    ) = cemm_pool.calculateCurrentValues(*balances_after_exit, True)
 
-    fees = amount_to_swap * (0.1 / 100)
+    fees = amount_to_swap * (to_decimal('0.1') / 100)
     amountToSwapMinusFees = amount_to_swap - fees
-    amount_out_expected = gyro_two_math_testing.calcOutGivenIn(
-        balances_after_exit[0],  # balanceIn,
-        balances_after_exit[1],  # balanceOut,
-        amountToSwapMinusFees,  # amountIn,
-        virtual_param_in,  # virtualParamIn,
-        virtual_param_out,  # virtualParamOut
-    )
+
+    sparams, _ = cemm_pool.getCEMMParams()
+    mparams = params2MathParams(CEMMMathParams(*unscale(sparams)))
+    cemm = math_implementation.CEMM.from_x_y(*unscale(balances_after_exit), mparams)
+    amount_out_expected = -cemm.trade_x(unscale(amountToSwapMinusFees), mock=True)
 
     swapRequest = SwapRequest(
         kind=SwapKind.GivenIn,  # SwapKind - GIVEN_IN
@@ -302,4 +295,4 @@ def test_swap(users, cemm_pool, mock_vault, gyro_erc20_funded, gyro_two_math_tes
     assert balances_after_swap[0] == balances_after_exit[0] + amount_to_swap
     assert balances_after_swap[1] == balances_after_exit[1] - amount_out
 
-    assert int(amount_out) == pytest.approx(amount_out_expected)
+    assert unscale(amount_out) == amount_out_expected.approxed()
