@@ -1,7 +1,9 @@
 from tests.support.quantized_decimal import QuantizedDecimal as D
 import pytest
+from brownie import Contract
 
-from tests.support.types import TwoPoolBaseParams, TwoPoolParams, ThreePoolParams
+
+from tests.support.types import TwoPoolBaseParams, TwoPoolParams, ThreePoolParams, ThreePoolFactoryCreateParams, TwoPoolFactoryCreateParams
 
 TOKENS_PER_USER = 1000 * 10**18
 
@@ -168,6 +170,37 @@ def mock_vault_pool(
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
 @pytest.fixture
+def mock_pool_from_factory(
+    admin,
+    GyroTwoPoolFactory,
+    GyroTwoPool,
+    mock_vault,
+    mock_gyro_config,
+    gyro_erc20_funded,
+    QueryProcessor,
+):
+    admin.deploy(QueryProcessor)
+    factory = admin.deploy(GyroTwoPoolFactory, mock_vault, mock_gyro_config.address)
+
+    args = TwoPoolFactoryCreateParams(
+        name="GyroTwoPoolFromFactory",
+        symbol="G2PF",
+        tokens=[gyro_erc20_funded[i].address for i in range(2)],
+        sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
+        swapFeePercentage=D(1) * 10**15,
+        oracleEnabled=False,
+        owner=admin,
+    )
+
+    tx = factory.create(*args)
+    pool_from_factory = Contract.from_abi(
+        "GyroTwoPool", tx.return_value, GyroTwoPool.abi
+    )
+
+    return pool_from_factory
+
+
+@pytest.fixture
 def mock_vault_pool3(
     admin, GyroThreePool, gyro_erc20_funded3, mock_vault, mock_gyro_config
 ):
@@ -184,6 +217,35 @@ def mock_vault_pool3(
         root3Alpha=D("0.97") * 10**18,
     )
     return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
+
+@pytest.fixture
+def mock_pool3_from_factory(
+    admin,
+    GyroThreePoolFactory,
+    GyroThreePool,
+    mock_vault,
+    mock_gyro_config,
+    gyro_erc20_funded3,
+):
+    factory = admin.deploy(GyroThreePoolFactory, mock_vault, mock_gyro_config.address)
+
+    args = ThreePoolFactoryCreateParams(
+        name="GyroThreePoolFromFactory",
+        symbol="G3PF",
+        tokens=[gyro_erc20_funded3[i].address for i in range(3)],
+        root3Alpha=D("0.97") * 10**18,
+        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
+        swapFeePercentage=D(1) * 10**15,
+        owner=admin,
+    )
+
+    tx = factory.create(*args)
+    pool3_from_factory = Contract.from_abi(
+        "GyroThreePool", tx.return_value, GyroThreePool.abi
+    )
+
+    return pool3_from_factory
+
 
 @pytest.fixture
 def balancer_vault_pool3(
