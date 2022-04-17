@@ -234,16 +234,35 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
     assert x_sol == scale(x_py).approxed_scaled()
 
 
-@settings(max_examples=MAX_EXAMPLES)
+@st.composite
+def gen_args_calcOutGivenIn(draw):
+    params = draw(util.gen_params())
+    balances = draw(gen_balances(2, bpool_params))
+    tokenInIsToken0 = draw(st.booleans())
+
+    mparams = util.params2MathParams(params)
+    cemm = mimpl.CEMM.from_x_y(*balances, mparams)
+
+    if tokenInIsToken0:
+        amountInMax = cemm.xmax - cemm.x
+    else:
+        amountInMax = cemm.ymax - cemm.y
+    assume(amountInMax >= 1)
+
+    amountIn = draw(qdecimals(1, amountInMax, places=4))
+
+    return params, balances, amountIn, tokenInIsToken0
+
+
+@settings(max_examples=100)
 @given(
-    params=util.gen_params(),
-    balances=gen_balances(2, bpool_params),
-    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
-    tokenInIsToken0=st.booleans(),
+    args=gen_args_calcOutGivenIn()
 )
 def test_calcOutGivenIn(
-    params, balances, amountIn, tokenInIsToken0, gyro_cemm_math_testing
+    args, gyro_cemm_math_testing
 ):
+    params, balances, amountIn, tokenInIsToken0 = args
+
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
     amount_out_py, amount_out_sol = util.mtest_calcOutGivenIn(
