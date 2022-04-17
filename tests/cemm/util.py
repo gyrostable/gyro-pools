@@ -32,9 +32,7 @@ def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
 
 
 def mathParams2DerivedParams(mparams: mimpl.Params) -> CEMMMathDerivedParams:
-    return CEMMMathDerivedParams(
-        tauAlpha=Vector2(*mparams.tau_alpha), tauBeta=Vector2(*mparams.tau_beta)
-    )
+    return prec_impl.calc_derived_values(mparams)  # Type mismatch but "duck" compatible.
 
 
 @st.composite

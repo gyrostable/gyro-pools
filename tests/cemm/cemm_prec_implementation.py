@@ -33,8 +33,15 @@ class DerivedParams(NamedTuple):
 
 
 class Vector2(NamedTuple):
+    # Note: the types should really be "Any numeric type, but types have to match".
     x: D2
     y: D2
+
+    # For compatibility with tuple representation
+    def __getitem__(self, ix):
+        if ix not in (0, 1):
+            return KeyError(f"Only indices 0, 1 supported. Given: {ix}")
+        return (self.x, self.y)[ix]
 
 
 def virtualOffset0(p: Params, d: DerivedParams, r: Iterable[D]) -> D:

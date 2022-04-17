@@ -90,7 +90,7 @@ class CEMMMathQParams(NamedTuple):
 
 class CEMMMathDerivedParams(NamedTuple):
     tauAlpha: Vector2
-    tauBeta: CEMMMathQParams
+    tauBeta: Vector2
     u: DecimalLike
     v: DecimalLike
     w: DecimalLike

@@ -165,8 +165,8 @@ def gen_params_conservative(draw):
 
 #     # test against the old (imprecise) implementation
 #     chi = (
-#         mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
-#         mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+#         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+#         mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
 #     )
 #     AChi = mparams.A_times(chi[0], chi[1])
 #     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
@@ -176,7 +176,7 @@ def gen_params_conservative(draw):
 @given(params=gen_params())
 def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = util.mathParams2DerivedParams(mparams)
+    derived_m = convd(util.mathParams2DerivedParams(params), D3)
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -188,8 +188,8 @@ def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
 
     # test against the old (imprecise) implementation
     chi = (
-        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
-        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+        mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+        mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
@@ -221,7 +221,7 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
 )
 def test_calcAtAChi_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = util.mathParams2DerivedParams(mparams)
+    derived_m = convd(util.mathParams2DerivedParams(params), D3)
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
@@ -229,8 +229,8 @@ def test_calcAtAChi_sense_check(params, balances):
     # test against the old (imprecise) implementation
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
-        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
-        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+        mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+        mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     AtAChi = At[0] * AChi[0] + At[1] * AChi[1]
@@ -259,7 +259,7 @@ def test_calcMinAtxAChiySqPlusAtxSq(gyro_cemm_math_testing, params, balances):
 )
 def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = util.mathParams2DerivedParams(mparams)
+    derived_m = convd(util.mathParams2DerivedParams(params), D3)
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcMinAtxAChiySqPlusAtxSq(
@@ -268,8 +268,8 @@ def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
     # test against the old (imprecise) implementation
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
-        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
-        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+        mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+        mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     val_sense = At[0] * At[0] * (1 - AChi[1] * AChi[1])
@@ -299,7 +299,7 @@ def test_calc2AtxAtyAChixAChiy(gyro_cemm_math_testing, params, balances):
 )
 def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = util.mathParams2DerivedParams(mparams)
+    derived_m = convd(util.mathParams2DerivedParams(params), D3)
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calc2AtxAtyAChixAChiy(
@@ -308,8 +308,8 @@ def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
     # test against the old (imprecise) implementation
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
-        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
-        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+        mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+        mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     val_sense = D3(2) * At[0] * At[1] * AChi[0] * AChi[1]
@@ -338,7 +338,7 @@ def test_calcMinAtyAChixSqPlusAtySq(gyro_cemm_math_testing, params, balances):
 )
 def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = util.mathParams2DerivedParams(mparams)
+    derived_m = convd(util.mathParams2DerivedParams(params), D3)
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcMinAtyAChixSqPlusAtySq(
@@ -347,8 +347,8 @@ def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
     # test against the old (imprecise) implementation
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
-        mparams.Ainv_times(derived_m.tauBeta.x, derived_m.tauBeta.y)[0],
-        mparams.Ainv_times(derived_m.tauAlpha.x, derived_m.tauAlpha.y)[1],
+        mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+        mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
     )
     AChi = mparams.A_times(chi[0], chi[1])
     val_sense = At[1] * At[1] * (D3(1) - AChi[0] * AChi[0])
