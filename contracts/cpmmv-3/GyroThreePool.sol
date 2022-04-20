@@ -55,13 +55,12 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         string memory symbol,
         IERC20[] memory tokens,
         uint256 root3Alpha,
-        address[] memory assetManagers,
         uint256 swapFeePercentage,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
         address owner,
         address configAddress
-    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, assetManagers, swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner) {
+    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner) {
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
 
         _token0 = tokens[0];
@@ -149,7 +148,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, uint256 virtualOffset) = _calculateCurrentValues();
+        uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
@@ -158,38 +157,43 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        (, uint256 virtualOffset) = _calculateCurrentValues();
+        uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
-    /** @dev Calculate the invariant and the offset that takes real reserves to virtual reserves.
-     * Note that, because our price bounds are symmetric, the offset is the same for the three assets.
+    /** @dev Calculate the offset that that takes real reserves to virtual reserves.
      */
-    function _calculateCurrentValues() private view returns (uint256 invariant, uint256 virtualOffset) {
+    function _calculateVirtualOffset() private view returns (uint256 virtualOffset) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         _upscaleArray(balances, _scalingFactors());
-
         uint256 root3Alpha = _root3Alpha;
-        invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
+        uint256 invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
         virtualOffset = invariant.mulDown(root3Alpha);
+    }
+
+    /** @dev Calculate the invariant. */
+    function _calculateInvariant() private view returns (uint256 invariant) {
+        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        _upscaleArray(balances, _scalingFactors());
+        return GyroThreeMath._calculateInvariant(balances, _root3Alpha);
     }
 
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffset
     ) private pure returns (uint256) {
-        return GyroThreeMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetInOut);
+        return GyroThreeMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffset);
     }
 
     function _onSwapGivenOut(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffset
     ) private pure returns (uint256) {
-        return GyroThreeMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffsetInOut);
+        return GyroThreeMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualOffset);
     }
 
     /**
@@ -283,7 +287,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         // re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
-        _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, invariantBeforeJoin, amountsIn, true);
+        _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeJoin, bptAmountOut, totalSupply(), true);
 
         // returns a new uint256[](3) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountOut, amountsIn, new uint256[](3));
@@ -354,7 +358,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
             // re-computation.
             // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the
             // total protocol fee factor.
-            _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(balances, invariantBeforeExit, amountsOut, false);
+            _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeExit, bptAmountIn, totalSupply(), false);
         } else {
             // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.
@@ -375,7 +379,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
      * @dev Returns the current value of the invariant.
      */
     function getInvariant() public view override returns (uint256 invariant) {
-        (invariant, ) = _calculateCurrentValues();
+        return _calculateInvariant();
     }
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)

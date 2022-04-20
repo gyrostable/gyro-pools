@@ -20,10 +20,9 @@ def test_calculate_quadratic(gyro_two_math_testing):
     expected_result = ((b + math.sqrt(b * b + 4 * a * c)) / (2 * a)) * 10 ** 18
     # assert result == 1618033988749883666
     assert float(result) == pytest.approx(expected_result)
-    fresult = result / 10 ** 18
-    assert a * fresult ** 2 - b * fresult - c == pytest.approx(
-        0
-    )  # One should imply the other (up to approximation error), but let's double check.
+    fresult = result / 10**18
+    assert a * fresult**2 - b * fresult - c == pytest.approx(0)
+    # One should imply the other (up to approximation error), but let's double check.
 
 
 

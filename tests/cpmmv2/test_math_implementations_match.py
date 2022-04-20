@@ -7,7 +7,7 @@ from brownie.test import given
 from hypothesis import assume
 from tests.cpmmv2 import math_implementation
 from tests.libraries import pool_math_implementation
-from tests.support.utils import scale, to_decimal
+from tests.support.utils import scale, to_decimal, unscale
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
@@ -215,13 +215,13 @@ def test_calc_in_given_out(
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = gyro_two_math_testing.calcInGivenOut(
+        in_amount_sol = unscale(gyro_two_math_testing.calcInGivenOut(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_out),
             scale(virtual_param_in),
             scale(virtual_param_out),
-        )
+        ))
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_two_math_testing.calcInGivenOut(
@@ -243,7 +243,10 @@ def test_calc_in_given_out(
             )
         return
 
-    assert to_decimal(in_amount_sol) == scale(in_amount)
+    # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
+    # implemented in python)
+    assert in_amount_sol >= in_amount
+    assert in_amount_sol == in_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
 
 
 @given(
@@ -291,13 +294,13 @@ def test_calc_out_given_in(
         and within_bal_ratio
         and out_amount >= 0
     ):
-        out_amount_sol = gyro_two_math_testing.calcOutGivenIn(
+        out_amount_sol = unscale(gyro_two_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
             scale(amount_in),
             scale(virtual_param_in),
             scale(virtual_param_out),
-        )
+        ))
     elif out_amount < 0:
         with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
             gyro_two_math_testing.calcOutGivenIn(
@@ -329,4 +332,7 @@ def test_calc_out_given_in(
             )
         return
 
-    assert to_decimal(out_amount_sol) == scale(out_amount)
+    # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
+    # implemented in python)
+    assert out_amount_sol <= out_amount
+    assert out_amount_sol == out_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))

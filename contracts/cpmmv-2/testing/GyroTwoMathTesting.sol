@@ -41,12 +41,12 @@ contract GyroTwoMathTesting {
     }
 
     function liquidityInvariantUpdate(
-        uint256[] memory balances,
-        uint256 lastInvariant,
-        uint256[] memory deltaBalances,
+        uint256 uinvariant,
+        uint256 changeBptSupply,
+        uint256 currentBptSupply,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
-        return GyroPoolMath.liquidityInvariantUpdate(balances, lastInvariant, deltaBalances, isIncreaseLiq);
+        return GyroPoolMath.liquidityInvariantUpdate(uinvariant, changeBptSupply, currentBptSupply, isIncreaseLiq);
     }
 
     function calcOutGivenIn(

@@ -19,7 +19,7 @@ from tests.cemm import cemm_prec_implementation
 TOKENS_PER_USER = 1000 * 10**18
 
 # This will provide assertion introspection for common test functions defined in this module.
-pytest.register_assert_rewrite("tests.cemm.util")
+pytest.register_assert_rewrite("tests.cemm.util", "tests.cpmmv3.util")
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +45,31 @@ def gyro_cemm_math_testing(admin, GyroCEMMMathTesting):
 @pytest.fixture(scope="module")
 def gyro_three_math_testing(admin, GyroThreeMathTesting):
     return admin.deploy(GyroThreeMathTesting)
+
+
+@pytest.fixture(scope="module")
+def gyro_three_math_debug(admin, GyroThreeMathDebug):
+    return admin.deploy(GyroThreeMathDebug)
+
+class ContractAsPureWrapper:
+    """Allows using a contract in places where a library of pure functions is expected, for easy debugging or gas measurement.
+
+    Example: ContractAsPureWrapper(GyroMathDebug), then use where GyroMathTesting is expected."""
+    def __init__(self, contract, prefix = '_'):
+        self.contract = contract
+        self.prefix = prefix
+
+    def __getattr__(self, item):
+        item = self.prefix + item
+        m = getattr(self.contract, item)
+        def f(*args, **kwargs):
+            tx = m(*args, **kwargs)
+            return tx.return_value
+        return f
+
+@pytest.fixture(scope="module")
+def gyro_three_math_debug_as_testing(admin, gyro_three_math_debug):
+    return ContractAsPureWrapper(gyro_three_math_debug)
 
 
 @pytest.fixture(scope="module")
@@ -113,6 +138,7 @@ def balancer_vault_pool(
     gyro_erc20_funded,
     balancer_vault,
     mock_gyro_config,
+    QueryProcessor,
 ):
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
@@ -137,7 +163,7 @@ def balancer_vault_pool(
 
 @pytest.fixture
 def mock_vault_pool(
-    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config
+    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config, QueryProcessor
 ):
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
@@ -162,11 +188,7 @@ def mock_vault_pool(
 
 @pytest.fixture
 def mock_vault_pool3(
-    admin,
-    GyroThreePool,
-    gyro_erc20_funded3,
-    mock_vault,
-    mock_gyro_config,
+    admin, GyroThreePool, gyro_erc20_funded3, mock_vault, mock_gyro_config
 ):
     args = ThreePoolParams(
         vault=mock_vault.address,

@@ -120,12 +120,33 @@ class QuantizedDecimal:
             )
         return self.quantize_to_lower_precision() != other
 
-    def __lt__(self, other: DecimalLike):
+    # Comparison operators are such that we can write a >= b.approxed(). Note that this relationship is not transitive,
+    # as is '=='.
+    # a > b.approxed() means (not a <= b.approxed()), i.e., a is significantly greater than b.
+
+    def __le__(self, other: DecimalLike):
         if isinstance(other, QuantizedDecimal):
             return (
-                self.quantize_to_lower_precision() < other.quantize_to_lower_precision()
+                self.quantize_to_lower_precision() <= other.quantize_to_lower_precision()
             )
-        return self < QuantizedDecimal(other)
+        if isinstance(other, ApproxDecimal):
+            return self < other.expected or self == other
+        return self <= QuantizedDecimal(other)
+
+    def __ge__(self, other: DecimalLike):
+        if isinstance(other, QuantizedDecimal):
+            return (
+                self.quantize_to_lower_precision() >= other.quantize_to_lower_precision()
+            )
+        if isinstance(other, ApproxDecimal):
+            return self > other.expected or self == other
+        return self >= QuantizedDecimal(other)
+
+    def __lt__(self, other):
+        return not self >= other
+
+    def __gt__(self, other):
+        return not self <= other
 
     def __hash__(self):
         return hash(self._value)
@@ -162,6 +183,14 @@ class QuantizedDecimal:
         context.rounding = decimal.ROUND_UP
         return QuantizedDecimal(self._value / self._get_value(other), context=context)
 
+    # mul_down and div_down are the defaults but we put them here for consistency so that one can quickly swap out one for the other.
+
+    def mul_down(self, other: DecimalLike):
+        return self * other
+
+    def div_down(self, other: DecimalLike):
+        return self / other
+
     @classmethod
     def from_float(cls, value: float) -> QuantizedDecimal:
         return cls(value)
@@ -191,6 +220,7 @@ class QuantizedDecimal:
         return pytest.approx(self.raw, **kwargs)
 
 
+# The following is LEGACY code. In new code just write a >= b.approxed()
 # Sry monkey patching...
 from _pytest.python_api import ApproxDecimal
 

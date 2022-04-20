@@ -39,8 +39,8 @@ def test_pool_reg(balancer_vault, balancer_vault_pool3, gyro_erc20_funded3):
 
 
 def test_pool_constructor(mock_vault_pool3):
-    assert mock_vault_pool3.getSwapFeePercentage() == 1 * 10**15
-    assert mock_vault_pool3.getRoot3Alpha() == D("0.97") * 10**18
+    assert mock_vault_pool3.getSwapFeePercentage() == 1 * 10 ** 15
+    assert mock_vault_pool3.getRoot3Alpha() == D("0.97") * 10 ** 18
 
 
 def join_pool(
@@ -74,7 +74,7 @@ def join_pool(
 
 def test_pool_on_initialize(users, mock_vault_pool3, mock_vault):
     balances = (0, 0, 0)
-    amountIn = 100 * 10**18
+    amountIn = 100 * 10 ** 18
 
     tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], balances, amountIn)
 
@@ -103,7 +103,7 @@ def test_pool_on_join(users, mock_vault_pool3, mock_vault):
     ##################################################
     ## Initialize pool
     ##################################################
-    amount_in = 100 * 10**18
+    amount_in = 100 * 10 ** 18
 
     tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], (0, 0, 0), amount_in)
 
@@ -113,8 +113,8 @@ def test_pool_on_join(users, mock_vault_pool3, mock_vault):
 
     # Check pool's invariant after initialization
     currentInvariant = unscale(mock_vault_pool3.getLastInvariant())
-    cubeInvariant_calcd = (unscale(amount_in) + currentInvariant * root3Alpha)**3
-    cubeInvariant_pool = currentInvariant**3
+    cubeInvariant_calcd = (unscale(amount_in) + currentInvariant * root3Alpha) ** 3
+    cubeInvariant_pool = currentInvariant ** 3
 
     # Approximation is rough here, see the math tests for more fine-grained comparisons.
     assert cubeInvariant_calcd == cubeInvariant_pool.approxed()
@@ -137,7 +137,11 @@ def test_pool_on_join(users, mock_vault_pool3, mock_vault):
     ## Check Pool balance Change
     assert tx.events["PoolBalanceChanged"]["liquidityProvider"] == users[1]
 
-    assert tx.events["PoolBalanceChanged"]["deltas"] == (amount_in, amount_in, amount_in)
+    assert tx.events["PoolBalanceChanged"]["deltas"] == (
+        amount_in,
+        amount_in,
+        amount_in,
+    )
 
     ## Check BPT Token minting
     assert tx.events["Transfer"][0]["from"] == ZERO_ADDRESS
@@ -157,15 +161,16 @@ def test_pool_on_join(users, mock_vault_pool3, mock_vault):
     assert newInvariant > currentInvariant
 
     currentInvariant = unscale(mock_vault_pool3.getLastInvariant())
-    cubeInvariant_calcd = prod(unscale(balancesAfterJoin[i]) + currentInvariant * root3Alpha
-                               for i in range(3))
-    cubeInvariant_pool = currentInvariant**3
+    cubeInvariant_calcd = prod(
+        unscale(balancesAfterJoin[i]) + currentInvariant * root3Alpha for i in range(3)
+    )
+    cubeInvariant_pool = currentInvariant ** 3
     assert cubeInvariant_calcd == cubeInvariant_pool.approxed()
 
 
 def test_pool_on_exit(users, mock_vault_pool3, mock_vault):
     ## Initialize Pool
-    amount_in = 100 * 10**18
+    amount_in = 100 * 10 ** 18
 
     tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], (0, 0, 0), amount_in)
 
@@ -180,7 +185,7 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault):
         amount_out=mock_vault_pool3.totalSupply(),  # say...
     )
 
-    amountOut = 5 * 10**18
+    amountOut = 5 * 10 ** 18
 
     total_supply_before_exit = mock_vault_pool3.totalSupply()
     (_, balances_after_exit) = mock_vault.getPoolTokens(poolId)
@@ -196,11 +201,12 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault):
         balances_after_exit,
         0,
         0,
-        mock_vault_pool3.balanceOf(users[0]) * amountOut // amount_in
+        mock_vault_pool3.balanceOf(users[0]) * amountOut // amount_in,
     )
 
-    assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(unscale((amountOut, amountOut, amountOut)))
-
+    assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(
+        unscale((amountOut, amountOut, amountOut))
+    )
 
     (_, balancesAfterExit) = mock_vault.getPoolTokens(poolId)
     assert int(balancesAfterExit[0]) == pytest.approx(
@@ -227,9 +233,10 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault):
 
     ## Check new pool's invariant
     currentInvariant = unscale(mock_vault_pool3.getLastInvariant())
-    cubeInvariant_calcd = prod(unscale(balancesAfterExit[i]) + currentInvariant * root3Alpha
-                               for i in range(3))
-    cubeInvariant_pool = currentInvariant**3
+    cubeInvariant_calcd = prod(
+        unscale(balancesAfterExit[i]) + currentInvariant * root3Alpha for i in range(3)
+    )
+    cubeInvariant_pool = currentInvariant ** 3
     assert cubeInvariant_calcd == cubeInvariant_pool.approxed()
 
     assert currentInvariant < invariant_before_exit
@@ -239,7 +246,7 @@ def test_swap(
     users, mock_vault_pool3, mock_vault, gyro_erc20_funded3, gyro_three_math_testing
 ):
     ## Initialize
-    amount_in = 100 * 10**18
+    amount_in = 100 * 10 ** 18
 
     tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], (0, 0, 0), amount_in)
 
@@ -254,11 +261,11 @@ def test_swap(
         amount_out=mock_vault_pool3.totalSupply(),
     )
 
-    amount_out = 5 * 10**18
+    amount_out = 5 * 10 ** 18
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
 
-    amount_to_swap = 10 * 10**18
+    amount_to_swap = 10 * 10 ** 18
     root3Alpha = unscale(mock_vault_pool3.getRoot3Alpha())
     current_invariant = unscale(mock_vault_pool3.getLastInvariant())
 

@@ -8,7 +8,7 @@ import "./GyroThreeMathDebug.sol";
 import "../../../libraries/GyroPoolMath.sol";
 
 contract GyroThreeMathTesting {
-    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
+    function calculateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256 invariant) {
         return GyroThreeMath._calculateInvariant(balances, root3Alpha);
     }
 
@@ -29,9 +29,10 @@ contract GyroThreeMathTesting {
         uint256 a,
         uint256 mb,
         uint256 mc,
-        uint256 md
+        uint256 md,
+        uint256 root3Alpha
     ) external pure returns (uint256 rootEst) {
-        return GyroThreeMath._calculateCubic(a, mb, mc, md);
+        rootEst = GyroThreeMath._calculateCubic(a, mb, mc, md, root3Alpha);
     }
 
     function calculateCubicStartingPoint(
@@ -48,9 +49,10 @@ contract GyroThreeMathTesting {
         uint256 mb,
         uint256 mc,
         uint256 md,
+        uint256 root3Alpha,
         uint256 rootEst
-    ) external pure returns (uint256) {
-        return GyroThreeMath._runNewtonIteration(a, mb, mc, md, rootEst);
+    ) external pure returns (uint256 rootEstOut) {
+        rootEstOut = GyroThreeMath._runNewtonIteration(a, mb, mc, md, root3Alpha, rootEst);
     }
 
     function calcNewtonDelta(
@@ -58,37 +60,43 @@ contract GyroThreeMathTesting {
         uint256 mb,
         uint256 mc,
         uint256 md,
+        uint256 root3Alpha,
         uint256 rootEst
     ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, rootEst);
+        return GyroThreeMath._calcNewtonDelta(a, mb, mc, md, root3Alpha, rootEst);
     }
 
     function liquidityInvariantUpdate(
-        uint256[] memory lastBalances,
-        uint256 lastInvariant,
-        uint256[] memory amountsIn,
+        uint256 uinvariant,
+        uint256 changeBptSupply,
+        uint256 currentBptSupply,
         bool isIncreaseLiq
     ) external pure returns (uint256 invariant) {
-        return GyroPoolMath.liquidityInvariantUpdate(lastBalances, lastInvariant, amountsIn, isIncreaseLiq);
+        return GyroPoolMath.liquidityInvariantUpdate(uinvariant, changeBptSupply, currentBptSupply, isIncreaseLiq);
     }
 
     function calcOutGivenIn(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountIn,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffset
     ) external pure returns (uint256 amountOut) {
-        return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffsetInOut);
+        return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffset);
     }
 
     function calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
         uint256 amountOut,
-        uint256 virtualOffsetInOut
+        uint256 virtualOffset
     ) external pure returns (uint256 amountIn) {
-        return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffsetInOut);
+        return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffset);
     }
+
+    function safeLargePow3ADown(uint256 l, uint256 root3Alpha, uint256 d) external pure returns (uint256 ret) {
+        return GyroThreeMath._safeLargePow3ADown(l, root3Alpha, d);
+    }
+
 
     function calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
@@ -114,14 +122,5 @@ contract GyroThreeMathTesting {
         uint256 protocolFeeGyroPortion
     ) external pure returns (uint256, uint256) {
         return GyroPoolMath._calcProtocolFees(previousInvariant, currentInvariant, currentBptSupply, protocolSwapFeePerc, protocolFeeGyroPortion);
-    }
-
-    // DEBUG
-    // Must be declared here, otherwise we can't see it.
-    // solhint-disable-next-line use-forbidden-name
-    event NewtonStep(bool high, uint256 delta, uint256 l);
-
-    function calculateInvariantDebug(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256) {
-        return GyroThreeMathDebug._calculateInvariant(balances, root3Alpha);
     }
 }
