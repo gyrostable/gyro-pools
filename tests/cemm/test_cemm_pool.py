@@ -1,3 +1,5 @@
+from operator import sub, add
+
 import pytest
 from brownie import ZERO_ADDRESS
 
@@ -8,6 +10,7 @@ from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest, C
 from tests.support.utils import approxed, unscale, to_decimal
 
 from tests.cemm import cemm as math_implementation
+from tests.cemm import cemm_prec_implementation as prec_impl
 
 def test_empty_erc20s(admin, gyro_erc20_empty):
     for token in range(constants.NUM_TOKENS):
@@ -98,22 +101,23 @@ def test_pool_on_initialize(users, cemm_pool, mock_vault):
     assert initial_balances[1] == amountIn
 
 
-def test_pool_on_join(users, cemm_pool, mock_vault):
+def test_pool_on_join(users, cemm_pool, mock_vault, gyro_cemm_math_testing):
     amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
 
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
 
-    sparams, _ = cemm_pool.getCEMMParams()
-    mparams = params2MathParams(CEMMMathParams(*unscale(sparams)))
+    sparams, sdparams = cemm_pool.getCEMMParams()
 
     # Check pool's invariant after initialization
-    # NOTE: this is only an approximate check; we have much more detailed checks in the math library tests.
-    currentInvariant = unscale(cemm_pool.getLastInvariant())
+    currentInvariant = cemm_pool.getLastInvariant()
 
-    cemm = math_implementation.CEMM.from_x_y(unscale(amount_in), unscale(amount_in), mparams)
-    assert currentInvariant == cemm.r.approxed()
+    balancesBeforeJoin = [amount_in, amount_in]
+    bptSupplyBeforeJoin = cemm_pool.totalSupply()
+    sInvariant = gyro_cemm_math_testing.calculateInvariant(balancesBeforeJoin, sparams, sdparams)
+
+    assert currentInvariant == sInvariant
 
     poolId = cemm_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
@@ -147,16 +151,26 @@ def test_pool_on_join(users, cemm_pool, mock_vault):
     assert balancesAfterJoin[0] == amount_in * 2
     assert balancesAfterJoin[1] == amount_in * 2
 
+    deltaBalances = [amount_in, amount_in]
+    assert list(balancesAfterJoin) == list(map(add, balancesBeforeJoin, deltaBalances))  # sanity check
+
     ## Check new pool's invariant
-    newInvariant = unscale(cemm_pool.getLastInvariant())
+    newInvariant = cemm_pool.getLastInvariant()
     assert newInvariant > currentInvariant
 
     currentInvariant = newInvariant
-    cemm = math_implementation.CEMM.from_x_y(*unscale(balancesAfterJoin), mparams)
-    assert currentInvariant == cemm.r.approxed()
+
+    sInvariant = gyro_cemm_math_testing.liquidityInvariantUpdate(
+        sInvariant,
+        bptSupplyBeforeJoin,
+        bptSupplyBeforeJoin,
+        True,
+    )
+
+    assert currentInvariant == sInvariant
 
 
-def test_pool_on_exit(users, cemm_pool, mock_vault):
+def test_pool_on_exit(users, cemm_pool, mock_vault, gyro_cemm_math_testing):
     amount_in = 100 * 10**18
 
     tx = join_pool(mock_vault, cemm_pool.address, users[0], (0, 0), amount_in)
@@ -176,8 +190,9 @@ def test_pool_on_exit(users, cemm_pool, mock_vault):
 
     total_supply_before_exit = cemm_pool.totalSupply()
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
-    invariant_after_join = unscale(cemm_pool.getLastInvariant())
+    invariant_after_join = cemm_pool.getLastInvariant()
 
+    bptTokensToBurn = cemm_pool.balanceOf(users[0]) * amountOut // amount_in
     tx = mock_vault.callExitPoolGyro(
         cemm_pool.address,
         0,
@@ -186,7 +201,7 @@ def test_pool_on_exit(users, cemm_pool, mock_vault):
         balances_after_join,
         0,
         0,
-        cemm_pool.balanceOf(users[0]) * amountOut // amount_in,
+        bptTokensToBurn,
     )
 
     assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(
@@ -210,16 +225,22 @@ def test_pool_on_exit(users, cemm_pool, mock_vault):
     assert float(bptTokensburnt) == pytest.approx(
         total_supply_before_exit * (amountOut / balances_after_join[0])
     )
+    assert bptTokensburnt == bptTokensToBurn
 
-    sparams, _ = cemm_pool.getCEMMParams()
-    mparams = params2MathParams(CEMMMathParams(*unscale(sparams)))
+    sparams, sdparams = cemm_pool.getCEMMParams()
 
     ## Check new pool's invariant
-    invariant_after_exit = unscale(cemm_pool.getLastInvariant())
+    invariant_after_exit = cemm_pool.getLastInvariant()
     assert invariant_after_join > invariant_after_exit
 
-    cemm = math_implementation.CEMM.from_x_y(*unscale(balancesAfterExit), mparams)
-    assert invariant_after_exit == cemm.r.approxed()
+    sInvariant_after_exit = gyro_cemm_math_testing.liquidityInvariantUpdate(
+        invariant_after_join,
+        bptTokensToBurn,
+        total_supply_before_exit,
+        False
+    )
+
+    assert invariant_after_exit == sInvariant_after_exit
 
 
 def test_pool_swap(users, cemm_pool, mock_vault, gyro_erc20_funded):
