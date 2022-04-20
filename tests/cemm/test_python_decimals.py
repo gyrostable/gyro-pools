@@ -110,7 +110,6 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0):
 
     quantized_decimal.set_decimals(18)
     mparams = params2MathParams(params)
-    derived = mathParams2DerivedParams(params2MathParams(params))
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     r_single = cemm.r
     f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
@@ -119,7 +118,6 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0):
 
     quantized_decimal.set_decimals(2 * 18)
     mparams = params2MathParams(params)
-    derived = mathParams2DerivedParams(params2MathParams(params))
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     r_double = cemm.r
     f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
@@ -174,7 +172,6 @@ def mtest_invariant_across_calcOutGivenIn(params, balances, amountIn, tokenInIsT
     # quantized_decimal.set_decimals(18 * 2)
 
     mparams = params2MathParams(params)
-    derived = mathParams2DerivedParams(params2MathParams(params))
     cemm = mimpl.CEMM.from_x_y(balances[0], balances[1], mparams)
     invariant_before = cemm.r
     f_trade = cemm.trade_x if tokenInIsToken0 else cemm.trade_y
