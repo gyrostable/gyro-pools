@@ -273,7 +273,7 @@ def calculateInvariantWithError(
     invariant = mulDownXpToNp(AtAChi + sqrt - err, mulDenominator)
     # error scales if denominator is small
     err = mulUpXpToNp(err, mulDenominator)
-    err_div = int(int(p.l * D("1e18")) * int(p.l * D("1e18")) / int(D("1e36")))
+    err_div = D(int(p.l * p.l))
     err = (
         err
         + mulUpXpToNp(D(invariant), mulDenominator) * err_div * 40 / D("1e38")

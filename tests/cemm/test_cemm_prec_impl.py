@@ -359,6 +359,16 @@ def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
 )
+@example(
+    params=CEMMMathParams(
+        alpha=D('0.050000000000020290'),
+        beta=D('0.397316269897841178'),
+        c=D('0.869675796261884515'),
+        s=D('0.493623347701723947'),
+        l=D('30098365.475000000000000000')),
+    balances=[D('60138484034.385962001000000000'),
+     D('1.404490000000000000')]
+)
 def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -375,6 +385,16 @@ def test_calcInvariantSqrt(gyro_cemm_math_testing, params, balances):
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
+)
+@example(
+    params=CEMMMathParams(
+        alpha=D('0.050000000000020290'),
+        beta=D('0.397316269897841178'),
+        c=D('0.869675796261884515'),
+        s=D('0.493623347701723947'),
+        l=D('30098365.475000000000000000')),
+    balances=[D('60138484034.385962001000000000'),
+     D('1.404490000000000000')]
 )
 def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
