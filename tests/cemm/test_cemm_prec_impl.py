@@ -153,7 +153,7 @@ def gen_params_conservative(draw):
 # @given(params=gen_params())
 # def test_calcAChiAChi(gyro_cemm_math_testing, params):
 #     mparams = util.params2MathParams(paramsTo100(params))
-#     derived_m = util.mathParams2DerivedParams(mparams)
+#     derived_m = mparams  # Legacy fix
 
 #     derived = prec_impl.calc_derived_values(params)
 #     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -176,7 +176,7 @@ def gen_params_conservative(draw):
 @given(params=gen_params())
 def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    derived_m = mparams  # Legacy fix
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -221,7 +221,7 @@ def test_calcAtAChi(gyro_cemm_math_testing, params, balances):
 )
 def test_calcAtAChi_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    derived_m = mparams  # Legacy fix
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
@@ -259,7 +259,7 @@ def test_calcMinAtxAChiySqPlusAtxSq(gyro_cemm_math_testing, params, balances):
 )
 def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    derived_m = mparams  # Legacy fix
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcMinAtxAChiySqPlusAtxSq(
@@ -299,7 +299,7 @@ def test_calc2AtxAtyAChixAChiy(gyro_cemm_math_testing, params, balances):
 )
 def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    derived_m = mparams  # Legacy fix
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calc2AtxAtyAChixAChiy(
@@ -338,7 +338,7 @@ def test_calcMinAtyAChixSqPlusAtySq(gyro_cemm_math_testing, params, balances):
 )
 def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
     mparams = util.params2MathParams(paramsTo100(params))
-    derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    derived_m = mparams  # Legacy fix
 
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcMinAtyAChixSqPlusAtySq(

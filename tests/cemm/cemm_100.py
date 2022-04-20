@@ -116,6 +116,16 @@ class Params:
     def tau_beta(self) -> Vector:
         return self.tau(self.beta)
 
+    # Aliases to make this duck-compatible with 'DerivedParams' from cemm_prec_implementation.py as long as only the
+    # tau values are accessed.
+    @property
+    def tauAlpha(self) -> Vector:
+        return self.tau_alpha
+
+    @property
+    def tauBeta(self) -> Vector:
+        return self.tau_beta
+
     def Ainv_times(self, x: D, y: D) -> Vector:
         """A^{-1} . (x, y), where '.' is matrix-vector multiplication and A is the transformation matrix."""
         retx = x * self.l * self.c + self.s * y
