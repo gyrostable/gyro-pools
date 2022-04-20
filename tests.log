@@ -1,0 +1,289 @@
+Brownie v1.18.1 - Python development framework for Ethereum
+
+============================= test session starts ==============================
+platform linux -- Python 3.9.9, pytest-6.2.5, py-1.11.0, pluggy-1.0.0
+rootdir: /home/ubuntu/vaults
+plugins: eth-brownie-1.18.1, xdist-1.34.0, forked-1.4.0, web3-5.27.0, hypothesis-6.27.3
+collected 28 items
+run-last-failure: rerun previous 5 failures first
+
+Launching 'ganache-cli --port 8545 --gasLimit 12000000 --accounts 10 --hardfork istanbul --mnemonic brownie --allowUnlimitedContractSize'...
+
+tests/cemm/test_cemm_prec_impl.py FFFFF......F................           [100%]
+
+=================================== FAILURES ===================================
+____________________________ test_calcAChiAChiInXp _____________________________
+
+gyro_cemm_math_testing = <GyroCEMMMathTesting Contract '0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87'>
+
+    @given(params=gen_params())
+>   def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
+
+tests/cemm/test_cemm_prec_impl.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+gyro_cemm_math_testing = <GyroCEMMMathTesting Contract '0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87'>
+params = CEMMMathParams(alpha=Decimal('0.050000000000000000'), beta=Decimal('0.123428886495925482'), c=Decimal('0.984807753012208020'), s=Decimal('0.173648177666930331'), l=Decimal('1.000000000000000000'))
+
+    @given(params=gen_params())
+    def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
+        mparams = util.params2MathParams(paramsTo100(params))
+        derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    
+        derived = prec_impl.calc_derived_values(params)
+        derived_scaled = prec_impl.scale_derived_values(derived)
+    
+        result_py = prec_impl.calcAChiAChiInXp(params, derived)
+        result_sol = gyro_cemm_math_testing.calcAChiAChiInXp(scale(params), derived_scaled)
+        assert result_py == D2((D3(result_sol) / D3("1e38")).raw)
+        assert result_py > 1
+    
+        # test against the old (imprecise) implementation
+        chi = (
+            mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+            mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
+        )
+        AChi = mparams.A_times(chi[0], chi[1])
+        AChiAChi = AChi[0] ** 2 + AChi[1] ** 2
+        # Note: expect to agree to 1e-22 if lambda=1e8
+        err_tol = D2(D(params.l).raw) ** 2 * D2("2e-37")
+>       assert result_py == convd(AChiAChi, D2).approxed(abs=err_tol)
+E       AssertionError: assert Decimal('1.01251231150270164686687515445976951849') == 1.01251231150270156208194582500969362928 ± 2.0e-37
+E        +  where 1.01251231150270156208194582500969362928 ± 2.0e-37 = <bound method QuantizedDecimal.approxed of Decimal('1.01251231150270156208194582500969362928')>(abs=Decimal('2.0E-37'))
+E        +    where <bound method QuantizedDecimal.approxed of Decimal('1.01251231150270156208194582500969362928')> = Decimal('1.01251231150270156208194582500969362928').approxed
+E        +      where Decimal('1.01251231150270156208194582500969362928') = convd(Decimal('1.0125123115027015620819458250096936292853215103575417260123264204777112835955921788185182908321102394'), D2)
+
+tests/cemm/test_cemm_prec_impl.py:198: AssertionError
+---------------------------------- Hypothesis ----------------------------------
+Falsifying example: test_calcAChiAChiInXp(
+    params=CEMMMathParams(alpha=Decimal('0.050000000000000000'), beta=Decimal('0.123428886495925482'), c=Decimal('0.984807753012208020'), s=Decimal('0.173648177666930331'), l=Decimal('1.000000000000000000')),
+    gyro_cemm_math_testing=<GyroCEMMMathTesting Contract '0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87'>,
+)
+_________________________ test_calcAtAChi_sense_check __________________________
+
+>   ???
+
+tests/cemm/test_cemm_prec_impl.py:219: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+params = CEMMMathParams(alpha=Decimal('0.050000000000000000'), beta=Decimal('3.144254616640336586'), c=Decimal('0.217308144686314958'), s=Decimal('0.976103053090702888'), l=Decimal('1.000000000000000000'))
+balances = [Decimal('1.000000000000000000'), Decimal('0E-18')]
+
+    @given(
+        params=gen_params(),
+        balances=gen_balances(2, bpool_params),
+    )
+    def test_calcAtAChi_sense_check(params, balances):
+        mparams = util.params2MathParams(paramsTo100(params))
+        derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    
+        derived = prec_impl.calc_derived_values(params)
+        result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
+    
+        # test against the old (imprecise) implementation
+        At = mparams.A_times(*convd((balances[0], balances[1]), D3))
+        chi = (
+            mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+            mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
+        )
+        AChi = mparams.A_times(chi[0], chi[1])
+        AtAChi = At[0] * AChi[0] + At[1] * AChi[1]
+>       assert AtAChi == convd(result_py, D).approxed(abs=D("5e-18"))
+E       AssertionError: assert Decimal('0.9529647099770319496963687153124469464448494816629026319263667935635194883921327407110745805068020192') == 0.952964709977031978 ± 5.0e-18
+E        +  where 0.952964709977031978 ± 5.0e-18 = <bound method QuantizedDecimal.approxed of Decimal('0.952964709977031978')>(abs=Decimal('5E-18'))
+E        +    where <bound method QuantizedDecimal.approxed of Decimal('0.952964709977031978')> = Decimal('0.952964709977031978').approxed
+E        +      where Decimal('0.952964709977031978') = convd(Decimal('0.952964709977031978'), D)
+E        +    and   Decimal('5E-18') = D('5e-18')
+
+tests/cemm/test_cemm_prec_impl.py:237: AssertionError
+---------------------------------- Hypothesis ----------------------------------
+Falsifying example: test_calcAtAChi_sense_check(
+    params=CEMMMathParams(alpha=Decimal('0.050000000000000000'), beta=Decimal('3.144254616640336586'), c=Decimal('0.217308144686314958'), s=Decimal('0.976103053090702888'), l=Decimal('1.000000000000000000')),
+    balances=[Decimal('1.000000000000000000'), Decimal('0E-18')],
+)
+_________________ test_calcMinAtxAChiySqPlusAtxSq_sense_check __________________
+
+>   ???
+
+tests/cemm/test_cemm_prec_impl.py:257: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+params = CEMMMathParams(alpha=Decimal('0.050000000000000002'), beta=Decimal('0.564755500419997791'), c=Decimal('0.778282972804240081'), s=Decimal('0.627913699677745907'), l=Decimal('62.239000000000000000'))
+balances = [Decimal('15250360332.004085800000000000'), Decimal('326.921350000000000000')]
+
+    @given(
+        params=gen_params(),
+        balances=gen_balances(2, bpool_params),
+    )
+    def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
+        mparams = util.params2MathParams(paramsTo100(params))
+        derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    
+        derived = prec_impl.calc_derived_values(params)
+        result_py = prec_impl.calcMinAtxAChiySqPlusAtxSq(
+            balances[0], balances[1], params, derived
+        )
+        # test against the old (imprecise) implementation
+        At = mparams.A_times(*convd((balances[0], balances[1]), D3))
+        chi = (
+            mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+            mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
+        )
+        AChi = mparams.A_times(chi[0], chi[1])
+        val_sense = At[0] * At[0] * (1 - AChi[1] * AChi[1])
+>       assert result_py == convd(val_sense, D).approxed(abs=D("1e-15"))
+E       AssertionError: assert Decimal('35123978857677000.327677215232027672') == 35123978857677000.345227351063882716 ± 1.0e-15
+E        +  where 35123978857677000.345227351063882716 ± 1.0e-15 = <bound method QuantizedDecimal.approxed of Decimal('35123978857677000.345227351063882716')>(abs=Decimal('1.000E-15'))
+E        +    where <bound method QuantizedDecimal.approxed of Decimal('35123978857677000.345227351063882716')> = Decimal('35123978857677000.345227351063882716').approxed
+E        +      where Decimal('35123978857677000.345227351063882716') = convd(Decimal('35123978857677000.3452273510638827162986040630026238040195863295478962449475154552225951934861534137746150797861221607'), D)
+E        +    and   Decimal('1.000E-15') = D('1e-15')
+
+tests/cemm/test_cemm_prec_impl.py:276: AssertionError
+---------------------------------- Hypothesis ----------------------------------
+Falsifying example: test_calcMinAtxAChiySqPlusAtxSq_sense_check(
+    params=CEMMMathParams(alpha=Decimal('0.050000000000000002'), beta=Decimal('0.564755500419997791'), c=Decimal('0.778282972804240081'), s=Decimal('0.627913699677745907'), l=Decimal('62.239000000000000000')),
+    balances=[Decimal('15250360332.004085800000000000'),
+     Decimal('326.921350000000000000')],
+)
+____________________ test_calc2AtxAtyAChixAChiy_sense_check ____________________
+
+>   ???
+
+tests/cemm/test_cemm_prec_impl.py:297: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+params = CEMMMathParams(alpha=Decimal('0.050000000000006372'), beta=Decimal('0.127779913225402950'), c=Decimal('0.983744220086498200'), s=Decimal('0.179575358683777747'), l=Decimal('1.199000000000000000'))
+balances = [Decimal('1.000017537139670154'), Decimal('203296614.325765667508823658')]
+
+    @given(
+        params=gen_params(),
+        balances=gen_balances(2, bpool_params),
+    )
+    def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
+        mparams = util.params2MathParams(paramsTo100(params))
+        derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    
+        derived = prec_impl.calc_derived_values(params)
+        result_py = prec_impl.calc2AtxAtyAChixAChiy(
+            balances[0], balances[1], params, derived
+        )
+        # test against the old (imprecise) implementation
+        At = mparams.A_times(*convd((balances[0], balances[1]), D3))
+        chi = (
+            mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+            mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
+        )
+        AChi = mparams.A_times(chi[0], chi[1])
+        val_sense = D3(2) * At[0] * At[1] * AChi[0] * AChi[1]
+>       assert result_py == convd(val_sense, D).approxed(abs=D("1e-15"))
+E       AssertionError: assert Decimal('803626962918472.725768757916768127') == 803626962918472.758296169031341649 ± 1.0e-15
+E        +  where 803626962918472.758296169031341649 ± 1.0e-15 = <bound method QuantizedDecimal.approxed of Decimal('803626962918472.758296169031341649')>(abs=Decimal('1.000E-15'))
+E        +    where <bound method QuantizedDecimal.approxed of Decimal('803626962918472.758296169031341649')> = Decimal('803626962918472.758296169031341649').approxed
+E        +      where Decimal('803626962918472.758296169031341649') = convd(Decimal('803626962918472.7582961690313416499915285277797466000384412948256101895460558922875441571476170660439634834137338565'), D)
+E        +    and   Decimal('1.000E-15') = D('1e-15')
+
+tests/cemm/test_cemm_prec_impl.py:316: AssertionError
+---------------------------------- Hypothesis ----------------------------------
+Falsifying example: test_calc2AtxAtyAChixAChiy_sense_check(
+    params=CEMMMathParams(alpha=Decimal('0.050000000000006372'), beta=Decimal('0.127779913225402950'), c=Decimal('0.983744220086498200'), s=Decimal('0.179575358683777747'), l=Decimal('1.199000000000000000')),
+    balances=[Decimal('1.000017537139670154'),
+     Decimal('203296614.325765667508823658')],
+)
+_________________ test_calcMinAtyAChixSqPlusAtySq_sense_check __________________
+
+>   ???
+
+tests/cemm/test_cemm_prec_impl.py:336: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+params = CEMMMathParams(alpha=Decimal('0.493530690092666744'), beta=Decimal('0.546208004897158469'), c=Decimal('0.788388682596548707'), s=Decimal('0.615177442006514363'), l=Decimal('29190319.346000000000000000'))
+balances = [Decimal('77046861976.538298555400000000'), Decimal('73648873545.723330823194664096')]
+
+    @given(
+        params=gen_params(),
+        balances=gen_balances(2, bpool_params),
+    )
+    def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
+        mparams = util.params2MathParams(paramsTo100(params))
+        derived_m = convd(util.mathParams2DerivedParams(params), D3)
+    
+        derived = prec_impl.calc_derived_values(params)
+        result_py = prec_impl.calcMinAtyAChixSqPlusAtySq(
+            balances[0], balances[1], params, derived
+        )
+        # test against the old (imprecise) implementation
+        At = mparams.A_times(*convd((balances[0], balances[1]), D3))
+        chi = (
+            mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
+            mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
+        )
+        AChi = mparams.A_times(chi[0], chi[1])
+        val_sense = At[1] * At[1] * (D3(1) - AChi[0] * AChi[0])
+>       assert result_py == convd(val_sense, D).approxed(abs=D("1e-15"))
+E       AssertionError: assert Decimal('432384472.110447416845552549') == 432780306.116384220788774207 ± 1.0e-15
+E        +  where 432780306.116384220788774207 ± 1.0e-15 = <bound method QuantizedDecimal.approxed of Decimal('432780306.116384220788774207')>(abs=Decimal('1.000E-15'))
+E        +    where <bound method QuantizedDecimal.approxed of Decimal('432780306.116384220788774207')> = Decimal('432780306.116384220788774207').approxed
+E        +      where Decimal('432780306.116384220788774207') = convd(Decimal('432780306.1163842207887742070492552668625504244615623507661967396778798701808723197930960982495185926307940693'), D)
+E        +    and   Decimal('1.000E-15') = D('1e-15')
+
+tests/cemm/test_cemm_prec_impl.py:355: AssertionError
+---------------------------------- Hypothesis ----------------------------------
+Falsifying example: test_calcMinAtyAChixSqPlusAtySq_sense_check(
+    params=CEMMMathParams(alpha=Decimal('0.493530690092666744'), beta=Decimal('0.546208004897158469'), c=Decimal('0.788388682596548707'), s=Decimal('0.615177442006514363'), l=Decimal('29190319.346000000000000000')),
+    balances=[Decimal('77046861976.538298555400000000'),
+     Decimal('73648873545.723330823194664096')],
+)
+___________________________ test_calculateInvariant ____________________________
+
+gyro_cemm_math_testing = <GyroCEMMMathTesting Contract '0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87'>
+
+>   ???
+
+tests/cemm/test_cemm_prec_impl.py:376: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+gyro_cemm_math_testing = <GyroCEMMMathTesting Contract '0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87'>
+params = CEMMMathParams(alpha=Decimal('0.050000000000020290'), beta=Decimal('0.397316269897841178'), c=Decimal('0.869675796261884515'), s=Decimal('0.493623347701723947'), l=Decimal('30098365.475000000000000000'))
+balances = [Decimal('60138484034.385962001000000000'), Decimal('1.404490000000000000')]
+
+    @given(
+        params=gen_params(),
+        balances=gen_balances(2, bpool_params),
+    )
+    def test_calculateInvariant(gyro_cemm_math_testing, params, balances):
+        derived = prec_impl.calc_derived_values(params)
+        derived_scaled = prec_impl.scale_derived_values(derived)
+        result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
+        result_sol, err_sol = gyro_cemm_math_testing.calculateInvariantWithError(
+            scale(balances), scale(params), derived_scaled
+        )
+        # denominator = prec_impl.calcAChiAChi(params, derived) - D(1)
+        # err = D("5e-18") if denominator > 1 else D("5e-18") / D(denominator)
+        denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+        err = D2("5e-18") if denominator > 1 else D2("5e-18") / D2(denominator)
+        err = D(err.raw)
+        assert result_py == unscale(result_sol).approxed(abs=(err + D("500e-18")))
+>       assert err_py == unscale(err_sol).approxed(abs=D("500e-18"))
+E       AssertionError: assert Decimal('183663867.261599783193999232') == 183663867.261599580454718273 ± 5.0e-16
+E        +  where 183663867.261599580454718273 ± 5.0e-16 = <bound method QuantizedDecimal.approxed of Decimal('183663867.261599580454718273')>(abs=Decimal('5.00E-16'))
+E        +    where <bound method QuantizedDecimal.approxed of Decimal('183663867.261599580454718273')> = Decimal('183663867.261599580454718273').approxed
+E        +      where Decimal('183663867.261599580454718273') = unscale(183663867261599580454718273)
+E        +    and   Decimal('5.00E-16') = D('500e-18')
+
+tests/cemm/test_cemm_prec_impl.py:392: AssertionError
+---------------------------------- Hypothesis ----------------------------------
+Falsifying example: test_calculateInvariant(
+    params=CEMMMathParams(alpha=Decimal('0.050000000000020290'), beta=Decimal('0.397316269897841178'), c=Decimal('0.869675796261884515'), s=Decimal('0.493623347701723947'), l=Decimal('30098365.475000000000000000')),
+    balances=[Decimal('60138484034.385962001000000000'),
+     Decimal('1.404490000000000000')],
+    gyro_cemm_math_testing=<GyroCEMMMathTesting Contract '0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87'>,
+)
+=========================== short test summary info ============================
+FAILED tests/cemm/test_cemm_prec_impl.py::test_calcAChiAChiInXp - AssertionEr...
+FAILED tests/cemm/test_cemm_prec_impl.py::test_calcAtAChi_sense_check - Asser...
+FAILED tests/cemm/test_cemm_prec_impl.py::test_calcMinAtxAChiySqPlusAtxSq_sense_check
+FAILED tests/cemm/test_cemm_prec_impl.py::test_calc2AtxAtyAChixAChiy_sense_check
+FAILED tests/cemm/test_cemm_prec_impl.py::test_calcMinAtyAChixSqPlusAtySq_sense_check
+FAILED tests/cemm/test_cemm_prec_impl.py::test_calculateInvariant - Assertion...
+=================== 6 failed, 22 passed in 220.73s (0:03:40) ===================
+Terminating local RPC client...

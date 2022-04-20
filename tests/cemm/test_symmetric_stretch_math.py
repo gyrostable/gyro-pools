@@ -1,6 +1,7 @@
 from math import pi, sin, cos
 
 import hypothesis.strategies as st
+
 # from pyrsistent import Invariant
 from brownie.test import given
 from hypothesis import assume
@@ -9,8 +10,13 @@ from tests.cemm import cemm as mimpl
 from tests.cemm import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import *
-from tests.support.util_common import BasicPoolParameters, gen_balances, gen_balances_vector
+from tests.support.util_common import (
+    BasicPoolParameters,
+    gen_balances,
+    gen_balances_vector,
+)
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
+import pytest
 
 billion_balance_strategy = st.integers(min_value=0, max_value=10_000_000_000)
 
@@ -20,15 +26,20 @@ MIN_PRICE_SEPARATION = D("0.001")
 MAX_IN_RATIO = D("0.3")
 MAX_OUT_RATIO = D("0.3")
 
-MIN_BALANCE_RATIO = D("1e-5")
-MIN_FEE = D("0.0002")
+MIN_BALANCE_RATIO = D(0)  # D("1e-5")
+MIN_FEE = D(0)  # D("0.0002")
 
 # this determines whether derivedParameters are calculated in solidity or not
 DP_IN_SOL = False
 
 
 bpool_params = BasicPoolParameters(
-    MIN_PRICE_SEPARATION, MAX_IN_RATIO, MAX_OUT_RATIO, MIN_BALANCE_RATIO, MIN_FEE
+    MIN_PRICE_SEPARATION,
+    MAX_IN_RATIO,
+    MAX_OUT_RATIO,
+    MIN_BALANCE_RATIO,
+    MIN_FEE,
+    int(D("1e11")),
 )
 
 
@@ -74,11 +85,6 @@ def gen_params_cemm_dinvariant(draw):
 
 
 @given(params=gen_params(), t=gen_balances_vector(bpool_params))
-def test_mulAinv(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
-    util.mtest_mulAinv(params, t, gyro_cemm_math_testing)
-
-
-@given(params=gen_params(), t=gen_balances_vector(bpool_params))
 def test_mulA(params: CEMMMathParams, t: Vector2, gyro_cemm_math_testing):
     util.mtest_mulA(params, t, gyro_cemm_math_testing)
 
@@ -100,6 +106,7 @@ def test_tau(params_px, gyro_cemm_math_testing):
     util.mtest_tau(params_px, gyro_cemm_math_testing)
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params=gen_params(), invariant=util.gen_synthetic_invariant())
 def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     util.mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing)
@@ -118,9 +125,7 @@ def test_calculateInvariant(params, balances, gyro_cemm_math_testing):
 
     # We now require that the invariant is underestimated and allow ourselves a bit of slack in the other direction.
     assert invariant_sol.approxed_scaled() <= scale(invariant_py).approxed_scaled()
-    assert invariant_sol == scale(invariant_py).approxed(
-        abs=1e12, rel=to_decimal("1E-9")
-    )
+    assert invariant_sol == scale(invariant_py).approxed(abs=D(5))
 
 
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
@@ -139,10 +144,13 @@ def test_calculatePrice(params, balances, gyro_cemm_math_testing):
     invariant=util.gen_synthetic_invariant(),
 )
 def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
     y_py, y_sol = util.mtest_calcYGivenX(
-        params, x, invariant, DP_IN_SOL, gyro_cemm_math_testing
+        params, x, r, DP_IN_SOL, gyro_cemm_math_testing
     )
-    assert y_sol == scale(y_py).approxed_scaled()
+    # assert y_sol == scale(y_py).approxed_scaled()
+    assert y_sol == scale(y_py).approxed(rel=D("5e-4"))
 
 
 @given(
@@ -151,8 +159,10 @@ def test_calcYGivenX(params, x, invariant, gyro_cemm_math_testing):
     invariant=util.gen_synthetic_invariant(),
 )
 def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
+    # just pick something for overestimate
+    r = (D(invariant) * (D(1) + D("1e-15")), invariant)
     x_py, x_sol = util.mtest_calcXGivenY(
-        params, y, invariant, DP_IN_SOL, gyro_cemm_math_testing
+        params, y, r, DP_IN_SOL, gyro_cemm_math_testing
     )
     assert x_sol == scale(x_py).approxed_scaled()
 
@@ -205,6 +215,7 @@ def test_calcInGivenOut(
     )
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     rnew_py, rnew_sol = util.mtest_liquidityInvariantUpdate(
@@ -214,6 +225,7 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     assert unscale(rnew_sol) == rnew_py.approxed()
 
 
+@pytest.mark.skip(reason="Needs refactor")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdateEquivalence(
     params_cemm_dinvariant, gyro_cemm_math_testing

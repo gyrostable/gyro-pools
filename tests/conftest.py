@@ -1,7 +1,20 @@
-from tests.support.quantized_decimal import QuantizedDecimal as D
 import pytest
+from typing import NamedTuple, Tuple
 
-from tests.support.types import TwoPoolBaseParams, TwoPoolParams, ThreePoolParams
+
+from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
+from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
+from tests.support.types import (
+    CEMMMathParams,
+    CEMMPoolParams,
+    GyroCEMMMathDerivedParams,
+    ThreePoolParams,
+    TwoPoolBaseParams,
+    TwoPoolParams,
+)
+
+from tests.cemm import cemm_prec_implementation
 
 TOKENS_PER_USER = 1000 * 10**18
 
@@ -63,13 +76,16 @@ def gyro_three_math_debug_as_testing(admin, gyro_three_math_debug):
 def mock_gyro_config(admin, MockGyroConfig):
     return admin.deploy(MockGyroConfig)
 
+
 @pytest.fixture
 def gyro_erc20_empty(admin, SimpleERC20):
     return (admin.deploy(SimpleERC20), admin.deploy(SimpleERC20))
 
+
 @pytest.fixture
 def gyro_erc20_empty3(admin, SimpleERC20):
     return tuple(admin.deploy(SimpleERC20) for _ in range(3))
+
 
 @pytest.fixture
 def gyro_erc20_funded(admin, SimpleERC20, users):
@@ -87,6 +103,7 @@ def gyro_erc20_funded(admin, SimpleERC20, users):
     else:
         return (gyro_erc20_1, gyro_erc20_0)
 
+
 @pytest.fixture
 def gyro_erc20_funded3(admin, SimpleERC20, users):
     npools = 3
@@ -102,14 +119,17 @@ def gyro_erc20_funded3(admin, SimpleERC20, users):
 def authorizer(admin, Authorizer):
     return admin.deploy(Authorizer, admin)
 
+
 @pytest.fixture
 def mock_vault(admin, MockVault, authorizer):
     return admin.deploy(MockVault, authorizer)
+
 
 @pytest.fixture(scope="module")
 def balancer_vault(admin, BalancerVault, SimpleERC20, authorizer):
     weth9 = admin.deploy(SimpleERC20)
     return admin.deploy(BalancerVault, authorizer.address, weth9.address, 0, 0)
+
 
 @pytest.fixture
 def balancer_vault_pool(
@@ -120,7 +140,6 @@ def balancer_vault_pool(
     mock_gyro_config,
     QueryProcessor,
 ):
-    admin.deploy(QueryProcessor)
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=balancer_vault.address,
@@ -146,7 +165,6 @@ def balancer_vault_pool(
 def mock_vault_pool(
     admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config, QueryProcessor
 ):
-    admin.deploy(QueryProcessor)
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=mock_vault.address,
@@ -167,6 +185,7 @@ def mock_vault_pool(
     )
     return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
 
+
 @pytest.fixture
 def mock_vault_pool3(
     admin, GyroThreePool, gyro_erc20_funded3, mock_vault, mock_gyro_config
@@ -184,6 +203,7 @@ def mock_vault_pool3(
         root3Alpha=D("0.97") * 10**18,
     )
     return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
+
 
 @pytest.fixture
 def balancer_vault_pool3(
@@ -233,6 +253,100 @@ def pool_factory(admin, GyroTwoPoolFactory, gyro_config):
     return admin.deploy(GyroTwoPoolFactory, balancer_vault, gyro_config.address)
 
 
+@pytest.fixture
+def cemm_pool(
+    admin,
+    GyroCEMMPool,
+    gyro_erc20_funded,
+    mock_vault,
+    mock_gyro_config,
+    QueryProcessor,
+):
+    admin.deploy(QueryProcessor)
+    two_pool_base_params = TwoPoolBaseParams(
+        vault=mock_vault.address,
+        name="GyroCEMMTwoPool",  # string
+        symbol="GCTP",  # string
+        token0=gyro_erc20_funded[0].address,  # IERC20
+        token1=gyro_erc20_funded[1].address,  # IERC20
+        normalizedWeight0=D("0.6") * 10**18,  # uint256
+        normalizedWeight1=D("0.4") * 10**18,  # uint256
+        swapFeePercentage=1 * 10**15,  # 0.5%
+        pauseWindowDuration=0,  # uint256
+        bufferPeriodDuration=0,  # uint256
+        oracleEnabled=False,  # bool
+        owner=admin,  # address
+    )
+
+    cemm_params = CEMMMathParams(
+        alpha=D("0.97"),
+        beta=D("1.02"),
+        c=D("0.7071067811865475244"),
+        s=D("0.7071067811865475244"),
+        l=D("2"),
+    )
+    derived_cemm_params = cemm_prec_implementation.calc_derived_values(cemm_params)
+    args = CEMMPoolParams(
+        two_pool_base_params,
+        scale_cemm_params(cemm_params),
+        scale_derived_values(derived_cemm_params),
+    )
+    return admin.deploy(
+        GyroCEMMPool, args, mock_gyro_config.address, gas_limit=11250000
+    )
+
+
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):
     pass
+
+
+class Params(NamedTuple):
+    alpha: D
+    beta: D
+    c: D
+    s: D
+    l: D
+
+
+class DerivedParams(NamedTuple):
+    tauAlpha: Tuple[D2, D2]
+    tauBeta: Tuple[D2, D2]
+    u: D2
+    v: D2
+    w: D2
+    z: D2
+    dSq: D2
+    # dAlpha: D2
+    # dBeta: D2
+
+
+def scale_cemm_params(p: Params) -> Params:
+    params = Params(
+        alpha=p.alpha * D("1e18"),
+        beta=p.beta * D("1e18"),
+        c=p.c * D("1e18"),
+        s=p.s * D("1e18"),
+        l=p.l * D("1e18"),
+    )
+    return params
+
+
+class Vector2(NamedTuple):
+    x: D2
+    y: D2
+
+
+def scale_derived_values(d: DerivedParams) -> DerivedParams:
+    derived = DerivedParams(
+        tauAlpha=Vector2(d.tauAlpha[0] * D2("1e38"), d.tauAlpha[1] * D2("1e38")),
+        tauBeta=Vector2(d.tauBeta[0] * D2("1e38"), d.tauBeta[1] * D2("1e38")),
+        u=d.u * D2("1e38"),
+        v=d.v * D2("1e38"),
+        w=d.w * D2("1e38"),
+        z=d.z * D2("1e38"),
+        dSq=d.dSq * D2("1e38"),
+        # dAlpha=d.dAlpha * D2("1e38"),
+        # dBeta=d.dBeta * D2("1e38"),
+    )
+    return derived
