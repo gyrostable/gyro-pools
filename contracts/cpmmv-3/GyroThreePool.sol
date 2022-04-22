@@ -55,13 +55,12 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         string memory symbol,
         IERC20[] memory tokens,
         uint256 root3Alpha,
-        address[] memory assetManagers,
         uint256 swapFeePercentage,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
         address owner,
         address configAddress
-    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, assetManagers, swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner) {
+    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner) {
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
 
         _token0 = tokens[0];
@@ -163,9 +162,8 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
     }
 
     /** @dev Calculate the offset that that takes real reserves to virtual reserves.
-      */
-    function _calculateVirtualOffset() private view returns (
-            uint256 virtualOffset) {
+     */
+    function _calculateVirtualOffset() private view returns (uint256 virtualOffset) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         _upscaleArray(balances, _scalingFactors());
         uint256 root3Alpha = _root3Alpha;

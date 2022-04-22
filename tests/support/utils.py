@@ -90,6 +90,15 @@ def approxed(x, abs=None, rel=None):
         return [approxed(v, abs, rel) for v in x]
     return to_decimal(x).approxed()
 
+def apply_deep(x, f):
+    # Order matters b/c named tuples are tuples.
+    if isinstance_namedtuple(x):
+        return type(x)(*[apply_deep(y, f) for y in x])
+    if isinstance(x, (list, tuple)):
+        return type(x)([apply_deep(y, f) for y in x])
+    return f(x)
+
+
 def qdecimals(
     min_value=None, max_value=None, allow_nan=False, allow_infinity=False, **kwargs
 ) -> st.SearchStrategy[QuantizedDecimal]:

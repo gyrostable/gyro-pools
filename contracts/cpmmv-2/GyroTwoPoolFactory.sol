@@ -25,9 +25,7 @@ import "./GyroTwoPool.sol";
 contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
-    constructor(IVault vault, address _gyroConfigAddress)
-        BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode)
-    {
+    constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
 

@@ -8,6 +8,7 @@ from tests.support.types import Vector2
 from tests.support.utils import qdecimals
 from tests.support.quantized_decimal import QuantizedDecimal as D
 
+
 @dataclass
 class BasicPoolParameters:
     min_price_separation: D
@@ -15,27 +16,26 @@ class BasicPoolParameters:
     max_out_ratio: D
     min_balance_ratio: D
     min_fee: D
-    max_balances: int = 1_000_000_000  # Max balances to test
+    max_balances: int = 100_000_000_000  # Max balances to test
+
+
+billion_balance_strategy = st.integers(min_value=0, max_value=100_000_000_000)
+
 
 @st.composite
 def gen_balances(draw, n: int, bparams: BasicPoolParameters):
     """Draw n balances respecting max_balances and min_balance_ratio. Only implemented for n = 1, 2, 3"""
     mbr = bparams.min_balance_ratio
+    mbr2 = D("1e-18") if mbr == 0 else mbr
     x = D(draw(qdecimals(1, bparams.max_balances)))
     if n == 1:
         return [x]
 
-    y = draw(qdecimals(
-        x * mbr,
-        min(x / mbr, bparams.max_balances)
-    ))
+    y = draw(qdecimals(x * mbr, min(x / mbr2, bparams.max_balances)))
     if n == 2:
         return [x, y]
 
-    z = draw(qdecimals(
-        max(x, y) * mbr,
-        min(min(x, y) / mbr, bparams.max_balances)
-    ))
+    z = draw(qdecimals(max(x, y) * mbr, min(min(x, y) / mbr2, bparams.max_balances)))
     if n == 3:
         return [x, y, z]
 

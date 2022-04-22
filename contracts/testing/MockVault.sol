@@ -35,20 +35,9 @@ contract MockVault is IPoolSwapStructs {
     IAuthorizer private _authorizer;
     mapping(bytes32 => Pool) private pools;
 
-    event Swap(
-        bytes32 indexed poolId,
-        IERC20 indexed tokenIn,
-        IERC20 indexed tokenOut,
-        uint256 amount
-    );
+    event Swap(bytes32 indexed poolId, IERC20 indexed tokenIn, IERC20 indexed tokenOut, uint256 amount);
 
-    event PoolBalanceChanged(
-        bytes32 indexed poolId,
-        address indexed liquidityProvider,
-        IERC20[] tokens,
-        int256[] deltas,
-        uint256[] protocolFees
-    );
+    event PoolBalanceChanged(bytes32 indexed poolId, address indexed liquidityProvider, IERC20[] tokens, int256[] deltas, uint256[] protocolFees);
 
     constructor(IAuthorizer authorizer) {
         // NOTE: terrible workaround Brownie not adding library to current project
@@ -62,11 +51,7 @@ contract MockVault is IPoolSwapStructs {
         return _authorizer;
     }
 
-    function getPoolTokens(bytes32 poolId)
-        external
-        view
-        returns (IERC20[] memory tokens, uint256[] memory balances)
-    {
+    function getPoolTokens(bytes32 poolId) external view returns (IERC20[] memory tokens, uint256[] memory balances) {
         Pool storage pool = pools[poolId];
         tokens = new IERC20[](pool.tokens.length);
         balances = new uint256[](pool.tokens.length);
@@ -105,11 +90,7 @@ contract MockVault is IPoolSwapStructs {
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
     ) external {
-        uint256 amount = IMinimalSwapInfoPool(pool).onSwap(
-            request,
-            balanceTokenIn,
-            balanceTokenOut
-        );
+        uint256 amount = IMinimalSwapInfoPool(pool).onSwap(request, balanceTokenIn, balanceTokenOut);
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amount);
     }
 
@@ -148,16 +129,14 @@ contract MockVault is IPoolSwapStructs {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
 
         uint256[] memory amountsInStr = new uint256[](params.currentBalances.length);
-        for (uint256 i = 0; i < params.currentBalances.length; ++i)
-            amountsInStr[i] = params.amountIn;
+        for (uint256 i = 0; i < params.currentBalances.length; ++i) amountsInStr[i] = params.amountIn;
 
         WeightedPoolUserData.JoinKind kind;
         bytes memory userData;
 
         {
             bool isEmptyPool = true;
-            for (uint256 i = 0; i < params.currentBalances.length; ++i)
-                isEmptyPool = isEmptyPool && (params.currentBalances[i] == 0);
+            for (uint256 i = 0; i < params.currentBalances.length; ++i) isEmptyPool = isEmptyPool && (params.currentBalances[i] == 0);
             if (isEmptyPool) {
                 kind = WeightedPoolUserData.JoinKind.INIT;
                 userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
@@ -189,13 +168,7 @@ contract MockVault is IPoolSwapStructs {
             deltas[i] = int256(amountsIn[i]);
         }
 
-        emit PoolBalanceChanged(
-            params.poolId,
-            params.sender,
-            tokens,
-            deltas,
-            dueProtocolFeeAmounts
-        );
+        emit PoolBalanceChanged(params.poolId, params.sender, tokens, deltas, dueProtocolFeeAmounts);
     }
 
     function callExitPoolGyro(
@@ -210,9 +183,7 @@ contract MockVault is IPoolSwapStructs {
     ) public returns (uint256[] memory amountsOut, uint256[] memory dueProtocolFeeAmounts) {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
 
-        WeightedPoolUserData.ExitKind kind = WeightedPoolUserData
-            .ExitKind
-            .EXACT_BPT_IN_FOR_TOKENS_OUT;
+        WeightedPoolUserData.ExitKind kind = WeightedPoolUserData.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT;
 
         bytes memory userData = abi.encode(kind, bptAmountIn);
 
@@ -250,11 +221,7 @@ contract MockVault is IPoolSwapStructs {
         // bytes memory userData = abi.encode(kind,amountsOutStr,10 * 10 ** 25); //maxBPTAmountIn
         //request.userData  = userData;
 
-        uint256 amount = IMinimalSwapInfoPool(poolAddress).onSwap(
-            request,
-            balanceTokenIn,
-            balanceTokenOut
-        );
+        uint256 amount = IMinimalSwapInfoPool(poolAddress).onSwap(request, balanceTokenIn, balanceTokenOut);
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amount);
 
         Pool storage pool = pools[request.poolId];

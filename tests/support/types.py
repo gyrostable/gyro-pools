@@ -75,6 +75,11 @@ class ThreePoolParams(NamedTuple):
     # configAddress listed separately
 
 
+class Vector2(NamedTuple):
+    x: DecimalLike
+    y: DecimalLike
+
+
 class CEMMMathParams(NamedTuple):
     alpha: DecimalLike
     beta: DecimalLike
@@ -83,20 +88,21 @@ class CEMMMathParams(NamedTuple):
     l: DecimalLike
 
 
-class Vector2(NamedTuple):
-    x: DecimalLike
-    y: DecimalLike
+class CEMMMathQParams(NamedTuple):
+    a: DecimalLike
+    b: DecimalLike
+    c: DecimalLike
 
 
 class CEMMMathDerivedParams(NamedTuple):
     tauAlpha: Vector2
     tauBeta: Vector2
+    u: DecimalLike
+    v: DecimalLike
+    w: DecimalLike
+    z: DecimalLike
+    dSq: DecimalLike
 
-
-class CEMMMathQParams(NamedTuple):
-    a: DecimalLike
-    b: DecimalLike
-    c: DecimalLike
 
 class ThreePoolFactoryCreateParams(NamedTuple):
     name: str
@@ -106,3 +112,12 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     assetManagers: list[str]  # Usually all zero addresses
     swapFeePercentage: DecimalLike
     owner: address
+# Legacy Aliases
+GyroCEMMMathParams = CEMMMathParams
+GyroCEMMMathDerivedParams = CEMMMathDerivedParams
+
+
+class CEMMPoolParams(NamedTuple):
+    baseParams: TwoPoolBaseParams
+    cemmParams: GyroCEMMMathParams
+    derivedCEMMParams: GyroCEMMMathDerivedParams
