@@ -40,8 +40,6 @@ class TwoPoolBaseParams(NamedTuple):
     symbol: str
     token0: str
     token1: str
-    normalizedWeight0: DecimalLike
-    normalizedWeight1: DecimalLike
     swapFeePercentage: DecimalLike
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike

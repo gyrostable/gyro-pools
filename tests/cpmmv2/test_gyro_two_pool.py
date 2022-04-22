@@ -46,7 +46,7 @@ def test_pool_factory(mock_pool_from_factory):
 
 def test_pool_constructor(mock_vault_pool):
     assert mock_vault_pool.getSwapFeePercentage() == 1 * 10 ** 15
-    assert mock_vault_pool.getNormalizedWeights() == (0.6 * 10 ** 18, 0.4 * 10 ** 18)
+    assert mock_vault_pool.getNormalizedWeights() == (0.5 * 10 ** 18, 0.5 * 10 ** 18)
 
     sqrtParams = mock_vault_pool.getSqrtParameters()
     assert sqrtParams[0] == 0.97 * 10 ** 18
