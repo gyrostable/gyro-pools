@@ -50,8 +50,6 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
                 symbol: symbol,
                 token0: tokens[0],
                 token1: tokens[1],
-                normalizedWeight0: 0.5e18,
-                normalizedWeight1: 0.5e18,
                 swapFeePercentage: swapFeePercentage,
                 pauseWindowDuration: pauseWindowDuration,
                 bufferPeriodDuration: bufferPeriodDuration,

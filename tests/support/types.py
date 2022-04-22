@@ -40,14 +40,20 @@ class TwoPoolBaseParams(NamedTuple):
     symbol: str
     token0: str
     token1: str
-    normalizedWeight0: DecimalLike
-    normalizedWeight1: DecimalLike
     swapFeePercentage: DecimalLike
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike
     oracleEnabled: bool
     owner: str
 
+class TwoPoolFactoryCreateParams(NamedTuple):
+    name: str
+    symbol: str
+    tokens: list[str]
+    sqrts: list[DecimalLike]
+    swapFeePercentage: DecimalLike
+    oracleEnabled: bool
+    owner: address
 
 class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
@@ -98,6 +104,14 @@ class CEMMMathDerivedParams(NamedTuple):
     dSq: DecimalLike
 
 
+class ThreePoolFactoryCreateParams(NamedTuple):
+    name: str
+    symbol: str
+    tokens: list[str]
+    root3Alpha: DecimalLike
+    assetManagers: list[str]  # Usually all zero addresses
+    swapFeePercentage: DecimalLike
+    owner: address
 # Legacy Aliases
 GyroCEMMMathParams = CEMMMathParams
 GyroCEMMMathDerivedParams = CEMMMathDerivedParams
