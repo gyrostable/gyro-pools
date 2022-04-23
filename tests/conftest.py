@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Contract
+from brownie import Contract, accounts
 
 from typing import NamedTuple, Tuple
 
@@ -15,7 +15,7 @@ from tests.support.types import (
     ThreePoolParams,
     TwoPoolBaseParams,
     TwoPoolParams,
-    ThreePoolFactoryCreateParams
+    ThreePoolFactoryCreateParams, TwoPoolFactoryCreateParams
 )
 
 from tests.cemm import cemm_prec_implementation
@@ -75,6 +75,9 @@ class ContractAsPureWrapper:
 def gyro_three_math_debug_as_testing(admin, gyro_three_math_debug):
     return ContractAsPureWrapper(gyro_three_math_debug)
 
+@pytest.fixture(scope="module")
+def deployed_query_processor(admin, QueryProcessor):
+    admin.deploy(QueryProcessor)
 
 @pytest.fixture(scope="module")
 def mock_gyro_config(admin, MockGyroConfig):
@@ -142,7 +145,7 @@ def balancer_vault_pool(
     gyro_erc20_funded,
     balancer_vault,
     mock_gyro_config,
-    QueryProcessor,
+    deployed_query_processor,
 ):
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
@@ -165,7 +168,7 @@ def balancer_vault_pool(
 
 @pytest.fixture
 def mock_vault_pool(
-    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config, QueryProcessor
+    admin, GyroTwoPool, gyro_erc20_funded, mock_vault, mock_gyro_config, deployed_query_processor
 ):
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
@@ -194,9 +197,8 @@ def mock_pool_from_factory(
     mock_vault,
     mock_gyro_config,
     gyro_erc20_funded,
-    QueryProcessor,
+    deployed_query_processor,
 ):
-    admin.deploy(QueryProcessor)
     factory = admin.deploy(GyroTwoPoolFactory, mock_vault, mock_gyro_config.address)
 
     args = TwoPoolFactoryCreateParams(
@@ -320,17 +322,14 @@ def cemm_pool(
     gyro_erc20_funded,
     mock_vault,
     mock_gyro_config,
-    QueryProcessor,
+    deployed_query_processor,
 ):
-    admin.deploy(QueryProcessor)
     two_pool_base_params = TwoPoolBaseParams(
         vault=mock_vault.address,
         name="GyroCEMMTwoPool",  # string
         symbol="GCTP",  # string
         token0=gyro_erc20_funded[0].address,  # IERC20
         token1=gyro_erc20_funded[1].address,  # IERC20
-        normalizedWeight0=D("0.6") * 10**18,  # uint256
-        normalizedWeight1=D("0.4") * 10**18,  # uint256
         swapFeePercentage=1 * 10**15,  # 0.5%
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
