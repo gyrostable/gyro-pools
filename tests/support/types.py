@@ -67,7 +67,6 @@ class ThreePoolParams(NamedTuple):
     symbol: str
     tokens: list[str]
     root3Alpha: DecimalLike
-    assetManagers: list[str]  # Usually all zero addresses
     swapFeePercentage: DecimalLike
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike
@@ -109,7 +108,6 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     symbol: str
     tokens: list[str]
     root3Alpha: DecimalLike
-    assetManagers: list[str]  # Usually all zero addresses
     swapFeePercentage: DecimalLike
     owner: address
 # Legacy Aliases

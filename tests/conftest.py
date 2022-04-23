@@ -228,7 +228,6 @@ def mock_vault_pool3(
         name="GyroThreePool",  # string
         symbol="G3P",  # string
         tokens=[gyro_erc20_funded3[i].address for i in range(3)],
-        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
         swapFeePercentage=D(1) * 10**15,
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
@@ -254,7 +253,6 @@ def mock_pool3_from_factory(
         symbol="G3PF",
         tokens=[gyro_erc20_funded3[i].address for i in range(3)],
         root3Alpha=D("0.97") * 10**18,
-        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
         swapFeePercentage=D(1) * 10**15,
         owner=admin,
     )
@@ -280,7 +278,6 @@ def balancer_vault_pool3(
         name="GyroThreePool",  # string
         symbol="G3P",  # string
         tokens=[gyro_erc20_funded3[i].address for i in range(3)],
-        assetManagers=["0x0000000000000000000000000000000000000000"] * 3,
         swapFeePercentage=D(1) * 10**15,
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256

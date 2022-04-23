@@ -37,7 +37,6 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
         string memory symbol,
         IERC20[] memory tokens,
         uint256 root3Alpha,
-        address[] memory assetManagers,
         uint256 swapFeePercentage,
         address owner
     ) external returns (address) {
@@ -51,7 +50,6 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
                     symbol,
                     tokens,
                     root3Alpha,
-                    assetManagers,
                     swapFeePercentage,
                     pauseWindowDuration,
                     bufferPeriodDuration,
