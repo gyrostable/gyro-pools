@@ -190,6 +190,7 @@ def test_pool_on_exit(users, cemm_pool, mock_vault, gyro_cemm_math_testing):
 
     total_supply_before_exit = cemm_pool.totalSupply()
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
+
     invariant_after_join = cemm_pool.getLastInvariant()
 
     bptTokensToBurn = cemm_pool.balanceOf(users[0]) * amountOut // amount_in
@@ -233,8 +234,17 @@ def test_pool_on_exit(users, cemm_pool, mock_vault, gyro_cemm_math_testing):
     invariant_after_exit = cemm_pool.getLastInvariant()
     assert invariant_after_join > invariant_after_exit
 
+    # This is the value used in _onExitPool(): The invariant is recalculated each time.
+    # B/c recalculation isn't perfectly precise, we only match the stored value approximately.
+    sInvariant_after_join = gyro_cemm_math_testing.calculateInvariant(
+        balances_after_join,
+        sparams,
+        sdparams
+    )
+    assert unscale(sInvariant_after_join) == unscale(invariant_after_join).approxed()
+
     sInvariant_after_exit = gyro_cemm_math_testing.liquidityInvariantUpdate(
-        invariant_after_join,
+        sInvariant_after_join,
         bptTokensToBurn,
         total_supply_before_exit,
         False
