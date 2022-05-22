@@ -945,8 +945,12 @@ def mtest_invariant_across_liquidityInvariantUpdate(
     derived = prec_impl.calc_derived_values(params)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
+    # Debug code for debugging the tests (sample generation)
+    # print("\nDEBUG AFTER fun start")
     assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    # print("DEBUG AFTER denom check")
     assume(sum(balances) > D(100))
+    # print("DEBUG AFTER balances check")
 
     derived_scaled = prec_impl.scale_derived_values(derived)
     invariant_before, err_before = prec_impl.calculateInvariantWithError(
