@@ -106,15 +106,20 @@ abstract contract ExtensibleWeightedPool2Tokens is
         BasePoolAuthorization(params.owner)
         TemporarilyPausable(params.pauseWindowDuration, params.bufferPeriodDuration)
     {
+        IERC20[] memory tokens = new IERC20[](2);
+        tokens[0] = params.token0;
+        tokens[1] = params.token1;
+
+        // See BasePool's constructor for why we need this.
+        // This contract is not derived from BasePool, so we need to do this check ourselves.
+        InputHelpers.ensureArrayIsSorted(tokens);
+
         _setOracleEnabled(params.oracleEnabled);
         _setSwapFeePercentage(params.swapFeePercentage);
 
         bytes32 poolId = params.vault.registerPool(IVault.PoolSpecialization.TWO_TOKEN);
 
         // Pass in zero addresses for Asset Managers
-        IERC20[] memory tokens = new IERC20[](2);
-        tokens[0] = params.token0;
-        tokens[1] = params.token1;
         params.vault.registerTokens(poolId, tokens, new address[](2));
 
         // Set immutable state variables - these cannot be read from during construction
