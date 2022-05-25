@@ -96,6 +96,12 @@ library SignedFixedPoint {
     function divUp(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
 
+        if (b < 0) {
+            // Required so the below is correct.
+            b = -b;
+            a = -a;
+        }
+
         if (a == 0) {
             return 0;
         } else {
