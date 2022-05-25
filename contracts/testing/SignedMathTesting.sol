@@ -23,6 +23,19 @@ contract SignedMathTesting {
         return a.divDown(b);
     }
 
+    function mulUp(int256 a, int256 b) external pure returns (int256) {
+        return a.mulUp(b);
+    }
+    function mulDown(int256 a, int256 b) external pure returns (int256) {
+        return a.mulDown(b);
+    }
+    function divUp(int256 a, int256 b) external pure returns (int256) {
+        return a.divUp(b);
+    }
+    function divDown(int256 a, int256 b) external pure returns (int256) {
+        return a.divDown(b);
+    }
+
     function addMag(int256 a, int256 b) external pure returns (int256) {
         return SignedFixedPoint.addMag(a, b);
     }
