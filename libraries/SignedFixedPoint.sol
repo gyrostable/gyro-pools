@@ -20,6 +20,9 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
 /* solhint-disable private-vars-leading-underscore */
 
 /// @dev Signed fixed point operations based on Balancer's FixedPoint library.
+/// Note: The standard `{mul,div}{Up,Down}()` functions do *not* round up or down, respectively,
+/// in a signed fashion (like ceil and floor operations), but *in absolute value*, i.e.,
+/// towards 0. This is useful in some applications.
 library SignedFixedPoint {
     int256 internal constant ONE = 1e18; // 18 decimal places
     // setting extra precision at 38 decimals, which is the most we can get w/o overflowing on normal multiplication
