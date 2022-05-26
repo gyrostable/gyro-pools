@@ -20,8 +20,8 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
 /* solhint-disable private-vars-leading-underscore */
 
 /// @dev Signed fixed point operations based on Balancer's FixedPoint library.
-/// Note: The standard `{mul,div}{Up,Down}()` functions do *not* round up or down, respectively,
-/// in a signed fashion (like ceil and floor operations), but *in absolute value*, i.e.,
+/// Note: The `{mul,div}{UpMag,DownMag}()` functions do *not* round up or down, respectively,
+/// in a signed fashion (like ceil and floor operations), but *in absolute value* (or *magnitude*), i.e.,
 /// towards 0. This is useful in some applications.
 library SignedFixedPoint {
     int256 internal constant ONE = 1e18; // 18 decimal places
@@ -54,10 +54,8 @@ library SignedFixedPoint {
         return c;
     }
 
-    // TODO do we also want the other two rounding directions (+ 4 functions then)? Do we want it instead?
-
     /// @dev This rounds towards 0, i.e., down *in absolute value*!
-    function mulDown(int256 a, int256 b) internal pure returns (int256) {
+    function mulDownMag(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
         _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
 
@@ -65,7 +63,7 @@ library SignedFixedPoint {
     }
 
     /// @dev This rounds away from 0, i.e., up *in absolute value*!
-    function mulUp(int256 a, int256 b) internal pure returns (int256) {
+    function mulUpMag(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
         _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
 
@@ -79,7 +77,7 @@ library SignedFixedPoint {
     }
 
     /// @dev Rounds towards 0, i.e., down in absolute value.
-    function divDown(int256 a, int256 b) internal pure returns (int256) {
+    function divDownMag(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
 
         if (a == 0) {
@@ -93,7 +91,7 @@ library SignedFixedPoint {
     }
 
     /// @dev Rounds away from 0, i.e., up in absolute value.
-    function divUp(int256 a, int256 b) internal pure returns (int256) {
+    function divUpMag(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
 
         if (b < 0) {

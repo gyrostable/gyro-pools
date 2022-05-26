@@ -105,14 +105,14 @@ library GyroCEMMMath {
 
         // It is easy to see that from the definition of eta that the underlying pxc value can be extracted as .x/.y.
         // This should be equal to the corresponding zeta value. We can compare for actual equality.
-        int256 pxc = derived.tauAlpha.x.divUp(derived.tauAlpha.y);
+        int256 pxc = derived.tauAlpha.x.divUpMag(derived.tauAlpha.y);
         int256 pxc_computed = zeta(params, params.alpha);
         _require(
             pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
             GyroCEMMPoolErrors.DERIVED_ZETA_WRONG
         );
 
-        pxc = derived.tauBeta.x.divUp(derived.tauBeta.y);
+        pxc = derived.tauBeta.x.divUpMag(derived.tauBeta.y);
         pxc_computed = zeta(params, params.beta);
         _require(
             pxc - VALIDATION_PRECISION_ZETA <= pxc_computed && pxc_computed <= pxc + VALIDATION_PRECISION_ZETA,
@@ -123,7 +123,7 @@ library GyroCEMMMath {
     }
 
     function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
-        ret = t1.x.mulDown(t2.x).add(t1.y.mulDown(t2.y));
+        ret = t1.x.mulDownMag(t2.x).add(t1.y.mulDownMag(t2.y));
     }
 
     // "Methods" for Params. We could put these into a separate library and import them via 'using' to get method call
@@ -132,8 +132,8 @@ library GyroCEMMMath {
     /** @dev Calculate A t where A is given in Section 2.2
      *  This is reversing rotation and scaling of the ellipse (mapping back to circle) */
     function mulA(Params memory params, Vector2 memory tp) internal pure returns (Vector2 memory t) {
-        t.x = params.c.mulDown(tp.x).divDown(params.lambda).sub(params.s.mulDown(tp.y).divDown(params.lambda));
-        t.y = params.s.mulDown(tp.x).add(params.c.mulDown(tp.y));
+        t.x = params.c.mulDownMag(tp.x).divDownMag(params.lambda).sub(params.s.mulDownMag(tp.y).divDownMag(params.lambda));
+        t.y = params.s.mulDownMag(tp.x).add(params.c.mulDownMag(tp.y));
     }
 
     /** @dev Given price px on the transformed ellipse, get the untransformed price pxc on the circle
@@ -141,7 +141,7 @@ library GyroCEMMMath {
      *  See Definition 1 in Section 2.1.1 */
     function zeta(Params memory params, int256 px) internal pure returns (int256 pxc) {
         Vector2 memory nd = mulA(params, Vector2(-SignedFixedPoint.ONE, px));
-        return -nd.y.divDown(nd.x);
+        return -nd.y.divDownMag(nd.x);
     }
 
     /** @dev Given price px on the transformed ellipse, maps to the corresponding point on the untransformed normalized circle
@@ -201,14 +201,14 @@ library GyroCEMMMath {
      *  Notice that the eta function does not depend on Params.
      *  See Definition 2 in Section 2.1.1 */
     function eta(int256 pxc) internal pure returns (Vector2 memory tpp) {
-        int256 z = GyroPoolMath._sqrt(FixedPoint.ONE.add(uint256(pxc.mulDown(pxc))), 5).toInt256();
+        int256 z = GyroPoolMath._sqrt(FixedPoint.ONE.add(uint256(pxc.mulDownMag(pxc))), 5).toInt256();
         tpp = eta(pxc, z);
     }
 
     /** @dev Calculates eta in more efficient way if the square root is known and input as second arg */
     function eta(int256 pxc, int256 z) internal pure returns (Vector2 memory tpp) {
-        tpp.x = pxc.divDown(z);
-        tpp.y = SignedFixedPoint.ONE.divDown(z);
+        tpp.x = pxc.divDownMag(z);
+        tpp.y = SignedFixedPoint.ONE.divDownMag(z);
     }
 
     /** @dev Calculate virtual offset a given invariant r.
@@ -225,10 +225,10 @@ library GyroCEMMMath {
         // a = r lambda c tau(beta)_x + rs tau(beta)_y
         //       account for 1 factors of dSq (2 s,c factors)
         int256 termXp = d.tauBeta.x.divXp(d.dSq);
-        a = d.tauBeta.x > 0 ? r.x.mulUp(p.lambda).mulUp(p.c).mulUpXpToNp(termXp) : r.y.mulDown(p.lambda).mulDown(p.c).mulUpXpToNp(termXp);
+        a = d.tauBeta.x > 0 ? r.x.mulUpMag(p.lambda).mulUpMag(p.c).mulUpXpToNp(termXp) : r.y.mulDownMag(p.lambda).mulDownMag(p.c).mulUpXpToNp(termXp);
 
         // use fact that tau(beta)_y > 0
-        a = a.add(r.x.mulUp(p.s).mulUpXpToNp(d.tauBeta.y.divXp(d.dSq)));
+        a = a.add(r.x.mulUpMag(p.s).mulUpXpToNp(d.tauBeta.y.divXp(d.dSq)));
     }
 
     /** @dev calculate virtual offset b given invariant r.
@@ -241,10 +241,10 @@ library GyroCEMMMath {
         // b = -r \lambda s tau(alpha)_x + rc tau(alpha)_y
         //       account for 1 factors of dSq (2 s,c factors)
         int256 termXp = d.tauAlpha.x.divXp(d.dSq);
-        b = (d.tauAlpha.x < 0) ? r.x.mulUp(p.lambda).mulUp(p.s).mulUpXpToNp(-termXp) : (-r.y).mulDown(p.lambda).mulDown(p.s).mulUpXpToNp(termXp);
+        b = (d.tauAlpha.x < 0) ? r.x.mulUpMag(p.lambda).mulUpMag(p.s).mulUpXpToNp(-termXp) : (-r.y).mulDownMag(p.lambda).mulDownMag(p.s).mulUpXpToNp(termXp);
 
         // use fact that tau(alpha)_y > 0
-        b = b.add(r.x.mulUp(p.c).mulUpXpToNp(d.tauAlpha.y.divXp(d.dSq)));
+        b = b.add(r.x.mulUpMag(p.c).mulUpXpToNp(d.tauAlpha.y.divXp(d.dSq)));
     }
 
     /** Maximal value for the real reserves x when the respective other balance is 0 for given invariant
@@ -259,8 +259,8 @@ library GyroCEMMMath {
         //      account for 1 factors of dSq (2 s,c factors)
         int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x
         int256 termXp2 = (d.tauBeta.y.sub(d.tauAlpha.y)).divXp(d.dSq);
-        xp = r.y.mulDown(p.lambda).mulDown(p.c).mulDownXpToNp(termXp1);
-        xp = xp.add((termXp2 > 0 ? r.y.mulDown(p.s) : r.x.mulUp(p.s)).mulDownXpToNp(termXp2));
+        xp = r.y.mulDownMag(p.lambda).mulDownMag(p.c).mulDownXpToNp(termXp1);
+        xp = xp.add((termXp2 > 0 ? r.y.mulDownMag(p.s) : r.x.mulUpMag(p.s)).mulDownXpToNp(termXp2));
     }
 
     /** Maximal value for the real reserves y when the respective other balance is 0 for given invariant
@@ -275,8 +275,8 @@ library GyroCEMMMath {
         //      account for 1 factors of dSq (2 s,c factors)
         int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x
         int256 termXp2 = (d.tauAlpha.y.sub(d.tauBeta.y)).divXp(d.dSq);
-        yp = r.y.mulDown(p.lambda).mulDown(p.s).mulDownXpToNp(termXp1);
-        yp = yp.add((termXp2 > 0 ? r.y.mulDown(p.c) : r.x.mulUp(p.c)).mulDownXpToNp(termXp2));
+        yp = r.y.mulDownMag(p.lambda).mulDownMag(p.s).mulDownXpToNp(termXp1);
+        yp = yp.add((termXp2 > 0 ? r.y.mulDownMag(p.c) : r.x.mulUpMag(p.c)).mulDownXpToNp(termXp2));
     }
 
     /** @dev Compute the invariant 'r' corresponding to the given values. The invariant can't be negative, but
@@ -297,14 +297,14 @@ library GyroCEMMMath {
         // Note: the minimum non-zero value of sqrt is 1e-9 since the minimum argument is 1e-18
         if (sqrt > 0) {
             // err + 1 to account for O(eps_np) term ignored before
-            err = (err + 1).divUp(2 * sqrt);
+            err = (err + 1).divUpMag(2 * sqrt);
         } else {
             // in the false case here, the extra precision error does not magnify, and so the error inside the sqrt is O(1e-18)
             // somedayTODO: The true case will almost surely never happen (can it be removed)
             err = err > 0 ? GyroPoolMath._sqrt(err.toUint256(), 5).toInt256() : 1e9;
         }
         // calculate the error in the numerator, scale the error by 20 to be sure all possible terms accounted for
-        err = ((params.lambda.mulUp(x.add(y)) / ONE_XP).add(err) + 1) * 20;
+        err = ((params.lambda.mulUpMag(x.add(y)) / ONE_XP).add(err) + 1) * 20;
 
         // A chi \cdot A chi > 1, so round it up to round denominator up
         // denominator uses extra precision, so we do * 1/denominator so we are sure the calculation doesn't overflow
@@ -340,15 +340,15 @@ library GyroCEMMMath {
     ) internal pure returns (int256 val) {
         // (cx - sy) * (w/lambda + z) / lambda
         //      account for 2 factors of dSq (4 s,c factors)
-        int256 termXp = (d.w.divDown(p.lambda).add(d.z)).divDown(p.lambda).divXp(d.dSq).divXp(d.dSq);
-        val = (x.mulDown(p.c).sub(y.mulDown(p.s))).mulDownXpToNp(termXp);
+        int256 termXp = (d.w.divDownMag(p.lambda).add(d.z)).divDownMag(p.lambda).divXp(d.dSq).divXp(d.dSq);
+        val = (x.mulDownMag(p.c).sub(y.mulDownMag(p.s))).mulDownXpToNp(termXp);
 
         // (x lambda s + y lambda c) * u, note u > 0
-        int256 termNp = x.mulDown(p.lambda).mulDown(p.s).add(y.mulDown(p.lambda).mulDown(p.c));
+        int256 termNp = x.mulDownMag(p.lambda).mulDownMag(p.s).add(y.mulDownMag(p.lambda).mulDownMag(p.c));
         val = val.add(termNp.mulDownXpToNp(d.u.divXp(d.dSq).divXp(d.dSq)));
 
         // (sx+cy) * v, note v > 0
-        termNp = x.mulDown(p.s).add(y.mulDown(p.c));
+        termNp = x.mulDownMag(p.s).add(y.mulDownMag(p.c));
         val = val.add(termNp.mulDownXpToNp(d.v.divXp(d.dSq).divXp(d.dSq)));
     }
 
@@ -360,17 +360,17 @@ library GyroCEMMMath {
     function calcAChiAChiInXp(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
         // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
         //      account for 3 factors of dSq (6 s,c factors)
-        val = p.lambda.mulUp((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
+        val = p.lambda.mulUpMag((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
         // for lambda^2 u^2 factor in rounding error in u since lambda could be big
         // Note: lambda^2 is multiplied at the end to be sure the calculation doesn't overflow, but this can lose some precision
         // TODO: can this be improved?
-        val = val.add(((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)).mulUp(p.lambda).mulUp(p.lambda));
+        val = val.add(((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)).mulUpMag(p.lambda).mulUpMag(p.lambda));
         // the next line converts from extre precision to normal precision post-computation while rounding up
         val = val.add((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
 
         // (A chi)_x^2 = (w/lambda + z)^2
         //      account for 3 factors of dSq (6 s,c factors)
-        int256 termXp = d.w.divUp(p.lambda).add(d.z);
+        int256 termXp = d.w.divUpMag(p.lambda).add(d.z);
         val = val.add(termXp.mulXp(termXp).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
     }
 
@@ -388,16 +388,16 @@ library GyroCEMMMath {
         // (At)_x^2 = (x^2 c^2 - xy2sc + y^2 s^2)/lambda^2
         //      account for 1 factor of dSq (2 s,c factors)
         ////////////////////////////////////////////////////////////////////////////////////
-        int256 termNp = x.mulUp(x).mulUp(p.c).mulUp(p.c).add(y.mulUp(y).mulUp(p.s).mulUp(p.s));
-        termNp = termNp.sub(x.mulDown(y).mulDown(p.c * 2).mulDown(p.s));
+        int256 termNp = x.mulUpMag(x).mulUpMag(p.c).mulUpMag(p.c).add(y.mulUpMag(y).mulUpMag(p.s).mulUpMag(p.s));
+        termNp = termNp.sub(x.mulDownMag(y).mulDownMag(p.c * 2).mulDownMag(p.s));
 
-        int256 termXp = d.u.mulXp(d.u).add((2 * d.u).mulXp(d.v).divDown(p.lambda)).add(d.v.mulXp(d.v).divDown(p.lambda).divDown(p.lambda));
+        int256 termXp = d.u.mulXp(d.u).add((2 * d.u).mulXp(d.v).divDownMag(p.lambda)).add(d.v.mulXp(d.v).divDownMag(p.lambda).divDownMag(p.lambda));
         termXp = termXp.divXp(d.dSq).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq);
         val = (-termNp).mulDownXpToNp(termXp);
 
         // now calculate (At)_x^2 accounting for possible rounding error to round down
         // need to to /dSq in a way so that there is no overflow for large balances
-        val = val.add((termNp - 9).divDown(p.lambda).divDown(p.lambda).mulDownXpToNp(SignedFixedPoint.ONE_XP.divXp(d.dSq)));
+        val = val.add((termNp - 9).divDownMag(p.lambda).divDownMag(p.lambda).mulDownXpToNp(SignedFixedPoint.ONE_XP.divXp(d.dSq)));
     }
 
     /// @dev calculate 2(At)_x * (At)_y * (A chi)_x * (A chi)_y, ignores rounding direction
@@ -412,12 +412,12 @@ library GyroCEMMMath {
         // = ((x^2 - y^2)sc + yx(c^2-s^2)) * 2 * (zu + (wu + zv)/lambda + wv/lambda^2)
         //      account for 4 factors of dSq (8 s,c factors)
         ////////////////////////////////////////////////////////////////////////////////////
-        int256 termNp = (x.mulDown(x).sub(y.mulUp(y))).mulDown(2 * p.c).mulDown(p.s);
-        int256 xy = y.mulDown(2 * x);
-        termNp = termNp.add(xy.mulDown(p.c).mulDown(p.c)).sub(xy.mulDown(p.s).mulDown(p.s));
+        int256 termNp = (x.mulDownMag(x).sub(y.mulUpMag(y))).mulDownMag(2 * p.c).mulDownMag(p.s);
+        int256 xy = y.mulDownMag(2 * x);
+        termNp = termNp.add(xy.mulDownMag(p.c).mulDownMag(p.c)).sub(xy.mulDownMag(p.s).mulDownMag(p.s));
 
-        int256 termXp = d.z.mulXp(d.u).add(d.w.mulXp(d.v).divDown(p.lambda).divDown(p.lambda));
-        termXp = termXp.add((d.w.mulXp(d.u).add(d.z.mulXp(d.v))).divDown(p.lambda));
+        int256 termXp = d.z.mulXp(d.u).add(d.w.mulXp(d.v).divDownMag(p.lambda).divDownMag(p.lambda));
+        termXp = termXp.add((d.w.mulXp(d.u).add(d.z.mulXp(d.v))).divDownMag(p.lambda));
         termXp = termXp.divXp(d.dSq).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq);
 
         val = termNp.mulDownXpToNp(termXp);
@@ -436,11 +436,11 @@ library GyroCEMMMath {
         // (At)_y^2 = (x^2 s^2 + xy2sc + y^2 c^2)
         //      account for 1 factor of dSq (2 s,c factors)
         ////////////////////////////////////////////////////////////////////////////////////
-        int256 termNp = x.mulUp(x).mulUp(p.s).mulUp(p.s).add(y.mulUp(y).mulUp(p.c).mulUp(p.c));
-        termNp = termNp.add(x.mulUp(y).mulUp(p.s * 2).mulUp(p.c));
+        int256 termNp = x.mulUpMag(x).mulUpMag(p.s).mulUpMag(p.s).add(y.mulUpMag(y).mulUpMag(p.c).mulUpMag(p.c));
+        termNp = termNp.add(x.mulUpMag(y).mulUpMag(p.s * 2).mulUpMag(p.c));
 
-        int256 termXp = d.z.mulXp(d.z).add(d.w.mulXp(d.w).divDown(p.lambda).divDown(p.lambda));
-        termXp = termXp.add((2 * d.z).mulXp(d.w).divDown(p.lambda));
+        int256 termXp = d.z.mulXp(d.z).add(d.w.mulXp(d.w).divDownMag(p.lambda).divDownMag(p.lambda));
+        termXp = termXp.add((2 * d.z).mulXp(d.w).divDownMag(p.lambda));
         termXp = termXp.divXp(d.dSq).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq);
         val = (-termNp).mulDownXpToNp(termXp);
 
@@ -464,7 +464,7 @@ library GyroCEMMMath {
         // however, we also use this error to correct the invariant for an overestimate in swaps, it is all the same order though
         // Note the O(eps_np) term will be dealt with later, so not included yet
         // Note that the extra precision term doesn't propagate unless balances are > 100b
-        err = (x.mulUp(x).add(y.mulUp(y))) / 1e38;
+        err = (x.mulUpMag(x).add(y.mulUpMag(y))) / 1e38;
         // we will account for the error later after the square root
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         val = val > 0 ? GyroPoolMath._sqrt(val.toUint256(), 5).toInt256() : 0;
@@ -486,11 +486,11 @@ library GyroCEMMMath {
         // transform to circle to get Av(t)
         vec = mulA(params, vec);
         // compute prices on circle
-        Vector2 memory pc = Vector2(vec.x.divDown(vec.y), ONE);
+        Vector2 memory pc = Vector2(vec.x.divDownMag(vec.y), ONE);
 
         // Convert prices back to ellipse
         int256 pgx = scalarProd(pc, mulA(params, Vector2(ONE, 0)));
-        px = pgx.divDown(scalarProd(pc, mulA(params, Vector2(0, ONE)))).toUint256();
+        px = pgx.divDownMag(scalarProd(pc, mulA(params, Vector2(0, ONE)))).toUint256();
     }
 
     /** @dev Check that post-swap balances obey maximal asset bounds
@@ -589,8 +589,8 @@ library GyroCEMMMath {
     ) internal pure returns (int256) {
         // x component will round up, y will round down, use extra precision
         Vector2 memory lamBar;
-        lamBar.x = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divDown(lambda).divDown(lambda));
-        lamBar.y = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divUp(lambda).divUp(lambda));
+        lamBar.x = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divDownMag(lambda).divDownMag(lambda));
+        lamBar.y = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divUpMag(lambda).divUpMag(lambda));
         // using qparams struct to avoid "stack too deep"
         QParams memory q;
         // shift by the virtual offsets
@@ -598,22 +598,22 @@ library GyroCEMMMath {
         // account for 1 factor of dSq (2 s,c factors)
         int256 xp = x.sub(ab.x);
         if (xp > 0) {
-            q.b = (-xp).mulDown(s).mulDown(c).mulUpXpToNp(lamBar.y.divXp(dSq));
+            q.b = (-xp).mulDownMag(s).mulDownMag(c).mulUpXpToNp(lamBar.y.divXp(dSq));
         } else {
-            q.b = (-xp).mulUp(s).mulUp(c).mulUpXpToNp(lamBar.x.divXp(dSq) + 1);
+            q.b = (-xp).mulUpMag(s).mulUpMag(c).mulUpXpToNp(lamBar.x.divXp(dSq) + 1);
         }
 
         // x component will round up, y will round down, use extra precision
         // account for 1 factor of dSq (2 s,c factors)
         Vector2 memory sTerm;
         // we wil take sTerm = 1 - sTerm below, using multiple lines to avoid "stack too deep"
-        sTerm.x = lamBar.y.mulDown(s).mulDown(s).divXp(dSq);
-        sTerm.y = lamBar.x.mulUp(s).mulUp(s).divXp(dSq + 1) + 1; // account for rounding error in dSq, divXp
+        sTerm.x = lamBar.y.mulDownMag(s).mulDownMag(s).divXp(dSq);
+        sTerm.y = lamBar.x.mulUpMag(s).mulUpMag(s).divXp(dSq + 1) + 1; // account for rounding error in dSq, divXp
         sTerm = Vector2(SignedFixedPoint.ONE_XP.sub(sTerm.x), SignedFixedPoint.ONE_XP.sub(sTerm.y));
 
         // now compute the argument of the square root
         q.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta, dSq);
-        q.c = q.c.add(r.y.mulDown(r.y).mulDownXpToNp(sTerm.y));
+        q.c = q.c.add(r.y.mulDownMag(r.y).mulDownXpToNp(sTerm.y));
         // the square root is always being subtracted, so round it down to overestimate the end balance
         // mathematically, terms in square root > 0, so treat as 0 if it is < 0 b/c of rounding error
         q.c = q.c > 0 ? GyroPoolMath._sqrt(q.c.toUint256(), 5).toInt256() : 0;
@@ -651,20 +651,20 @@ library GyroCEMMMath {
         //      account for 2 factors of dSq (4 s,c factors)
         int256 termXp = tauBeta.x.mulXp(tauBeta.y).divXp(dSq).divXp(dSq);
         if (termXp > 0) {
-            q.a = r.x.mulUp(r.x).mulUp(2 * s);
-            q.a = q.a.mulUp(c).mulUpXpToNp(termXp + 7); // +7 account for rounding in termXp
+            q.a = r.x.mulUpMag(r.x).mulUpMag(2 * s);
+            q.a = q.a.mulUpMag(c).mulUpXpToNp(termXp + 7); // +7 account for rounding in termXp
         } else {
-            q.a = r.y.mulDown(r.y).mulDown(2 * s);
-            q.a = q.a.mulDown(c).mulUpXpToNp(termXp);
+            q.a = r.y.mulDownMag(r.y).mulDownMag(2 * s);
+            q.a = q.a.mulDownMag(c).mulUpXpToNp(termXp);
         }
 
         // -rx 2c tau(beta)_x
         //      account for 1 factor of dSq (2 s,c factors)
         if (tauBeta.x < 0) {
             // +3 account for rounding in extra precision terms
-            q.b = r.x.mulUp(x).mulUp(2 * c).mulUpXpToNp(-tauBeta.x.divXp(dSq) + 3);
+            q.b = r.x.mulUpMag(x).mulUpMag(2 * c).mulUpXpToNp(-tauBeta.x.divXp(dSq) + 3);
         } else {
-            q.b = (-r.y).mulDown(x).mulDown(2 * c).mulUpXpToNp(tauBeta.x.divXp(dSq));
+            q.b = (-r.y).mulDownMag(x).mulDownMag(2 * c).mulUpXpToNp(tauBeta.x.divXp(dSq));
         }
         // q.a later needs to be divided by lambda
         q.a = q.a.add(q.b);
@@ -672,25 +672,25 @@ library GyroCEMMMath {
         // q.b = r^2 s^2 tau(beta)_y^2
         //      account for 2 factors of dSq (4 s,c factors)
         termXp = tauBeta.y.mulXp(tauBeta.y).divXp(dSq).divXp(dSq) + 7; // +7 account for rounding in termXp
-        q.b = r.x.mulUp(r.x).mulUp(s);
-        q.b = q.b.mulUp(s).mulUpXpToNp(termXp);
+        q.b = r.x.mulUpMag(r.x).mulUpMag(s);
+        q.b = q.b.mulUpMag(s).mulUpXpToNp(termXp);
 
         // q.c = -rx 2s tau(beta)_y, recall that tauBeta.y > 0 so round lower in magnitude
         //      account for 1 factor of dSq (2 s,c factors)
-        q.c = (-r.y).mulDown(x).mulDown(2 * s).mulUpXpToNp(tauBeta.y.divXp(dSq));
+        q.c = (-r.y).mulDownMag(x).mulDownMag(2 * s).mulUpXpToNp(tauBeta.y.divXp(dSq));
 
         // (q.b + q.c + x^2) / lambda
-        q.b = q.b.add(q.c).add(x.mulUp(x));
-        q.b = q.b > 0 ? q.b.divUp(lambda) : q.b.divDown(lambda);
+        q.b = q.b.add(q.c).add(x.mulUpMag(x));
+        q.b = q.b > 0 ? q.b.divUpMag(lambda) : q.b.divDownMag(lambda);
 
         // remaining calculation is (q.a + q.b) / lambda
         q.a = q.a.add(q.b);
-        q.a = q.a > 0 ? q.a.divUp(lambda) : q.a.divDown(lambda);
+        q.a = q.a > 0 ? q.a.divUpMag(lambda) : q.a.divDownMag(lambda);
 
         // + r^2 c^2 tau(beta)_x^2
         //      account for 2 factors of dSq (4 s,c factors)
         termXp = tauBeta.x.mulXp(tauBeta.x).divXp(dSq).divXp(dSq) + 7; // +7 account for rounding in termXp
-        int256 val = r.x.mulUp(r.x).mulUp(c).mulUp(c);
+        int256 val = r.x.mulUpMag(r.x).mulUpMag(c).mulUpMag(c);
         return (val.mulUpXpToNp(termXp)).add(q.a);
     }
 

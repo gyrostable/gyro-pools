@@ -16,24 +16,24 @@ contract SignedMathTesting {
     }
 
     function mul(int256 a, int256 b) external pure returns (int256) {
-        return a.mulDown(b);
+        return a.mulDownMag(b);
     }
 
     function truediv(int256 a, int256 b) external pure returns (int256) {
-        return a.divDown(b);
+        return a.divDownMag(b);
     }
 
     function mulUp(int256 a, int256 b) external pure returns (int256) {
-        return a.mulUp(b);
+        return a.mulUpMag(b);
     }
     function mulDown(int256 a, int256 b) external pure returns (int256) {
-        return a.mulDown(b);
+        return a.mulDownMag(b);
     }
     function divUp(int256 a, int256 b) external pure returns (int256) {
-        return a.divUp(b);
+        return a.divUpMag(b);
     }
     function divDown(int256 a, int256 b) external pure returns (int256) {
-        return a.divDown(b);
+        return a.divDownMag(b);
     }
 
     function addMag(int256 a, int256 b) external pure returns (int256) {
