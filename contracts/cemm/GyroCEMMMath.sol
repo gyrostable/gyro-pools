@@ -396,7 +396,7 @@ library GyroCEMMMath {
         val = (-termNp).mulDownXpToNp(termXp);
 
         // now calculate (At)_x^2 accounting for possible rounding error to round down
-        // need to to /dSq in a way so that there is no overflow for large balances
+        // need to do 1/dSq in a way so that there is no overflow for large balances
         val = val.add((termNp - 9).divDownMag(p.lambda).divDownMag(p.lambda).mulDownXpToNp(SignedFixedPoint.ONE_XP.divXp(d.dSq)));
     }
 
@@ -445,7 +445,7 @@ library GyroCEMMMath {
         val = (-termNp).mulDownXpToNp(termXp);
 
         // now calculate (At)_y^2 accounting for possible rounding error to round down
-        // need to to /dSq in a way so that there is no overflow for large balances
+        // need to do 1/dSq in a way so that there is no overflow for large balances
         val = val.add((termNp - 9).mulDownXpToNp(SignedFixedPoint.ONE_XP.divXp(d.dSq)));
     }
 
