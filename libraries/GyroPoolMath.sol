@@ -36,22 +36,20 @@ library GyroPoolMath {
     // Note: this function is identical to that in WeightedMath.sol audited by Balancer
     function _calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
-        uint256 bptAmountOut,
+        uint256 bptOut,
         uint256 totalBPT
-    ) internal pure returns (uint256[] memory) {
+    ) internal pure returns (uint256[] memory amountsIn) {
         /************************************************************************************
         // tokensInForExactBptOut                                                          //
-        // (per token)                                                                     //
-        // aI = amountIn (vec)             /   bptOut   \                                  //
-        // b = balance (vec)     aI = b * | ------------ |                                 //
-        // bptOut = bptAmountOut           \  totalBPT  /                                  //
-        // bpt = totalBPT                                                                  //
+        //                              /   bptOut   \                                     //
+        // amountsIn[i] = balances[i] * | ------------ |                                   //
+        //                              \  totalBPT  /                                     //
         ************************************************************************************/
 
         // Tokens in, so we round up overall.
-        uint256 bptRatio = bptAmountOut.divUp(totalBPT);
+        uint256 bptRatio = bptOut.divUp(totalBPT);
 
-        uint256[] memory amountsIn = new uint256[](balances.length);
+        amountsIn = new uint256[](balances.length);
         for (uint256 i = 0; i < balances.length; i++) {
             amountsIn[i] = balances[i].mulUp(bptRatio);
         }
@@ -62,24 +60,23 @@ library GyroPoolMath {
     // Note: this function is identical to that in WeightedMath.sol audited by Balancer
     function _calcTokensOutGivenExactBptIn(
         uint256[] memory balances,
-        uint256 bptAmountIn,
+        uint256 bptIn,
         uint256 totalBPT
-    ) internal pure returns (uint256[] memory) {
+    ) internal pure returns (uint256[] memory amountsOut) {
         /**********************************************************************************************
         // exactBPTInForTokensOut                                                                    //
         // (per token)                                                                               //
-        // aO = amountOut                  /        bptIn         \                                  //
-        // b = balance           a0 = b * | ---------------------  |                                 //
-        // bptIn = bptAmountIn             \       totalBPT       /                                  //
-        // bpt = totalBPT                                                                            //
+        //                                /        bptIn         \                                   //
+        // amountsOut[i] = balances[i] * | ---------------------  |                                  //
+        //                                \       totalBPT       /                                   //
         **********************************************************************************************/
 
         // Since we're computing an amount out, we round down overall. This means rounding down on both the
         // multiplication and division.
 
-        uint256 bptRatio = bptAmountIn.divDown(totalBPT);
+        uint256 bptRatio = bptIn.divDown(totalBPT);
 
-        uint256[] memory amountsOut = new uint256[](balances.length);
+        amountsOut = new uint256[](balances.length);
         for (uint256 i = 0; i < balances.length; i++) {
             amountsOut[i] = balances[i].mulDown(bptRatio);
         }
