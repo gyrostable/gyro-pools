@@ -316,10 +316,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             uint256[] memory
         )
     {
-        // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous join
-        // or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids spending gas
-        // computing them on each individual swap
-
         uint256[] memory sqrtParams = _sqrtParameters();
 
         // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
