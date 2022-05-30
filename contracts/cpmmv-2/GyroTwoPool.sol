@@ -74,6 +74,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
+        _upscaleArray(balances);
         (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(balances[0], balances[1], true);
     }
 
@@ -202,6 +203,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             uint256 virtualParamOut
         )
     {
+        uint256 scalingFactorTokenIn = _scalingFactor(tokenInIsToken0);
+        uint256 scalingFactorTokenOut = _scalingFactor(!tokenInIsToken0);
+        balanceTokenIn = _upscale(balanceTokenIn, scalingFactorTokenIn);
+        balanceTokenOut = _upscale(balanceTokenOut, scalingFactorTokenOut);
         return _calculateCurrentValues(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
     }
 
