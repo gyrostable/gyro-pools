@@ -149,14 +149,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
             // TODO check this call: why do we need to upscale? Should we downscale??
             request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
-            uint256 amountOut = _onSwapGivenIn(request, balanceTokenIn, balanceTokenOut, virtualParamIn, virtualParamOut, currentInvariant);
+            uint256 amountOut = _onSwapGivenIn(request, balanceTokenIn, balanceTokenOut, virtualParamIn, virtualParamOut);
 
             // amountOut tokens are exiting the Pool, so we round down.
             return _downscaleDown(amountOut, scalingFactorTokenOut);
         } else {
             request.amount = _upscale(request.amount, scalingFactorTokenOut);
 
-            uint256 amountIn = _onSwapGivenOut(request, balanceTokenIn, balanceTokenOut, virtualParamIn, virtualParamOut, currentInvariant);
+            uint256 amountIn = _onSwapGivenOut(request, balanceTokenIn, balanceTokenOut, virtualParamIn, virtualParamOut);
 
             // amountIn tokens are entering the Pool, so we round up.
             amountIn = _downscaleUp(amountIn, scalingFactorTokenIn);
@@ -172,9 +172,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
         uint256 virtualParamIn,
-        uint256 virtualParamOut,
-        uint256 // not used but avoids collision with inherited private fn
-    ) private pure returns (uint256) {
+        uint256 virtualParamOut
+    ) internal pure override returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return GyroTwoMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualParamIn, virtualParamOut);
     }
@@ -184,9 +183,8 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut,
         uint256 virtualParamIn,
-        uint256 virtualParamOut,
-        uint256 // not used but avoids collision with inherited private fn
-    ) private pure returns (uint256) {
+        uint256 virtualParamOut
+    ) internal pure override returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return GyroTwoMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualParamIn, virtualParamOut);
     }

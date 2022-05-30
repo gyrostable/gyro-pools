@@ -313,7 +313,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 currentBalanceTokenOut,
         uint256 normalizedWeightIn,
         uint256 normalizedWeightOut
-    ) private pure returns (uint256) {
+    ) internal pure virtual returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return
             WeightedMath._calcOutGivenIn(
@@ -331,7 +331,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 currentBalanceTokenOut,
         uint256 normalizedWeightIn,
         uint256 normalizedWeightOut
-    ) private pure returns (uint256) {
+    ) internal pure virtual returns (uint256) {
         // Swaps are disabled while the contract is paused.
         return
             WeightedMath._calcInGivenOut(
