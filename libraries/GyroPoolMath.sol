@@ -29,7 +29,7 @@ library GyroPoolMath {
     uint256 private constant SQRT_1E_NEG_11 = 3162277660168;
     uint256 private constant SQRT_1E_NEG_13 = 316227766016;
     uint256 private constant SQRT_1E_NEG_15 = 31622776601;
-    uint256 private constant SQRT_1E_NEG_17 = 316227766;
+    uint256 private constant SQRT_1E_NEG_17 = 3162277660;
 
     uint256 private constant MIN_NEWTON_STEP_SIZE = 5;
 
