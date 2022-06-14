@@ -2,7 +2,8 @@ from pprint import pprint
 from typing import Iterable
 
 import pytest
-from hypothesis import given, settings, HealthCheck, example
+from brownie.test import given
+from hypothesis import settings, HealthCheck, example
 
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import to_decimal, qdecimals
