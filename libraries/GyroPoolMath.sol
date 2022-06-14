@@ -176,55 +176,55 @@ library GyroPoolMath {
         if (input >= FixedPoint.ONE) {
             return (1 << (_intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
         } else {
-            if (input < 10) {
+            if (input <= 10) {
                 return SQRT_1E_NEG_17;
             }
-            if (input < 1e2) {
+            if (input <= 1e2) {
                 return 1e10;
             }
-            if (input < 1e3) {
+            if (input <= 1e3) {
                 return SQRT_1E_NEG_15;
             }
-            if (input < 1e4) {
+            if (input <= 1e4) {
                 return 1e11;
             }
-            if (input < 1e5) {
+            if (input <= 1e5) {
                 return SQRT_1E_NEG_13;
             }
-            if (input < 1e6) {
+            if (input <= 1e6) {
                 return 1e12;
             }
-            if (input < 1e7) {
+            if (input <= 1e7) {
                 return SQRT_1E_NEG_11;
             }
-            if (input < 1e8) {
+            if (input <= 1e8) {
                 return 1e13;
             }
-            if (input < 1e9) {
+            if (input <= 1e9) {
                 return SQRT_1E_NEG_9;
             }
-            if (input < 1e10) {
+            if (input <= 1e10) {
                 return 1e14;
             }
-            if (input < 1e11) {
+            if (input <= 1e11) {
                 return SQRT_1E_NEG_7;
             }
-            if (input < 1e12) {
+            if (input <= 1e12) {
                 return 1e15;
             }
-            if (input < 1e13) {
+            if (input <= 1e13) {
                 return SQRT_1E_NEG_5;
             }
-            if (input < 1e14) {
+            if (input <= 1e14) {
                 return 1e16;
             }
-            if (input < 1e15) {
+            if (input <= 1e15) {
                 return SQRT_1E_NEG_3;
             }
-            if (input < 1e16) {
+            if (input <= 1e16) {
                 return 1e17;
             }
-            if (input < 1e17) {
+            if (input <= 1e17) {
                 return SQRT_1E_NEG_1;
             }
             return input;
