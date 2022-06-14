@@ -122,6 +122,12 @@ def mtest_zeta(params_px, gyro_cemm_math_testing):
         px,
     ) = params_px  # Annoying manual unpacking b/c hypothesis is oddly limited at dependent arguments.
     mparams = params2MathParams(params)
+
+    # DEBUG: WEIRD IMPORT ERROR!
+    # Problem: mimpl is actually cemm_100.py, not cemm.py, which leads to problems.
+    assert isinstance(mparams, mimpl.Params)  # Catch weird type error
+    assert str(type(mparams)) == "<class 'tests.cemm.cemm.Params'>"
+
     res_sol = gyro_cemm_math_testing.zeta(scale(params), scale(px))
     res_math = mparams.zeta(px)
     assert int(res_sol) == scale(res_math)
