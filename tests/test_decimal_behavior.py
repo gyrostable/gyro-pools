@@ -65,12 +65,19 @@ def test_sqrtNewton(math_testing, a):
 
 @given(a=qdecimals(0).filter(lambda a: a > 0))
 @example(a=D(1))
+@example(a=D('1E-17'))
+@example(a=D('1E-18'))
 def test_sqrtNewtonInitialGuess(math_testing, a):
     result_sol = unscale(
         math_testing.sqrtNewtonInitialGuess(scale(a))
     )
     if a >= 1:
         assert result_sol == 2 ** (floor(log2(a) / 2))
+    elif  a == D('1E-18'):
+        # Special case where it's not worth introducing another case in the solidity code.
+        # The rule below would yield 1E-9, i.e., the exact result, but our code includes this
+        # in the next higher case.
+        assert result_sol == D('1E-17').sqrt()
     elif  a <= 0.1:
         a_oom = D(10)**ceil(log10(a))
         assert result_sol == a_oom.sqrt()
