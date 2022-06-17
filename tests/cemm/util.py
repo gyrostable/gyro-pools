@@ -953,7 +953,7 @@ def mtest_invariant_across_liquidityInvariantUpdate(
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
     # Debug code for debugging the tests (sample generation)
     # print("\nDEBUG AFTER fun start")
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     # print("DEBUG AFTER denom check")
     assume(sum(balances) > D(100))
     # print("DEBUG AFTER balances check")
@@ -987,18 +987,20 @@ def mtest_invariant_across_liquidityInvariantUpdate(
     invariant_after, err_after = prec_impl.calculateInvariantWithError(
         new_balances, params, derived
     )
-    abs_tol = D(2) * (
-        D(err_before) + D(err_after) + (D("1e-18") * invariant_before) / bpt_supply
-    )
-    rel_tol = D("1e-16") / min(D(1), bpt_supply)
+    # abs_tol = D(2) * (
+    #     D(err_before) + D(err_after) + (D("1e-18") * invariant_before) / bpt_supply
+    # )
+    # rel_tol = D("1e-16") / min(D(1), bpt_supply)
     # if D(invariant_updated) != D(invariant_after).approxed(abs=abs_tol, rel=rel_tol):
     if isIncrease and invariant_updated < invariant_after:
         loss = calculate_loss(
             invariant_updated - invariant_after, invariant_after, new_balances
         )
     elif not isIncrease and invariant_updated > invariant_after:
+        # We use `err_after` to compensate for errors in the invariant calculation itself. We don't have to do this
+        # above b/c calculateInvariantWithError() yields an underestimate and this is already the worst case there.
         loss = calculate_loss(
-            invariant_after - invariant_updated, invariant_after, new_balances
+            invariant_after + err_after - invariant_updated, invariant_after + err_after, new_balances
         )
     else:
         loss = (D(0), D(0))
