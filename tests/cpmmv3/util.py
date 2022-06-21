@@ -18,7 +18,7 @@ def gen_feasible_prices(draw: Callable, alpha: D):
     # NOTE: This is really slow, though I also don't know how we might possibly speed it up.
     # You likely need `@settings(suppress_health_check=[HealthCheck.too_slow])` in your tests.
     """Generate relative prices p_x/z and p_y/z that are 'fesible' in the sense of Prop. 9."""
-    px = draw(qdecimals(alpha, D(1)/alpha))
+    px = draw(qdecimals(alpha, D(1) / alpha))
 
     # We ensure the "x >= 0" and "y >= 0" properties by choice of py's bounds.
     # This is important for test performance.
@@ -31,12 +31,14 @@ def gen_feasible_prices(draw: Callable, alpha: D):
 
 
 @st.composite
-def gen_synthetic_balances_via_prices(draw, bparams: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D):
+def gen_synthetic_balances_via_prices(
+    draw, bparams: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D
+):
     """Generates an invariant and a price, and from that balances using math from the CPMMv3 paper.
 
     Due to rounding errors, the relationship does not hold exactly, i.e., the generated balances also have an error attached.
-    
-    NOTE: There seems to be no advantage using this over gen_synthetic_balances(); prices can be computed when in doubt. Perhaps if one needs specifically chosen prices, but otherwise you're prob better off with the other function.""" 
+
+    NOTE: There seems to be no advantage using this over gen_synthetic_balances(); prices can be computed when in doubt. Perhaps if one needs specifically chosen prices, but otherwise you're prob better off with the other function."""
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
     alpha = root3Alpha**3
 
@@ -47,7 +49,7 @@ def gen_synthetic_balances_via_prices(draw, bparams: BasicPoolParameters, root3A
 
     # See Prop. 9.
     px, py = prices
-    gamma = (px * py)**(D(1)/3)
+    gamma = (px * py) ** (D(1) / 3)
 
     factors = [
         gamma / px - root3Alpha,
@@ -66,8 +68,13 @@ def gen_synthetic_balances_via_prices(draw, bparams: BasicPoolParameters, root3A
 
 
 @st.composite
-def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D,
-                           min_balance: D = D(1)):
+def gen_synthetic_balances(
+    draw,
+    bpool_params: BasicPoolParameters,
+    root3Alpha_min: D,
+    root3Alpha_max: D,
+    min_balance: D = D(1),
+):
     """This is more accurate than gen_synthetic_balances_via_prices()."""
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
 
@@ -86,7 +93,7 @@ def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_m
     ymax = min(
         invariant**2 / (root3Alpha * (x + virtOffset)) - virtOffset,
         x / bpool_params.min_balance_ratio,
-        MAX_BALANCE
+        MAX_BALANCE,
     )
     assume(ymin <= ymax)
     y = draw(qdecimals(ymin, ymax))
@@ -95,8 +102,12 @@ def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_m
     assume(z >= min_balance)
     assume(z <= MAX_BALANCE)
 
-    assume(y / bpool_params.min_balance_ratio >= z >= y * bpool_params.min_balance_ratio)
-    assume(x / bpool_params.min_balance_ratio >= z >= x * bpool_params.min_balance_ratio)
+    assume(
+        y / bpool_params.min_balance_ratio >= z >= y * bpool_params.min_balance_ratio
+    )
+    assume(
+        x / bpool_params.min_balance_ratio >= z >= x * bpool_params.min_balance_ratio
+    )
 
     balances = (x, y, z)
 
@@ -104,8 +115,13 @@ def gen_synthetic_balances(draw, bpool_params: BasicPoolParameters, root3Alpha_m
 
 
 @st.composite
-def gen_synthetic_balances_1asset(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D,
-                           min_balance: D = D(1)):
+def gen_synthetic_balances_1asset(
+    draw,
+    bpool_params: BasicPoolParameters,
+    root3Alpha_min: D,
+    root3Alpha_max: D,
+    min_balance: D = D(1),
+):
     """Like gen_gen_synthetic_balances(), but only one asset is non-zero."""
 
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
@@ -121,16 +137,24 @@ def gen_synthetic_balances_1asset(draw, bpool_params: BasicPoolParameters, root3
 
     return balances, invariant, root3Alpha
 
+
 @st.composite
-def gen_synthetic_balances_2assets(draw, bpool_params: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D,
-                                   min_balance: D = D(1)):
+def gen_synthetic_balances_2assets(
+    draw,
+    bpool_params: BasicPoolParameters,
+    root3Alpha_min: D,
+    root3Alpha_max: D,
+    min_balance: D = D(1),
+):
     """Like gen_gen_synthetic_balances(), but only two assets are non-zero."""
 
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
     invariant = draw(qdecimals(1, MAX_SYNTHETIC_INVARIANT))
     virtOffset = invariant * root3Alpha
 
-    xmax = min(invariant / root3Alpha / root3Alpha - invariant * root3Alpha, MAX_BALANCE)
+    xmax = min(
+        invariant / root3Alpha / root3Alpha - invariant * root3Alpha, MAX_BALANCE
+    )
     assume(xmax >= min_balance)
     x = draw(qdecimals(min_balance, xmax))
 
@@ -138,7 +162,9 @@ def gen_synthetic_balances_2assets(draw, bpool_params: BasicPoolParameters, root
     assume(y >= min_balance)
     assume(y <= MAX_BALANCE)
 
-    assume(x * bpool_params.min_balance_ratio <= y <= x / bpool_params.min_balance_ratio)
+    assume(
+        x * bpool_params.min_balance_ratio <= y <= x / bpool_params.min_balance_ratio
+    )
 
     shift = draw(st.integers(0, 2))
     balances = [D(0)] * 3

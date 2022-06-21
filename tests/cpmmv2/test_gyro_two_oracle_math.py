@@ -37,7 +37,7 @@ def test_calc_spot_price(mock_gyro_two_oracle_math, balances, sqrt_alpha, sqrt_b
     expected = (balances[1] + b).div_up(balances[0] + a)
 
     assert result == scale(expected)
-    
+
 
 # Note: the rest of the functions in mock_gyro_two_oracle_math are rather trivial
 # given spot prices and the original Balancer codebase

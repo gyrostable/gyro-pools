@@ -8,7 +8,8 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
-MAX_ALPHA=D("0.99996")
+MAX_ALPHA = D("0.99996")
+
 
 def triple_uniform_integers(min_value=0, max_value=1_000_000_000):
     g = st.integers(min_value=min_value, max_value=max_value)
@@ -16,11 +17,11 @@ def triple_uniform_integers(min_value=0, max_value=1_000_000_000):
 
 
 bpool_params = BasicPoolParameters(
-    min_price_separation=D(1)/MAX_ALPHA - MAX_ALPHA,
-    max_out_ratio=D('0.3'),
-    max_in_ratio=D('0.3'),
-    min_balance_ratio=D('1e-5'),
-    min_fee=D('0.0001')
+    min_price_separation=D(1) / MAX_ALPHA - MAX_ALPHA,
+    max_out_ratio=D("0.3"),
+    max_in_ratio=D("0.3"),
+    min_balance_ratio=D("1e-5"),
+    min_fee=D("0.0001"),
 )
 
 
@@ -36,18 +37,20 @@ def gen_root3Alpha():
 def test_calculateInvariant_growth(
     gyro_three_math_testing, balances, root3Alpha, addl_balances
 ):
-    l_low = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root3Alpha)
-    ))
+    l_low = unscale(
+        gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha))
+    )
 
     balances_high = tuple(map(add, balances, addl_balances))
 
-    l_high = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances_high), scale(root3Alpha)
-    ))
+    l_high = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            scale(balances_high), scale(root3Alpha)
+        )
+    )
 
     # Error bounds informed by the 'reconstruction' tests (see test_three_pool_properties.py)
-    assert l_low <= l_high.approxed(abs=D('3e-18'), rel=D('3e-18'))
+    assert l_low <= l_high.approxed(abs=D("3e-18"), rel=D("3e-18"))
 
 
 def test_calcInGivenOut_pricebounds(gyro_three_math_testing):
@@ -245,8 +248,8 @@ def test_InOut_inverse(gyro_three_math_testing):
 def run_test_calcInGivenOut_pricebounds(
     gyro_three_math_testing, balances, root3Alpha, amountOut, ixIn, ixOut
 ):
-    invariant = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root3Alpha))
+    invariant = unscale(
+        gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha))
     )
     virtualOffset = invariant * root3Alpha
 
@@ -255,7 +258,7 @@ def run_test_calcInGivenOut_pricebounds(
             scale(balances[ixIn]),
             scale(balances[ixOut]),
             scale(amountOut),
-            scale(virtualOffset)
+            scale(virtualOffset),
         )
     )
 
@@ -267,8 +270,8 @@ def run_test_calcInGivenOut_pricebounds(
 def run_test_calcOutGivenIn_pricebounds(
     gyro_three_math_testing, balances, root3Alpha, amountIn, ixIn, ixOut
 ):
-    invariant = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root3Alpha))
+    invariant = unscale(
+        gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha))
     )
     virtualOffset = invariant * root3Alpha
 
@@ -277,7 +280,7 @@ def run_test_calcOutGivenIn_pricebounds(
             scale(balances[ixIn]),
             scale(balances[ixOut]),
             scale(amountIn),
-            scale(virtualOffset)
+            scale(virtualOffset),
         )
     )
 
@@ -289,9 +292,9 @@ def run_test_calcOutGivenIn_pricebounds(
 def run_test_InOut_inverse(
     gyro_three_math_testing, balances, root3Alpha, amountIn, ixIn, ixOut
 ):
-    invariant = unscale(gyro_three_math_testing.calculateInvariant(
-        scale(balances), scale(root3Alpha)
-    ))
+    invariant = unscale(
+        gyro_three_math_testing.calculateInvariant(scale(balances), scale(root3Alpha))
+    )
     virtualOffset = invariant * root3Alpha
 
     amountOut = unscale(
@@ -299,7 +302,7 @@ def run_test_InOut_inverse(
             scale(balances[ixIn]),
             scale(balances[ixOut]),
             scale(amountIn),
-            scale(virtualOffset)
+            scale(virtualOffset),
         )
     )
     amountIn1 = unscale(
@@ -307,7 +310,7 @@ def run_test_InOut_inverse(
             scale(balances[ixIn]),
             scale(balances[ixOut]),
             scale(amountOut),
-            scale(virtualOffset)
+            scale(virtualOffset),
         )
     )
 
@@ -318,7 +321,7 @@ def run_test_InOut_inverse(
             scale(balances[ixIn]),
             scale(balances[ixOut]),
             scale(amountIn1),
-            scale(virtualOffset)
+            scale(virtualOffset),
         )
     )
 

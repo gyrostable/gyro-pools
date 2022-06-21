@@ -215,13 +215,15 @@ def test_calc_in_given_out(
         within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
     if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = unscale(gyro_two_math_testing.calcInGivenOut(
-            scale(balances[0]),
-            scale(balances[1]),
-            scale(amount_out),
-            scale(virtual_param_in),
-            scale(virtual_param_out),
-        ))
+        in_amount_sol = unscale(
+            gyro_two_math_testing.calcInGivenOut(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_out),
+                scale(virtual_param_in),
+                scale(virtual_param_out),
+            )
+        )
     elif not within_bal_ratio:
         with reverts("BAL#357"):  # MIN_BAL_RATIO
             gyro_two_math_testing.calcInGivenOut(
@@ -246,7 +248,7 @@ def test_calc_in_given_out(
     # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
     # implemented in python)
     assert in_amount_sol >= in_amount
-    assert in_amount_sol == in_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
+    assert in_amount_sol == in_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))
 
 
 @given(
@@ -294,13 +296,15 @@ def test_calc_out_given_in(
         and within_bal_ratio
         and out_amount >= 0
     ):
-        out_amount_sol = unscale(gyro_two_math_testing.calcOutGivenIn(
-            scale(balances[0]),
-            scale(balances[1]),
-            scale(amount_in),
-            scale(virtual_param_in),
-            scale(virtual_param_out),
-        ))
+        out_amount_sol = unscale(
+            gyro_two_math_testing.calcOutGivenIn(
+                scale(balances[0]),
+                scale(balances[1]),
+                scale(amount_in),
+                scale(virtual_param_in),
+                scale(virtual_param_out),
+            )
+        )
     elif out_amount < 0:
         with reverts("BAL#001"):  # subtraction overflow when ~ 0 and rounding down
             gyro_two_math_testing.calcOutGivenIn(
@@ -335,4 +339,4 @@ def test_calc_out_given_in(
     # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
     # implemented in python)
     assert out_amount_sol <= out_amount
-    assert out_amount_sol == out_amount.approxed(abs=D('5e-18'), rel=D('5e-18'))
+    assert out_amount_sol == out_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))

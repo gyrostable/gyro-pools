@@ -122,8 +122,12 @@ def test_invariant_across_calcInGivenOut(
 ):
     balances, amount_out = setup
     invariant_after, invariant = mtest_invariant_across_calcInGivenOut(
-        gyro_three_math_testing, balances, amount_out, root_three_alpha, False,
-            check_price_impact_direction=True
+        gyro_three_math_testing,
+        balances,
+        amount_out,
+        root_three_alpha,
+        False,
+        check_price_impact_direction=True,
     )
     assert invariant_after >= invariant
 
@@ -144,8 +148,12 @@ def test_invariant_across_calcOutGivenIn(
 ):
     balances, amount_in = setup
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
-        gyro_three_math_testing, balances, amount_in, root_three_alpha, False,
-        check_price_impact_direction=True
+        gyro_three_math_testing,
+        balances,
+        amount_in,
+        root_three_alpha,
+        False,
+        check_price_impact_direction=True,
     )
     assert invariant_after >= invariant
 
@@ -165,8 +173,12 @@ def test_invariant_across_calcOutGivenIn_zeroin(
 ):
     amount_in = 0
     invariant_after, invariant = mtest_invariant_across_calcOutGivenIn(
-        gyro_three_math_testing, balances, amount_in, root_three_alpha, False,
-        check_price_impact_direction=True
+        gyro_three_math_testing,
+        balances,
+        amount_in,
+        root_three_alpha,
+        False,
+        check_price_impact_direction=True,
     )
     assert invariant_after >= invariant
 
@@ -219,8 +231,8 @@ def calculate_cubic_terms_float(balances: Tuple[int, int, int], root_three_alpha
     x, y, z = balances
     x, y, z = (float(x), float(y), float(z))
     root_three_alpha = float(root_three_alpha)
-    a = 1 - root_three_alpha ** 3
-    b = -(x + y + z) * root_three_alpha ** 2
+    a = 1 - root_three_alpha**3
+    b = -(x + y + z) * root_three_alpha**2
     c = -(x * y + y * z + x * z) * root_three_alpha
     d = -x * y * z
     return a, b, c, d
@@ -229,7 +241,7 @@ def calculate_cubic_terms_float(balances: Tuple[int, int, int], root_three_alpha
 def calculate_f_L_float(L: D, balances: Tuple[int, int, int], root_three_alpha: D):
     a, b, c, d = calculate_cubic_terms_float(balances, root_three_alpha)
     L = float(L)
-    return L ** 3 * a + L ** 2 * b + L * c + d
+    return L**3 * a + L**2 * b + L * c + d
 
 
 def calculate_f_L_prime_float(
@@ -237,17 +249,22 @@ def calculate_f_L_prime_float(
 ):
     a, b, c, d = calculate_cubic_terms_float(balances, root_three_alpha)
     L = float(L)
-    return L ** 2 * a * 3 + L * b * 2 + c
+    return L**2 * a * 3 + L * b * 2 + c
 
 
 def calculate_f_L_decimal(L: D, a: D, b: D, c: D, d: D):
     return L.mul_up(L).mul_up(L).mul_up(a) + L * L * b + L * c + d
 
+
 # check_price_impact_direction: Test if the avg price is worse than the instantaneous price at the beginning of the trade.
 # This also ensures that no money can be extracted without putting anything in.
 def mtest_invariant_across_calcInGivenOut(
-    gyro_three_math_testing, balances, amount_out, root_three_alpha, check_sol_inv,
-        check_price_impact_direction=False
+    gyro_three_math_testing,
+    balances,
+    amount_out,
+    root_three_alpha,
+    check_sol_inv,
+    check_price_impact_direction=False,
 ):
     assume(amount_out < to_decimal("0.3") * (balances[1]))
 
@@ -354,8 +371,12 @@ def mtest_invariant_across_calcInGivenOut(
 
 
 def mtest_invariant_across_calcOutGivenIn(
-    gyro_three_math_testing, balances, amount_in, root_three_alpha, check_sol_inv,
-        check_price_impact_direction=False
+    gyro_three_math_testing,
+    balances,
+    amount_in,
+    root_three_alpha,
+    check_sol_inv,
+    check_price_impact_direction=False,
 ):
     assume(amount_in < to_decimal("0.3") * (balances[0]))
 
@@ -534,8 +555,8 @@ def mtest_invariant_across_liquidityInvariantUpdate(
     else:
         loss = (D(0), D(0), D(0))
     loss_ub = (
-        loss[0] * (D(1) / (root_three_alpha ** 3))
-        + loss[1] * (1 / (root_three_alpha ** 3))
+        loss[0] * (D(1) / (root_three_alpha**3))
+        + loss[1] * (1 / (root_three_alpha**3))
         + loss[2]
     )
     assert abs(loss_ub) < D("1e-5")

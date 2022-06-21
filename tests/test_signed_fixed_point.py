@@ -56,6 +56,7 @@ def test_decimal_behavior(signed_math_testing, a, b, op_name):
 
 one = 10**18
 
+
 def test_signed_rounding_div_exact(signed_math_testing):
     # Regression for issue #59
     assert signed_math_testing.divUp(1, 1) == one
@@ -107,5 +108,3 @@ def test_signed_rounding_mul(signed_math_testing):
     assert signed_math_testing.mulDown(-1, -1) == 0
     assert signed_math_testing.mulDown(1, -1) == 0
     assert signed_math_testing.mulDown(-1, 1) == 0
-
-

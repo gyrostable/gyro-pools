@@ -64,8 +64,7 @@ def calculateInvariantNewton(
     #     l = (-b + (b**2 - ac * 4).sqrt()) / (2 * a)
     #     return l, log
 
-
-    lmin = -b / (a * 3) + (b ** 2 - a * c * 3).sqrt() / (
+    lmin = -b / (a * 3) + (b**2 - a * c * 3).sqrt() / (
         a * 3
     )  # Sqrt is not gonna make a problem b/c all summands are positive.
     # ^ Local minimum, and also the global minimum of f among l > 0; towards a starting point
@@ -103,7 +102,7 @@ def calculateInvariantNewton(
         # Ordering optimization. Doesn't seem to matter as much as the first one above.
         # df_l = a * 3 * l ** 2 + b * 2 * l + c
         df_l = 3 * l2 - 3 * l2 * alpha1 * alpha1 * alpha1 + l * b * 2 + c
-        delta = - f_l / df_l
+        delta = -f_l / df_l
 
         # delta==0 can happen with poor numerical precision! In this case, this is all we can get.
         if delta_pre is not None and (delta == 0 or f_l < 0):
@@ -122,7 +121,7 @@ def invariantErrorsInAssets(l, balances: Iterable, root3Alpha):
     Type agnostic: Pass D to get D calculations or float to get float calculations."""
     x, y, z = balances
 
-    gamma = l ** 2 / ((x + l * root3Alpha) * (y + l * root3Alpha))  # 3√(px py)
+    gamma = l**2 / ((x + l * root3Alpha) * (y + l * root3Alpha))  # 3√(px py)
     px = (z + l * root3Alpha) / (x + l * root3Alpha)
     py = (z + l * root3Alpha) / (y + l * root3Alpha)
     x1 = l * (gamma / px - root3Alpha)
@@ -168,7 +167,7 @@ def calculateInvariantAltFloatWithInfo(balances: Iterable[D], root3Alpha: D):
 
     # See CPMMV writeup, appendix A.1
     l_m = mb / (3 * a)
-    l_plus = l_m + sqrt(l_m ** 2 + mc)
+    l_plus = l_m + sqrt(l_m**2 + mc)
     l_0 = 1.5 * l_plus
 
     res = root_scalar(f, fprime=df, x0=l_0, rtol=1e-18, xtol=1e-18)
@@ -241,11 +240,11 @@ def calcNewtonDelta(a: D, mb: D, mc: D, md: D, alpha1: D, l: D) -> tuple[D, bool
 
     b, c, d = -mb, -mc, -md
 
-    l3 = l ** 3
-    l2 = l ** 2
+    l3 = l**3
+    l2 = l**2
     f_l = l3 - l3 * alpha1 * alpha1 * alpha1 + l2 * b + c * l + d
     df_l = 3 * l2 - 3 * l2 * alpha1 * alpha1 * alpha1 + l * b * 2 + c
-    delta = - f_l / df_l
+    delta = -f_l / df_l
 
     return abs(delta), delta >= 0
 
@@ -255,9 +254,15 @@ def calcNewtonDeltaDown(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]
     # dfRootEst = rootEst * rootEst * (D(3) * a) - rootEst.mul_up(D(2) * mb) - mc
     # deltaMinus = rootEst.mul_up(rootEst).mul_up(rootEst).mul_up(a).div_up(dfRootEst)
     # deltaPlus = (rootEst * rootEst * mb + rootEst * mc) / dfRootEst + md / dfRootEst
-    dfRootEst = rootEst.mul_up(rootEst).mul_up(D(3) * a) - rootEst.mul_down(D(2) * mb) - mc
-    deltaMinus = rootEst.mul_down(rootEst).mul_down(rootEst).mul_down(a).div_down(dfRootEst)
-    deltaPlus = (rootEst.mul_up(rootEst).mul_up(mb) + rootEst.mul_up(mc)).div_up(dfRootEst) + md.div_up(dfRootEst)
+    dfRootEst = (
+        rootEst.mul_up(rootEst).mul_up(D(3) * a) - rootEst.mul_down(D(2) * mb) - mc
+    )
+    deltaMinus = (
+        rootEst.mul_down(rootEst).mul_down(rootEst).mul_down(a).div_down(dfRootEst)
+    )
+    deltaPlus = (rootEst.mul_up(rootEst).mul_up(mb) + rootEst.mul_up(mc)).div_up(
+        dfRootEst
+    ) + md.div_up(dfRootEst)
 
     # DEBUG
     print(f"df        = {dfRootEst}")
@@ -273,15 +278,14 @@ def calcNewtonDeltaDown(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]
     return deltaAbs, deltaIsPos
 
 
-
 def calcNewtonDelta1(a: D, mb: D, mc: D, md: D, rootEst: D) -> tuple[D, bool]:
     """Alternative implementation with slightly different rounding behavior."""
     l = rootEst
     # Signs: "minus" refers to the delta, not to f(l)!
-    f_l_minus = a * l ** 3
-    f_l_plus = mb * l ** 2 + mc * l + md
+    f_l_minus = a * l**3
+    f_l_plus = mb * l**2 + mc * l + md
     f_l = f_l_minus - f_l_plus
-    df_l = a * 3 * l ** 2 - mb * 2 * l - mc
+    df_l = a * 3 * l**2 - mb * 2 * l - mc
     print(f"f_l = {f_l}")
     print(f"df_l = {df_l}")
     print(f"f_l_plus / df_l = {f_l_plus / df_l}")

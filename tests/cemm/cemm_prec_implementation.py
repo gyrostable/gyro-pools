@@ -452,10 +452,10 @@ def calc_derived_values(p: Params) -> DerivedParams:
     dSq = c * c + s * s
     d = dSq.sqrt()
     dAlpha = D3(1) / (
-        ((c / d + alpha * s / d) ** 2 / lam ** 2 + (alpha * c / d - s / d) ** 2).sqrt()
+        ((c / d + alpha * s / d) ** 2 / lam**2 + (alpha * c / d - s / d) ** 2).sqrt()
     )
     dBeta = D3(1) / (
-        ((c / d + beta * s / d) ** 2 / lam ** 2 + (beta * c / d - s / d) ** 2).sqrt()
+        ((c / d + beta * s / d) ** 2 / lam**2 + (beta * c / d - s / d) ** 2).sqrt()
     )
     tauAlpha = [0, 0]
     tauAlpha[0] = (alpha * c - s) * dAlpha

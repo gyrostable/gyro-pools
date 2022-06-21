@@ -32,7 +32,9 @@ def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
 
 
 def mathParams2DerivedParams(mparams: mimpl.Params) -> CEMMMathDerivedParams:
-    return prec_impl.calc_derived_values(mparams)  # Type mismatch but "duck" compatible.
+    return prec_impl.calc_derived_values(
+        mparams
+    )  # Type mismatch but "duck" compatible.
 
 
 @st.composite

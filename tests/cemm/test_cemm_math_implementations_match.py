@@ -255,12 +255,8 @@ def gen_args_calcOutGivenIn(draw):
 
 
 @settings(max_examples=100)
-@given(
-    args=gen_args_calcOutGivenIn()
-)
-def test_calcOutGivenIn(
-    args, gyro_cemm_math_testing
-):
+@given(args=gen_args_calcOutGivenIn())
+def test_calcOutGivenIn(args, gyro_cemm_math_testing):
     params, balances, amountIn, tokenInIsToken0 = args
 
     ixIn = 0 if tokenInIsToken0 else 1

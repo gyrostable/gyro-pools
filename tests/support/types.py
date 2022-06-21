@@ -46,6 +46,7 @@ class TwoPoolBaseParams(NamedTuple):
     oracleEnabled: bool
     owner: str
 
+
 class TwoPoolFactoryCreateParams(NamedTuple):
     name: str
     symbol: str
@@ -54,6 +55,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     swapFeePercentage: DecimalLike
     oracleEnabled: bool
     owner: address
+
 
 class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
@@ -110,6 +112,8 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     root3Alpha: DecimalLike
     swapFeePercentage: DecimalLike
     owner: address
+
+
 # Legacy Aliases
 GyroCEMMMathParams = CEMMMathParams
 GyroCEMMMathDerivedParams = CEMMMathDerivedParams

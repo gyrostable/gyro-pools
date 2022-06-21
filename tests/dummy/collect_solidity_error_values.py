@@ -23,7 +23,8 @@ from tests.support.utils import qdecimals
 error_values: Union[None, list[dict]]  # None means disabled.
 error_values = None
 
-bpool_params = BasicPoolParameters(min_balance_ratio=D('1e-5'))  # Almost a dummy
+bpool_params = BasicPoolParameters(min_balance_ratio=D("1e-5"))  # Almost a dummy
+
 
 def push_error_values(row: dict):
     global error_values
