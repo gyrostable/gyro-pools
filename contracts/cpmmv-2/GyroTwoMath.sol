@@ -163,7 +163,7 @@ library GyroTwoMath {
       // dY = incrY = amountOut < 0                                                                //
       // x = balanceIn             x' = x +  virtualParamX                                         //
       // y = balanceOut            y' = y +  virtualParamY                                         //
-      // L  = inv.Liq                   /            x' * y'          \          z' * dX           //
+      // L  = inv.Liq                   /            x' * y'          \          y' * dX           //
       //                   |dy| = y' - |   --------------------------  |   = --------------  -     //
       //  x' = virtIn                   \          ( x' + dX)         /          x' + dX           //
       //  y' = virtOut                                                                             //
@@ -203,19 +203,19 @@ library GyroTwoMath {
         uint256 virtualOffsetOut
     ) internal pure returns (uint256 amountIn) {
         /**********************************************************************************************
-      // dX = incrX  = amountIn  > 0                                                               //
-      // dY = incrY  = amountOut < 0                                                               //
-      // x = balanceIn             x' = x +  virtualParamX                                         //
-      // y = balanceOut            y' = y +  virtualParamY                                         //
-      // x = balanceIn                                                                             //
-      // L  = inv.Liq                /            x' * y'          \                               //
-      //                     dx =   |   --------------------------  |  -  x'                       //
-      // x' = virtIn                \           ( y' + dy)         /                               //
-      // y' = virtOut                                                                              //
-      // Note that dy < 0 < dx.                                                                    //
-      // We exploit the fact that this formula is symmetric up to virtualOffset{X,Y}.               //
-      // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.      //
-      // We add a very small safety margin to compensate for potential errors in the invariant.     //
+      // dX = incrX  = amountIn  > 0                                                                 //
+      // dY = incrY  = amountOut < 0                                                                 //
+      // x = balanceIn             x' = x +  virtualParamX                                           //
+      // y = balanceOut            y' = y +  virtualParamY                                           //
+      // x = balanceIn                                                                               //
+      // L  = inv.Liq               /            x' * y'          \                x' * dy           //
+      //                     dx =  |   --------------------------  |  -  x'  = - -----------         //
+      // x' = virtIn               \             y' + dy          /                y' + dy           //
+      // y' = virtOut                                                                                //
+      // Note that dy < 0 < dx.                                                                      //
+      // We exploit the fact that this formula is symmetric up to virtualOffset{X,Y}.                //
+      // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.       //
+      // We add a very small safety margin to compensate for potential errors in the invariant.      //
       **********************************************************************************************/
         _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
