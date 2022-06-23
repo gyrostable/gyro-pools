@@ -97,7 +97,7 @@ library GyroThreeMath {
         uint256 root3Alpha
     ) internal pure returns (uint256 rootEst) {
         rootEst = _calculateCubicStartingPoint(a, mb, mc, md);
-        rootEst = _runNewtonIteration(a, mb, mc, md, root3Alpha, rootEst);
+        rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, rootEst);
     }
 
     /** @dev Starting point for Newton iteration. Safe with all cubic polynomials where the coefficients have the
@@ -123,7 +123,6 @@ library GyroThreeMath {
      *   f'(l) is always positive for the range of values we consider.
      *   See write-up, Appendix A.*/
     function _runNewtonIteration(
-        uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
@@ -133,7 +132,7 @@ library GyroThreeMath {
         uint256 deltaAbsPrev = 0;
         for (uint256 iteration = 0; iteration < 255; ++iteration) {
             // The delta to the next step can be positive or negative, and we represent its sign separately.
-            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(a, mb, mc, md, root3Alpha, rootEst);
+            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(mb, mc, md, root3Alpha, rootEst);
 
             // Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
             if (deltaAbs <= 1) return rootEst;
@@ -154,7 +153,6 @@ library GyroThreeMath {
     /** @dev The Newton step -f(l)/f'(l), represented by its absolute value and its sign.
      * Requires that l is sufficiently large (right of the local minimum) so that f' > 0.*/
     function _calcNewtonDelta(
-        uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
