@@ -62,7 +62,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     }
 
     constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) {
-        // GyroCEMMMath.validateParams(params.cemmParams);
         (_paramsAlpha, _paramsBeta, _paramsC, _paramsS, _paramsLambda) = (
             params.cemmParams.alpha,
             params.cemmParams.beta,
@@ -71,7 +70,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             params.cemmParams.lambda
         );
 
-        // GyroCEMMMath.validateDerivedParams(params.cemmParams, params.derivedCemmParams);
         (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY, _u, _v, _w, _z, _dSq) = (
             params.derivedCemmParams.tauAlpha.x,
             params.derivedCemmParams.tauAlpha.y,

@@ -7,14 +7,6 @@ import "../GyroCEMMMath.sol";
 import "../../../libraries/GyroPoolMath.sol";
 
 contract GyroCEMMMathTesting {
-    function validateParams(GyroCEMMMath.Params memory params) external pure {
-        return GyroCEMMMath.validateParams(params);
-    }
-
-    function validateDerivedParams(GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory derived) external pure {
-        GyroCEMMMath.validateDerivedParams(params, derived);
-    }
-
     function scalarProd(GyroCEMMMath.Vector2 memory t1, GyroCEMMMath.Vector2 memory t2) external pure returns (int256 ret) {
         ret = GyroCEMMMath.scalarProd(t1, t2);
     }
