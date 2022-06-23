@@ -512,10 +512,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     }
 
     /**
-     * @dev Calculates protocol fee amounts in BPT terms
-     * Overrides an inherited function and some arguments are intentionally not used (balances, normalizedWeights)
-     * protocolSwapFeePercentage is not used b/c we take parameters from GyroConfig instead
-     * Returns dueFees, where dueFees[0] = BPT due to Gyro, and dueFees[1] = BPT due to Balancer
+     * @dev Calculates protocol fee amounts in BPT terms.
+     * protocolSwapFeePercentage is not used here b/c we take parameters from GyroConfig instead.
+     * Returns: BPT due to Gyro, BPT due to Balancer, receiving address for Gyro fees, receiving address for Balancer
+     * fees.
      */
     function _getDueProtocolFeeAmounts(uint256 previousInvariant, uint256 currentInvariant)
         internal
