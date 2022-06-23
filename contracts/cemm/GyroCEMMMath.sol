@@ -312,6 +312,9 @@ library GyroCEMMMath {
         // as alternative, could do, but could overflow: invariant = (AtAChi.add(sqrt) - err).divXp(denominator);
         int256 invariant = (AtAChi.add(sqrt) - err).mulDownXpToNp(mulDenominator);
         // error scales if denominator is small
+        // NB: This error calculation computes the error in the expression "numerator / denominator", but in this code
+        // we actually use the formula "numerator * (1 / denominator)" to compute the invariant. This affects this line
+        // and the one below.
         err = err.mulUpXpToNp(mulDenominator);
         // account for relative error due to error in the denominator
         // error in denominator is O(epsilon) if lambda<1e11, scale up by 10 to be sure we catch it, and add O(eps)
