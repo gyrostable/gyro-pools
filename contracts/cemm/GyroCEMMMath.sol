@@ -632,7 +632,7 @@ library GyroCEMMMath {
         return q.a.add(ab.y);
     }
 
-    /** @dev Calculates x'x' where x' = x - b = x - r (A^{-1}tau(beta))_x
+    /** @dev Calculates x'x'/λ^2 where x' = x - b = x - r (A^{-1}tau(beta))_x
      *  calculates an overestimate
      *  to calculate y'y', change x->y, s->c, c->s, tauBeta.x -> -tauAlpha.x, tauBeta.y -> tauAlpha.y  */
     function calcXpXpDivLambdaLambda(
