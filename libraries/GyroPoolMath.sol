@@ -45,13 +45,13 @@ library GyroPoolMath {
         // amountsIn[i] = balances[i] * | ------------ |                                   //
         //                              \  totalBPT  /                                     //
         ************************************************************************************/
-
+        // We adjust the order of operations to minimize error amplification, assuming that
+        // balances[i], totalBPT > 1 (which is usually the case).
         // Tokens in, so we round up overall.
-        uint256 bptRatio = bptOut.divUp(totalBPT);
 
         amountsIn = new uint256[](balances.length);
         for (uint256 i = 0; i < balances.length; i++) {
-            amountsIn[i] = balances[i].mulUp(bptRatio);
+            amountsIn[i] = balances[i].mulUp(bptOut).divUp(totalBPT);
         }
 
         return amountsIn;
@@ -70,15 +70,14 @@ library GyroPoolMath {
         // amountsOut[i] = balances[i] * | ---------------------  |                                  //
         //                                \       totalBPT       /                                   //
         **********************************************************************************************/
-
+        // We adjust the order of operations to minimize error amplification, assuming that
+        // balances[i], totalBPT > 1 (which is usually the case).
         // Since we're computing an amount out, we round down overall. This means rounding down on both the
         // multiplication and division.
 
-        uint256 bptRatio = bptIn.divDown(totalBPT);
-
         amountsOut = new uint256[](balances.length);
         for (uint256 i = 0; i < balances.length; i++) {
-            amountsOut[i] = balances[i].mulDown(bptRatio);
+            amountsOut[i] = balances[i].mulDown(bptIn).divDown(totalBPT);
         }
 
         return amountsOut;
