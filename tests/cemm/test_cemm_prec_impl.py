@@ -426,7 +426,7 @@ def test_calculateInvariant_sense_check(params, balances):
 
     derived = prec_impl.calc_derived_values(params)
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
     # test against the old (imprecise) implementation
@@ -444,7 +444,7 @@ def test_calculateInvariant_error_not_too_bad(gyro_cemm_math_testing, params, ba
     derived = prec_impl.calc_derived_values(params)
     result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     assert err_py < D("3e-8")
     if result_py < D(1):
         assert err_py / result_py < D("1e-8")
@@ -480,7 +480,7 @@ def test_virtualOffsets_sense_check(params, invariant):
     derived = prec_impl.calc_derived_values(params)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     # test w/o error in invariant
     r = (invariant, invariant)
@@ -528,7 +528,7 @@ def test_calcXpXpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
     r = (invariant + 2 * D(err), invariant)
@@ -598,7 +598,7 @@ def test_calcYpYpDivLambdaLambda_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
     r = (invariant + 2 * D(err), invariant)
@@ -720,7 +720,7 @@ def test_solveQuadraticSwap_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     assume(sum(balances) > D(100))
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
@@ -875,7 +875,7 @@ def test_calcYGivenX_error_not_too_bad(params, balances):
     r = (invariant + 2 * D(err), invariant)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     assume(sum(balances) > D(100))
 
     # calculate swap error tolerance
@@ -901,7 +901,7 @@ def test_calcYGivenX_sense_check(params, balances):
     r = (invariant + 2 * D(err), invariant)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     assume(sum(balances) > D(100))
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
@@ -956,7 +956,7 @@ def test_maxBalances_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
 
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
-    assume(denominator > D2("0.01"))  # if this is not the case, error can blow up
+    assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
     r = (invariant + 2 * D(err), invariant)
