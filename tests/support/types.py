@@ -1,4 +1,4 @@
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Tuple, Iterable
 
 from tests.support.quantized_decimal import DecimalLike
 
@@ -18,7 +18,7 @@ class CallJoinPoolGyroParams(NamedTuple):
     currentBalances: Tuple[int, ...]
     lastChangeBlock: int
     protocolSwapFeePercentage: int
-    amountIn: int
+    amountIn: Iterable[int]
     bptOut: int
 
 

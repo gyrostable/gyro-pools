@@ -113,13 +113,13 @@ contract MockVault is IPoolSwapStructs {
         uint256[] currentBalances;
         uint256 lastChangeBlock;
         uint256 protocolSwapFeePercentage;
-        uint256 amountIn;
+        uint256[] amountsIn;
         uint256 bptOut;
     }
 
     // Join pool.
     // NOTE:
-    // - CallJoinPoolGyroParams.amountIn is only used upon initialization.
+    // - CallJoinPoolGyroParams.amountsIn is only used upon initialization.
     // - CallJoinPoolGyroParams.bptOut is only used out of initialization.
     // This is an unfortunate accident and should in principle be refactored.
     function callJoinPoolGyro(CallJoinPoolGyroParams memory params)
@@ -127,9 +127,6 @@ contract MockVault is IPoolSwapStructs {
         returns (uint256[] memory amountsIn, uint256[] memory dueProtocolFeeAmounts)
     {
         //(, amountsIn, minBPTAmountOut) = abi.decode(self, (JoinKind, uint256[], uint256));
-
-        uint256[] memory amountsInStr = new uint256[](params.currentBalances.length);
-        for (uint256 i = 0; i < params.currentBalances.length; ++i) amountsInStr[i] = params.amountIn;
 
         WeightedPoolUserData.JoinKind kind;
         bytes memory userData;
@@ -139,7 +136,7 @@ contract MockVault is IPoolSwapStructs {
             for (uint256 i = 0; i < params.currentBalances.length; ++i) isEmptyPool = isEmptyPool && (params.currentBalances[i] == 0);
             if (isEmptyPool) {
                 kind = WeightedPoolUserData.JoinKind.INIT;
-                userData = abi.encode(kind, amountsInStr, 1e7); //min Bpt
+                userData = abi.encode(kind, params.amountsIn, 1e7); //min Bpt
             } else {
                 kind = WeightedPoolUserData.JoinKind.ALL_TOKENS_IN_FOR_EXACT_BPT_OUT;
                 userData = abi.encode(kind, params.bptOut); // bptOut

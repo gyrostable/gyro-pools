@@ -78,7 +78,7 @@ def join_pool(
             balances,
             last_change_block,
             protocol_swap_fees,
-            amount_in,
+            [amount_in, amount_in],
             amount_out,
         )
     )
