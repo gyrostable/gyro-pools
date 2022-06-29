@@ -11,7 +11,7 @@ class SwapKind:
 
 
 class CallJoinPoolGyroParams(NamedTuple):
-    gyroTwoPool: address
+    pool: address
     poolId: bytes
     sender: address
     recipient: address
