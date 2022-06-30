@@ -201,14 +201,16 @@ def measure_pool_gas():
     rows = []
 
     tx = gyro_cemm_math_testing.calculateInvariant.transact(balances, params, derived)
-    # tx.call_trace()  # Uncomment for details
+    tx.call_trace()  # Uncomment for details
     rows.append(("calculateInvariant", gas_without_call_cost(tx)))
     invariantBeforeAction = tx.return_value
 
     tx = gyro_cemm_math_testing._calcAllTokensInGivenExactBptOut.transact(balances, scale(bpt_amount_out), mock_vault_pool.totalSupply())
+    tx.call_trace()
     rows.append(("_calcAllTokensInGivenExactBptOut", gas_without_call_cost(tx)))
 
     tx = gyro_cemm_math_testing.liquidityInvariantUpdate.transact(invariantBeforeAction, scale(bpt_amount_out), mock_vault_pool.totalSupply(), True)
+    tx.call_trace()
     rows.append(("liquidityInvariantUpdate", gas_without_call_cost(tx)))
 
     rows.append(("SUM", sum(row[1] for row in rows)))
@@ -250,12 +252,12 @@ def measure_pool_gas():
     rows = []
 
     tx = gyro_cemm_math_testing.calculateInvariantWithError.transact(balances, params, derived)
-    # tx.call_trace()  # Uncomment for details
+    tx.call_trace()  # Uncomment for details
     rows.append(("calculateInvariantWithError", gas_without_call_cost(tx)))
     invariantBeforeActionWithError = tx.return_value
 
     tx = gyro_cemm_math_testing.calcOutGivenIn.transact(balances, scale(amount_to_swap), True, params, derived, invariantBeforeActionWithError)
-    # tx.call_trace()  # Uncomment for details
+    tx.call_trace()  # Uncomment for details
     rows.append(("calcOutGivenIn", gas_without_call_cost(tx)))
 
     rows.append(("SUM", sum(row[1] for row in rows)))
