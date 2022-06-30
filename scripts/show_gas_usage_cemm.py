@@ -254,9 +254,10 @@ def measure_pool_gas():
     tx = gyro_cemm_math_testing.calculateInvariantWithError.transact(balances, params, derived)
     tx.call_trace()  # Uncomment for details
     rows.append(("calculateInvariantWithError", gas_without_call_cost(tx)))
-    invariantBeforeActionWithError = tx.return_value
+    invariantBefore, invariantBeforeError = tx.return_value
+    invariantBeforeOverUnder = (invariantBefore + 2  * invariantBeforeError, invariantBefore)
 
-    tx = gyro_cemm_math_testing.calcOutGivenIn.transact(balances, scale(amount_to_swap), True, params, derived, invariantBeforeActionWithError)
+    tx = gyro_cemm_math_testing.calcOutGivenIn.transact(balances, scale(amount_to_swap), True, params, derived, invariantBeforeOverUnder)
     tx.call_trace()  # Uncomment for details
     rows.append(("calcOutGivenIn", gas_without_call_cost(tx)))
 
