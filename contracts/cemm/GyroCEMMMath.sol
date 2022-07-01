@@ -71,6 +71,7 @@ library GyroCEMMMath {
     }
 
     function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
+        // TODO LEAVE IN CHECKS HERE! DO NOTHING (except for removing this comment when done)!
         ret = t1.x.mulDownMag(t2.x).add(t1.y.mulDownMag(t2.y));
     }
 
@@ -80,6 +81,10 @@ library GyroCEMMMath {
     /** @dev Calculate A t where A is given in Section 2.2
      *  This is reversing rotation and scaling of the ellipse (mapping back to circle) */
     function mulA(Params memory params, Vector2 memory tp) internal pure returns (Vector2 memory t) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON […]
+        // NB: This function is only used inside calculatePrice(). This is why we can make two simplifications:
+        // 1. We don't correct for precision of s, c using d.dSq because that level of precision is not important in this context.
+        // 2. We don't need to check for over/underflow b/c these are impossible in that context and given the (checked) assumptions on the various values.
         t.x = params.c.mulDownMag(tp.x).divDownMag(params.lambda).sub(params.s.mulDownMag(tp.y).divDownMag(params.lambda));
         t.y = params.s.mulDownMag(tp.x).add(params.c.mulDownMag(tp.y));
     }
@@ -170,12 +175,13 @@ library GyroCEMMMath {
         DerivedParams memory d,
         Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 a) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON r * lambda
         // a = r lambda c tau(beta)_x + rs tau(beta)_y
         //       account for 1 factors of dSq (2 s,c factors)
         int256 termXp = d.tauBeta.x.divXp(d.dSq);
         a = d.tauBeta.x > 0 ? r.x.mulUpMag(p.lambda).mulUpMag(p.c).mulUpXpToNp(termXp) : r.y.mulDownMag(p.lambda).mulDownMag(p.c).mulUpXpToNp(termXp);
 
-        // use fact that tau(beta)_y > 0
+        // use fact that tau(beta)_y > 0, so the required rounding direction is clear.
         a = a.add(r.x.mulUpMag(p.s).mulUpXpToNp(d.tauBeta.y.divXp(d.dSq)));
     }
 
@@ -186,12 +192,13 @@ library GyroCEMMMath {
         DerivedParams memory d,
         Vector2 memory r // overestimate in x component, underestimate in y
     ) internal pure returns (int256 b) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON r * lambda
         // b = -r \lambda s tau(alpha)_x + rc tau(alpha)_y
         //       account for 1 factors of dSq (2 s,c factors)
         int256 termXp = d.tauAlpha.x.divXp(d.dSq);
         b = (d.tauAlpha.x < 0) ? r.x.mulUpMag(p.lambda).mulUpMag(p.s).mulUpXpToNp(-termXp) : (-r.y).mulDownMag(p.lambda).mulDownMag(p.s).mulUpXpToNp(termXp);
 
-        // use fact that tau(alpha)_y > 0
+        // use fact that tau(alpha)_y > 0, so the required rounding direction is clear.
         b = b.add(r.x.mulUpMag(p.c).mulUpXpToNp(d.tauAlpha.y.divXp(d.dSq)));
     }
 
@@ -203,10 +210,11 @@ library GyroCEMMMath {
         DerivedParams memory d,
         Vector2 memory r // overestimate in x-component, underestimate in y-component
     ) internal pure returns (int256 xp) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON r * lambda
         // x^+ = r lambda c (tau(beta)_x - tau(alpha)_x) + rs (tau(beta)_y - tau(alpha)_y)
         //      account for 1 factors of dSq (2 s,c factors)
-        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x
-        int256 termXp2 = (d.tauBeta.y.sub(d.tauAlpha.y)).divXp(d.dSq);
+        int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x, so this is > 0 and rounding direction is clear
+        int256 termXp2 = (d.tauBeta.y.sub(d.tauAlpha.y)).divXp(d.dSq); // note this may be negative, but since tauBeta.y, tauAlpha.y >= 0, it is always in [-1, 1].
         xp = r.y.mulDownMag(p.lambda).mulDownMag(p.c).mulDownXpToNp(termXp1);
         xp = xp.add((termXp2 > 0 ? r.y.mulDownMag(p.s) : r.x.mulUpMag(p.s)).mulDownXpToNp(termXp2));
     }
@@ -219,6 +227,7 @@ library GyroCEMMMath {
         DerivedParams memory d,
         Vector2 memory r // overestimate in x-component, underestimate in y-component
     ) internal pure returns (int256 yp) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON r * lambda
         // y^+ = r lambda s (tau(beta)_x - tau(alpha)_x) + rc (tau(alpha)_y - tau(beta)_y)
         //      account for 1 factors of dSq (2 s,c factors)
         int256 termXp1 = (d.tauBeta.x.sub(d.tauAlpha.x)).divXp(d.dSq); // note tauBeta.x > tauAlpha.x
@@ -289,6 +298,7 @@ library GyroCEMMMath {
         Params memory p,
         DerivedParams memory d
     ) internal pure returns (int256 val) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON (x + y) * lambda
         // (cx - sy) * (w/lambda + z) / lambda
         //      account for 2 factors of dSq (4 s,c factors)
         int256 termXp = (d.w.divDownMag(p.lambda).add(d.z)).divDownMag(p.lambda).divXp(d.dSq).divXp(d.dSq);
@@ -309,12 +319,15 @@ library GyroCEMMMath {
     /// Since we will only divide by this later, we will not need to worry about overflow in that operation if done in the right way
     /// TODO: is rounding direction ok?
     function calcAChiAChiInXp(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON lambda.
         // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
         //      account for 3 factors of dSq (6 s,c factors)
+        // SOMEDAY: In these calcs, a calculated value is multiplied by lambda and lambda^2, resp, which implies some
+        // error amplification. It's fine b/c we're doing it in extra precision here, but would still be nice if it
+        // could be avoided, perhaps by splitting up the numbers into a high and low part.
         val = p.lambda.mulUpMag((2 * d.u).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
         // for lambda^2 u^2 factor in rounding error in u since lambda could be big
         // Note: lambda^2 is multiplied at the end to be sure the calculation doesn't overflow, but this can lose some precision
-        // TODO: can this be improved?
         val = val.add(((d.u + 1).mulXp(d.u + 1).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq)).mulUpMag(p.lambda).mulUpMag(p.lambda));
         // the next line converts from extre precision to normal precision post-computation while rounding up
         val = val.add((d.v).mulXp(d.v).divXp(d.dSq).divXp(d.dSq).divXp(d.dSq));
@@ -339,6 +352,7 @@ library GyroCEMMMath {
         // (At)_x^2 = (x^2 c^2 - xy2sc + y^2 s^2)/lambda^2
         //      account for 1 factor of dSq (2 s,c factors)
         ////////////////////////////////////////////////////////////////////////////////////
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON (x + y)^2
         int256 termNp = x.mulUpMag(x).mulUpMag(p.c).mulUpMag(p.c).add(y.mulUpMag(y).mulUpMag(p.s).mulUpMag(p.s));
         termNp = termNp.sub(x.mulDownMag(y).mulDownMag(p.c * 2).mulDownMag(p.s));
 
@@ -363,6 +377,7 @@ library GyroCEMMMath {
         // = ((x^2 - y^2)sc + yx(c^2-s^2)) * 2 * (zu + (wu + zv)/lambda + wv/lambda^2)
         //      account for 4 factors of dSq (8 s,c factors)
         ////////////////////////////////////////////////////////////////////////////////////
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON (x + y)^2
         int256 termNp = (x.mulDownMag(x).sub(y.mulUpMag(y))).mulDownMag(2 * p.c).mulDownMag(p.s);
         int256 xy = y.mulDownMag(2 * x);
         termNp = termNp.add(xy.mulDownMag(p.c).mulDownMag(p.c)).sub(xy.mulDownMag(p.s).mulDownMag(p.s));
@@ -387,6 +402,7 @@ library GyroCEMMMath {
         // (At)_y^2 = (x^2 s^2 + xy2sc + y^2 c^2)
         //      account for 1 factor of dSq (2 s,c factors)
         ////////////////////////////////////////////////////////////////////////////////////
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON (x + y)^2
         int256 termNp = x.mulUpMag(x).mulUpMag(p.s).mulUpMag(p.s).add(y.mulUpMag(y).mulUpMag(p.c).mulUpMag(p.c));
         termNp = termNp.add(x.mulUpMag(y).mulUpMag(p.s * 2).mulUpMag(p.c));
 
@@ -408,6 +424,7 @@ library GyroCEMMMath {
         Params memory p,
         DerivedParams memory d
     ) internal pure returns (int256 val, int256 err) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS FROM THE OTHER FUNCTIONS (on (x + y)^2 specifically)
         val = calcMinAtxAChiySqPlusAtxSq(x, y, p, d).add(calc2AtxAtyAChixAChiy(x, y, p, d));
         val = val.add(calcMinAtyAChixSqPlusAtySq(x, y, p, d));
         // error inside the square root is O((x^2 + y^2) * eps_xp) + O(eps_np), where eps_xp=1e-38, eps_np=1e-18
@@ -429,6 +446,7 @@ library GyroCEMMMath {
         DerivedParams memory derived,
         int256 invariant
     ) internal pure returns (uint256 px) {
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON […] EXCEPT FOR THE ONES MARKED
         // shift by virtual offsets to get v(t)
         Vector2 memory r = Vector2(invariant, invariant); // ignore r rounding for spot price, precision will be lost in TWAP anyway
         Vector2 memory ab = Vector2(virtualOffset0(params, derived, r), virtualOffset1(params, derived, r));
@@ -440,7 +458,10 @@ library GyroCEMMMath {
         Vector2 memory pc = Vector2(vec.x.divDownMag(vec.y), ONE);
 
         // Convert prices back to ellipse
+        // NB: These operations check for overflow because the price pc[0] might be large when vex.y is small.
+        // SOMEDAY I think this probably can't actually happen due to our bounds on the different values. In this case we could do this unchecked as well.
         int256 pgx = scalarProd(pc, mulA(params, Vector2(ONE, 0)));
+        // TODO LEAVE IN THIS CHECK, then delete this comment when done.
         px = pgx.divDownMag(scalarProd(pc, mulA(params, Vector2(0, ONE)))).toUint256();
     }
 
@@ -483,6 +504,7 @@ library GyroCEMMMath {
             ixOut = 0;
             calcGiven = calcXGivenY;
         }
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON […]
 
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         int256 balInNew = balances[ixIn].add(amountIn).toInt256();
@@ -514,6 +536,7 @@ library GyroCEMMMath {
             ixOut = 0;
             calcGiven = calcYGivenX; // this reverses compared to calcOutGivenIn
         }
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON […]
 
         _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         int256 balOutNew = balances[ixOut].sub(amountOut).toInt256();
@@ -539,8 +562,11 @@ library GyroCEMMMath {
         int256 dSq
     ) internal pure returns (int256) {
         // x component will round up, y will round down, use extra precision
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON […]
         Vector2 memory lamBar;
         lamBar.x = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divDownMag(lambda).divDownMag(lambda));
+        // Note: The following cannot become negative even with errors because we require lambda >= 1 and
+        // divUpMag returns the exact result if the quotient is representable in 18 decimals.
         lamBar.y = SignedFixedPoint.ONE_XP.sub(SignedFixedPoint.ONE_XP.divUpMag(lambda).divUpMag(lambda));
         // using qparams struct to avoid "stack too deep"
         QParams memory q;
@@ -561,6 +587,7 @@ library GyroCEMMMath {
         sTerm.x = lamBar.y.mulDownMag(s).mulDownMag(s).divXp(dSq);
         sTerm.y = lamBar.x.mulUpMag(s).mulUpMag(s).divXp(dSq + 1) + 1; // account for rounding error in dSq, divXp
         sTerm = Vector2(SignedFixedPoint.ONE_XP.sub(sTerm.x), SignedFixedPoint.ONE_XP.sub(sTerm.y));
+        // ^^ NB: The components of sTerm are non-negative: We only need to worry about sTerm.y. This is non-negative b/c, because of bounds on lambda lamBar <= 1 - 1e-16, and division by dSq ensures we have enough precision so that rounding errors are never magnitude 1e-16.
 
         // now compute the argument of the square root
         q.c = -calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta, dSq);
@@ -592,7 +619,8 @@ library GyroCEMMMath {
         Vector2 memory tauBeta,
         int256 dSq
     ) internal pure returns (int256) {
-        //////////////////////////////////////////////////////////////////////////////////
+        // TODO OK TO REMOVE CHECKS GIVEN CONDITIONS ON […]
+//////////////////////////////////////////////////////////////////////////////////
         // x'x'/lambda^2 = r^2 c^2 tau(beta)_x^2
         //      + ( r^2 2s c tau(beta)_x tau(beta)_y - rx 2c tau(beta)_x ) / lambda
         //      + ( r^2 s^2 tau(beta)_y^2 - rx 2s tau(beta)_y + x^2 ) / lambda^2
