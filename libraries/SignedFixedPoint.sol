@@ -62,10 +62,28 @@ library SignedFixedPoint {
         return product / ONE;
     }
 
+    /// @dev this implements mulDownMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function mulDownMagU(int256 a, int256 b) internal pure returns (int256) {
+        return (a * b) / ONE;
+    }
+
     /// @dev This rounds away from 0, i.e., up *in absolute value*!
     function mulUpMag(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
         _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+
+        // If product > 0, the result should be ceil(p/ONE) = floor((p-1)/ONE) + 1, where floor() is implicit. If
+        // product < 0, the result should be floor(p/ONE) = ceil((p+1)/ONE) - 1, where ceil() is implicit.
+        // Addition for signed numbers: Case selection so we round away from 0, not always up.
+        if (product > 0) return ((product - 1) / ONE) + 1;
+        else if (product < 0) return ((product + 1) / ONE) - 1;
+        // product == 0
+        else return 0;
+    }
+
+    /// @dev this implements mulUpMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function mulUpMagU(int256 a, int256 b) internal pure returns (int256) {
+        int256 product = a * b;
 
         // If product > 0, the result should be ceil(p/ONE) = floor((p-1)/ONE) + 1, where floor() is implicit. If
         // product < 0, the result should be floor(p/ONE) = ceil((p+1)/ONE) - 1, where ceil() is implicit.
@@ -90,6 +108,17 @@ library SignedFixedPoint {
         }
     }
 
+    /// @dev this implements divDownMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function divDownMagU(int256 a, int256 b) internal pure returns (int256) {
+        _require(b != 0, Errors.ZERO_DIVISION);
+
+        if (a == 0) {
+            return 0;
+        } else {
+            return (a * ONE) / b;
+        }
+    }
+
     /// @dev Rounds away from 0, i.e., up in absolute value.
     function divUpMag(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
@@ -111,6 +140,26 @@ library SignedFixedPoint {
         }
     }
 
+    /// @dev this implements divUpMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function divUpMagU(int256 a, int256 b) internal pure returns (int256) {
+        _require(b != 0, Errors.ZERO_DIVISION);
+
+        if (b < 0) {
+            // Required so the below is correct.
+            b = -b;
+            a = -a;
+        }
+
+        if (a == 0) {
+            return 0;
+        } else {
+            int256 aInflated = a * ONE;
+
+            if (aInflated > 0) return ((aInflated - 1) / b) + 1;
+            else return ((aInflated + 1) / b) - 1;
+        }
+    }
+
     /// @dev multiplies two extra precision numbers (with 38 decimals)
     /// rounds down in magnitude but this shouldn't matter
     /// multiplication can overflow if a,b are > 2 in magnitude
@@ -119,6 +168,14 @@ library SignedFixedPoint {
         _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
 
         return product / ONE_XP;
+    }
+
+    /// @dev multiplies two extra precision numbers (with 38 decimals)
+    /// rounds down in magnitude but this shouldn't matter
+    /// multiplication can overflow if a,b are > 2 in magnitude
+    /// this implements mulXp w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function mulXpU(int256 a, int256 b) internal pure returns (int256) {
+        return (a * b) / ONE_XP;
     }
 
     /// @dev divides two extra precision numbers (with 38 decimals)
@@ -137,6 +194,20 @@ library SignedFixedPoint {
         }
     }
 
+    /// @dev divides two extra precision numbers (with 38 decimals)
+    /// rounds down in magnitude but this shouldn't matter
+    /// can overflow if a > 2 or b << 1 in magnitude
+    /// this implements divXp w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function divXpU(int256 a, int256 b) internal pure returns (int256) {
+        _require(b != 0, Errors.ZERO_DIVISION);
+
+        if (a == 0) {
+            return 0;
+        } else {
+            return (a * ONE_XP) / b;
+        }
+    }
+
     /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
     /// Rounds down in signed direction
     /// returns normal precision of the product
@@ -151,6 +222,18 @@ library SignedFixedPoint {
     }
 
     /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
+    /// Rounds down in signed direction
+    /// returns normal precision of the product
+    /// this implements mulDownXpToNp w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function mulDownXpToNpU(int256 a, int256 b) internal pure returns (int256) {
+        int256 b1 = b / 1e19;
+        int256 b2 = b % 1e19;
+        int256 prod1 = a * b1;
+        int256 prod2 = a * b2;
+        return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
+    }
+
+    /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
     /// Rounds up in signed direction
     /// returns normal precision of the product
     function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
@@ -160,6 +243,18 @@ library SignedFixedPoint {
         _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
         int256 prod2 = a * b2;
         _require(a == 0 || prod2 / a == b2, Errors.MUL_OVERFLOW);
+        return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
+    }
+
+    /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
+    /// Rounds up in signed direction
+    /// returns normal precision of the product
+    /// this implements mulUpXpToNp w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
+    function mulUpXpToNpU(int256 a, int256 b) internal pure returns (int256) {
+        int256 b1 = b / 1e19;
+        int256 b2 = b % 1e19;
+        int256 prod1 = a * b1;
+        int256 prod2 = a * b2;
         return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
     }
 
