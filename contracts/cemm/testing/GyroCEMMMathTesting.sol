@@ -15,34 +15,6 @@ contract GyroCEMMMathTesting {
         t = GyroCEMMMath.mulA(params, tp);
     }
 
-    function zeta(GyroCEMMMath.Params memory params, int256 px) external pure returns (int256 pxc) {
-        pxc = GyroCEMMMath.zeta(params, px);
-    }
-
-    function tau(GyroCEMMMath.Params memory params, int256 px) external pure returns (GyroCEMMMath.Vector2 memory tpp) {
-        tpp = GyroCEMMMath.tau(params, px);
-    }
-
-    function tau(
-        GyroCEMMMath.Params memory params,
-        int256 px,
-        int256 sqrt
-    ) external pure returns (GyroCEMMMath.Vector2 memory tpp) {
-        return GyroCEMMMath.tau(params, px, sqrt);
-    }
-
-    function mkDerivedParams(GyroCEMMMath.Params memory params) external pure returns (GyroCEMMMath.DerivedParams memory derived) {
-        derived = GyroCEMMMath.mkDerivedParams(params);
-    }
-
-    function eta(int256 pxc) external pure returns (GyroCEMMMath.Vector2 memory tpp) {
-        tpp = GyroCEMMMath.eta(pxc);
-    }
-
-    function eta(int256 pxc, int256 z) external pure returns (GyroCEMMMath.Vector2 memory tpp) {
-        tpp = GyroCEMMMath.eta(pxc, z);
-    }
-
     function virtualOffset0(
         GyroCEMMMath.Params memory params,
         GyroCEMMMath.DerivedParams memory derived,
