@@ -111,12 +111,7 @@ library SignedFixedPoint {
     /// @dev this implements divDownMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
     function divDownMagU(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
-
-        if (a == 0) {
-            return 0;
-        } else {
-            return (a * ONE) / b;
-        }
+        return (a * ONE) / b;
     }
 
     /// @dev Rounds away from 0, i.e., up in absolute value.
@@ -144,8 +139,9 @@ library SignedFixedPoint {
     function divUpMagU(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
 
+        // TODO check if we can shave off some gas by logically refactoring this vs the below case distinction into one (on a * b or so).
         if (b < 0) {
-            // Required so the below is correct.
+            // Ensure b > 0 so the below is correct.
             b = -b;
             a = -a;
         }
@@ -153,10 +149,8 @@ library SignedFixedPoint {
         if (a == 0) {
             return 0;
         } else {
-            int256 aInflated = a * ONE;
-
-            if (aInflated > 0) return ((aInflated - 1) / b) + 1;
-            else return ((aInflated + 1) / b) - 1;
+            if (a > 0) return ((a * ONE - 1) / b) + 1;
+            else return ((a * ONE + 1) / b) - 1;
         }
     }
 
@@ -201,11 +195,7 @@ library SignedFixedPoint {
     function divXpU(int256 a, int256 b) internal pure returns (int256) {
         _require(b != 0, Errors.ZERO_DIVISION);
 
-        if (a == 0) {
-            return 0;
-        } else {
-            return (a * ONE_XP) / b;
-        }
+        return (a * ONE_XP) / b;
     }
 
     /// @dev multiplies normal precision a with extra precision b (with 38 decimals)
@@ -228,6 +218,7 @@ library SignedFixedPoint {
     function mulDownXpToNpU(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
         int256 b2 = b % 1e19;
+        // TODO check if we eliminate these vars and save some gas (by only checking the sign of prod1, say)
         int256 prod1 = a * b1;
         int256 prod2 = a * b2;
         return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
@@ -253,6 +244,7 @@ library SignedFixedPoint {
     function mulUpXpToNpU(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
         int256 b2 = b % 1e19;
+        // TODO check if we eliminate these vars and save some gas (by only checking the sign of prod1, say)
         int256 prod1 = a * b1;
         int256 prod2 = a * b2;
         return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
