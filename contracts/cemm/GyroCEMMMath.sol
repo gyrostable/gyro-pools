@@ -491,14 +491,14 @@ library GyroCEMMMath {
             calcGiven = calcXGivenY;
         }
 
-        _require(amountIn <= balances[ixIn].mulDownU(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
+        _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         int256 balInNew = balances[ixIn].add(amountIn).toInt256();
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         int256 balOutNew = calcGiven(balInNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
         _require(balOutNew.toUint256() < balances[ixOut], assetBoundError);
         amountOut = balances[ixOut].sub(balOutNew.toUint256());
-        _require(amountOut <= balances[ixOut].mulDownU(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
 
     function calcInGivenOut(
@@ -522,14 +522,14 @@ library GyroCEMMMath {
             calcGiven = calcYGivenX; // this reverses compared to calcOutGivenIn
         }
 
-        _require(amountOut <= balances[ixOut].mulDownU(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         int256 balOutNew = balances[ixOut].sub(amountOut).toInt256();
         int256 balInNew = calcGiven(balOutNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
         _require(balInNew.toUint256() > balances[ixIn], assetBoundError);
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         amountIn = balInNew.toUint256().sub(balances[ixIn]);
-        _require(amountIn <= balances[ixIn].mulDownU(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
+        _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
     /** @dev Variables are named for calculating y given x
