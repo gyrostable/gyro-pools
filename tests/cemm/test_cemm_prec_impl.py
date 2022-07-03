@@ -442,9 +442,9 @@ def test_calculateInvariant_sense_check(params, balances):
 )
 def test_calculateInvariant_error_not_too_bad(gyro_cemm_math_testing, params, balances):
     derived = prec_impl.calc_derived_values(params)
-    result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
     assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
+    result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
     assert err_py < D("3e-8")
     if result_py < D(1):
         assert err_py / result_py < D("1e-8")
@@ -871,12 +871,12 @@ def calculate_swap_error(params, balances, r, derived):
 @given(params=gen_params(), balances=gen_balances(2, bpool_params))
 def test_calcYGivenX_error_not_too_bad(params, balances):
     derived = prec_impl.calc_derived_values(params)
-    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + 2 * D(err), invariant)
-
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
     assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     assume(sum(balances) > D(100))
+
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + 2 * D(err), invariant)
 
     # calculate swap error tolerance
     swap_err_xy, swap_err_yx = calculate_swap_error(params, balances, r, derived)
@@ -897,12 +897,12 @@ def test_calcYGivenX_error_not_too_bad(params, balances):
 )
 def test_calcYGivenX_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
-    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
-    r = (invariant + 2 * D(err), invariant)
-
     denominator = prec_impl.calcAChiAChiInXp(params, derived) - D2(1)
     assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
     assume(sum(balances) > D(100))
+
+    invariant, err = prec_impl.calculateInvariantWithError(balances, params, derived)
+    r = (invariant + 2 * D(err), invariant)
 
     y_py = prec_impl.calcYGivenX(balances[0], params, derived, r)
     x_py = prec_impl.calcXGivenY(balances[1], params, derived, r)
