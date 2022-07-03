@@ -37,7 +37,8 @@ library SignedFixedPoint {
         // Fixed Point addition is the same as regular checked addition
 
         int256 c = a + b;
-        _require(b >= 0 ? c >= a : c < a, Errors.ADD_OVERFLOW);
+        if (!(b >= 0 ? c >= a : c < a))
+            _require(false, Errors.ADD_OVERFLOW);
         return c;
     }
 
@@ -50,14 +51,16 @@ library SignedFixedPoint {
         // Fixed Point addition is the same as regular checked addition
 
         int256 c = a - b;
-        _require(b <= 0 ? c >= a : c < a, Errors.SUB_OVERFLOW);
+        if (!(b <= 0 ? c >= a : c < a))
+            _require(false, Errors.SUB_OVERFLOW);
         return c;
     }
 
     /// @dev This rounds towards 0, i.e., down *in absolute value*!
     function mulDownMag(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
-        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || product / a == b))
+            _require(false, Errors.MUL_OVERFLOW);
 
         return product / ONE;
     }
@@ -70,7 +73,8 @@ library SignedFixedPoint {
     /// @dev This rounds away from 0, i.e., up *in absolute value*!
     function mulUpMag(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
-        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || product / a == b))
+            _require(false, Errors.MUL_OVERFLOW);
 
         // If product > 0, the result should be ceil(p/ONE) = floor((p-1)/ONE) + 1, where floor() is implicit. If
         // product < 0, the result should be floor(p/ONE) = ceil((p+1)/ONE) - 1, where ceil() is implicit.
@@ -96,13 +100,15 @@ library SignedFixedPoint {
 
     /// @dev Rounds towards 0, i.e., down in absolute value.
     function divDownMag(int256 a, int256 b) internal pure returns (int256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0)
+            _require(false, Errors.ZERO_DIVISION);
 
         if (a == 0) {
             return 0;
         } else {
             int256 aInflated = a * ONE;
-            _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            if (aInflated / a != ONE)
+                _require(false, Errors.DIV_INTERNAL);
 
             return aInflated / b;
         }
@@ -110,13 +116,15 @@ library SignedFixedPoint {
 
     /// @dev this implements divDownMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
     function divDownMagU(int256 a, int256 b) internal pure returns (int256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0)
+            _require(false, Errors.ZERO_DIVISION);
         return (a * ONE) / b;
     }
 
     /// @dev Rounds away from 0, i.e., up in absolute value.
     function divUpMag(int256 a, int256 b) internal pure returns (int256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0)
+            _require(false, Errors.ZERO_DIVISION);
 
         if (b < 0) {
             // Required so the below is correct.
@@ -128,7 +136,8 @@ library SignedFixedPoint {
             return 0;
         } else {
             int256 aInflated = a * ONE;
-            _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            if (aInflated / a != ONE)
+                _require(false, Errors.DIV_INTERNAL);
 
             if (aInflated > 0) return ((aInflated - 1) / b) + 1;
             else return ((aInflated + 1) / b) - 1;
@@ -137,7 +146,8 @@ library SignedFixedPoint {
 
     /// @dev this implements divUpMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
     function divUpMagU(int256 a, int256 b) internal pure returns (int256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0)
+            _require(false, Errors.ZERO_DIVISION);
 
         // TODO check if we can shave off some gas by logically refactoring this vs the below case distinction into one (on a * b or so).
         if (b < 0) {
@@ -159,7 +169,8 @@ library SignedFixedPoint {
     /// multiplication can overflow if a,b are > 2 in magnitude
     function mulXp(int256 a, int256 b) internal pure returns (int256) {
         int256 product = a * b;
-        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || product / a == b))
+            _require(false, Errors.MUL_OVERFLOW);
 
         return product / ONE_XP;
     }
@@ -176,13 +187,15 @@ library SignedFixedPoint {
     /// rounds down in magnitude but this shouldn't matter
     /// can overflow if a > 2 or b << 1 in magnitude
     function divXp(int256 a, int256 b) internal pure returns (int256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0)
+            _require(false, Errors.ZERO_DIVISION);
 
         if (a == 0) {
             return 0;
         } else {
             int256 aInflated = a * ONE_XP;
-            _require(aInflated / a == ONE_XP, Errors.DIV_INTERNAL); // mul overflow
+            if (aInflated / a != ONE_XP)
+                _require(false, Errors.DIV_INTERNAL);
 
             return aInflated / b;
         }
@@ -193,7 +206,8 @@ library SignedFixedPoint {
     /// can overflow if a > 2 or b << 1 in magnitude
     /// this implements divXp w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
     function divXpU(int256 a, int256 b) internal pure returns (int256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b==0)
+            _require(false, Errors.ZERO_DIVISION);
 
         return (a * ONE_XP) / b;
     }
@@ -205,9 +219,11 @@ library SignedFixedPoint {
         int256 b1 = b / 1e19;
         int256 b2 = b % 1e19;
         int256 prod1 = a * b1;
-        _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || prod1 / a == b1))
+            _require(false, Errors.MUL_OVERFLOW);
         int256 prod2 = a * b2;
-        _require(a == 0 || prod2 / a == b2, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || prod2 / a == b2))
+            _require(false, Errors.MUL_OVERFLOW);
         return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
     }
 
@@ -231,9 +247,11 @@ library SignedFixedPoint {
         int256 b1 = b / 1e19;
         int256 b2 = b % 1e19;
         int256 prod1 = a * b1;
-        _require(a == 0 || prod1 / a == b1, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || prod1 / a == b1))
+            _require(false, Errors.MUL_OVERFLOW);
         int256 prod2 = a * b2;
-        _require(a == 0 || prod2 / a == b2, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || prod2 / a == b2))
+            _require(false, Errors.MUL_OVERFLOW);
         return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
     }
 
