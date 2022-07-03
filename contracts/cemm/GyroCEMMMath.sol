@@ -96,9 +96,9 @@ library GyroCEMMMath {
     Does NOT check for internal consistency of 'derived' with 'params'. */
     function validateDerivedParamsLimits(Params memory params, DerivedParams memory derived) internal pure {
         int256 norm2;
-        norm2 = scalarProd(derived.tauAlpha, derived.tauAlpha);
+        norm2 = scalarProdXp(derived.tauAlpha, derived.tauAlpha);
         _require(ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
-        norm2 = scalarProd(derived.tauBeta, derived.tauBeta);
+        norm2 = scalarProdXp(derived.tauBeta, derived.tauBeta);
         _require(ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
 
         _require(derived.u <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
@@ -113,6 +113,11 @@ library GyroCEMMMath {
 
     function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
         ret = t1.x.mulDownMag(t2.x).add(t1.y.mulDownMag(t2.y));
+    }
+
+    /// @dev scalar product for extra-precision values
+    function scalarProdXp(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
+        ret = t1.x.mulXp(t2.x).add(t1.y.mulXp(t2.y));
     }
 
     // "Methods" for Params. We could put these into a separate library and import them via 'using' to get method call
