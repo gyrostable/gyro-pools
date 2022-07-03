@@ -33,6 +33,7 @@ library GyroCEMMMath {
     int256 internal constant _MAX_STRETCH_FACTOR = 1e26;                // 1e8   in normal precision
     int256 internal constant _DERIVED_TAU_NORM_ACCURACY_XP = 1e3;       // 1e-35 in extra precision
     int256 internal constant _MAX_INV_INVARIANT_DENOMINATOR_XP = 1e43;  // 1e5   in extra precision
+    int256 internal constant _DERIVED_DSQ_NORM_ACCURACY_XP = 1e23;      // 1e-15 in extra precision
 
     // Anti-overflow limits: Dynamic values (checked before operations that use them)
     int256 internal constant _MAX_BALANCES  = 1e34;  // 1e16 in normal precision
@@ -105,6 +106,8 @@ library GyroCEMMMath {
         _require(derived.v <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
         _require(derived.w <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
         _require(derived.z <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+
+        _require(ONE_XP - _DERIVED_DSQ_NORM_ACCURACY_XP <= derived.dSq && derived.dSq <= ONE_XP + _DERIVED_DSQ_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_DSQ_WRONG);
 
         // NB No anti-overflow checks are required given the checks done above and in validateParams().
         int256 mulDenominator = ONE_XP.divXpU(calcAChiAChiInXp(params, derived) - ONE_XP);

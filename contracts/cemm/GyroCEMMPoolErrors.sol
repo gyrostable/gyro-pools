@@ -29,4 +29,5 @@ library GyroCEMMPoolErrors {
     uint256 internal constant INVARIANT_DENOMINATOR_WRONG = 362;
     uint256 internal constant MAX_ASSETS_EXCEEDED = 363;
     uint256 internal constant MAX_INVARIANT_EXCEEDED = 363;
+    uint256 internal constant DERIVED_DSQ_WRONG = 364;
 }
