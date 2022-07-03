@@ -28,6 +28,16 @@ library GyroCEMMMath {
     uint256 internal constant _MAX_IN_RATIO = 0.3e18;
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
+    // Anti-overflow limits: Params and DerivedParams (static, only needs to be checked on pool creation)
+    int256 internal constant _ROTATION_VECTOR_NORM_ACCURACY = 1e3;      // 1e-15 in normal precision
+    int256 internal constant _MAX_STRETCH_FACTOR = 1e26;                // 1e8   in normal precision
+    int256 internal constant _DERIVED_TAU_NORM_ACCURACY_XP = 1e3;       // 1e-35 in extra precision
+    int256 internal constant _MAX_INV_INVARIANT_DENOMINATOR_XP = 1e43;  // 1e5   in extra precision
+
+    // Anti-overflow limits: Dynamic values (checked before operations that use them)
+    int256 internal constant _MAX_BALANCES  = 1e34;  // 1e16 in normal precision
+    int256 internal constant _MAX_INVARIANT = 1e37;  // 1e19 in normal precision
+
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are
     // the functions that are used by the contract b/c there the values are stored unsigned.
@@ -68,6 +78,37 @@ library GyroCEMMMath {
         int256 a;
         int256 b;
         int256 c;
+    }
+
+    /** @dev Enforces limits and approximate normalization of the rotation vector. */
+    function validateParams(Params memory params) internal pure {
+        _require(0 <= params.s && params.s <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
+        _require(0 <= params.c && params.c <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
+
+        Vector2 memory sc = Vector2(params.s, params.c);
+        int256 scnorm2 = scalarProd(sc, sc);  // squared norm
+        _require(ONE - _ROTATION_VECTOR_NORM_ACCURACY <= scnorm2 && scnorm2 <= ONE + _ROTATION_VECTOR_NORM_ACCURACY, GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
+
+        _require(0 <= params.lambda && params.lambda <= _MAX_STRETCH_FACTOR, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
+    }
+
+    /** @dev Enforces limits and approximate normalization of the derived values.
+    Does NOT check for internal consistency of 'derived' with 'params'. */
+    function validateDerivedParamsLimits(Params memory params, DerivedParams memory derived) internal pure {
+        int256 norm2;
+        norm2 = scalarProd(derived.tauAlpha, derived.tauAlpha);
+        _require(ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
+        norm2 = scalarProd(derived.tauBeta, derived.tauBeta);
+        _require(ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
+
+        _require(derived.u <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _require(derived.v <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _require(derived.w <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _require(derived.z <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+
+        // NB No anti-overflow checks are required given the checks done above and in validateParams().
+        int256 mulDenominator = ONE_XP.divXpU(calcAChiAChiInXp(params, derived) - ONE_XP);
+        _require(mulDenominator <= _MAX_INV_INVARIANT_DENOMINATOR_XP, GyroCEMMPoolErrors.INVARIANT_DENOMINATOR_WRONG);
     }
 
     function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
@@ -159,13 +200,16 @@ library GyroCEMMMath {
      *  we use a signed value to store it because all the other calculations are happening with signed ints, too.
      *  Computes r according to Prop 13 in 2.2.1 Initialization from Real Reserves
      *  orders operations to achieve best precision
-     *  Returns an underestimate and a bound on error size */
+     *  Returns an underestimate and a bound on error size.
+     *  Enforces anti-overflow limits on balances and the computed invaraint in the process. */
     function calculateInvariantWithError(
         uint256[] memory balances,
         Params memory params,
         DerivedParams memory derived
     ) internal pure returns (int256, int256) {
         (int256 x, int256 y) = (balances[0].toInt256(), balances[1].toInt256());
+        _require(x.add(y) <= _MAX_BALANCES, GyroCEMMPoolErrors.MAX_ASSETS_EXCEEDED);
+
         int256 AtAChi = calcAtAChi(x, y, params, derived);
         (int256 sqrt, int256 err) = calcInvariantSqrt(x, y, params, derived);
         // calculate the error in the square root term, separates cases based on sqrt >= 1/2
@@ -185,6 +229,8 @@ library GyroCEMMMath {
         // A chi \cdot A chi > 1, so round it up to round denominator up
         // denominator uses extra precision, so we do * 1/denominator so we are sure the calculation doesn't overflow
         int256 mulDenominator = ONE_XP.divXpU(calcAChiAChiInXp(params, derived) - ONE_XP);
+        // NOTE: Anti-overflow limits on mulDenominator are checked on contract creation.
+
         // as alternative, could do, but could overflow: invariant = (AtAChi.add(sqrt) - err).divXp(denominator);
         int256 invariant = (AtAChi + sqrt - err).mulDownXpToNpU(mulDenominator);
         // error scales if denominator is small
@@ -198,6 +244,9 @@ library GyroCEMMMath {
         // Scale by a constant to account for errors in the scaling factor itself and limited compounding.
         // calculating lambda^2 w/o decimals so that the calculation will never overflow, the lost precision isn't important
         err = err + ((invariant.mulUpXpToNpU(mulDenominator) * ((params.lambda * params.lambda) / 1e36)) * 40) / ONE_XP + 1;
+
+        _require(invariant.add(err) <= _MAX_INVARIANT, GyroCEMMPoolErrors.MAX_INVARIANT_EXCEEDED);
+
         return (invariant, err);
     }
 

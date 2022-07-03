@@ -25,4 +25,8 @@ library GyroCEMMPoolErrors {
     uint256 internal constant DERIVED_TAU_NOT_NORMALIZED = 358;
     uint256 internal constant DERIVED_ZETA_WRONG = 359;
     uint256 internal constant STRETCHING_FACTOR_WRONG = 360;
+    uint256 internal constant DERIVED_UVWZ_WRONG = 361;
+    uint256 internal constant INVARIANT_DENOMINATOR_WRONG = 362;
+    uint256 internal constant MAX_ASSETS_EXCEEDED = 363;
+    uint256 internal constant MAX_INVARIANT_EXCEEDED = 363;
 }
