@@ -385,11 +385,10 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             // to avoid extra calculations and reduce the potential for errors.
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
-            // We need to re-calculate the invariant with the updated balances from scratch in this case.
-            // TODO review if calculating the invariant is critical enough to just not do it, like in the 3-pool.
-            // (actually, should we always do it like that in any case? Any advantage to how we do it here?)
-            _mutateAmounts(balances, amountsOut, FixedPoint.sub);
-            _lastInvariant = GyroCEMMMath.calculateInvariant(balances, cemmParams, derivedCEMMParams);
+            // Invalidate _lastInvariant. We do not compute the invariant to make sure the pool is not locking
+            // up b/c numerical limits might be violated. Instead, we set the invariant such that any following
+            // (non-paused) join/exit will ignore and recompute it. (see GyroPoolMath._calcProtocolFees())
+            _lastInvariant = type(uint256).max;
         }
 
         // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead

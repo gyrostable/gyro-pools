@@ -108,6 +108,7 @@ library GyroPoolMath {
         if (currentInvariant <= previousInvariant) {
             // This shouldn't happen outside of rounding errors, but have this safeguard nonetheless to prevent the Pool
             // from entering a locked state in which joins and exits revert while computing accumulated swap fees.
+            // NB: This condition is also used by the pools to indicate that _lastInvariant is invalid and should be ignored.
             return (0, 0);
         }
 
