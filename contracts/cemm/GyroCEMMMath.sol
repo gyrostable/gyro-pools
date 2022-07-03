@@ -29,15 +29,15 @@ library GyroCEMMMath {
     uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
 
     // Anti-overflow limits: Params and DerivedParams (static, only needs to be checked on pool creation)
-    int256 internal constant _ROTATION_VECTOR_NORM_ACCURACY = 1e3;      // 1e-15 in normal precision
-    int256 internal constant _MAX_STRETCH_FACTOR = 1e26;                // 1e8   in normal precision
-    int256 internal constant _DERIVED_TAU_NORM_ACCURACY_XP = 1e23;      // 1e-15 in extra precision
-    int256 internal constant _MAX_INV_INVARIANT_DENOMINATOR_XP = 1e43;  // 1e5   in extra precision
-    int256 internal constant _DERIVED_DSQ_NORM_ACCURACY_XP = 1e23;      // 1e-15 in extra precision
+    int256 internal constant _ROTATION_VECTOR_NORM_ACCURACY = 1e3; // 1e-15 in normal precision
+    int256 internal constant _MAX_STRETCH_FACTOR = 1e26; // 1e8   in normal precision
+    int256 internal constant _DERIVED_TAU_NORM_ACCURACY_XP = 1e23; // 1e-15 in extra precision
+    int256 internal constant _MAX_INV_INVARIANT_DENOMINATOR_XP = 1e43; // 1e5   in extra precision
+    int256 internal constant _DERIVED_DSQ_NORM_ACCURACY_XP = 1e23; // 1e-15 in extra precision
 
     // Anti-overflow limits: Dynamic values (checked before operations that use them)
-    int256 internal constant _MAX_BALANCES  = 1e34;  // 1e16 in normal precision
-    int256 internal constant _MAX_INVARIANT = 1e37;  // 1e19 in normal precision
+    int256 internal constant _MAX_BALANCES = 1e34; // 1e16 in normal precision
+    int256 internal constant _MAX_INVARIANT = 1e37; // 1e19 in normal precision
 
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are
@@ -87,8 +87,11 @@ library GyroCEMMMath {
         _require(0 <= params.c && params.c <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
 
         Vector2 memory sc = Vector2(params.s, params.c);
-        int256 scnorm2 = scalarProd(sc, sc);  // squared norm
-        _require(ONE - _ROTATION_VECTOR_NORM_ACCURACY <= scnorm2 && scnorm2 <= ONE + _ROTATION_VECTOR_NORM_ACCURACY, GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED);
+        int256 scnorm2 = scalarProd(sc, sc); // squared norm
+        _require(
+            ONE - _ROTATION_VECTOR_NORM_ACCURACY <= scnorm2 && scnorm2 <= ONE + _ROTATION_VECTOR_NORM_ACCURACY,
+            GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED
+        );
 
         _require(0 <= params.lambda && params.lambda <= _MAX_STRETCH_FACTOR, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
     }
@@ -98,16 +101,25 @@ library GyroCEMMMath {
     function validateDerivedParamsLimits(Params memory params, DerivedParams memory derived) internal pure {
         int256 norm2;
         norm2 = scalarProdXp(derived.tauAlpha, derived.tauAlpha);
-        _require(ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
+        _require(
+            ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP,
+            GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED
+        );
         norm2 = scalarProdXp(derived.tauBeta, derived.tauBeta);
-        _require(ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED);
+        _require(
+            ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP,
+            GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED
+        );
 
         _require(derived.u <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
         _require(derived.v <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
         _require(derived.w <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
         _require(derived.z <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
 
-        _require(ONE_XP - _DERIVED_DSQ_NORM_ACCURACY_XP <= derived.dSq && derived.dSq <= ONE_XP + _DERIVED_DSQ_NORM_ACCURACY_XP, GyroCEMMPoolErrors.DERIVED_DSQ_WRONG);
+        _require(
+            ONE_XP - _DERIVED_DSQ_NORM_ACCURACY_XP <= derived.dSq && derived.dSq <= ONE_XP + _DERIVED_DSQ_NORM_ACCURACY_XP,
+            GyroCEMMPoolErrors.DERIVED_DSQ_WRONG
+        );
 
         // NB No anti-overflow checks are required given the checks done above and in validateParams().
         int256 mulDenominator = ONE_XP.divXpU(calcAChiAChiInXp(params, derived) - ONE_XP);
@@ -150,7 +162,9 @@ library GyroCEMMMath {
         // a = r lambda c tau(beta)_x + rs tau(beta)_y
         //       account for 1 factors of dSq (2 s,c factors)
         int256 termXp = d.tauBeta.x.divXpU(d.dSq);
-        a = d.tauBeta.x > 0 ? r.x.mulUpMagU(p.lambda).mulUpMagU(p.c).mulUpXpToNpU(termXp) : r.y.mulDownMagU(p.lambda).mulDownMagU(p.c).mulUpXpToNpU(termXp);
+        a = d.tauBeta.x > 0
+            ? r.x.mulUpMagU(p.lambda).mulUpMagU(p.c).mulUpXpToNpU(termXp)
+            : r.y.mulDownMagU(p.lambda).mulDownMagU(p.c).mulUpXpToNpU(termXp);
 
         // use fact that tau(beta)_y > 0, so the required rounding direction is clear.
         a = a + r.x.mulUpMagU(p.s).mulUpXpToNpU(d.tauBeta.y.divXpU(d.dSq));
@@ -166,7 +180,9 @@ library GyroCEMMMath {
         // b = -r \lambda s tau(alpha)_x + rc tau(alpha)_y
         //       account for 1 factors of dSq (2 s,c factors)
         int256 termXp = d.tauAlpha.x.divXpU(d.dSq);
-        b = (d.tauAlpha.x < 0) ? r.x.mulUpMagU(p.lambda).mulUpMagU(p.s).mulUpXpToNpU(-termXp) : (-r.y).mulDownMagU(p.lambda).mulDownMagU(p.s).mulUpXpToNpU(termXp);
+        b = (d.tauAlpha.x < 0)
+            ? r.x.mulUpMagU(p.lambda).mulUpMagU(p.s).mulUpXpToNpU(-termXp)
+            : (-r.y).mulDownMagU(p.lambda).mulDownMagU(p.s).mulUpXpToNpU(termXp);
 
         // use fact that tau(alpha)_y > 0, so the required rounding direction is clear.
         b = b + r.x.mulUpMagU(p.c).mulUpXpToNpU(d.tauAlpha.y.divXpU(d.dSq));
@@ -274,18 +290,21 @@ library GyroCEMMMath {
         Params memory p,
         DerivedParams memory d
     ) internal pure returns (int256 val) {
+        // to save gas, pre-compute dSq^2 as it will be used 3 times
+        int256 dSq2 = d.dSq.mulXpU(d.dSq);
+
         // (cx - sy) * (w/lambda + z) / lambda
         //      account for 2 factors of dSq (4 s,c factors)
-        int256 termXp = (d.w.divDownMagU(p.lambda) + d.z).divDownMagU(p.lambda).divXpU(d.dSq).divXpU(d.dSq);
+        int256 termXp = (d.w.divDownMagU(p.lambda) + d.z).divDownMagU(p.lambda).divXpU(dSq2);
         val = (x.mulDownMagU(p.c) - y.mulDownMagU(p.s)).mulDownXpToNpU(termXp);
 
         // (x lambda s + y lambda c) * u, note u > 0
         int256 termNp = x.mulDownMagU(p.lambda).mulDownMagU(p.s) + y.mulDownMagU(p.lambda).mulDownMagU(p.c);
-        val = val + termNp.mulDownXpToNpU(d.u.divXpU(d.dSq).divXpU(d.dSq));
+        val = val + termNp.mulDownXpToNpU(d.u.divXpU(dSq2));
 
         // (sx+cy) * v, note v > 0
         termNp = x.mulDownMagU(p.s) + y.mulDownMagU(p.c);
-        val = val + termNp.mulDownXpToNpU(d.v.divXpU(d.dSq).divXpU(d.dSq));
+        val = val + termNp.mulDownXpToNpU(d.v.divXpU(dSq2));
     }
 
     /// @dev calculates A chi \cdot A chi in extra precision
@@ -294,22 +313,25 @@ library GyroCEMMMath {
     /// Since we will only divide by this later, we will not need to worry about overflow in that operation if done in the right way
     /// TODO: is rounding direction ok?
     function calcAChiAChiInXp(Params memory p, DerivedParams memory d) internal pure returns (int256 val) {
+        // to save gas, pre-compute dSq^3 as it will be used 4 times
+        int256 dSq3 = d.dSq.mulXpU(d.dSq).mulXpU(d.dSq);
+
         // (A chi)_y^2 = lambda^2 u^2 + lambda 2 u v + v^2
         //      account for 3 factors of dSq (6 s,c factors)
         // SOMEDAY: In these calcs, a calculated value is multiplied by lambda and lambda^2, resp, which implies some
         // error amplification. It's fine b/c we're doing it in extra precision here, but would still be nice if it
         // could be avoided, perhaps by splitting up the numbers into a high and low part.
-        val = p.lambda.mulUpMagU((2 * d.u).mulXpU(d.v).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq));
+        val = p.lambda.mulUpMagU((2 * d.u).mulXpU(d.v).divXpU(dSq3));
         // for lambda^2 u^2 factor in rounding error in u since lambda could be big
         // Note: lambda^2 is multiplied at the end to be sure the calculation doesn't overflow, but this can lose some precision
-        val = val + ((d.u + 1).mulXpU(d.u + 1).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq)).mulUpMagU(p.lambda).mulUpMagU(p.lambda);
+        val = val + ((d.u + 1).mulXpU(d.u + 1).divXpU(dSq3)).mulUpMagU(p.lambda).mulUpMagU(p.lambda);
         // the next line converts from extre precision to normal precision post-computation while rounding up
-        val = val + (d.v).mulXpU(d.v).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq);
+        val = val + (d.v).mulXpU(d.v).divXpU(dSq3);
 
         // (A chi)_x^2 = (w/lambda + z)^2
         //      account for 3 factors of dSq (6 s,c factors)
         int256 termXp = d.w.divUpMagU(p.lambda) + d.z;
-        val = val + termXp.mulXpU(termXp).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq);
+        val = val + termXp.mulXpU(termXp).divXpU(dSq3);
     }
 
     /// @dev calculate -(At)_x ^2 (A chi)_y ^2 + (At)_x ^2, rounding down in signed direction
@@ -330,7 +352,7 @@ library GyroCEMMMath {
         termNp = termNp - x.mulDownMagU(y).mulDownMagU(p.c * 2).mulDownMagU(p.s);
 
         int256 termXp = d.u.mulXpU(d.u) + (2 * d.u).mulXpU(d.v).divDownMagU(p.lambda) + d.v.mulXpU(d.v).divDownMagU(p.lambda).divDownMagU(p.lambda);
-        termXp = termXp.divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq);
+        termXp = termXp.divXpU(d.dSq.mulXpU(d.dSq).mulXpU(d.dSq).mulXpU(d.dSq));
         val = (-termNp).mulDownXpToNpU(termXp);
 
         // now calculate (At)_x^2 accounting for possible rounding error to round down
@@ -356,7 +378,7 @@ library GyroCEMMMath {
 
         int256 termXp = d.z.mulXpU(d.u) + d.w.mulXpU(d.v).divDownMagU(p.lambda).divDownMagU(p.lambda);
         termXp = termXp + (d.w.mulXpU(d.u) + d.z.mulXpU(d.v)).divDownMagU(p.lambda);
-        termXp = termXp.divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq);
+        termXp = termXp.divXpU(d.dSq.mulXpU(d.dSq).mulXpU(d.dSq).mulXpU(d.dSq));
 
         val = termNp.mulDownXpToNpU(termXp);
     }
@@ -379,7 +401,7 @@ library GyroCEMMMath {
 
         int256 termXp = d.z.mulXpU(d.z) + d.w.mulXpU(d.w).divDownMagU(p.lambda).divDownMagU(p.lambda);
         termXp = termXp + (2 * d.z).mulXpU(d.w).divDownMagU(p.lambda);
-        termXp = termXp.divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq).divXpU(d.dSq);
+        termXp = termXp.divXpU(d.dSq.mulXpU(d.dSq).mulXpU(d.dSq).mulXpU(d.dSq));
         val = (-termNp).mulDownXpToNpU(termXp);
 
         // now calculate (At)_y^2 accounting for possible rounding error to round down
@@ -584,17 +606,21 @@ library GyroCEMMMath {
         Vector2 memory tauBeta,
         int256 dSq
     ) internal pure returns (int256) {
-//////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////
         // x'x'/lambda^2 = r^2 c^2 tau(beta)_x^2
         //      + ( r^2 2s c tau(beta)_x tau(beta)_y - rx 2c tau(beta)_x ) / lambda
         //      + ( r^2 s^2 tau(beta)_y^2 - rx 2s tau(beta)_y + x^2 ) / lambda^2
         //////////////////////////////////////////////////////////////////////////////////
+        // to save gas, pre-compute dSq^2 as it will be used 3 times, and r.x^2 as it will be used 2-3 times
+        // sqVars = (dSq^2, r.x^2)
+        Vector2 memory sqVars = Vector2(dSq.mulXpU(dSq), r.x.mulUpMagU(r.x));
+
         QParams memory q; // for working terms
         // q.a = r^2 s 2c tau(beta)_x tau(beta)_y
         //      account for 2 factors of dSq (4 s,c factors)
-        int256 termXp = tauBeta.x.mulXpU(tauBeta.y).divXpU(dSq).divXpU(dSq);
+        int256 termXp = tauBeta.x.mulXpU(tauBeta.y).divXpU(sqVars.x);
         if (termXp > 0) {
-            q.a = r.x.mulUpMagU(r.x).mulUpMagU(2 * s);
+            q.a = sqVars.y.mulUpMagU(2 * s);
             q.a = q.a.mulUpMagU(c).mulUpXpToNpU(termXp + 7); // +7 account for rounding in termXp
         } else {
             q.a = r.y.mulDownMagU(r.y).mulDownMagU(2 * s);
@@ -614,8 +640,8 @@ library GyroCEMMMath {
 
         // q.b = r^2 s^2 tau(beta)_y^2
         //      account for 2 factors of dSq (4 s,c factors)
-        termXp = tauBeta.y.mulXpU(tauBeta.y).divXpU(dSq).divXpU(dSq) + 7; // +7 account for rounding in termXp
-        q.b = r.x.mulUpMagU(r.x).mulUpMagU(s);
+        termXp = tauBeta.y.mulXpU(tauBeta.y).divXpU(sqVars.x) + 7; // +7 account for rounding in termXp
+        q.b = sqVars.y.mulUpMagU(s);
         q.b = q.b.mulUpMagU(s).mulUpXpToNpU(termXp);
 
         // q.c = -rx 2s tau(beta)_y, recall that tauBeta.y > 0 so round lower in magnitude
@@ -632,8 +658,8 @@ library GyroCEMMMath {
 
         // + r^2 c^2 tau(beta)_x^2
         //      account for 2 factors of dSq (4 s,c factors)
-        termXp = tauBeta.x.mulXpU(tauBeta.x).divXpU(dSq).divXpU(dSq) + 7; // +7 account for rounding in termXp
-        int256 val = r.x.mulUpMagU(r.x).mulUpMagU(c).mulUpMagU(c);
+        termXp = tauBeta.x.mulXpU(tauBeta.x).divXpU(sqVars.x) + 7; // +7 account for rounding in termXp
+        int256 val = sqVars.y.mulUpMagU(c).mulUpMagU(c);
         return (val.mulUpXpToNpU(termXp)) + q.a;
     }
 
