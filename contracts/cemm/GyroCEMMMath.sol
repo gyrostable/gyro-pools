@@ -31,7 +31,7 @@ library GyroCEMMMath {
     // Anti-overflow limits: Params and DerivedParams (static, only needs to be checked on pool creation)
     int256 internal constant _ROTATION_VECTOR_NORM_ACCURACY = 1e3;      // 1e-15 in normal precision
     int256 internal constant _MAX_STRETCH_FACTOR = 1e26;                // 1e8   in normal precision
-    int256 internal constant _DERIVED_TAU_NORM_ACCURACY_XP = 1e3;       // 1e-35 in extra precision
+    int256 internal constant _DERIVED_TAU_NORM_ACCURACY_XP = 1e23;      // 1e-15 in extra precision
     int256 internal constant _MAX_INV_INVARIANT_DENOMINATOR_XP = 1e43;  // 1e5   in extra precision
     int256 internal constant _DERIVED_DSQ_NORM_ACCURACY_XP = 1e23;      // 1e-15 in extra precision
 
