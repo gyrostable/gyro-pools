@@ -22,7 +22,7 @@ To analyze gas usage, the `Tracer` in `tests/support/analyze_trace.py` can be us
 
 
 ```python
-from tests.support.trace_analzyer import Tracer
+from tests.support.trace_analyzer import Tracer
 
 tx = ... # transaction to analyze
 
