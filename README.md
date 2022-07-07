@@ -15,3 +15,17 @@ The project can be compiled and tested using
 brownie compile
 brownie test
 ```
+
+## Testing
+
+To analyze gas usage, the `Tracer` in `tests/support/analyze_trace.py` can be used in the following way:
+
+
+```python
+from tests.support.trace_analzyer import Tracer
+
+tx = ... # transaction to analyze
+
+tracer = Tracer.load()
+tracer.trace_tx(tx)
+```

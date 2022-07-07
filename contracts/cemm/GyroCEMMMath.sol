@@ -572,7 +572,8 @@ library GyroCEMMMath {
         Vector2 memory sTerm;
         // we wil take sTerm = 1 - sTerm below, using multiple lines to avoid "stack too deep"
         sTerm.x = lamBar.y.mulDownMagU(s).mulDownMagU(s).divXpU(dSq);
-        sTerm.y = lamBar.x.mulUpMagU(s).mulUpMagU(s).divXpU(dSq + 1) + 1; // account for rounding error in dSq, divXp
+        sTerm.y = lamBar.x.mulUpMagU(s);
+        sTerm.y = sTerm.y.mulUpMagU(s).divXpU(dSq + 1) + 1; // account for rounding error in dSq, divXp
         sTerm = Vector2(SignedFixedPoint.ONE_XP - sTerm.x, SignedFixedPoint.ONE_XP - sTerm.y);
         // ^^ NB: The components of sTerm are non-negative: We only need to worry about sTerm.y. This is non-negative b/c, because of bounds on lambda lamBar <= 1 - 1e-16, and division by dSq ensures we have enough precision so that rounding errors are never magnitude 1e-16.
 
