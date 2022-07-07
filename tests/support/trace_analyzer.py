@@ -13,7 +13,7 @@ from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import web3
 
-ROOT_DIR = path.dirname(path.dirname(__file__))
+ROOT_DIR = path.join(path.dirname(__file__), "../../")
 
 LIBRARY_PLACEHOLDER = re.compile(r"__\$[a-zA-Z0-9_]+\$__")
 ZERO_ADDRESS = "0" * 40
