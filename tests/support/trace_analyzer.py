@@ -343,23 +343,33 @@ class Context:
     def summary(self):
         return f"{self.qualified_function_name} ({self.gas_consumed:,} / {self.total_gas_consumed:,})"
 
+    def format(self, maxlvl=None):
+        return self._format([], maxlvl=maxlvl)
+
     def _format(
         self,
         prefixes: List[bool],
         transition_type: Optional[CallType] = None,
         is_last: bool = False,
+        maxlvl=None,
+        lvl=1,
     ):
         format_prefix = lambda x: "│   " if x else "    "
         prefix = "".join(map(format_prefix, prefixes[:-1]))
         pipe = "└" if is_last else "│"
         prefix += f"{pipe}─({transition_type.char})─" if transition_type else ""
         line = f"{prefix} {self.summary}\n"
-        children = "".join(
-            child._format(
-                prefixes + [i < len(self.children) - 1], t, i == len(self.children) - 1
+        if maxlvl is not None and lvl >= maxlvl:
+            children = ""
+            # childprefix = "".join(map(format_prefix, prefixes[:])) + "└─"
+            # children = childprefix + " [...]\n"
+        else:
+            children = "".join(
+                child._format(
+                    prefixes + [i < len(self.children) - 1], t, i == len(self.children) - 1, maxlvl, lvl + 1
+                )
+                for i, (t, child) in enumerate(self.children)
             )
-            for i, (t, child) in enumerate(self.children)
-        )
         return line + children
 
     def update_names(self, sources: Sources, location: Location):
