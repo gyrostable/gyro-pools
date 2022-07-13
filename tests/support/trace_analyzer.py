@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from functools import lru_cache
 from os import path
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 import web3
 
@@ -101,6 +101,10 @@ class ContractDefinition(Definition):
 @dataclass
 class FunctionDefinition(Definition):
     contract_name: str
+
+    @property
+    def qualified_name(self) -> str:
+        return f"{self.contract_name}.{self.name}"
 
     @classmethod
     def from_ast_node(cls, node: dict, contract_name: str) -> FunctionDefinition:
@@ -316,8 +320,14 @@ class Context:
     children: List[Tuple[CallType, Context]] = field(default_factory=list)
 
     @property
-    def gas_consumed(self):
+    def total_gas_consumed(self):
         return self.initial_gas - self.final_gas if self.final_gas else 0
+
+    @property
+    def gas_consumed(self):
+        return self.total_gas_consumed - sum(
+            child.total_gas_consumed for _, child in self.children
+        )
 
     @property
     def qualified_function_name(self):
@@ -331,26 +341,7 @@ class Context:
 
     @property
     def summary(self):
-        return f"{self.qualified_function_name} ({self.gas_consumed:,})"
-
-    def flatten(self):
-        # NOTE: this is a bit hacky but avoids quite a few issues
-        # due to the fact that it is not possible to map in and out jumps
-        if self.gas_consumed == 0 and len(self.children) == 1:
-            return self.children[0][1]
-
-        children = []
-        for t, child in self.children:
-            child = child.flatten()
-            if (
-                child.qualified_function_name != self.qualified_function_name
-                and child.gas_consumed > 0
-            ):
-                children.append((t, child))
-            else:
-                self.children.extend(child.children)
-
-        return dataclasses.replace(self, children=children)
+        return f"{self.qualified_function_name} ({self.gas_consumed:,} / {self.total_gas_consumed:,})"
 
     def _format(
         self,
@@ -421,8 +412,6 @@ class Tracer:
                 continue
 
             context.update_names(self.sources, location)
-            if internal_call_stack:
-                internal_call_stack[-1].update_names(self.sources, location)
 
             op = trace["op"]
 
@@ -442,11 +431,20 @@ class Tracer:
                 call_stack.pop()
 
             elif op == "JUMP" and location.jump_type == JumpType.In:
-                new_context = Context(
-                    contract_name="", function_name="", initial_gas=trace["gas"]
-                )
+                next_location = source.get_pc_location(traces[i + 1]["pc"])
+                func = self.sources.get_location_function(next_location)
                 parent_context = (
                     internal_call_stack[-1] if internal_call_stack else context
+                )
+                if (
+                    not func
+                    or func.qualified_name == parent_context.qualified_function_name
+                ):
+                    continue
+                new_context = Context(
+                    contract_name=func.contract_name,
+                    function_name=func.name,
+                    initial_gas=trace["gas"],
                 )
                 parent_context.children.append((CallType.INTERNAL, new_context))
                 internal_call_stack.append(new_context)
@@ -458,7 +456,7 @@ class Tracer:
 
         root_context.final_gas = traces[-1]["gas"]
 
-        return root_context.flatten()
+        return root_context
 
     @classmethod
     def load(cls):
