@@ -123,89 +123,20 @@ mock_vault_pool = admin.deploy(
     GyroCEMMPool, args, mock_gyro_config.address, gas_limit=11250000
 )
 
-def gas_without_call_cost(tx: TransactionReceipt):
-    return tx.gas_used - call_cost(tx)
+# Set to an integer to only show that deep of traces. Nice to avoid visual overload.
+MAXLVL = None
 
-def call_cost(tx: TransactionReceipt):
-    """This is 21-24k but actually hard to compute exactly because of (...). We pull out an internal variable computed in (e.g.) call_trace().
-
-    See: https://github.com/eth-brownie/brownie/blob/c01ff902f3586d31f07610bb9e6261886135a3e1/brownie/network/transaction.py#L830"""
-    tx._expand_trace()
-    return tx._call_cost
-
-
-def tracer_events2call_tree(tx: TransactionReceipt):
-    """
-    Collects DebugGasTracer events and transforms them into a call tree with gas costs.
-
-    Returns: A tree of dicts with keys:
-    - subcalls: list
-    - fn: str
-    - gas_used: int = total gas used by context (including the events themselves!)
-    - gas_subcalls: int = total gas used by subcalls. gas_subcalls ≤ gas_used
-    """
-    # Build tree structure into 'cur'
-    stack = [dict(subcalls=[])]  # Top = Synthetic stack frame. The only one without enter/exit events.
-    for ev in tx.events['DebugGasTracer']:
-        if ev['isEnter']:
-            stack.append(dict(subcalls=[], ev_enter=ev))
-        else:
-            call = stack.pop()  # Fails if there's an exit without an enter event.
-            assert call['ev_enter']['fn'] == ev['fn']  # Fails when enter/exit events are mismatched.
-            call['ev_leave'] = ev
-            stack[-1]['subcalls'].append(call)
-
-    (top,) = stack  # Fails if there's an enter without an exit event.
-
-    # Process tree and add annotations
-    def go(call: dict):
-        if 'ev_enter' in call and 'ev_leave' in call:
-            call['gas_used'] = call['ev_enter']['gasleft'] - call['ev_leave']['gasleft']
-            call['fn'] = call['ev_enter']['fn']
-
-            # Events not needed anymore and tend to clutter debug output
-            del call['ev_enter'], call['ev_leave']
-        else:
-            # Synthetic toplevel frame, represents the whole tx. Use its gas minus call cost.
-            call['gas_used'] = gas_without_call_cost(tx)
-            call['fn'] = 'TOP'
-
-        # Preorder matters!
-        for c in call['subcalls']:
-            go(c)
-        call['gas_subcalls'] = sum(c['gas_used'] for c in call['subcalls'])
-
-    go(top)
-    return top
-
-
-def print_call_tree(call: dict):
-    """call: Output of tracer_events2call_tree"""
-    indentstr = "   "
-    gasfmt = "{:_}"
-
-    def go(call: dict, lvl: int):
-        gas_inner = call['gas_used'] - call['gas_subcalls']
-        line = "".join([
-            indentstr * lvl,
-            " " if lvl > 0 else "",
-            call['fn'],
-            " ",
-            "[", gasfmt.format(gas_inner), " / ", gasfmt.format(call['gas_used']), "]"
-        ])
-
-        print(line)
-
-        for c in call['subcalls']:
-            go(c, lvl + 1)
-
-    go(call, 0)
-
-
-# Whether to show call traces for detailed math ops.
-# Some of this info is redundant rn, but the call traces are not.
-SHOW_MATH_TRACES = True
-
+def my_call_trace(tracer: Tracer, tx: TransactionReceipt):
+    print(tracer.trace_tx(tx).format(maxlvl=MAXLVL))
+    # s: str = repr(tracer.trace_tx(tx))
+    # if MAXLVL is not None:
+    #     lines = s.splitlines()
+    #     if len(lines) > MAXLVL:
+    #         lines = lines[:MAXLVL - 1]
+    #         s = "\n".join(lines) + "\n [...]"
+    #         print(s)
+    #         return
+    # print(s)
 
 def main():
     poolId = mock_vault_pool.getPoolId()
@@ -232,28 +163,9 @@ def main():
 
     tracer = Tracer.load()
 
-    # DEBUG: The following call fails with a KeyError
-    print(tracer.trace_tx(tx_total))
-
-    # The two pieces of info are essentially redundant (the tracer events being more fine grained), but show them both to double check.
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
 
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-        tx = gyro_cemm_math_testing.calculateInvariant.transact(scale(init_amounts_in), params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariant", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-
-        print(tabulate(rows))
-        print("\n")
-
-    return
 
     ##################################################
     ## Add liqudidity to an already initialized pool
@@ -275,31 +187,8 @@ def main():
         )
     )
 
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
-
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-
-        tx = gyro_cemm_math_testing.calculateInvariant.transact(balances, params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariant", gas_without_call_cost(tx)))
-        invariantBeforeAction = tx.return_value
-
-        tx = gyro_cemm_math_testing._calcAllTokensInGivenExactBptOut.transact(balances, scale(bpt_amount_out), mock_vault_pool.totalSupply())
-        tx.call_trace()
-        rows.append(("_calcAllTokensInGivenExactBptOut", gas_without_call_cost(tx)))
-
-        tx = gyro_cemm_math_testing.liquidityInvariantUpdate.transact(invariantBeforeAction, scale(bpt_amount_out), mock_vault_pool.totalSupply(), True)
-        tx.call_trace()
-        rows.append(("liquidityInvariantUpdate", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-        print(tabulate(rows))
-        print("\n")
 
     ##################################################
     ## Conduct swaps
@@ -329,28 +218,8 @@ def main():
         balances[1],
     )
 
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
-
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-
-        tx = gyro_cemm_math_testing.calculateInvariantWithError.transact(balances, params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariantWithError", gas_without_call_cost(tx)))
-        invariantBefore, invariantBeforeError = tx.return_value
-        invariantBeforeOverUnder = (invariantBefore + 2  * invariantBeforeError, invariantBefore)
-
-        tx = gyro_cemm_math_testing.calcOutGivenIn.transact(balances, scale(amount_to_swap), True, params, derived, invariantBeforeOverUnder)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calcOutGivenIn", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-        print(tabulate(rows))
-        print("\n")
 
     print("----- 4: Swap (After Swap) -----\n")
     (_, balances) = mock_vault.getPoolTokens(poolId)
@@ -376,29 +245,8 @@ def main():
         balances[1],
     )
 
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
-
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-
-        tx = gyro_cemm_math_testing.calculateInvariantWithError.transact(balances, params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariantWithError", gas_without_call_cost(tx)))
-        invariantBefore, invariantBeforeError = tx.return_value
-        invariantBeforeOverUnder = (invariantBefore + 2 * invariantBeforeError, invariantBefore)
-
-        tx = gyro_cemm_math_testing.calcOutGivenIn.transact(balances, scale(amount_to_swap), True, params, derived,
-            invariantBeforeOverUnder)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calcOutGivenIn", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-        print(tabulate(rows))
-        print("\n")
 
     ##################################################
     ## Add liqudidity after swap
@@ -421,31 +269,8 @@ def main():
         )
     )
 
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
-
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-
-        tx = gyro_cemm_math_testing.calculateInvariant.transact(balances, params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariant", gas_without_call_cost(tx)))
-        invariantBeforeAction = tx.return_value
-
-        tx = gyro_cemm_math_testing._calcAllTokensInGivenExactBptOut.transact(balances, scale(bpt_amount_out), mock_vault_pool.totalSupply())
-        tx.call_trace()
-        rows.append(("_calcAllTokensInGivenExactBptOut", gas_without_call_cost(tx)))
-
-        tx = gyro_cemm_math_testing.liquidityInvariantUpdate.transact(invariantBeforeAction, scale(bpt_amount_out), mock_vault_pool.totalSupply(), True)
-        tx.call_trace()
-        rows.append(("liquidityInvariantUpdate", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-        print(tabulate(rows))
-        print("\n")
 
     ##################################################
     ## Another swap
@@ -475,29 +300,8 @@ def main():
         balances[1],
     )
 
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
-
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-
-        tx = gyro_cemm_math_testing.calculateInvariantWithError.transact(balances, params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariantWithError", gas_without_call_cost(tx)))
-        invariantBefore, invariantBeforeError = tx.return_value
-        invariantBeforeOverUnder = (invariantBefore + 2 * invariantBeforeError, invariantBefore)
-
-        tx = gyro_cemm_math_testing.calcOutGivenIn.transact(balances, scale(amount_to_swap), True, params, derived,
-            invariantBeforeOverUnder)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calcOutGivenIn", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-        print(tabulate(rows))
-        print("\n")
 
     ##################################################
     ## Exit pool
@@ -518,28 +322,5 @@ def main():
         bpt_amount_in,
     )
 
-    tx_total.call_trace()
+    my_call_trace(tracer, tx_total)
     print()
-    print_call_tree(tracer_events2call_tree(tx_total))
-
-    if SHOW_MATH_TRACES:
-        print("\n  -- Math Ops --\n")
-        rows = []
-
-        tx = gyro_cemm_math_testing.calculateInvariant.transact(balances, params, derived)
-        tx.call_trace()  # Uncomment for details
-        rows.append(("calculateInvariant", gas_without_call_cost(tx)))
-        invariantBeforeAction = tx.return_value
-
-        tx = gyro_cemm_math_testing._calcTokensOutGivenExactBptIn.transact(balances, scale(bpt_amount_in), mock_vault_pool.totalSupply())
-        tx.call_trace()
-        rows.append(("_calcTokensOutGivenExactBptIn", gas_without_call_cost(tx)))
-
-        tx = gyro_cemm_math_testing.liquidityInvariantUpdate.transact(invariantBeforeAction, scale(bpt_amount_in), mock_vault_pool.totalSupply(), False)
-        tx.call_trace()
-        rows.append(("liquidityInvariantUpdate", gas_without_call_cost(tx)))
-
-        rows.append(("SUM", sum(row[1] for row in rows)))
-        rows.append(("TOTAL TX incl wrapper", gas_without_call_cost(tx_total)))
-        print(tabulate(rows))
-        print("\n")
