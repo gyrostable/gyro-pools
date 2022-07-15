@@ -35,11 +35,11 @@ beta = D("1.02")
 phi_degrees = 45
 l_lambda = D("2")
 
-oracleEnabled = False
+oracleEnabled = True
 
 swapFeePercentage = D('0.1') / D(100)
-# protocolSwapFeePercentage = D('0.5') / D(100)
-protocolSwapFeePercentage = 0
+protocolSwapFeePercentage = D('0.5') / D(100)
+# protocolSwapFeePercentage = 0
 
 # The following just has to be large enough
 TOKENS_PER_USER = 1000
@@ -126,26 +126,14 @@ mock_vault_pool = admin.deploy(
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None
 
-def my_call_trace(tracer: Tracer, tx: TransactionReceipt):
-    print(tracer.trace_tx(tx).format(maxlvl=MAXLVL))
-    # s: str = repr(tracer.trace_tx(tx))
-    # if MAXLVL is not None:
-    #     lines = s.splitlines()
-    #     if len(lines) > MAXLVL:
-    #         lines = lines[:MAXLVL - 1]
-    #         s = "\n".join(lines) + "\n [...]"
-    #         print(s)
-    #         return
-    # print(s)
-
 def main():
     poolId = mock_vault_pool.getPoolId()
-    (params, derived) = mock_vault_pool.getCEMMParams()
 
     ##################################################
     ## Add initial liquidity
     ##################################################
-    print("----- 1: Join (Initial) -----\n")
+    label = "1: Join (Initial)"
+    print(f"----- {label} -----\n")
 
     tx_total = mock_vault.callJoinPoolGyro(
         CallJoinPoolGyroParams(
@@ -162,15 +150,25 @@ def main():
     )
 
     tracer = Tracer.load()
+    summary_headers = ("Operation", "Function", "Gas")
+    summary_table = []
 
-    my_call_trace(tracer, tx_total)
-    print()
+    def go(tx):
+        ctx = tracer.trace_tx(tx_total)
+        assert len(ctx.children) == 1
+        ctx1 = ctx.children[0][1]
+        summary_table.append((label, ctx1.qualified_function_name, ctx1.total_gas_consumed))
+        print(ctx.format(maxlvl=MAXLVL))
+        print()
+
+    go(tx_total)
 
 
     ##################################################
     ## Add liqudidity to an already initialized pool
     ##################################################
-    print("----- 2: Join (Non-Initial After Initial) -----\n")
+    label = "2: Join (Non-Initial After Initial)"
+    print(f"----- {label} -----\n")
     (_, balances) = mock_vault.getPoolTokens(poolId)
     bpt_amount_out = unscale(mock_vault_pool.totalSupply()) * D('0.2')
     tx_total = mock_vault.callJoinPoolGyro(
@@ -187,13 +185,13 @@ def main():
         )
     )
 
-    my_call_trace(tracer, tx_total)
-    print()
+    go(tx_total)
 
     ##################################################
     ## Conduct swaps
     ##################################################
-    print("----- 3: Swap (After Join) -----\n")
+    label = "3: Swap (After Join)"
+    print(f"----- {label} -----\n")
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
 
@@ -218,10 +216,10 @@ def main():
         balances[1],
     )
 
-    my_call_trace(tracer, tx_total)
-    print()
+    go(tx_total)
 
-    print("----- 4: Swap (After Swap) -----\n")
+    label = "4: Swap (After Swap)"
+    print(f"----- {label} -----\n")
     (_, balances) = mock_vault.getPoolTokens(poolId)
 
     amount_to_swap = 10
@@ -245,13 +243,13 @@ def main():
         balances[1],
     )
 
-    my_call_trace(tracer, tx_total)
-    print()
+    go(tx_total)
 
     ##################################################
     ## Add liqudidity after swap
     ##################################################
-    print("----- 5: Join (After Swap) -----\n")
+    label = "5: Join (After Swap)"
+    print(f"----- {label} -----\n")
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
     bpt_amount_out = unscale(mock_vault_pool.totalSupply()) * D('1.2')
@@ -269,13 +267,13 @@ def main():
         )
     )
 
-    my_call_trace(tracer, tx_total)
-    print()
+    go(tx_total)
 
     ##################################################
     ## Another swap
     ##################################################
-    print("----- 6: Swap (Again After Join) -----\n")
+    label = "6: Swap (Again After Join)"
+    print(f"----- {label} -----\n")
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
 
@@ -300,13 +298,13 @@ def main():
         balances[1],
     )
 
-    my_call_trace(tracer, tx_total)
-    print()
+    go(tx_total)
 
     ##################################################
     ## Exit pool
     ##################################################
-    print("----- 7: Exit (After Swap) -----\n")
+    label = "7: Exit (After Swap)"
+    print(f"----- {label} -----\n")
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
     bpt_amount_in = unscale(mock_vault_pool.balanceOf(users[0])) * D('0.7')
@@ -322,5 +320,13 @@ def main():
         bpt_amount_in,
     )
 
-    my_call_trace(tracer, tx_total)
+    go(tx_total)
+
+
+    #### Summary Table
+    print("Summary:\n")
+    print(tabulate(
+        summary_table,
+        headers=summary_headers
+    ))
     print()
