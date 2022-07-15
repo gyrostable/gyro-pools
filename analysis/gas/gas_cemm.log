@@ -7,15 +7,15 @@ Launching 'ganache-cli --port 8545 --gasLimit 12000000 --accounts 10 --hardfork 
 Running 'scripts/show_gas_usage_cemm.py::main'...
 ----- 1: Join (Initial) -----
 
- MockVault.callJoinPoolGyro (69,633 / 201,620)
-└─(C)─ GyroCEMMPool.onJoinPool (4,519 / 131,987)
-    └─(I)─ ExtensibleWeightedPool2Tokens.onJoinPool (532 / 127,468)
+ MockVault.callJoinPoolGyro (69,633 / 200,776)
+└─(C)─ GyroCEMMPool.onJoinPool (4,519 / 131,143)
+    └─(I)─ ExtensibleWeightedPool2Tokens.onJoinPool (532 / 126,624)
         │─(I)─ BalancerPoolToken.getVault (23 / 23)
         │─(I)─ _require (30 / 30)
         │─(I)─ ExtensibleWeightedPool2Tokens.getPoolId (23 / 23)
         │─(I)─ _require (30 / 30)
-        │─(I)─ TemporarilyPausable._ensureNotPaused (42 / 996)
-        │   │─(I)─ TemporarilyPausable._isNotPaused (901 / 924)
+        │─(I)─ TemporarilyPausable._ensureNotPaused (42 / 152)
+        │   │─(I)─ TemporarilyPausable._isNotPaused (57 / 80)
         │   │   └─(I)─ TemporarilyPausable._getBufferPeriodEndTime (23 / 23)
         │   └─(I)─ _require (30 / 30)
         │─(I)─ ERC20.totalSupply (823 / 823)
@@ -2290,7 +2290,7 @@ Summary:
 
 Operation                            Function                    Gas
 -----------------------------------  -----------------------  ------
-1: Join (Initial)                    GyroCEMMPool.onJoinPool  131987
+1: Join (Initial)                    GyroCEMMPool.onJoinPool  131143
 2: Join (Non-Initial After Initial)  GyroCEMMPool.onJoinPool  130842
 3: Swap (After Join)                 GyroCEMMPool.onSwap       66850
 4: Swap (After Swap)                 GyroCEMMPool.onSwap       66842
