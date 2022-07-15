@@ -106,8 +106,8 @@ base_params = TwoPoolBaseParams(
 
 args = TwoPoolParams(
     baseParams=base_params,
-    sqrtAlpha=sqrt_alpha,
-    sqrtBeta=sqrt_beta
+    sqrtAlpha=scale(sqrt_alpha),
+    sqrtBeta=scale(sqrt_beta),
 )
 
 mock_vault_pool = admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
