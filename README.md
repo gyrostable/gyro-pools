@@ -39,3 +39,20 @@ Then you need to run your script with everything compiled *before* the script ru
 ```bash
 brownie compile; brownie run scripts/my_script.py
 ```
+
+### Gas measurement scripts
+
+There are gas measurement scripts at `scripts/show_gas_usage_*.py`. For example:
+
+```bash
+$ brownie run scripts/show_gas_usage_cpmmv2.py
+```
+
+You can run all the ready-made gas measurements, and store their data, via
+```bash
+$ scripts/run_gas_measurements.sh
+```
+
+For this you need the `ansi2txt` utility installed. On Ubuntu you can get it via the `colorized-logs` package.
+
+This writes log files to `analysis/gas/`.
