@@ -6,14 +6,35 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 
 import "../interfaces/ICappedLiquidity.sol";
 
-contract CappedLiquidity is ICappedLiquidity {
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/IAuthentication.sol";
+
+abstract contract CappedLiquidity is ICappedLiquidity {
     using FixedPoint for uint256;
 
-    string internal constant _OVER_CAP = "over liquidity cap";
+    string internal constant _OVER_GLOBAL_CAP = "over global liquidity cap";
+    string internal constant _OVER_ADDRESS_CAP = "over address liquidity cap";
+    string internal constant _NOT_AUTHORIZED = "not authorized";
+    string internal constant _UNCAPPED = "pool is uncapped";
 
     CapParams internal _capParams;
 
+    address public override capManager;
+
     constructor(CapParams memory params) {
+        capManager = msg.sender;
+        _capParams.capEnabled = params.capEnabled;
+        _capParams.perAddressCap = params.perAddressCap;
+        _capParams.globalCap = params.globalCap;
+    }
+
+    function capParams() external view override returns (CapParams memory) {
+        return _capParams;
+    }
+
+    function setCapParams(CapParams memory params) external override {
+        require(msg.sender == capManager, _NOT_AUTHORIZED);
+        require(_capParams.capEnabled, _UNCAPPED);
+
         _capParams.capEnabled = params.capEnabled;
         _capParams.perAddressCap = params.perAddressCap;
         _capParams.globalCap = params.globalCap;
@@ -25,19 +46,7 @@ contract CappedLiquidity is ICappedLiquidity {
         uint256 currentSupply
     ) internal view {
         CapParams memory params = _capParams;
-        require(amountMinted.add(userBalance) <= params.perAddressCap, _OVER_CAP);
-        require(amountMinted.add(currentSupply) <= params.globalCap, _OVER_CAP);
-    }
-
-    function capEnabled() external view override returns (bool) {
-        return _capParams.capEnabled;
-    }
-
-    function perAddressCap() external view override returns (uint256) {
-        return _capParams.perAddressCap;
-    }
-
-    function globalCap() external view override returns (uint256) {
-        return _capParams.globalCap;
+        require(amountMinted.add(userBalance) <= params.perAddressCap, _OVER_ADDRESS_CAP);
+        require(amountMinted.add(currentSupply) <= params.globalCap, _OVER_GLOBAL_CAP);
     }
 }

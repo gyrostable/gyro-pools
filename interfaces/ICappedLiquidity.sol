@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 interface ICappedLiquidity {
     struct CapParams {
@@ -8,9 +9,9 @@ interface ICappedLiquidity {
         uint128 globalCap;
     }
 
-    function capEnabled() external view returns (bool);
+    function setCapParams(CapParams memory params) external;
 
-    function globalCap() external view returns (uint256);
+    function capParams() external view returns (CapParams memory);
 
-    function perAddressCap() external view returns (uint256);
+    function capManager() external view returns (address);
 }

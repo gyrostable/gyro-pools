@@ -25,10 +25,12 @@ import "./ExtensibleBaseWeightedPool.sol";
 import "./GyroThreeMath.sol";
 import "./GyroThreePoolErrors.sol";
 
+import "../CappedLiquidity.sol";
+
 /**
  * @dev Gyro Three Pool with immutable weights.
  */
-contract GyroThreePool is ExtensibleBaseWeightedPool {
+contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
 
@@ -59,8 +61,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration,
         address owner,
-        address configAddress
-    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner) {
+        address configAddress,
+        CapParams memory capParams
+    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner)
+      CappedLiquidity(capParams) {
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
 
         _token0 = tokens[0];
@@ -281,6 +285,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool {
         _distributeFees(invariantBeforeJoin);
 
         (bptAmountOut, amountsIn) = _doJoin(balances, userData);
+
+        if (_capParams.capEnabled) {
+            _ensureCap(bptAmountOut, balanceOf(msg.sender), totalSupply());
+        }
 
         // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full

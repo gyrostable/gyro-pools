@@ -337,16 +337,16 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, userData);
 
+        if (_capParams.capEnabled) {
+            _ensureCap(bptAmountOut, balanceOf(recipient), totalSupply());
+        }
+
         // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
         // re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
         _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountOut, totalSupply(), true);
-
-        if (_capParams.capEnabled) {
-            _ensureCap(bptAmountOut, balanceOf(recipient), totalSupply());
-        }
 
         // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountOut, amountsIn, new uint256[](2));

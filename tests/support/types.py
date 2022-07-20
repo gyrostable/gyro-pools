@@ -81,6 +81,7 @@ class ThreePoolParams(NamedTuple):
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike
     owner: str
+    cap_params: CapParams = CapParams()
     # configAddress listed separately
 
 
@@ -120,6 +121,7 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     root3Alpha: DecimalLike
     swapFeePercentage: DecimalLike
     owner: address
+    cap_params: CapParams = CapParams()
 
 
 # Legacy Aliases

@@ -20,6 +20,8 @@ import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
+import "../../interfaces/ICappedLiquidity.sol";
+
 import "./GyroThreePool.sol";
 
 contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
@@ -38,7 +40,8 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
         IERC20[] memory tokens,
         uint256 root3Alpha,
         uint256 swapFeePercentage,
-        address owner
+        address owner,
+        ICappedLiquidity.CapParams memory capParams
     ) external returns (address) {
         (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
 
@@ -54,7 +57,8 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
                     pauseWindowDuration,
                     bufferPeriodDuration,
                     owner,
-                    gyroConfigAddress
+                    gyroConfigAddress,
+                    capParams
                 )
             );
     }
