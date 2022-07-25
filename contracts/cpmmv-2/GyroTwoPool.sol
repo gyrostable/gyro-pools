@@ -24,12 +24,13 @@ import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
+import "../CappedLiquidity.sol";
 import "./ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2PoolErrors.sol";
 import "./GyroTwoMath.sol";
 import "./GyroTwoOracleMath.sol";
 
-contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
+contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, CappedLiquidity {
     using FixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -43,9 +44,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         NewPoolParams baseParams;
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
+        CapParams capParams;
     }
 
-    constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) {
+    constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) CappedLiquidity(params.capParams) {
         _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
@@ -77,7 +79,12 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(balances[0], balances[1], true);
     }
 
-    function _getVirtualParameters(uint256[2] memory sqrtParams, uint256 invariant) internal view virtual returns (uint256[2] memory virtualParameters) {
+    function _getVirtualParameters(uint256[2] memory sqrtParams, uint256 invariant)
+        internal
+        view
+        virtual
+        returns (uint256[2] memory virtualParameters)
+    {
         virtualParameters[0] = _virtualParameters(true, sqrtParams[1], invariant);
         virtualParameters[1] = _virtualParameters(false, sqrtParams[0], invariant);
         return virtualParameters;
@@ -301,7 +308,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
     function _onJoinPool(
         bytes32,
         address,
-        address,
+        address recipient,
         uint256[] memory balances,
         uint256 lastChangeBlock,
         uint256, //protocolSwapFeePercentage,
@@ -329,6 +336,10 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath {
         _distributeFees(invariantBeforeAction);
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, userData);
+
+        if (_capParams.capEnabled) {
+            _ensureCap(bptAmountOut, balanceOf(recipient), totalSupply());
+        }
 
         // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full

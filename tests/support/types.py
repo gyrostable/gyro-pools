@@ -47,6 +47,12 @@ class TwoPoolBaseParams(NamedTuple):
     owner: str
 
 
+class CapParams(NamedTuple):
+    cap_enabled: bool = False
+    per_address_cap: int = 0
+    global_cap: int = 0
+
+
 class TwoPoolFactoryCreateParams(NamedTuple):
     name: str
     symbol: str
@@ -55,12 +61,14 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     swapFeePercentage: DecimalLike
     oracleEnabled: bool
     owner: address
+    cap_params: CapParams = CapParams()
 
 
 class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     sqrtAlpha: DecimalLike  # should already be upscaled
     sqrtBeta: DecimalLike  # Should already be upscaled
+    cap_params: CapParams = CapParams()
 
 
 class ThreePoolParams(NamedTuple):
@@ -73,6 +81,7 @@ class ThreePoolParams(NamedTuple):
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike
     owner: str
+    cap_params: CapParams = CapParams()
     # configAddress listed separately
 
 
@@ -112,6 +121,7 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     root3Alpha: DecimalLike
     swapFeePercentage: DecimalLike
     owner: address
+    cap_params: CapParams = CapParams()
 
 
 # Legacy Aliases

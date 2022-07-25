@@ -20,6 +20,7 @@ import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
+import "../../interfaces/ICappedLiquidity.sol";
 import "./GyroTwoPool.sol";
 
 contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
@@ -39,7 +40,8 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
         uint256[] memory sqrts,
         uint256 swapFeePercentage,
         bool oracleEnabled,
-        address owner
+        address owner,
+        ICappedLiquidity.CapParams memory capParams
     ) external returns (address) {
         (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
 
@@ -57,7 +59,8 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
                 owner: owner
             }),
             sqrtAlpha: sqrts[0],
-            sqrtBeta: sqrts[1]
+            sqrtBeta: sqrts[1],
+            capParams: capParams
         });
 
         return _create(abi.encode(params, gyroConfigAddress));
