@@ -63,8 +63,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         address owner,
         address configAddress,
         CapParams memory capParams
-    ) ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner)
-      CappedLiquidity(capParams) {
+    )
+        ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner)
+        CappedLiquidity(capParams)
+    {
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
 
         _token0 = tokens[0];
@@ -259,7 +261,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
     function _onJoinPool(
         bytes32,
         address,
-        address,
+        address recipient,
         uint256[] memory balances,
         uint256,
         uint256, // protocolSwapFeePercentage, not used
@@ -287,7 +289,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         (bptAmountOut, amountsIn) = _doJoin(balances, userData);
 
         if (_capParams.capEnabled) {
-            _ensureCap(bptAmountOut, balanceOf(msg.sender), totalSupply());
+            _ensureCap(bptAmountOut, balanceOf(recipient), totalSupply());
         }
 
         // Since we pay fees in BPT, they have not changed the invariant and 'lastInvariant' is still consistent with
