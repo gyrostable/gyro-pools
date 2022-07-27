@@ -252,7 +252,7 @@ def gen_args_calcOutGivenIn(draw):
         amountInMax = cemm.ymax - cemm.y
     assume(amountInMax >= 1)
 
-    amountIn = draw(qdecimals(1, amountInMax, places=4))
+    amountIn = draw(qdecimals(1, amountInMax))
 
     return params, balances, amountIn, tokenInIsToken0
 
@@ -282,7 +282,7 @@ def test_calcOutGivenIn(args, gyro_cemm_math_testing):
 @given(
     params=util.gen_params(),
     balances=gen_balances(2, bpool_params),
-    amountOut=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    amountOut=qdecimals(min_value=1, max_value=1_000_000_000),
     tokenInIsToken0=st.booleans(),
 )
 def test_calcInGivenOut(

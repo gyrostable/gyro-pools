@@ -71,7 +71,7 @@ def gen_params_out_given_in(draw):
 
 
 def gen_bounds():
-    return st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4)
+    return st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX)
 
 
 @st.composite

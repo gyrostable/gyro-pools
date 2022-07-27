@@ -174,7 +174,7 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
-    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    amountIn=qdecimals(min_value=1, max_value=1_000_000_000),
     tokenInIsToken0=st.booleans(),
 )
 def test_calcOutGivenIn(
@@ -200,7 +200,7 @@ def test_calcOutGivenIn(
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
-    amountOut=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    amountOut=qdecimals(min_value=1, max_value=1_000_000_000),
     tokenInIsToken0=st.booleans(),
 )
 @example(
