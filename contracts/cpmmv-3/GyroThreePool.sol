@@ -31,7 +31,7 @@ import "../CappedLiquidity.sol";
  * @dev Gyro Three Pool with immutable weights.
  */
 contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
 
     uint256 private immutable _root3Alpha;
@@ -77,7 +77,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
 
-        _require(root3Alpha < FixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+        _require(root3Alpha < GyroFixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
         _root3Alpha = root3Alpha;
         gyroConfig = IGyroConfig(configAddress);
     }
@@ -90,7 +90,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
     // normalized weights are all 1/3. This is what the functions return.
 
     function _getNormalizedWeight(IERC20) internal view virtual override returns (uint256) {
-        return FixedPoint.ONE / 3;
+        return GyroFixedPoint.ONE / 3;
     }
 
     function _getNormalizedWeights() internal view virtual override returns (uint256[] memory) {
@@ -98,9 +98,9 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
 
         // prettier-ignore
         {
-            normalizedWeights[0] = FixedPoint.ONE/3;
-            normalizedWeights[1] = FixedPoint.ONE/3;
-            normalizedWeights[2] = FixedPoint.ONE/3;
+            normalizedWeights[0] = GyroFixedPoint.ONE/3;
+            normalizedWeights[1] = GyroFixedPoint.ONE/3;
+            normalizedWeights[2] = GyroFixedPoint.ONE/3;
         }
 
         return normalizedWeights;

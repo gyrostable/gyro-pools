@@ -264,7 +264,7 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     assert out_amount_sol <= out_amount
     assert out_amount_sol == out_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))
 
-
+@mark.skip(reason="Function Removed")
 @given(
     l=qdecimals("1e12", "1e16"),
     root_three_alpha=st.decimals(

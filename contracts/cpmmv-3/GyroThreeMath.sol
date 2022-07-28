@@ -14,12 +14,13 @@
 
 pragma solidity ^0.7.0;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 import "./GyroThreePoolErrors.sol";
 
+import "../../libraries/GyroFixedPoint.sol";
 import "../../libraries/GyroPoolMath.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
@@ -35,7 +36,7 @@ import "../../libraries/GyroPoolMath.sol";
  * errors.
  */
 library GyroThreeMath {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     using GyroPoolMath for uint256; // number._sqrt(tolerance)
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
@@ -76,7 +77,7 @@ library GyroThreeMath {
         )
     {
         // Order of operations is chosen to minimize error amplification.
-        a = FixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
+        a = GyroFixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
         mb = bterm.mulDown(root3Alpha).mulDown(root3Alpha);
         uint256 cterm = (balances[0].mulDown(balances[1])).add(balances[1].mulDown(balances[2])).add(balances[2].mulDown(balances[0]));
@@ -112,7 +113,7 @@ library GyroThreeMath {
         uint256 lmin = mb.divUp(a * 3).add(radic._sqrt(5).divUp(a * 3));
         // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All
         // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
-        uint256 alpha = FixedPoint.ONE.sub(a); // We know that a is in [0, 1].
+        uint256 alpha = GyroFixedPoint.ONE.sub(a); // We know that a is in [0, 1].
         uint256 factor = alpha >= 0.5e18 ? 1.5e18 : 2e18;
         l0 = lmin.mulUp(factor);
     }
@@ -252,8 +253,8 @@ library GyroThreeMath {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
-            uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(GyroFixedPoint.ONE - 1));
 
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
@@ -296,8 +297,8 @@ library GyroThreeMath {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
-            uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(GyroFixedPoint.ONE - 1));
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }

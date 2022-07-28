@@ -15,7 +15,8 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../../libraries/GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/LogCompression.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/TemporarilyPausable.sol";
@@ -41,7 +42,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
     TemporarilyPausable,
     PoolPriceOracle
 {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
 
@@ -499,7 +500,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         );
 
         // Update current balances by subtracting the protocol fee amounts
-        _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+        _mutateAmounts(balances, dueProtocolFeeAmounts, GyroFixedPoint.sub);
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
             normalizedWeights,
@@ -508,7 +509,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // Update the invariant with the balances the Pool will have after the join, in order to compute the
         // protocol swap fee amounts due in future joins and exits.
-        _mutateAmounts(balances, amountsIn, FixedPoint.add);
+        _mutateAmounts(balances, amountsIn, GyroFixedPoint.add);
         _lastInvariant = WeightedMath._calculateInvariant(normalizedWeights, balances);
 
         return (bptAmountOut, amountsIn, dueProtocolFeeAmounts);
@@ -698,7 +699,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
             );
 
             // Update current balances by subtracting the protocol fee amounts
-            _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+            _mutateAmounts(balances, dueProtocolFeeAmounts, GyroFixedPoint.sub);
         } else {
             // If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.
@@ -709,7 +710,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // Update the invariant with the balances the Pool will have after the exit, in order to compute the
         // protocol swap fees due in future joins and exits.
-        _mutateAmounts(balances, amountsOut, FixedPoint.sub);
+        _mutateAmounts(balances, amountsOut, GyroFixedPoint.sub);
         _lastInvariant = WeightedMath._calculateInvariant(normalizedWeights, balances);
 
         return (bptAmountIn, amountsOut, dueProtocolFeeAmounts);

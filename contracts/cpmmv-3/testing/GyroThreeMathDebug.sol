@@ -14,7 +14,8 @@
 
 pragma solidity ^0.7.0;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../../../libraries/GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
@@ -29,7 +30,7 @@ import "../../../libraries/GyroPoolMath.sol";
 contract GyroThreeMathDebug {
     event NewtonStep(uint256 deltaAbs, bool deltaIsPos, uint256 rootEst);
 
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     using GyroPoolMath for uint256;  // number._sqrt(tolerance)
 
     // Swap limits: amounts swapped may not be larger than this percentage of total balance.
@@ -78,7 +79,7 @@ contract GyroThreeMathDebug {
             uint256 md
         )
     {
-        a = FixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
+        a = GyroFixedPoint.ONE.sub(root3Alpha.mulDown(root3Alpha).mulDown(root3Alpha));
         uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
         mb = bterm.mulDown(root3Alpha).mulDown(root3Alpha);
         uint256 cterm = (balances[0].mulDown(balances[1])).add(balances[1].mulDown(balances[2])).add(balances[2].mulDown(balances[0]));
@@ -108,11 +109,11 @@ contract GyroThreeMathDebug {
         uint256 mc,
         uint256 // md
     ) public returns (uint256 l0) {
-        uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
+        uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * GyroFixedPoint.ONE));
         uint256 lmin = mb.divUp(a * 3).add(radic._sqrt(5).divUp(a * 3));
         // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All factors > 1 are safe.
         // For small alpha values, it is more efficient to fallback to a larger factor.
-        uint256 alpha = FixedPoint.ONE.sub(a);  // We know that a is in [0, 1].
+        uint256 alpha = GyroFixedPoint.ONE.sub(a);  // We know that a is in [0, 1].
         uint256 factor = alpha >= 0.5e18 ? 1.5e18 : 2e18;
         l0 = lmin.mulUp(factor);
     }
@@ -203,7 +204,7 @@ contract GyroThreeMathDebug {
         } else {
             ret = l.mulDown(l);
             // These products split up the factors into different groups of decimal places to reduce temorary blowup.
-            ret = Math.mul(ret, l / FixedPoint.ONE).add(ret.mulDown(l % FixedPoint.ONE));
+            ret = Math.mul(ret, l / GyroFixedPoint.ONE).add(ret.mulDown(l % GyroFixedPoint.ONE));
             uint256 x = ret;
             x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(
                 x.mulDown(root3Alpha % MIDDECIMAL)
@@ -256,8 +257,8 @@ contract GyroThreeMathDebug {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-            uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(GyroFixedPoint.ONE - 1));
 
             amountOut = virtOutUnder.mulUp(amountIn).divDown(virtInOver.add(amountIn));
         }
@@ -309,8 +310,8 @@ contract GyroThreeMathDebug {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-            uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver   = balanceIn.add(virtualOffset.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(GyroFixedPoint.ONE - 1));
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }

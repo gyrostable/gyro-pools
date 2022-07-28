@@ -95,11 +95,6 @@ contract GyroThreeMathTesting {
         return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffset);
     }
 
-    function safeLargePow3ADown(uint256 l, uint256 root3Alpha, uint256 d) external pure returns (uint256 ret) {
-        return GyroThreeMath._safeLargePow3ADown(l, root3Alpha, d);
-    }
-
-
     function calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
         uint256 bptAmountOut,
