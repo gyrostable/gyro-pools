@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/GyroFixedPoint.sol";
@@ -178,8 +178,8 @@ library GyroTwoMath {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(GyroFixedPoint.ONE - 1));
+            uint256 virtInOver = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
 
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
@@ -195,7 +195,7 @@ library GyroTwoMath {
     // Similar to the one before but adapting bc negative values
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances.
-      * See _calcOutGivenIn(). */
+     * See _calcOutGivenIn(). */
     function _calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -223,8 +223,13 @@ library GyroTwoMath {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
+<<<<<<< HEAD
             uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(GyroFixedPoint.ONE - 1));
+=======
+            uint256 virtInOver = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
+>>>>>>> 6d4fab5 (nethermind-5.1.4)
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }

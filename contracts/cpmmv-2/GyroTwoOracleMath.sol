@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/GyroFixedPoint.sol";
@@ -41,10 +41,7 @@ contract GyroTwoOracleMath {
 
         // pool weights are hard-coded to 1/2
         uint256 normalizedWeight = 5e17;
-        return
-            (balanceA.add(virtualParameterA)).divUp(normalizedWeight).divUp(
-                (balanceB.add(virtualParameterB)).divUp(normalizedWeight)
-            );
+        return (balanceA.add(virtualParameterA)).divUp(normalizedWeight).divUp((balanceB.add(virtualParameterB)).divUp(normalizedWeight));
     }
 
     /**
@@ -67,12 +64,7 @@ contract GyroTwoOracleMath {
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
-        uint256 spotPrice = _calcSpotPrice(
-            balanceA,
-            virtualParameterA,
-            balanceB,
-            virtualParameterB
-        );
+        uint256 spotPrice = _calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
         return LogCompression.toLowResLog(spotPrice);
     }
 
@@ -100,12 +92,7 @@ contract GyroTwoOracleMath {
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `mulUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
-        uint256 spotPrice = _calcSpotPrice(
-            balanceA,
-            virtualParameterA,
-            balanceB,
-            virtualParameterB
-        );
+        uint256 spotPrice = _calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
         uint256 portfolioValue = balanceA.add(balanceB.mulUp(spotPrice));
         int256 logPortfolioValue = LogCompression.toLowResLog(portfolioValue);
 

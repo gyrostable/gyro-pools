@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "../GyroCEMMOracleMath.sol";
@@ -17,19 +17,10 @@ contract GyroCEMMOracleMathTesting is GyroCEMMOracleMath, MockLogCompression {
         uint256 spotPriceA,
         int256 logBptTotalSupply
     ) external pure returns (int256 ret) {
-        ret = GyroCEMMOracleMath._calcLogBPTPrice(
-            balanceA,
-            balanceB,
-            spotPriceA,
-            logBptTotalSupply
-        );
+        ret = GyroCEMMOracleMath._calcLogBPTPrice(balanceA, balanceB, spotPriceA, logBptTotalSupply);
     }
 
-    function calcLogInvariantDivSupply(uint256 invariant, int256 logBptTotalSupply)
-        external
-        pure
-        returns (int256 ret)
-    {
+    function calcLogInvariantDivSupply(uint256 invariant, int256 logBptTotalSupply) external pure returns (int256 ret) {
         ret = GyroCEMMOracleMath._calcLogInvariantDivSupply(invariant, logBptTotalSupply);
     }
 }
