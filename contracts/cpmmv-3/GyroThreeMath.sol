@@ -52,10 +52,11 @@ library GyroThreeMath {
     uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 8;
     uint8 internal constant _INVARIANT_MIN_ITERATIONS = 5;
 
-    // Threshold of x where the normal method of computing x^3 would overflow and we need a workaround.
-    // Equal to 4.87e13 scaled; 4.87e13 is the point x where x**3 * 10**36 = (x**2 native) * (x native) ~ 2**256
-    uint256 internal constant _SAFE_LARGE_POW3_THRESHOLD = 4.87e31;
-    uint256 internal constant MIDDECIMAL = 1e9; // splits the fixed point decimals into two equal parts.
+    uint256 internal constant _MAX_BALANCES = 1e29;  // 1e11 = 100 billion, scaled
+    uint256 internal constant _MIN_ROOT_3_ALPHA = 0.15874010519681997e18;  // 3rd root of 0.004, scaled
+    uint256 internal constant _MAX_ROOT_3_ALPHA = 0.9999666655554938e18;  // 3rd root of 0.9999, scaled
+    // Threshold of l where the normal method of computing the newton step would overflow and we need a workaround.
+    uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 4.87e31;  // 4.87e13, scaled
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
@@ -109,8 +110,8 @@ library GyroThreeMath {
         uint256 mc,
         uint256 // md
     ) internal pure returns (uint256 l0) {
-        uint256 radic = mb.mulUp(mb).add(a.mulUp(mc).mulUp(3 * FixedPoint.ONE));
-        uint256 lmin = mb.divUp(a * 3).add(radic._sqrt(5).divUp(a * 3));
+        uint256 radic = mb.mulUp(mb).add(a.mulUp(mc * 3));
+        uint256 lmin = mb.add(radic._sqrt(5)).divUp(a * 3);
         // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All
         // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
         uint256 alpha = GyroFixedPoint.ONE.sub(a); // We know that a is in [0, 1].
@@ -145,6 +146,7 @@ library GyroThreeMath {
                 return rootEst;
             }
             deltaAbsPrev = deltaAbs;
+            // TODO leave overflow check in here
             if (deltaIsPos) rootEst = rootEst.add(deltaAbs);
             else rootEst = rootEst.sub(deltaAbs);
         }
@@ -160,63 +162,53 @@ library GyroThreeMath {
         uint256 root3Alpha,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
+        uint256 rootEst2 = rootEst.mulDown(rootEst);
+
         // The following is equal to dfRootEst^3 * a but with an order of operations optimized for precision.
         // Subtraction does not underflow since rootEst is chosen so that it's always above the (only) local minimum.
-        uint256 dfRootEst;
-        {
-            uint256 rootEst2 = rootEst.mulDown(rootEst);
-            dfRootEst = Math.mul(3, rootEst2);
-            dfRootEst = dfRootEst.sub(dfRootEst.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
-            dfRootEst = dfRootEst.sub(Math.mul(2, rootEst.mulDown(mb))).sub(mc);
+        // TODO test if this changes the SOR; perhaps undo if there's a problem. (minor optimization)
+        // uint256 dfRootEst = (rootEst * 3).mulDown(rootEst);
+        uint256 dfRootEst = 3 * rootEst2;
+        dfRootEst = dfRootEst.sub(dfRootEst.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
+        dfRootEst = dfRootEst.sub(Math.mul(2, rootEst.mulDown(mb))).sub(mc);
+
+        // We distinguish two cases: Relatively small values of rootEst, where we can use simple operations, and larger
+        // values, where the simple operations may overflow and we need to use functions that compensate for that.
+        uint256 deltaMinus;
+        uint256 deltaPlus;
+        if (rootEst <= _L_THRESHOLD_SIMPLE_NUMERICS) {
+            // Calculations are ordered and grouped to minimize rounding error amplification.
+            deltaMinus = rootEst2.mulDown(rootEst);
+            deltaMinus = deltaMinus.sub(deltaMinus.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
+            deltaMinus = deltaMinus.divDown(dfRootEst);
+
+            // NB: We could order the operations here in much the same way we did above to reduce errors. But tests show
+            // that this has no significant effect, and it would lead to more complex code.
+            deltaPlus = rootEst2.mulDown(mb);
+            deltaPlus = deltaPlus.add(rootEst.mulDown(mc)).divDown(dfRootEst);
+            deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
+        } else {
+            // Same operations as above, but we replace some of the operations with their variants that work for larger
+            // numbers.
+            deltaMinus = rootEst2.mulDownLargeSmall(rootEst);
+            deltaMinus = deltaMinus.sub(deltaMinus.mulDownLargeSmall(root3Alpha).mulDownLargeSmall(root3Alpha)
+                .mulDownLargeSmall(root3Alpha));
+            // TODO add comment about why divDownLarge() doesn't crash and doesn't lose too much precision (dfRootEst >> 0)
+            // TODO Leave the check in here? - OR add a check at the very top of this block (prob better)
+            deltaMinus = deltaMinus.divDownLarge(dfRootEst);
+
+            // We use mulDownLargeSmall() to prevent an overflow that can occur for large balances and alpha very
+            // close to 1.
+            deltaPlus = rootEst2.mulDownLargeSmall(mb);
+            // We use mc.mulDownLargeSmall(rootEst), rather than the other way round, because mc is usually bigger.
+            // TODO add comment about why divDownLarge() doesn't crash and doesn't lose too much precision (dfRootEst >> 0)
+            // TODO I think the first mulDownLargeSmall can be just mulDown.
+            deltaPlus = deltaPlus.add(mc.mulDownLargeSmall(rootEst)).divDownLarge(dfRootEst);
+            deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
         }
-
-        uint256 deltaMinus = _safeLargePow3ADown(rootEst, root3Alpha, dfRootEst);
-
-        // NB: We could order the operations here in much the same way we did above to reduce errors. But tests show
-        // that this has no significant effect, and it would lead to more complex code.
-        uint256 deltaPlus = rootEst.mulDown(rootEst).mulDown(mb);
-        deltaPlus = deltaPlus.add(rootEst.mulDown(mc)).divDown(dfRootEst);
-        deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
 
         deltaIsPos = (deltaPlus >= deltaMinus);
         deltaAbs = (deltaIsPos ? deltaPlus.sub(deltaMinus) : deltaMinus.sub(deltaPlus));
-    }
-
-    /** @dev Equal to l^3 * (1 - root3Alpha^3) / d = l^3 * a / d. However, we ensure that (1) the order of operations is
-     * such that rounding errors are minimized AND (2) this also works in a scenario where these operations would
-     * overflow naively, i.e., when l^3 * 10^36 does not fit into uint256.
-     * We assume d >= ONE and, of course, root3Alpha < ONE. In practice, expect d ~ a * l^2. (tested experimentally) */
-    function _safeLargePow3ADown(
-        uint256 l,
-        uint256 root3Alpha,
-        uint256 d
-    ) internal pure returns (uint256 ret) {
-        if (l <= _SAFE_LARGE_POW3_THRESHOLD) {
-            // Simple case where there is no overflow
-            ret = l.mulDown(l).mulDown(l);
-            ret = ret.sub(ret.mulDown(root3Alpha).mulDown(root3Alpha).mulDown(root3Alpha));
-            ret = ret.divDown(d);
-        } else {
-            ret = l.mulDown(l);
-
-            // Compute l^2 * l * (1 - root3Alpha^3)
-            // The following products split up the factors into different groups of decimal places to reduce temorary
-            // blowup and prevent overflow.
-            // No precision is lost.
-            ret = Math.mul(ret, l / FixedPoint.ONE).add(ret.mulDown(l % FixedPoint.ONE));
-
-            uint256 x = ret;
-            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(x.mulDown(root3Alpha % MIDDECIMAL));
-            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(x.mulDown(root3Alpha % MIDDECIMAL));
-            x = Math.divDown(Math.mul(x, root3Alpha / MIDDECIMAL), MIDDECIMAL).add(x.mulDown(root3Alpha % MIDDECIMAL));
-            ret = ret.sub(x);
-
-            // We perform half-precision division to reduce blowup.
-            // In contrast to the above multiplications, this loses precision if d is small. However, tests show that,
-            // for the l and d values considered here, the precision lost would be below the precision of the fixed
-            // point type itself, so nothing is actually lost.
-            ret = Math.divDown(Math.mul(ret, MIDDECIMAL), Math.divDown(d, MIDDECIMAL));
-        }
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the current balances and
