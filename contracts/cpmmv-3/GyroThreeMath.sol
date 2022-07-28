@@ -57,9 +57,16 @@ library GyroThreeMath {
     uint256 internal constant _MAX_ROOT_3_ALPHA = 0.9999666655554938e18;  // 3rd root of 0.9999, scaled
     // Threshold of l where the normal method of computing the newton step would overflow and we need a workaround.
     uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 4.87e31;  // 4.87e13, scaled
+    // Threshold of l above which overflows may occur in the Newton iteration. This is far above the theoretically
+    // maximum possible (starting or solution) value of l, so it would only ever be reached due to some other bug in the
+    // newton iteration.
+    uint256 internal constant _L_MAX = 4.86e34;  // 4.86e16, scaled
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
+        _require(balances[0] <= _MAX_BALANCES, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        _require(balances[1] <= _MAX_BALANCES, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        _require(balances[2] <= _MAX_BALANCES, GyroThreePoolErrors.BALANCES_TOO_LARGE);
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
@@ -162,6 +169,8 @@ library GyroThreeMath {
         uint256 root3Alpha,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
+        _require(rootEst <= _L_MAX, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+
         uint256 rootEst2 = rootEst.mulDown(rootEst);
 
         // The following is equal to dfRootEst^3 * a but with an order of operations optimized for precision.

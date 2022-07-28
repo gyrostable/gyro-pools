@@ -77,7 +77,10 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
 
-        _require(root3Alpha < GyroFixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+        // _require(root3Alpha < GyroFixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+        _require(GyroThreeMath._MIN_ROOT_3_ALPHA <= root3Alpha && root3Alpha <= GyroThreeMath._MAX_ROOT_3_ALPHA,
+            GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+
         _root3Alpha = root3Alpha;
         gyroConfig = IGyroConfig(configAddress);
     }
