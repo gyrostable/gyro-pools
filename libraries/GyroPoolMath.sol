@@ -32,8 +32,6 @@ library GyroPoolMath {
     uint256 private constant SQRT_1E_NEG_15 = 31622776601;
     uint256 private constant SQRT_1E_NEG_17 = 3162277660;
 
-    uint256 private constant MIN_NEWTON_STEP_SIZE = 5;
-
     // Note: this function is identical to that in WeightedMath.sol audited by Balancer
     function _calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,
