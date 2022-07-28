@@ -8,6 +8,7 @@ from hypothesis import settings, assume, example
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie import reverts
 from brownie.test import given
+from pytest import mark
 
 from tests.support.utils import scale, to_decimal, unscale, qdecimals
 
