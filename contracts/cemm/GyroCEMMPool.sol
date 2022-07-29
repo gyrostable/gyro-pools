@@ -136,7 +136,13 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
     ) public virtual override whenNotPaused onlyVault(request.poolId) returns (uint256) {
-        bool tokenInIsToken0 = request.tokenIn == _token0;
+        bool tokenInIsToken0;
+
+        if (request.tokenIn == _token0) {
+            tokenInIsToken0 = true;
+        } else {
+            _revert(GyroCEMMPoolErrors.TOKEN_IN_IS_NOT_TOKEN_0);
+        }
 
         uint256 scalingFactorTokenIn = _scalingFactor(tokenInIsToken0);
         uint256 scalingFactorTokenOut = _scalingFactor(!tokenInIsToken0);
