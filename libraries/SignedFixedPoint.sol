@@ -75,7 +75,7 @@ library SignedFixedPoint {
         if (product > 0) return ((product - 1) / ONE) + 1;
         else if (product < 0) return ((product + 1) / ONE) - 1;
         // product == 0
-        else return 0;
+        return 0;
     }
 
     /// @dev this implements mulUpMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
