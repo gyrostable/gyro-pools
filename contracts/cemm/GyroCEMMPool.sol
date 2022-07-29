@@ -62,9 +62,22 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         GyroCEMMMath.DerivedParams derivedCemmParams;
     }
 
+    event CEMMParamsValidated(bool paramsValidated);
+    event CEMMDerivedParamsValidated(bool derivedParamsValidated);
+
+    event InvariantAterInitializeJoin(uint256 invariantAfterJoin);
+    event InvariantOldAndNew(uint256 oldInvariant, uint256 newInvariant);
+
+    event SwapParams(uint256[] balances, GyroCEMMMath.Vector2 invariant, uint256 amount);
+
+    event OracleIndexUpdated(uint256 oracleUpdatedIndex);
+
     constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) {
         GyroCEMMMath.validateParams(params.cemmParams);
+        emit CEMMParamsValidated(true);
+
         GyroCEMMMath.validateDerivedParamsLimits(params.cemmParams, params.derivedCemmParams);
+        emit CEMMDerivedParamsValidated(true);
 
         (_paramsAlpha, _paramsBeta, _paramsC, _paramsS, _paramsLambda) = (
             params.cemmParams.alpha,
@@ -154,12 +167,16 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
 
             uint256 amountOut = _onSwapGivenIn(request, balances, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
 
+            emit SwapParams(balances, invariant, amountOut);
+
             // amountOut tokens are exiting the Pool, so we round down.
             return _downscaleDown(amountOut, scalingFactorTokenOut);
         } else {
             request.amount = _upscale(request.amount, scalingFactorTokenOut);
 
             uint256 amountIn = _onSwapGivenOut(request, balances, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+
+            emit SwapParams(balances, invariant, amountIn);
 
             // amountIn tokens are entering the Pool, so we round up.
             amountIn = _downscaleUp(amountIn, scalingFactorTokenIn);
@@ -224,6 +241,8 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
 
         (GyroCEMMMath.Params memory cemmParams, GyroCEMMMath.DerivedParams memory derivedCEMMParams) = reconstructCEMMParams();
         uint256 invariantAfterJoin = GyroCEMMMath.calculateInvariant(amountsIn, cemmParams, derivedCEMMParams);
+
+        emit InvariantAterInitializeJoin(invariantAfterJoin);
 
         // Set the initial BPT to the value of the invariant times the number of tokens. This makes BPT supply more
         // consistent in Pools with similar compositions but different number of tokens.
@@ -290,6 +309,8 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
         _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountOut, totalSupply(), true);
+
+        emit InvariantOldAndNew(invariantBeforeAction, _lastInvariant);
 
         // returns a new uint256[](2) b/c Balancer vault is expecting a fee array, but fees paid in BPT instead
         return (bptAmountOut, amountsIn, new uint256[](2));
@@ -381,6 +402,8 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
             // protocol fee factor.
             _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountIn, totalSupply(), false);
+
+            emit InvariantOldAndNew(invariantBeforeAction, _lastInvariant);
         } else {
             // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.
@@ -486,6 +509,8 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
                 miscData = miscData.setOracleIndex(oracleUpdatedIndex);
                 miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
                 _miscData = miscData;
+
+                emit OracleIndexUpdated(oracleUpdatedIndex);
             }
         }
     }
