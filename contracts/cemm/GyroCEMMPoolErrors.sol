@@ -17,6 +17,9 @@ pragma solidity 0.7.6;
 // solhint-disable
 
 library GyroCEMMPoolErrors {
+    // Input
+    uint256 internal constant ADDRESS_IS_ZERO_ADDRESS = 120;
+
     // Math
     uint256 internal constant PRICE_BOUNDS_WRONG = 354;
     uint256 internal constant ROTATION_VECTOR_WRONG = 355;
