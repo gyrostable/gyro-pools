@@ -34,32 +34,16 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
     /**
      * @dev Deploys a new `GyroThreePool`.
      */
-    function create(
-        string memory name,
-        string memory symbol,
-        IERC20[] memory tokens,
-        uint256 root3Alpha,
-        uint256 swapFeePercentage,
-        address owner,
-        ICappedLiquidity.CapParams memory capParams
-    ) external returns (address) {
+    function create(GyroThreePool.NewPoolConfigParams memory config) external returns (address) {
         (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
+        GyroThreePool.NewPoolParams memory params = GyroThreePool.NewPoolParams({
+            vault: getVault(),
+            configAddress: gyroConfigAddress,
+            pauseWindowDuration: pauseWindowDuration,
+            bufferPeriodDuration: bufferPeriodDuration,
+            config: config
+        });
 
-        return
-            _create(
-                abi.encode(
-                    getVault(),
-                    name,
-                    symbol,
-                    tokens,
-                    root3Alpha,
-                    swapFeePercentage,
-                    pauseWindowDuration,
-                    bufferPeriodDuration,
-                    owner,
-                    gyroConfigAddress,
-                    capParams
-                )
-            );
+        return _create(abi.encode(params));
     }
 }

@@ -235,9 +235,8 @@ def mock_pool_from_factory(
     )
 
     tx = factory.create(*args)
-    pool_from_factory = Contract.from_abi(
-        "GyroTwoPool", tx.return_value, GyroTwoPool.abi
-    )
+    pool_address = tx.events["PoolCreated"]["pool"]
+    pool_from_factory = Contract.from_abi("GyroTwoPool", pool_address, GyroTwoPool.abi)
 
     return pool_from_factory
 
@@ -248,17 +247,19 @@ def mock_vault_pool3(
 ):
     args = ThreePoolParams(
         vault=mock_vault.address,
-        name="GyroThreePool",  # string
-        symbol="G3P",  # string
-        tokens=[gyro_erc20_funded3[i].address for i in range(3)],
-        swapFeePercentage=D(1) * 10**15,
+        config_address=mock_gyro_config.address,
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
-        owner=admin,  # address
-        root3Alpha=D("0.97") * 10**18,
-        configAddress=mock_gyro_config.address,
+        config=ThreePoolFactoryCreateParams(
+            name="GyroThreePool",  # string
+            symbol="G3P",  # string
+            tokens=[gyro_erc20_funded3[i].address for i in range(3)],
+            swapFeePercentage=D(1) * 10**15,
+            owner=admin,  # address
+            root3Alpha=D("0.97") * 10**18,
+        ),
     )
-    return admin.deploy(GyroThreePool, *args)
+    return admin.deploy(GyroThreePool, args)
 
 
 @pytest.fixture
@@ -281,9 +282,10 @@ def mock_pool3_from_factory(
         owner=admin,
     )
 
-    tx = factory.create(*args)
+    tx = factory.create(args)
+    pool_address = tx.events["PoolCreated"]["pool"]
     pool3_from_factory = Contract.from_abi(
-        "GyroThreePool", tx.return_value, GyroThreePool.abi
+        "GyroThreePool", pool_address, GyroThreePool.abi
     )
 
     return pool3_from_factory
@@ -299,17 +301,19 @@ def balancer_vault_pool3(
 ):
     args = ThreePoolParams(
         vault=balancer_vault.address,
-        name="GyroThreePool",  # string
-        symbol="G3P",  # string
-        tokens=[gyro_erc20_funded3[i].address for i in range(3)],
-        swapFeePercentage=D(1) * 10**15,
+        config_address=mock_gyro_config.address,
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
-        owner=admin,  # address
-        root3Alpha=D("0.97") * 10**18,
-        configAddress=mock_gyro_config.address
+        config=ThreePoolFactoryCreateParams(
+            name="GyroThreePool",  # string
+            symbol="G3P",  # string
+            tokens=[gyro_erc20_funded3[i].address for i in range(3)],
+            swapFeePercentage=D(1) * 10**15,
+            owner=admin,  # address
+            root3Alpha=D("0.97") * 10**18,
+        ),
     )
-    return admin.deploy(GyroThreePool, *args)
+    return admin.deploy(GyroThreePool, args)
 
 
 @pytest.fixture(scope="module")

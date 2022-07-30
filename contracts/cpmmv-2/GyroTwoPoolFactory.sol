@@ -41,12 +41,40 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
         uint256 swapFeePercentage,
         bool oracleEnabled,
         address owner,
-        ICappedLiquidity.CapParams memory capParams
+        ICappedLiquidity.CapParams memory capParams,
+        address pauseManager
     ) external returns (address) {
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
+        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(
+            name,
+            symbol,
+            tokens,
+            swapFeePercentage,
+            oracleEnabled,
+            owner
+        );
 
         GyroTwoPool.GyroParams memory params = GyroTwoPool.GyroParams({
-            baseParams: ExtensibleWeightedPool2Tokens.NewPoolParams({
+            baseParams: baseParams,
+            sqrtAlpha: sqrts[0],
+            sqrtBeta: sqrts[1],
+            capParams: capParams,
+            pauseManager: pauseManager
+        });
+
+        return _create(abi.encode(params, gyroConfigAddress));
+    }
+
+    function _makePoolParams(
+        string memory name,
+        string memory symbol,
+        IERC20[] memory tokens,
+        uint256 swapFeePercentage,
+        bool oracleEnabled,
+        address owner
+    ) internal view returns (ExtensibleWeightedPool2Tokens.NewPoolParams memory) {
+        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
+        return
+            ExtensibleWeightedPool2Tokens.NewPoolParams({
                 vault: getVault(),
                 name: name,
                 symbol: symbol,
@@ -57,12 +85,6 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
                 bufferPeriodDuration: bufferPeriodDuration,
                 oracleEnabled: oracleEnabled,
                 owner: owner
-            }),
-            sqrtAlpha: sqrts[0],
-            sqrtBeta: sqrts[1],
-            capParams: capParams
-        });
-
-        return _create(abi.encode(params, gyroConfigAddress));
+            });
     }
 }

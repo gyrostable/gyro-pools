@@ -26,11 +26,12 @@ import "./GyroThreeMath.sol";
 import "./GyroThreePoolErrors.sol";
 
 import "../CappedLiquidity.sol";
+import "../LocallyPausable.sol";
 
 /**
  * @dev Gyro Three Pool with immutable weights.
  */
-contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
+contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
 
@@ -51,22 +52,41 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
     uint256 internal immutable _scalingFactor1;
     uint256 internal immutable _scalingFactor2;
 
-    constructor(
-        IVault vault,
-        string memory name,
-        string memory symbol,
-        IERC20[] memory tokens,
-        uint256 root3Alpha,
-        uint256 swapFeePercentage,
-        uint256 pauseWindowDuration,
-        uint256 bufferPeriodDuration,
-        address owner,
-        address configAddress,
-        CapParams memory capParams
-    )
-        ExtensibleBaseWeightedPool(vault, name, symbol, tokens, new address[](3), swapFeePercentage, pauseWindowDuration, bufferPeriodDuration, owner)
-        CappedLiquidity(capParams)
+    struct NewPoolConfigParams {
+        string name;
+        string symbol;
+        IERC20[] tokens;
+        uint256 swapFeePercentage;
+        uint256 root3Alpha;
+        address owner;
+        CapParams capParams;
+        address pauseManager;
+    }
+
+    struct NewPoolParams {
+        IVault vault;
+        address configAddress;
+        NewPoolConfigParams config;
+        uint256 pauseWindowDuration;
+        uint256 bufferPeriodDuration;
+    }
+
+    constructor(NewPoolParams memory params)
+        ExtensibleBaseWeightedPool(
+            params.vault,
+            params.config.name,
+            params.config.symbol,
+            params.config.tokens,
+            new address[](3),
+            params.config.swapFeePercentage,
+            params.pauseWindowDuration,
+            params.bufferPeriodDuration,
+            params.config.owner
+        )
+        CappedLiquidity(params.config.capParams)
+        LocallyPausable(params.config.pauseManager)
     {
+        IERC20[] memory tokens = params.config.tokens;
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
 
         _token0 = tokens[0];
@@ -77,12 +97,13 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         _scalingFactor1 = _computeScalingFactor(tokens[1]);
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
 
-        // _require(root3Alpha < GyroFixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
-        _require(GyroThreeMath._MIN_ROOT_3_ALPHA <= root3Alpha && root3Alpha <= GyroThreeMath._MAX_ROOT_3_ALPHA,
-            GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
-
-        _root3Alpha = root3Alpha;
-        gyroConfig = IGyroConfig(configAddress);
+        // _require(params.config.root3Alpha < FixedPoint.ONE, GyroThreePoolErrors.PRICE_BOUNDS_WRONG);
+        _require(
+            GyroThreeMath._MIN_ROOT_3_ALPHA <= params.config.root3Alpha && params.config.root3Alpha <= GyroThreeMath._MAX_ROOT_3_ALPHA,
+            GyroThreePoolErrors.PRICE_BOUNDS_WRONG
+        );
+        _root3Alpha = params.config.root3Alpha;
+        gyroConfig = IGyroConfig(params.configAddress);
     }
 
     function getRoot3Alpha() external view returns (uint256) {
@@ -156,7 +177,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
-    ) internal view virtual override whenNotPaused returns (uint256) {
+    ) internal view virtual override whenNotPaused whenNotLocallyPaused returns (uint256) {
         uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
@@ -165,7 +186,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
-    ) internal view virtual override whenNotPaused returns (uint256) {
+    ) internal view virtual override whenNotPaused whenNotLocallyPaused returns (uint256) {
         uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
@@ -224,7 +245,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
         address,
         uint256[] memory scalingFactors,
         bytes memory userData
-    ) internal override whenNotPaused returns (uint256, uint256[] memory) {
+    ) internal override whenNotPaused whenNotLocallyPaused returns (uint256, uint256[] memory) {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
         _require(kind == BaseWeightedPool.JoinKind.INIT, Errors.UNINITIALIZED);
 
@@ -356,7 +377,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity {
 
         uint256 root3Alpha = _root3Alpha;
 
-        if (_isNotPaused()) {
+        if (_isNotPaused() && !_locallyPaused) {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.

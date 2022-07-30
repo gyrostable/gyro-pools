@@ -26,12 +26,13 @@ import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
 import "../CappedLiquidity.sol";
+import "../LocallyPausable.sol";
 import "./ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2PoolErrors.sol";
 import "./GyroTwoMath.sol";
 import "./GyroTwoOracleMath.sol";
 
-contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, CappedLiquidity {
+contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -46,9 +47,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
         CapParams capParams;
+        address pauseManager;
     }
 
-    constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) CappedLiquidity(params.capParams) {
+    constructor(GyroParams memory params, address configAddress)
+        ExtensibleWeightedPool2Tokens(params.baseParams)
+        CappedLiquidity(params.capParams)
+        LocallyPausable(params.pauseManager)
+    {
         _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
@@ -122,7 +128,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         SwapRequest memory request,
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
-    ) public virtual override whenNotPaused onlyVault(request.poolId) returns (uint256) {
+    ) public virtual override whenNotPaused whenNotLocallyPaused onlyVault(request.poolId) returns (uint256) {
         bool tokenInIsToken0 = request.tokenIn == _token0;
 
         uint256 scalingFactorTokenIn = _scalingFactor(tokenInIsToken0);
@@ -317,6 +323,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
     )
         internal
         override
+        whenNotLocallyPaused
         returns (
             uint256,
             uint256[] memory,
@@ -421,7 +428,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
 
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
-        if (_isNotPaused()) {
+        if (_isNotPaused() && !_locallyPaused) {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
