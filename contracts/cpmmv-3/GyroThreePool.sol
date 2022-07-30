@@ -20,6 +20,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
 import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
+import "../../libraries/GyroErrors.sol";
 
 import "./ExtensibleBaseWeightedPool.sol";
 import "./GyroThreeMath.sol";
@@ -88,6 +89,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
     {
         IERC20[] memory tokens = params.config.tokens;
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
+        _require(params.configAddress != address(0), GyroErrors.ZERO_ADDRESS);
 
         _token0 = tokens[0];
         _token1 = tokens[1];

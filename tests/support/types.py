@@ -1,10 +1,13 @@
+from dataclasses import field
 from typing import NamedTuple, Tuple, Iterable
 
 from tests.support.quantized_decimal import DecimalLike
-from brownie import ZERO_ADDRESS
+from brownie import accounts
 
 
 address = str
+
+DEFAULT_PAUSE_MANAGER = "0x66aB6D9362d4F35596279692F0251Db635165871"
 
 
 class SwapKind:
@@ -64,7 +67,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     oracleEnabled: bool
     owner: address
     cap_params: CapParams = CapParams()
-    pause_manager: address = ZERO_ADDRESS
+    pause_manager: address = DEFAULT_PAUSE_MANAGER
 
 
 class TwoPoolParams(NamedTuple):
@@ -72,7 +75,7 @@ class TwoPoolParams(NamedTuple):
     sqrtAlpha: DecimalLike  # should already be upscaled
     sqrtBeta: DecimalLike  # Should already be upscaled
     cap_params: CapParams = CapParams()
-    pauseManager: address = ZERO_ADDRESS
+    pauseManager: address = DEFAULT_PAUSE_MANAGER
 
 
 class Vector2(NamedTuple):
@@ -112,7 +115,7 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     root3Alpha: DecimalLike
     owner: address
     cap_params: CapParams = CapParams()
-    pauseManager: address = ZERO_ADDRESS
+    pauseManager: address = DEFAULT_PAUSE_MANAGER
 
 
 class ThreePoolParams(NamedTuple):

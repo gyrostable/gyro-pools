@@ -24,6 +24,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.so
 import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
+import "../../libraries/GyroErrors.sol";
 
 import "../CappedLiquidity.sol";
 import "../LocallyPausable.sol";
@@ -56,6 +57,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         LocallyPausable(params.pauseManager)
     {
         _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);
+        _require(configAddress != address(0), GyroErrors.ZERO_ADDRESS);
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
 
