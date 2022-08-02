@@ -3,12 +3,14 @@ from operator import add
 import hypothesis.strategies as st
 from brownie import reverts  # type: ignore
 from brownie.test import given
+from hypothesis import example
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
-MAX_ALPHA = D("0.99996")
+MAX_ALPHA = D("0.9999")
+MAX_ROOT_3_ALPHA = MAX_ALPHA**(D(1)/3)
 
 
 def triple_uniform_integers(min_value=0, max_value=1_000_000_000):
@@ -26,13 +28,21 @@ bpool_params = BasicPoolParameters(
 
 
 def gen_root3Alpha():
-    return qdecimals(min_value="0.9", max_value=MAX_ALPHA)
+    return qdecimals(min_value="0.9", max_value=MAX_ROOT_3_ALPHA)
 
 
 @given(
     balances=gen_balances(3, bpool_params),
     root3Alpha=gen_root3Alpha(),
     addl_balances=triple_uniform_integers(500_000_000),
+)
+@example(
+    balances=(
+        bpool_params.max_balances - 500_000_000,
+        bpool_params.max_balances - 600_000_000,
+        bpool_params.max_balances - 800_000_000),
+    root3Alpha=MAX_ROOT_3_ALPHA,
+    addl_balances=(500_000_000, 600_000_000, 800_000_000),
 )
 def test_calculateInvariant_growth(
     gyro_three_math_testing, balances, root3Alpha, addl_balances
@@ -91,6 +101,14 @@ def test_calcInGivenOut_pricebounds(gyro_three_math_testing):
         [10_000_000, 2_000_000, 10_000_000_000],
         D("0.9999"),
         200,
+        1,
+        0,
+    )
+    run_test_calcInGivenOut_pricebounds(
+        gyro_three_math_testing,
+        [100_000_000_000, 99_000_000_000, 100_000_000_000],
+        D("0.9999"),
+        999_000_000,
         1,
         0,
     )
@@ -155,6 +173,14 @@ def test_calcOutGivenIn_pricebounds(gyro_three_math_testing):
         1,
         0,
     )
+    run_test_calcOutGivenIn_pricebounds(
+        gyro_three_math_testing,
+        [100_000_000_000, 99_000_000_000, 100_000_000_000],
+        D("0.9999"),
+        1_000_000_000,
+        1,
+        0,
+    )
     with reverts():
         run_test_calcInGivenOut_pricebounds(
             gyro_three_math_testing,
@@ -213,6 +239,14 @@ def test_InOut_inverse(gyro_three_math_testing):
         [10_000_000, 2_000_000, 10_000_000_000],
         D("0.9999"),
         200,
+        1,
+        0,
+    )
+    run_test_InOut_inverse(
+        gyro_three_math_testing,
+        [100_000_000_000, 99_000_000_000, 100_000_000_000],
+        D("0.9999"),
+        1_000_000_000,
         1,
         0,
     )
