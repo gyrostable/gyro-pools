@@ -8,6 +8,7 @@ from hypothesis import settings, assume, example
 import tests.cpmmv3.v3_math_implementation as math_implementation
 from brownie import reverts
 from brownie.test import given
+from pytest import mark
 
 from tests.support.utils import scale, to_decimal, unscale, qdecimals
 
@@ -116,8 +117,15 @@ def gen_params_out_given_in(draw):
 @given(
     setup=gen_params_in_given_out(),
     root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX,
     ),
+)
+@example(
+    setup=(
+        (99_000_000_000, 99_000_000_000, 99_000_000_000),
+        999_999_000
+    ),
+    root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_calc_in_given_out(
     gyro_three_math_testing,
@@ -190,6 +198,13 @@ def test_calc_in_given_out(
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
     ),
+)
+@example(
+    setup=(
+        (99_000_000_000, 99_000_000_000, 99_000_000_000),
+        1_000_000_000
+    ),
+    root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     balances, amount_in = setup
@@ -264,7 +279,7 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     assert out_amount_sol <= out_amount
     assert out_amount_sol == out_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))
 
-
+@mark.skip(reason="Function Removed")
 @given(
     l=qdecimals("1e12", "1e16"),
     root_three_alpha=st.decimals(
@@ -301,6 +316,9 @@ def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
     root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
 )
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e11"), D(0), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e11"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 # L = Decimal('99993316741847.981485422976711167')
 # This is also *approximately* computed by Solidity. Wtf.
 # Crash on L^3, but why?!
@@ -336,8 +354,15 @@ def test_calculate_invariant(
     root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
     # rootEst=st.decimals(min_value="1", max_value="100000000000", places=4),
 )
+@example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e11"), D(0), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=[D("1e11"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
     a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
+    l_lower = D("1.3") * math_implementation.calculateLocalMinimum(
+        a, mb, mc
+    )
     rootEst = math_implementation.calculateCubic(
         a, mb, mc, md, root_three_alpha, balances
     )
@@ -345,11 +370,11 @@ def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
         a, mb, mc, md, root_three_alpha, rootEst
     )
     delta_abs_sol, delta_is_pos_sol = gyro_three_math_testing.calcNewtonDelta(
-        scale(a),
         scale(mb),
         scale(mc),
         scale(md),
         scale(root_three_alpha),
+        scale(l_lower),
         scale(rootEst),
     )
     delta_abs_sol = unscale(delta_abs_sol)

@@ -77,8 +77,9 @@ def main():
 
     a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root3Alpha)
 
-    invariant_math, log_math = math_implementation.calculateInvariantNewton(a, -mb, -mc, -md, root3Alpha, balances)
+    invariant_math, log_math = math_implementation.calculateInvariantNewton(a, mb, mc, md, root3Alpha, balances)
 
+    # TODO GyroThreeMathDebug is slightly out of sync with GyroThreeMath. So this is all a bit outdated.
     gyro_three_math_testing = accounts[0].deploy(GyroThreeMathDebug)
 
     tx = gyro_three_math_testing._calculateInvariantUnderOver(

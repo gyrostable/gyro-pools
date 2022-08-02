@@ -4,7 +4,6 @@ pragma solidity ^0.7.0;
 /// @dev We can't call the functions of the math library for testing b/c they're internal. That's why this contract forwards calls to the math library.
 
 import "../GyroThreeMath.sol";
-import "./GyroThreeMathDebug.sol";
 import "../../../libraries/GyroPoolMath.sol";
 
 contract GyroThreeMathTesting {
@@ -41,31 +40,29 @@ contract GyroThreeMathTesting {
         uint256 mc,
         uint256 md
     ) external pure returns (uint256 l0) {
-        return GyroThreeMath._calculateCubicStartingPoint(a, mb, mc, md);
+        (, l0) = GyroThreeMath._calculateCubicStartingPoint(a, mb, mc, md);
     }
 
     function runNewtonIteration(
-        uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
         uint256 root3Alpha,
+        uint256 l_lower,
         uint256 rootEst
     ) external pure returns (uint256 rootEstOut) {
-        // Keeping the dead parameter a for compatibility with legacy testing code.
-        rootEstOut = GyroThreeMath._runNewtonIteration(mb, mc, md, root3Alpha, rootEst);
+        rootEstOut = GyroThreeMath._runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
     function calcNewtonDelta(
-        uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
         uint256 root3Alpha,
+        uint256 l_lower,
         uint256 rootEst
     ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        // Keeping the dead parameter a for compatibility with legacy testing code.
-        return GyroThreeMath._calcNewtonDelta(mb, mc, md, root3Alpha, rootEst);
+        return GyroThreeMath._calcNewtonDelta(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
     function liquidityInvariantUpdate(
@@ -94,11 +91,6 @@ contract GyroThreeMathTesting {
     ) external pure returns (uint256 amountIn) {
         return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffset);
     }
-
-    function safeLargePow3ADown(uint256 l, uint256 root3Alpha, uint256 d) external pure returns (uint256 ret) {
-        return GyroThreeMath._safeLargePow3ADown(l, root3Alpha, d);
-    }
-
 
     function calcAllTokensInGivenExactBptOut(
         uint256[] memory balances,

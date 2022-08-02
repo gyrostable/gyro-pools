@@ -1,6 +1,7 @@
 pragma solidity ^0.7.0;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../../libraries/GyroFixedPoint.sol";
 import "../../libraries/SignedFixedPoint.sol";
 import "../../libraries/GyroPoolMath.sol";
 import "./GyroCEMMPoolErrors.sol";
@@ -20,7 +21,7 @@ library GyroCEMMMath {
     int256 internal constant ONE_XP = 1e38; // 38 decimal places
 
     using SignedFixedPoint for int256;
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
 

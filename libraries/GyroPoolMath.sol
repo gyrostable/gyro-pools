@@ -14,12 +14,13 @@
 
 pragma solidity ^0.7.0;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "./GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 library GyroPoolMath {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
 
     uint256 private constant SQRT_1E_NEG_1 = 316227766016837933;
     uint256 private constant SQRT_1E_NEG_3 = 31622776601683793;
@@ -138,13 +139,13 @@ library GyroPoolMath {
         uint256 guess = _makeInitialGuess(input);
 
         // 7 iterations
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
-        guess = (guess + ((input * FixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
+        guess = (guess + ((input * GyroFixedPoint.ONE) / guess)) / 2;
 
         // Check in some epsilon range
         // Check square is more or less correct
@@ -173,8 +174,8 @@ library GyroPoolMath {
     // }
 
     function _makeInitialGuess(uint256 input) internal pure returns (uint256) {
-        if (input >= FixedPoint.ONE) {
-            return (1 << (_intLog2Halved(input / FixedPoint.ONE))) * FixedPoint.ONE;
+        if (input >= GyroFixedPoint.ONE) {
+            return (1 << (_intLog2Halved(input / GyroFixedPoint.ONE))) * GyroFixedPoint.ONE;
         } else {
             if (input <= 10) {
                 return SQRT_1E_NEG_17;

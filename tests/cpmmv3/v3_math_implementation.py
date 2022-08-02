@@ -33,14 +33,27 @@ def calculateCubic(
     a: D, mb: D, mc: D, md: D, root3Alpha: D, balances: Iterable[D]
 ) -> D:
     invariant, log_steps = calculateInvariantNewton(
-        a, -mb, -mc, -md, root3Alpha, balances
+        a, mb, mc, md, root3Alpha, balances
     )
     return invariant
 
+def calculateLocalMinimum(
+        a: D, mb: D, mc: D
+) -> D:
+    b = -mb
+    c = -mc
+    lmin = -b / (a * 3) + (b**2 - a * c * 3).sqrt() / (
+        a * 3
+    )  # Sqrt is not gonna make a problem b/c all summands are positive.
+    return lmin
 
 def calculateInvariantNewton(
-    a: D, b: D, c: D, d: D, alpha1: D, balances: Iterable[D]
+    a: D, mb: D, mc: D, md: D, alpha1: D, balances: Iterable[D]
 ) -> tuple[D, list]:
+    b = -mb
+    c = -mc
+    d = -md
+
     log = []
     # def test_calc_out_given_in(gyro_three_math_testing, amount_in, balances, root_three_alpha):
 

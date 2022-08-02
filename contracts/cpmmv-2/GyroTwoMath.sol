@@ -14,7 +14,8 @@
 
 pragma solidity ^0.7.0;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../../libraries/GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
@@ -26,7 +27,7 @@ import "./Gyro2PoolErrors.sol";
 // solhint-disable private-vars-leading-underscore
 
 library GyroTwoMath {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
     // implementation of the power function, as these ratios are often exponents.
     uint256 internal constant _MIN_WEIGHT = 0.01e18;
@@ -95,7 +96,7 @@ library GyroTwoMath {
         )
     {
         {
-            a = FixedPoint.ONE.sub(sqrtAlpha.divDown(sqrtBeta));
+            a = GyroFixedPoint.ONE.sub(sqrtAlpha.divDown(sqrtBeta));
             uint256 bterm0 = balances[1].divDown(sqrtBeta);
             uint256 bterm1 = balances[0].mulDown(sqrtAlpha);
             mb = bterm0.add(bterm1);
@@ -104,7 +105,7 @@ library GyroTwoMath {
         // For better fixed point precision, calculate in expanded form w/ re-ordering of multiplications
         // b^2 = x^2 * alpha + x*y*2*sqrt(alpha/beta) + y^2 / beta
         bSquare = (balances[0].mulDown(balances[0])).mulDown(sqrtAlpha).mulDown(sqrtAlpha);
-        uint256 bSq2 = (balances[0].mulDown(balances[1])).mulDown(2 * FixedPoint.ONE).mulDown(sqrtAlpha).divDown(sqrtBeta);
+        uint256 bSq2 = (balances[0].mulDown(balances[1])).mulDown(2 * GyroFixedPoint.ONE).mulDown(sqrtAlpha).divDown(sqrtBeta);
         uint256 bSq3 = (balances[1].mulDown(balances[1])).divDown(sqrtBeta.mulUp(sqrtBeta));
         bSquare = bSquare.add(bSq2).add(bSq3);
     }
@@ -124,9 +125,9 @@ library GyroTwoMath {
         uint256 bSquare, // b^2 can be calculated separately with more precision
         uint256 mc
     ) internal pure returns (uint256 invariant) {
-        uint256 denominator = a.mulUp(2 * FixedPoint.ONE);
+        uint256 denominator = a.mulUp(2 * GyroFixedPoint.ONE);
         // order multiplications for fixed point precision
-        uint256 addTerm = (mc.mulDown(4 * FixedPoint.ONE)).mulDown(a);
+        uint256 addTerm = (mc.mulDown(4 * GyroFixedPoint.ONE)).mulDown(a);
         // The minus sign in the radicand cancels out in this special case, so we add
         uint256 radicand = bSquare.add(addTerm);
         uint256 sqrResult = GyroPoolMath._sqrt(radicand, 5);
@@ -177,8 +178,8 @@ library GyroTwoMath {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(GyroFixedPoint.ONE - 1));
 
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
@@ -222,8 +223,8 @@ library GyroTwoMath {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(GyroFixedPoint.ONE - 1));
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }

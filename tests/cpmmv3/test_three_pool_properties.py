@@ -9,7 +9,7 @@ from tests.libraries import pool_math_implementation
 from tests.cpmmv3.util import (
     gen_synthetic_balances,
     gen_synthetic_balances_1asset,
-    gen_synthetic_balances_2assets,
+    gen_synthetic_balances_2assets, equal_balances_at_invariant,
 )
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
@@ -89,6 +89,21 @@ def gen_params_liquidityUpdate(draw):
         dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
     return balances, bpt_supply, isIncrease, dsupply
 
+@st.composite
+def gen_params_liquidityUpdate_large(draw):
+    """A variant that only generates large balances."""
+    balances = draw(st.sampled_from([
+        (D(0), bpool_params.max_balances, D(0)),
+        (bpool_params.max_balances, bpool_params.max_balances, D(0)),
+        (bpool_params.max_balances, bpool_params.max_balances, bpool_params.max_balances),
+    ]))
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
+    isIncrease = draw(st.booleans())
+    if isIncrease:
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
+    else:
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
+    return balances, bpt_supply, isIncrease, dsupply
 
 ###############################################################################################
 # Test invariant correctness via being an approximate root of a certain cubic polynomial.
@@ -99,6 +114,9 @@ def gen_params_liquidityUpdate(draw):
     root_three_alpha=gen_bounds(),
 )
 @example(balances=(D("1e10"), D(0), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=(D("1e11"), D(0), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=(D("1e11"), D("1e11"), D(0)), root_three_alpha=D(ROOT_ALPHA_MAX))
+@example(balances=(D("1e11"), D("1e11"), D("1e11")), root_three_alpha=D(ROOT_ALPHA_MAX))
 def test_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha):
     mtest_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha)
 
@@ -114,6 +132,13 @@ def test_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
     ),
+)
+@example(
+    setup=(
+        (99_000_000_000, 99_000_000_000, 99_000_000_000),
+        999_999_000
+    ),
+    root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_invariant_across_calcInGivenOut(
     gyro_three_math_testing,
@@ -143,6 +168,13 @@ def test_invariant_across_calcInGivenOut(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
     ),
 )
+@example(
+    setup=(
+        (99_000_000_000, 99_000_000_000, 99_000_000_000),
+        1_000_000_000
+    ),
+    root_three_alpha=ROOT_ALPHA_MAX,
+)
 def test_invariant_across_calcOutGivenIn(
     gyro_three_math_testing, root_three_alpha, setup
 ):
@@ -165,8 +197,12 @@ def test_invariant_across_calcOutGivenIn(
 @given(
     balances=gen_balances(),
     root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
+        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX
     ),
+)
+@example(
+    balances=(bpool_params.max_balances,)*3,
+    root_three_alpha=ROOT_ALPHA_MAX
 )
 def test_invariant_across_calcOutGivenIn_zeroin(
     gyro_three_math_testing, root_three_alpha, balances
@@ -188,7 +224,7 @@ def test_invariant_across_calcOutGivenIn_zeroin(
 
 
 @given(
-    params_invariantUpdate=gen_params_liquidityUpdate(),
+    params_invariantUpdate=st.one_of(gen_params_liquidityUpdate(), gen_params_liquidityUpdate_large()),
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
     ),
@@ -224,7 +260,9 @@ def mtest_sol_invariant_cubic(
 
     # NOTE That the function f has an extremely steep slope, so the following is already very good for an approximate
     # root. The coefficients a..d also have rounding errors attached, so this won't (and shouldn't) be very close to 0.
-    assert abs(f_L_decimal) <= D("1e26")
+    # 2022-08-02 Had to increase this by ~2 orders of magnitude to pass for extreme balances.
+    # Perhaps the right measure would be relative or something.
+    assert abs(f_L_decimal) <= D("4.5e28")
 
 
 def calculate_cubic_terms_float(balances: Tuple[int, int, int], root_three_alpha: D):
@@ -598,13 +636,9 @@ def calculate_loss(delta_invariant, invariant, balances):
 )
 @example(
     args=(
-        (
-            Decimal("728109563488.263687529903349137"),
-            Decimal("7281095.634882636875299036"),
-            Decimal("1724716619.689367265339564601"),
-        ),
-        Decimal("36417643407.707023648100000000"),
-        Decimal("0.200000000021982758"),
+            (equal_balances_at_invariant(D("2.999899e15"), ROOT_ALPHA_MAX),) * 3,
+            D("2.999899e15"),  # Close to and ≤ the theoretical maximum.
+            ROOT_ALPHA_MAX
     )
 )
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):

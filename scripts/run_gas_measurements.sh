@@ -7,6 +7,8 @@ cd "$(dirname "$0")/../"
 
 mkdir -p analysis/gas
 
+# Clean build is important; saw some crashes without it
+rm -r build/
 brownie compile
 
 for m in cpmmv2 cpmmv3 cemm; do

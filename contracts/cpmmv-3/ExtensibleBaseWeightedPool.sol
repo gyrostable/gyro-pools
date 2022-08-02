@@ -15,7 +15,8 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../../libraries/GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 import "@balancer-labs/v2-pool-utils/contracts/BaseMinimalSwapInfoPool.sol";
@@ -30,7 +31,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.so
  *  based on local or external logic.
  */
 abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
 
     uint256 internal _lastInvariant;
@@ -225,7 +226,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         );
 
         // Update current balances by subtracting the protocol fee amounts
-        _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+        _mutateAmounts(balances, dueProtocolFeeAmounts, GyroFixedPoint.sub);
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(
             balances,
             normalizedWeights,
@@ -382,7 +383,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
             );
 
             // Update current balances by subtracting the protocol fee amounts
-            _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+            _mutateAmounts(balances, dueProtocolFeeAmounts, GyroFixedPoint.sub);
         } else {
             // If the contract is paused, swap protocol fee amounts are not charged to avoid extra calculations and
             // reduce the potential for errors.
@@ -542,7 +543,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256[] memory amountsIn,
         uint256[] memory normalizedWeights
     ) private view returns (uint256) {
-        _mutateAmounts(balances, amountsIn, FixedPoint.add);
+        _mutateAmounts(balances, amountsIn, GyroFixedPoint.add);
         return WeightedMath._calculateInvariant(normalizedWeights, balances);
     }
 
@@ -551,7 +552,7 @@ abstract contract ExtensibleBaseWeightedPool is BaseMinimalSwapInfoPool {
         uint256[] memory amountsOut,
         uint256[] memory normalizedWeights
     ) private view returns (uint256) {
-        _mutateAmounts(balances, amountsOut, FixedPoint.sub);
+        _mutateAmounts(balances, amountsOut, GyroFixedPoint.sub);
         return WeightedMath._calculateInvariant(normalizedWeights, balances);
     }
 

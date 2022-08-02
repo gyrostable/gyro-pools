@@ -2,14 +2,15 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../libraries/GyroFixedPoint.sol";
 
 import "../interfaces/ICappedLiquidity.sol";
 
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/IAuthentication.sol";
 
 abstract contract CappedLiquidity is ICappedLiquidity {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
 
     string internal constant _OVER_GLOBAL_CAP = "over global liquidity cap";
     string internal constant _OVER_ADDRESS_CAP = "over address liquidity cap";

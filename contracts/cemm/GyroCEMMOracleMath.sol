@@ -14,11 +14,12 @@
 
 pragma solidity ^0.7.0;
 
-import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+// import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+import "../../libraries/GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/LogCompression.sol";
 
 contract GyroCEMMOracleMath {
-    using FixedPoint for uint256;
+    using GyroFixedPoint for uint256;
 
     /**
      * @dev Calculates the logarithm of the spot price of token B in token A.
