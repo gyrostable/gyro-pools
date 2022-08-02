@@ -37,28 +37,56 @@ library GyroFixedPoint {
         // Fixed Point addition is the same as regular checked addition
 
         uint256 c = a + b;
-        _require(c >= a, Errors.ADD_OVERFLOW);
+        if (!(c >= a)) {
+            _require(false, Errors.ADD_OVERFLOW);
+        }
         return c;
     }
 
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
         // Fixed Point addition is the same as regular checked addition
 
-        _require(b <= a, Errors.SUB_OVERFLOW);
+        if (!(b <= a)) {
+            _require(false, Errors.SUB_OVERFLOW);
+        }
         uint256 c = a - b;
         return c;
     }
 
     function mulDown(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
-        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || product / a == b)) {
+            _require(false, Errors.MUL_OVERFLOW);
+        }
 
         return product / ONE;
     }
 
+    function mulDownU(uint256 a, uint256 b) internal pure returns (uint256) {
+        return (a * b) / ONE;
+    }
+
     function mulUp(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
-        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+        if (!(a == 0 || product / a == b)) {
+            _require(false, Errors.MUL_OVERFLOW);
+        }
+
+        if (product == 0) {
+            return 0;
+        } else {
+            // The traditional divUp formula is:
+            // divUp(x, y) := (x + y - 1) / y
+            // To avoid intermediate overflow in the addition, we distribute the division and get:
+            // divUp(x, y) := (x - 1) / y + 1
+            // Note that this requires x != 0, which we already tested for.
+
+            return ((product - 1) / ONE) + 1;
+        }
+    }
+
+    function mulUpU(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 product = a * b;
 
         if (product == 0) {
             return 0;
@@ -74,26 +102,42 @@ library GyroFixedPoint {
     }
 
     function divDown(uint256 a, uint256 b) internal pure returns (uint256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0) {
+            _require(false, Errors.ZERO_DIVISION);
+        }
 
         if (a == 0) {
             return 0;
         } else {
             uint256 aInflated = a * ONE;
-            _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            if (!(aInflated / a == ONE)) {
+                _require(false, Errors.DIV_INTERNAL); // mul overflow
+            }
 
             return aInflated / b;
         }
     }
 
+    function divDownU(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (b == 0) {
+            _require(false, Errors.ZERO_DIVISION);
+        }
+
+        return (a * ONE) / b;
+    }
+
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
-        _require(b != 0, Errors.ZERO_DIVISION);
+        if (b == 0) {
+            _require(false, Errors.ZERO_DIVISION);
+        }
 
         if (a == 0) {
             return 0;
         } else {
             uint256 aInflated = a * ONE;
-            _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            if (!(aInflated / a == ONE)) {
+                _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            }
 
             // The traditional divUp formula is:
             // divUp(x, y) := (x + y - 1) / y
@@ -105,6 +149,17 @@ library GyroFixedPoint {
         }
     }
 
+    function divUpU(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (b == 0) {
+            _require(false, Errors.ZERO_DIVISION);
+        }
+
+        if (a == 0) {
+            return 0;
+        } else {
+            return ((a * ONE - 1) / b) + 1;
+        }
+    }
 
     /**
      * @dev Like mulDown(), but it also works in some situations where mulDown(a, b) would overflow because a * b is too
@@ -119,6 +174,10 @@ library GyroFixedPoint {
         return add(Math.mul(a / ONE, b), mulDown(a % ONE, b));
     }
 
+    function mulDownLargeSmallU(uint256 a, uint256 b) internal pure returns (uint256) {
+        return (a / ONE) * b + mulDownU(a % ONE, b);
+    }
+
     /**
      * @dev Like divDown(), but it also works when `a` would overflow in `divDown`. This is safe if both of
      * - a ≤ 1.15e68 (raw, i.e., a ≤ 1.15e50 with respect to the value that is represented)
@@ -128,6 +187,10 @@ library GyroFixedPoint {
      */
     function divDownLarge(uint256 a, uint256 b) internal pure returns (uint256) {
         return divDownLarge(a, b, MIDDECIMAL, MIDDECIMAL);
+    }
+
+    function divDownLargeU(uint256 a, uint256 b) internal pure returns (uint256) {
+        return divDownLargeU(a, b, MIDDECIMAL, MIDDECIMAL);
     }
 
     /**
@@ -140,8 +203,32 @@ library GyroFixedPoint {
      * hold.
      * Introduces some rounding error that is relevant iff b is small and is proportional to e.
      */
-    function divDownLarge(uint256 a, uint256 b, uint256 d, uint256 e) internal pure returns (uint256) {
-        return Math.divDown(Math.mul(a, d), Math.divDown(b, e));
+    function divDownLarge(
+        uint256 a,
+        uint256 b,
+        uint256 d,
+        uint256 e
+    ) internal pure returns (uint256) {
+        return Math.divDown(Math.mul(a, d), Math.divUp(b, e));
+    }
+
+    /// @dev e is assumed to be non-zero, and so division by zero is not checked for it
+    function divDownLargeU(
+        uint256 a,
+        uint256 b,
+        uint256 d,
+        uint256 e
+    ) internal pure returns (uint256) {
+        // (a * d) / (b / e)
+
+        if (b == 0) {
+            // In this case only, the denominator of the outer division is zero, and we revert
+            _require(false, Errors.ZERO_DIVISION);
+        }
+
+        uint256 denom = 1 + (b - 1) / e;
+
+        return (a * d) / denom;
     }
 
     /**
