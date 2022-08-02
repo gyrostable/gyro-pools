@@ -91,10 +91,11 @@ args = ThreePoolParams(
     pauseWindowDuration=0,  # uint256
     bufferPeriodDuration=0,  # uint256
     owner=admin,  # address
-    root3Alpha=scale(root_3_alpha)
+    root3Alpha=scale(root_3_alpha),
+    configAddress= mock_gyro_config.address,
 )
 
-mock_vault_pool = admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
+mock_vault_pool = admin.deploy(GyroThreePool, *args)
 
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None

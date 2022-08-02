@@ -256,8 +256,9 @@ def mock_vault_pool3(
         bufferPeriodDuration=0,  # uint256
         owner=admin,  # address
         root3Alpha=D("0.97") * 10**18,
+        configAddress=mock_gyro_config.address,
     )
-    return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
+    return admin.deploy(GyroThreePool, *args)
 
 
 @pytest.fixture
@@ -306,8 +307,9 @@ def balancer_vault_pool3(
         bufferPeriodDuration=0,  # uint256
         owner=admin,  # address
         root3Alpha=D("0.97") * 10**18,
+        configAddress=mock_gyro_config.address
     )
-    return admin.deploy(GyroThreePool, *args, mock_gyro_config.address)
+    return admin.deploy(GyroThreePool, *args)
 
 
 @pytest.fixture(scope="module")
