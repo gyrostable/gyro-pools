@@ -198,7 +198,7 @@ library GyroThreeMath {
         // uint256 dfRootEst = (rootEst * 3).mulDown(rootEst);
         uint256 dfRootEst = 3 * rootEst2;
         dfRootEst = dfRootEst.sub(dfRootEst.mulDownU(root3Alpha).mulDownU(root3Alpha).mulDownU(root3Alpha));
-        dfRootEst = dfRootEst.sub(Math.mul(2, rootEst.mulDownU(mb))).sub(mc);
+        dfRootEst = dfRootEst.sub(2 * rootEst.mulDownU(mb)).sub(mc);
 
         // We distinguish two cases: Relatively small values of rootEst, where we can use simple operations, and larger
         // values, where the simple operations may overflow and we need to use functions that compensate for that.
