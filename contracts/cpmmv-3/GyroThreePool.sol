@@ -294,6 +294,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
     )
         internal
         override
+        whenNotLocallyPaused
         returns (
             uint256 bptAmountOut,
             uint256[] memory amountsIn,
