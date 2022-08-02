@@ -81,8 +81,8 @@ class ThreePoolParams(NamedTuple):
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike
     owner: str
+    configAddress: str
     cap_params: CapParams = CapParams()
-    # configAddress listed separately
 
 
 class Vector2(NamedTuple):
