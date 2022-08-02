@@ -93,10 +93,10 @@ library GyroThreeMath {
         )
     {
         // Order of operations is chosen to minimize error amplification.
-        a = GyroFixedPoint.ONE.sub(root3Alpha.mulDownU(root3Alpha).mulDownU(root3Alpha));
-        uint256 bterm = balances[0].add(balances[1]).add(balances[2]);
+        a = GyroFixedPoint.ONE - root3Alpha.mulDownU(root3Alpha).mulDownU(root3Alpha);
+        uint256 bterm = balances[0] + balances[1] + balances[2];
         mb = bterm.mulDownU(root3Alpha).mulDownU(root3Alpha);
-        uint256 cterm = (balances[0].mulDownU(balances[1])).add(balances[1].mulDownU(balances[2])).add(balances[2].mulDownU(balances[0]));
+        uint256 cterm = balances[0].mulDownU(balances[1]) + balances[1].mulDownU(balances[2]) + balances[2].mulDownU(balances[0]);
         mc = cterm.mulDownU(root3Alpha);
         md = balances[0].mulDownU(balances[1]).mulDownU(balances[2]);
     }
@@ -132,11 +132,11 @@ library GyroThreeMath {
         uint256 mc,
         uint256 // md
     ) internal pure returns (uint256 l_lower, uint256 l0) {
-        uint256 radic = mb.mulUpU(mb).add(a.mulUpU(mc * 3));
-        uint256 lplus = mb.add(radic._sqrt(5)).divUpU(a * 3);  // Upper local minimum
+        uint256 radic = mb.mulUpU(mb) + a.mulUpU(mc * 3);
+        uint256 lplus = (mb + radic._sqrt(5)).divUpU(a * 3);  // Upper local minimum
         // This formula has been found computationally. It is exact for alpha -> 1, where the factor is 1.5. All
         // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
-        uint256 alpha = GyroFixedPoint.ONE.sub(a); // We know that a is in [0, 1].
+        uint256 alpha = GyroFixedPoint.ONE - a; // We know that a is in [0, 1].
         l0 = lplus.mulUpU(alpha >= 0.5e18 ? 1.5e18 : 2e18);
         l_lower = lplus.mulUpU(_L_VS_LPLUS_MIN);
     }
@@ -169,7 +169,7 @@ library GyroThreeMath {
                 return rootEst;
             }
             deltaAbsPrev = deltaAbs;
-            // TODO leave overflow check in here
+            // Using checked versions of add/sub just to be extra sure
             if (deltaIsPos) rootEst = rootEst.add(deltaAbs);
             else rootEst = rootEst.sub(deltaAbs);
         }
@@ -201,8 +201,8 @@ library GyroThreeMath {
         // TODO test if this changes the SOR; perhaps undo if there's a problem. (minor optimization)
         // uint256 dfRootEst = (rootEst * 3).mulDown(rootEst);
         uint256 dfRootEst = 3 * rootEst2;
-        dfRootEst = dfRootEst.sub(dfRootEst.mulDownU(root3Alpha).mulDownU(root3Alpha).mulDownU(root3Alpha));
-        dfRootEst = dfRootEst.sub(2 * rootEst.mulDownU(mb)).sub(mc);
+        dfRootEst = dfRootEst - dfRootEst.mulDownU(root3Alpha).mulDownU(root3Alpha).mulDownU(root3Alpha);
+        dfRootEst = dfRootEst - 2 * rootEst.mulDownU(mb) - mc;
 
         // We distinguish two cases: Relatively small values of rootEst, where we can use simple operations, and larger
         // values, where the simple operations may overflow and we need to use functions that compensate for that.
@@ -211,20 +211,20 @@ library GyroThreeMath {
         if (rootEst <= _L_THRESHOLD_SIMPLE_NUMERICS) {
             // Calculations are ordered and grouped to minimize rounding error amplification.
             deltaMinus = rootEst2.mulDownU(rootEst);
-            deltaMinus = deltaMinus.sub(deltaMinus.mulDownU(root3Alpha).mulDownU(root3Alpha).mulDownU(root3Alpha));
+            deltaMinus = deltaMinus - deltaMinus.mulDownU(root3Alpha).mulDownU(root3Alpha).mulDownU(root3Alpha);
             deltaMinus = deltaMinus.divDownU(dfRootEst);
 
             // NB: We could order the operations here in much the same way we did above to reduce errors. But tests show
             // that this has no significant effect, and it would lead to more complex code.
             deltaPlus = rootEst2.mulDownU(mb);
-            deltaPlus = deltaPlus.add(rootEst.mulDownU(mc)).divDownU(dfRootEst);
-            deltaPlus = deltaPlus.add(md.divDownU(dfRootEst));
+            deltaPlus = (deltaPlus + rootEst.mulDownU(mc)).divDownU(dfRootEst);
+            deltaPlus = deltaPlus + md.divDownU(dfRootEst);
         } else {
             // Same operations as above, but we replace some of the operations with their variants that work for larger
             // numbers.
             deltaMinus = rootEst2.mulDownLargeSmallU(rootEst);
-            deltaMinus = deltaMinus.sub(deltaMinus.mulDownLargeSmallU(root3Alpha).mulDownLargeSmallU(root3Alpha)
-                .mulDownLargeSmallU(root3Alpha));
+            deltaMinus = deltaMinus - deltaMinus.mulDownLargeSmallU(root3Alpha).mulDownLargeSmallU(root3Alpha)
+            .mulDownLargeSmallU(root3Alpha);
             // NB: `divDownLarge()` is not exact, but `dfRootEst` is large enough so that the error is on the order of
             // 1e-18. To see why, and why this doesn't overflow, see the Overflow Analysis writeup.
             deltaMinus = deltaMinus.divDownLargeU(dfRootEst);
@@ -234,12 +234,12 @@ library GyroThreeMath {
             deltaPlus = rootEst2.mulDownLargeSmallU(mb);
             // NB: `divDownLarge()` is not exact, but `dfRootEst` is large enough so that the error is on the order of
             // 1e-18. To see why, and why this doesn't overflow, see the Overflow Analysis writeup.
-            deltaPlus = deltaPlus.add(mc.mulDownU(rootEst)); deltaPlus = deltaPlus.divDownLargeU(dfRootEst, 1e12, 1e6);
-            deltaPlus = deltaPlus.add(md.divDownU(dfRootEst));
+            deltaPlus = deltaPlus + mc.mulDownU(rootEst); deltaPlus = deltaPlus.divDownLargeU(dfRootEst, 1e12, 1e6);
+            deltaPlus = deltaPlus + md.divDownU(dfRootEst);
         }
 
         deltaIsPos = (deltaPlus >= deltaMinus);
-        deltaAbs = (deltaIsPos ? deltaPlus.sub(deltaMinus) : deltaMinus.sub(deltaPlus));
+        deltaAbs = (deltaIsPos ? deltaPlus - deltaMinus : deltaMinus - deltaPlus);
     }
 
     /** @dev Computes how many tokens can be taken out of a pool if `amountIn` are sent, given the current balances and
@@ -279,10 +279,10 @@ library GyroThreeMath {
             // computation.
             // SOMEDAY These factors can be adjusted to compensate for potential errors in the invariant when the
             // balances are very large. (this may not be needed, to be revisited later)
-            uint256 virtInOver = balanceIn.add(virtualOffset.mulUpU(GyroFixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDownU(GyroFixedPoint.ONE - 1));
+            uint256 virtInOver = balanceIn + virtualOffset.mulUpU(GyroFixedPoint.ONE + 2);
+            uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
-            amountOut = virtOutUnder.mulDownU(amountIn).divDownU(virtInOver.add(amountIn));
+            amountOut = virtOutUnder.mulDownU(amountIn).divDownU(virtInOver + amountIn);
         }
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
@@ -325,10 +325,10 @@ library GyroThreeMath {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
-            uint256 virtInOver = balanceIn.add(virtualOffset.mulUpU(GyroFixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDownU(GyroFixedPoint.ONE - 1));
+            uint256 virtInOver = balanceIn + virtualOffset.mulUpU(GyroFixedPoint.ONE + 2);
+            uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
-            amountIn = virtInOver.mulUpU(amountOut).divUpU(virtOutUnder.sub(amountOut));
+            amountIn = virtInOver.mulUpU(amountOut).divUpU(virtOutUnder - amountOut);
         }
 
         if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO)))
