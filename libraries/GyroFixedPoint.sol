@@ -127,7 +127,21 @@ library GyroFixedPoint {
      * Introduces some rounding error that is relevant iff b is small.
      */
     function divDownLarge(uint256 a, uint256 b) internal pure returns (uint256) {
-        return Math.divDown(Math.mul(a, MIDDECIMAL), Math.divDown(b, MIDDECIMAL));
+        return divDownLarge(a, b, MIDDECIMAL, MIDDECIMAL);
+    }
+
+    /**
+     * @dev Like divDown(), but it also works when `a` would overflow in `divDown`. d and e must be chosen such that
+     * d * e = 1e18 (raw numbers, or d * e = 1e-18 with respect to the numbers they represent in fixed point). Note that
+     * this requires d, e ≤ 1e18 (raw, or d, e ≤ 1 with respect to the numbers represented).
+     * This operation is safe if both of
+     * - a * d ≤ 1.15e77 (raw, i.e., a * d ≤ 1.15e41 with respect to the value that is represented)
+     * - b ≥ e (with respect to raw or represented numbers)
+     * hold.
+     * Introduces some rounding error that is relevant iff b is small and is proportional to e.
+     */
+    function divDownLarge(uint256 a, uint256 b, uint256 d, uint256 e) internal pure returns (uint256) {
+        return Math.divDown(Math.mul(a, d), Math.divDown(b, e));
     }
 
     /**
