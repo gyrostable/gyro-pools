@@ -339,6 +339,9 @@ def test_calculate_invariant(
 )
 def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
     a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
+    l_lower = D("1.3") * math_implementation.calculateLocalMinimum(
+        a, mb, mc
+    )
     rootEst = math_implementation.calculateCubic(
         a, mb, mc, md, root_three_alpha, balances
     )
@@ -346,11 +349,11 @@ def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
         a, mb, mc, md, root_three_alpha, rootEst
     )
     delta_abs_sol, delta_is_pos_sol = gyro_three_math_testing.calcNewtonDelta(
-        scale(a),
         scale(mb),
         scale(mc),
         scale(md),
         scale(root_three_alpha),
+        scale(l_lower),
         scale(rootEst),
     )
     delta_abs_sol = unscale(delta_abs_sol)

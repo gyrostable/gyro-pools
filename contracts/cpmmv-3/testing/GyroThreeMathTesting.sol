@@ -41,31 +41,29 @@ contract GyroThreeMathTesting {
         uint256 mc,
         uint256 md
     ) external pure returns (uint256 l0) {
-        return GyroThreeMath._calculateCubicStartingPoint(a, mb, mc, md);
+        (, l0) = GyroThreeMath._calculateCubicStartingPoint(a, mb, mc, md);
     }
 
     function runNewtonIteration(
-        uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
         uint256 root3Alpha,
+        uint256 l_lower,
         uint256 rootEst
     ) external pure returns (uint256 rootEstOut) {
-        // Keeping the dead parameter a for compatibility with legacy testing code.
-        rootEstOut = GyroThreeMath._runNewtonIteration(mb, mc, md, root3Alpha, rootEst);
+        rootEstOut = GyroThreeMath._runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
     function calcNewtonDelta(
-        uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 md,
         uint256 root3Alpha,
+        uint256 l_lower,
         uint256 rootEst
     ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        // Keeping the dead parameter a for compatibility with legacy testing code.
-        return GyroThreeMath._calcNewtonDelta(mb, mc, md, root3Alpha, rootEst);
+        return GyroThreeMath._calcNewtonDelta(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
     function liquidityInvariantUpdate(

@@ -596,17 +596,6 @@ def calculate_loss(delta_invariant, invariant, balances):
         D("0.200000000181790486"),
     ),
 )
-@example(
-    args=(
-        (
-            Decimal("728109563488.263687529903349137"),
-            Decimal("7281095.634882636875299036"),
-            Decimal("1724716619.689367265339564601"),
-        ),
-        Decimal("36417643407.707023648100000000"),
-        Decimal("0.200000000021982758"),
-    )
-)
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
     balances, invariant, root3Alpha = args
 

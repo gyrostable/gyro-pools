@@ -25,6 +25,7 @@ library GyroThreePoolErrors {
     uint256 internal constant UNDERESTIMATE_INVARIANT_FAILED = 360;
     uint256 internal constant INVARIANT_TOO_LARGE = 361;
     uint256 internal constant BALANCES_TOO_LARGE = 362;
+    uint256 internal constant INVARIANT_UNDERFLOW = 363;
 
     // Input
     uint256 internal constant TOKENS_LENGTH_MUST_BE_3 = 353;

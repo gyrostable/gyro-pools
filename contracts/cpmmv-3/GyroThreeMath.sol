@@ -58,9 +58,14 @@ library GyroThreeMath {
     // Threshold of l where the normal method of computing the newton step would overflow and we need a workaround.
     uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 4.87e31;  // 4.87e13, scaled
     // Threshold of l above which overflows may occur in the Newton iteration. This is far above the theoretically
-    // maximum possible (starting or solution) value of l, so it would only ever be reached due to some other bug in the
-    // newton iteration.
-    uint256 internal constant _L_MAX = 4.86e34;  // 4.86e16, scaled
+    // maximum possible (starting or solution or intermediate) value of l, so it would only ever be reached due to some
+    // other bug in the Newton iteration.
+    uint256 internal constant _L_MAX = 1e34;  // 1e16, scaled
+    // Minimum value of l / L+, where L+ is the local minimum of the function f. This is significantly below the
+    // theoretically maximum possible (starting or solution or intermediate) value of l, so it would only ever be reached
+    // due to a bug in the Newton iteration. We require this because otherwise, rounding errors in `divDownLarge()` may
+    // become significant.
+    uint256 internal constant _L_VS_LPLUS_MIN = 1.3e18;  // 1.3, scaled
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
@@ -105,25 +110,28 @@ library GyroThreeMath {
         uint256 md,
         uint256 root3Alpha
     ) internal pure returns (uint256 rootEst) {
-        rootEst = _calculateCubicStartingPoint(a, mb, mc, md);
-        rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, rootEst);
+        uint256 l_lower;
+        (l_lower, rootEst) = _calculateCubicStartingPoint(a, mb, mc, md);
+        rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
-    /** @dev Starting point for Newton iteration. Safe with all cubic polynomials where the coefficients have the
-     *  appropriate signs and a in [0, 1], but calibrated to the particular polynomial for computing the invariant. */
+    /** @dev (Minimum safe value, starting point for Newton iteration). Calibrated to the particular polynomial for
+     * computing the invariant. For values < l_lower, errors from rounding can amplify too much when l is large. This this
+     * is only relevant for the branch of calcNewtonDelta() where rootEst > _L_THRESHOLD_SIMPLE_NUMERICS.
+     */
     function _calculateCubicStartingPoint(
         uint256 a,
         uint256 mb,
         uint256 mc,
         uint256 // md
-    ) internal pure returns (uint256 l0) {
+    ) internal pure returns (uint256 l_lower, uint256 l0) {
         uint256 radic = mb.mulUp(mb).add(a.mulUp(mc * 3));
-        uint256 lmin = mb.add(radic._sqrt(5)).divUp(a * 3);
-        // This formula has been found experimentally. It is exact for alpha -> 1, where the factor is 1.5. All
+        uint256 lplus = mb.add(radic._sqrt(5)).divUp(a * 3);  // Upper local minimum
+        // This formula has been found computationally. It is exact for alpha -> 1, where the factor is 1.5. All
         // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
         uint256 alpha = GyroFixedPoint.ONE.sub(a); // We know that a is in [0, 1].
-        uint256 factor = alpha >= 0.5e18 ? 1.5e18 : 2e18;
-        l0 = lmin.mulUp(factor);
+        l0 = lplus.mulUp(alpha >= 0.5e18 ? 1.5e18 : 2e18);
+        l_lower = lplus.mulUp(_L_VS_LPLUS_MIN);
     }
 
     /** @dev Find a root of the given polynomial with the given starting point l.
@@ -136,12 +144,13 @@ library GyroThreeMath {
         uint256 mc,
         uint256 md,
         uint256 root3Alpha,
+        uint256 l_lower,
         uint256 rootEst
     ) internal pure returns (uint256) {
         uint256 deltaAbsPrev = 0;
         for (uint256 iteration = 0; iteration < 255; ++iteration) {
             // The delta to the next step can be positive or negative, and we represent its sign separately.
-            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(mb, mc, md, root3Alpha, rootEst);
+            (uint256 deltaAbs, bool deltaIsPos) = _calcNewtonDelta(mb, mc, md, root3Alpha, l_lower, rootEst);
 
             // Note: If we ever set _INVARIANT_MIN_ITERATIONS=0, the following should include `iteration >= 1`.
             if (deltaAbs <= 1) return rootEst;
@@ -167,9 +176,14 @@ library GyroThreeMath {
         uint256 mc,
         uint256 md,
         uint256 root3Alpha,
+        uint256 l_lower,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
         _require(rootEst <= _L_MAX, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+
+        // Note: In principle, this check is only relevant for the `else` branch below. But if it's violated, this
+        // points to severe problems anyways, so we keep it here.
+        _require(rootEst >= l_lower, GyroThreePoolErrors.INVARIANT_UNDERFLOW);
 
         uint256 rootEst2 = rootEst.mulDown(rootEst);
 
@@ -202,17 +216,16 @@ library GyroThreeMath {
             deltaMinus = rootEst2.mulDownLargeSmall(rootEst);
             deltaMinus = deltaMinus.sub(deltaMinus.mulDownLargeSmall(root3Alpha).mulDownLargeSmall(root3Alpha)
                 .mulDownLargeSmall(root3Alpha));
-            // TODO add comment about why divDownLarge() doesn't crash and doesn't lose too much precision (dfRootEst >> 0)
-            // TODO Leave the check in here? - OR add a check at the very top of this block (prob better)
+            // NB: `divDownLarge()` is not exact, but `dfRootEst` is large enough so that the error is on the order of
+            // 1e-18. To see why, and why this doesn't overflow, see the Overflow Analysis writeup.
             deltaMinus = deltaMinus.divDownLarge(dfRootEst);
 
             // We use mulDownLargeSmall() to prevent an overflow that can occur for large balances and alpha very
             // close to 1.
             deltaPlus = rootEst2.mulDownLargeSmall(mb);
-            // We use mc.mulDownLargeSmall(rootEst), rather than the other way round, because mc is usually bigger.
-            // TODO add comment about why divDownLarge() doesn't crash and doesn't lose too much precision (dfRootEst >> 0)
-            // TODO I think the first mulDownLargeSmall can be just mulDown.
-            deltaPlus = deltaPlus.add(mc.mulDownLargeSmall(rootEst)).divDownLarge(dfRootEst);
+            // NB: `divDownLarge()` is not exact, but `dfRootEst` is large enough so that the error is on the order of
+            // 1e-18. To see why, and why this doesn't overflow, see the Overflow Analysis writeup.
+            deltaPlus = deltaPlus.add(mc.mulDown(rootEst)); deltaPlus = deltaPlus.divDownLarge(dfRootEst, 1e12, 1e6);
             deltaPlus = deltaPlus.add(md.divDown(dfRootEst));
         }
 
@@ -254,6 +267,8 @@ library GyroThreeMath {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
+            // SOMEDAY These factors can be adjusted to compensate for potential errors in the invariant when the
+            // balances are very large. (this may not be needed, to be revisited later)
             uint256 virtInOver = balanceIn.add(virtualOffset.mulUp(GyroFixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffset.mulDown(GyroFixedPoint.ONE - 1));
 
