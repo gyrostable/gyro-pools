@@ -123,11 +123,7 @@ library GyroFixedPoint {
             _require(false, Errors.ZERO_DIVISION);
         }
 
-        if (a == 0) {
-            return 0;
-        } else {
-            return (a * ONE) / b;
-        }
+        return (a * ONE) / b;
     }
 
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -139,7 +135,9 @@ library GyroFixedPoint {
             return 0;
         } else {
             uint256 aInflated = a * ONE;
-            _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            if (!(aInflated / a == ONE)) {
+                _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+            }
 
             // The traditional divUp formula is:
             // divUp(x, y) := (x + y - 1) / y
@@ -214,6 +212,7 @@ library GyroFixedPoint {
         return Math.divDown(Math.mul(a, d), Math.divUp(b, e));
     }
 
+    /// @dev e is assumed to be non-zero, and so division by zero is not checked for it
     function divDownLargeU(
         uint256 a,
         uint256 b,
@@ -221,17 +220,13 @@ library GyroFixedPoint {
         uint256 e
     ) internal pure returns (uint256) {
         // (a * d) / (b / e)
-        if (e == 0) {
-            _require(false, Errors.ZERO_DIVISION);
-        }
 
-        uint256 denom;
         if (b == 0) {
             // In this case only, the denominator of the outer division is zero, and we revert
             _require(false, Errors.ZERO_DIVISION);
-        } else {
-            denom = 1 + (b - 1) / e;
         }
+
+        uint256 denom = 1 + (b - 1) / e;
 
         return (a * d) / denom;
     }
