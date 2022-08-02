@@ -116,6 +116,10 @@ library GyroThreeMath {
         uint256 l_lower;
         (l_lower, rootEst) = _calculateCubicStartingPoint(a, mb, mc, md);
         rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
+
+        // Sanity check; the Newton iteration does not check its own final result, only intermediate results.
+        if (!(rootEst <= _L_MAX))
+            _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
     }
 
     /** @dev (Minimum safe value, starting point for Newton iteration). Calibrated to the particular polynomial for
