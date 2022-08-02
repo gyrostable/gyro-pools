@@ -69,9 +69,12 @@ library GyroThreeMath {
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
-        _require(balances[0] <= _MAX_BALANCES, GyroThreePoolErrors.BALANCES_TOO_LARGE);
-        _require(balances[1] <= _MAX_BALANCES, GyroThreePoolErrors.BALANCES_TOO_LARGE);
-        _require(balances[2] <= _MAX_BALANCES, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[0] <= _MAX_BALANCES))
+            _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[1] <= _MAX_BALANCES))
+            _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[2] <= _MAX_BALANCES))
+            _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
@@ -179,11 +182,13 @@ library GyroThreeMath {
         uint256 l_lower,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        _require(rootEst <= _L_MAX, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX))
+            _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
 
         // Note: In principle, this check is only relevant for the `else` branch below. But if it's violated, this
         // points to severe problems anyways, so we keep it here.
-        _require(rootEst >= l_lower, GyroThreePoolErrors.INVARIANT_UNDERFLOW);
+        if (!(rootEst >= l_lower))
+            _require(false, GyroThreePoolErrors.INVARIANT_UNDERFLOW);
 
         uint256 rootEst2 = rootEst.mulDown(rootEst);
 
@@ -261,7 +266,8 @@ library GyroThreeMath {
         // We assume that the virtualOffset carries a relative +/- 3e-18 error due to the invariant  //
         // calculation add an appropriate safety margin.                                             //
         **********************************************************************************************/
-        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
+        if (!(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO)))
+            _require(false, Errors.MAX_IN_RATIO);
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
@@ -277,7 +283,8 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
-        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO)))
+            _require(false, Errors.MAX_OUT_RATIO);
     }
 
     /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the current balances
@@ -307,7 +314,8 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
         // the pool than is in it.
-        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO)))
+            _require(false, Errors.MAX_OUT_RATIO);
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
@@ -319,6 +327,7 @@ library GyroThreeMath {
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }
 
-        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
+        if (!(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO)))
+            _require(false, Errors.MAX_IN_RATIO);
     }
 }
