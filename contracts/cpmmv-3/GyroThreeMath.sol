@@ -266,7 +266,7 @@ library GyroThreeMath {
         // We assume that the virtualOffset carries a relative +/- 3e-18 error due to the invariant  //
         // calculation add an appropriate safety margin.                                             //
         **********************************************************************************************/
-        if (!(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO)))
+        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO)))
             _require(false, Errors.MAX_IN_RATIO);
 
         {
@@ -283,7 +283,7 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
-        if (!(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO)))
+        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO)))
             _require(false, Errors.MAX_OUT_RATIO);
     }
 
@@ -314,7 +314,7 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
         // the pool than is in it.
-        if (!(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO)))
+        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO)))
             _require(false, Errors.MAX_OUT_RATIO);
 
         {
@@ -327,7 +327,7 @@ library GyroThreeMath {
             amountIn = virtInOver.mulUpU(amountOut).divUpU(virtOutUnder.sub(amountOut));
         }
 
-        if (!(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO)))
+        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO)))
             _require(false, Errors.MAX_IN_RATIO);
     }
 }
