@@ -1,4 +1,5 @@
 compiler:
+  evm_version: berlin
   solc:
     version: 0.7.1
     optimizer:
@@ -11,8 +12,8 @@ compiler:
 networks:
   development:
     cmd_settings:
-      evm_version: istanbul
+      evm_version: london
       unlimited_contract_size: True
   mainnet-fork:
     cmd_settings:
-      evm_version: istanbul
+      evm_version: london
