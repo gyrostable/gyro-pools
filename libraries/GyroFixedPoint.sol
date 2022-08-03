@@ -62,6 +62,7 @@ library GyroFixedPoint {
         return product / ONE;
     }
 
+    /// @dev "U" denotes version of the math function that does not check for overflows in order to save gas
     function mulDownU(uint256 a, uint256 b) internal pure returns (uint256) {
         return (a * b) / ONE;
     }
