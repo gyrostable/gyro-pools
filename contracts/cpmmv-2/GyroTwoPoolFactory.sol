@@ -26,10 +26,12 @@ import "./GyroTwoPool.sol";
 contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
-    uint256 public constant PAUSE_WINDOW_DURATION = 365 days;
+    uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
     uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
 
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
+        _require(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);
+        _require(address(vault) != address(0), GyroErrors.ZERO_ADDRESS);
         gyroConfigAddress = _gyroConfigAddress;
     }
 

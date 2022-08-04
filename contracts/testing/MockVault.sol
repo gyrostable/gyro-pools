@@ -194,9 +194,9 @@ contract MockVault is IPoolSwapStructs {
             userData
         );
 
-        Pool storage pool = pools[poolId];
-        for (uint256 i = 0; i < pool.tokens.length; i++) {
-            pool.balances[pool.tokens[i]] -= amountsOut[i];
+        Pool storage _pool = pools[poolId];
+        for (uint256 i = 0; i < _pool.tokens.length; i++) {
+            _pool.balances[_pool.tokens[i]] -= amountsOut[i];
         }
 
         IERC20[] memory tokens = new IERC20[](currentBalances.length);
@@ -221,9 +221,9 @@ contract MockVault is IPoolSwapStructs {
         uint256 amount = IMinimalSwapInfoPool(poolAddress).onSwap(request, balanceTokenIn, balanceTokenOut);
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amount);
 
-        Pool storage pool = pools[request.poolId];
-        pool.balances[request.tokenIn] += request.amount;
-        pool.balances[request.tokenOut] -= amount;
+        Pool storage _pool = pools[request.poolId];
+        _pool.balances[request.tokenIn] += request.amount;
+        _pool.balances[request.tokenOut] -= amount;
     }
 
     function getPoolId() external view returns (bytes32) {
