@@ -60,6 +60,14 @@ contract MockVault is IPoolSwapStructs {
             tokens[i] = pool.tokens[i];
             balances[i] = pool.balances[tokens[i]];
         }
+        /*
+        // DEBUG: Dummy values, no storage access
+        tokens = new IERC20[](3);
+        balances = new uint256[](3);
+        balances[0] = 100e18;
+        balances[1] = 100e18;
+        balances[2] = 100e18;
+        */
     }
 
     function registerPool(IVault.PoolSpecialization) external view returns (bytes32) {
@@ -217,6 +225,45 @@ contract MockVault is IPoolSwapStructs {
         // User Data not used in swap
         // bytes memory userData = abi.encode(kind,amountsOutStr,10 * 10 ** 25); //maxBPTAmountIn
         //request.userData  = userData;
+
+        // Dummy to ensure storage is warm. We can't just call getPoolTokens() b/c it's external.
+        // The following makes the two balances warm that the real vault will have warm.
+        {
+            Pool storage pool = pools[request.poolId];
+            uint256 dummy;
+            dummy = pool.balances[request.tokenIn] + pool.balances[request.tokenOut];
+            // no-op to prevent the optimizer from removing this code:
+            if (dummy == 0)
+                return;
+        }
+        /*{
+            Pool storage pool = pools[request.poolId];
+            IERC20[] memory tokens = new IERC20[](pool.tokens.length);
+            uint256[] memory balances = new uint256[](pool.tokens.length);
+
+            for (uint256 i = 0; i < pool.tokens.length; i++) {
+                tokens[i] = pool.tokens[i];
+                balances[i] = pool.balances[tokens[i]];
+            }
+            // DEBUG noop
+            if(balances[0] == 0 && balances[1] == 0 && balances[2] == 0) {
+                return;
+            }
+        }
+        {
+            Pool storage pool = pools[request.poolId];
+            IERC20[] memory tokens = new IERC20[](pool.tokens.length);
+            uint256[] memory balances = new uint256[](pool.tokens.length);
+
+            for (uint256 i = 0; i < pool.tokens.length; i++) {
+                tokens[i] = pool.tokens[i];
+                balances[i] = pool.balances[tokens[i]];
+            }
+            // DEBUG noop
+            if(balances[0] == 0 && balances[1] == 0 && balances[2] == 0) {
+                return;
+            }
+        }*/
 
         uint256 amount = IMinimalSwapInfoPool(poolAddress).onSwap(request, balanceTokenIn, balanceTokenOut);
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amount);
