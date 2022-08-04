@@ -140,6 +140,8 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
 
         if (request.tokenIn == _token0 && request.tokenOut == _token1) {
             tokenInIsToken0 = true;
+        } else if (request.tokenIn == _token1 && request.tokenOut == _token0) {
+            tokenInIsToken0 = false;
         } else {
             _revert(GyroCEMMPoolErrors.TOKEN_IN_IS_NOT_TOKEN_0);
         }
