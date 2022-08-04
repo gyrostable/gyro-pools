@@ -16,6 +16,3 @@ runs:
     - name: Install Dependencies
       run: yarn
       shell: bash
-    - name: Compile contracts
-      run: brownie compile
-      shell: bash

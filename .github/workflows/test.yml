@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup
       - name: Run Unit Tests
-        run: brownie test --coverage -m 'not hypothesis'
+        run: brownie test -m 'not hypothesis'
 
   property_test:
     runs-on: ubuntu-latest
@@ -39,4 +39,4 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup
       - name: Run property Tests
-        run: brownie test --coverage --hypothesis-seed=42 --failfast -m hypothesis
+        run: brownie test --hypothesis-seed=42 --failfast -m hypothesis

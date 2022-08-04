@@ -12,11 +12,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // solhint-disable
 
 library GyroCEMMPoolErrors {
+    // Input
+    uint256 internal constant ADDRESS_IS_ZERO_ADDRESS = 120;
+    uint256 internal constant TOKEN_IN_IS_NOT_TOKEN_0 = 121;
+
     // Math
     uint256 internal constant PRICE_BOUNDS_WRONG = 354;
     uint256 internal constant ROTATION_VECTOR_WRONG = 355;

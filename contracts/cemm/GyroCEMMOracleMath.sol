@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/GyroFixedPoint.sol";
@@ -68,11 +68,7 @@ contract GyroCEMMOracleMath {
     /** @dev Calculates normalized invariant = invariant / BPT total supply
      *  Manipulation resistant BPT share pricing takes the form BPT price = (L/S) * f(p_x, p_y, alpha, beta)
      *  A time-weighted average of L/S enables BPT pricing that is resistant to donation attacks, in which L/S is manipulated */
-    function _calcLogInvariantDivSupply(uint256 invariant, int256 logBptTotalSupply)
-        internal
-        pure
-        returns (int256)
-    {
+    function _calcLogInvariantDivSupply(uint256 invariant, int256 logBptTotalSupply) internal pure returns (int256) {
         // Since we already have ln(S) and want to compute ln(L/S), we perform the computation in log
         // space directly: ln(L/S) = ln(L) - ln(S)
         int256 logInvariant = LogCompression.toLowResLog(invariant);
