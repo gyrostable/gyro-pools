@@ -1002,7 +1002,9 @@ def mtest_invariant_across_liquidityInvariantUpdate(
         # We use `err_after` to compensate for errors in the invariant calculation itself. We don't have to do this
         # above b/c calculateInvariantWithError() yields an underestimate and this is already the worst case there.
         loss = calculate_loss(
-            invariant_after + err_after - invariant_updated, invariant_after + err_after, new_balances
+            invariant_after + err_after - invariant_updated,
+            invariant_after + err_after,
+            new_balances,
         )
     else:
         loss = (D(0), D(0))

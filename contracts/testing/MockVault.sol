@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/IERC20.sol";
@@ -251,8 +251,7 @@ contract MockVault is IPoolSwapStructs {
             uint256 dummy;
             dummy = pool.balances[request.tokenIn] + pool.balances[request.tokenOut];
             // no-op to prevent the optimizer from removing this code:
-            if (dummy == 0)
-                return;
+            if (dummy == 0) return;
         }
         /*{
             Pool storage pool = pools[request.poolId];

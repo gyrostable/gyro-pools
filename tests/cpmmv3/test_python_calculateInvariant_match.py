@@ -72,9 +72,9 @@ def test_calculateInvariant_match(balances: Iterable[D], root3Alpha: D):
 )
 @example(
     args=(
-            (equal_balances_at_invariant(D("2.9998999977e15"), ROOT_ALPHA_MAX),) * 3,
-            D("2.9998999977e15"),  # Close to the theoretical maximum.
-            ROOT_ALPHA_MAX
+        (equal_balances_at_invariant(D("2.9998999977e15"), ROOT_ALPHA_MAX),) * 3,
+        D("2.9998999977e15"),  # Close to the theoretical maximum.
+        ROOT_ALPHA_MAX,
     )
 )
 def test_calculateInvariant_reconstruction(args):
@@ -91,9 +91,9 @@ def test_calculateInvariant_reconstruction(args):
 )
 @example(
     args=(
-            (equal_balances_at_invariant(D("2.9998999977e15"), ROOT_ALPHA_MAX),) * 3,
-            D("2.9998999977e15"),  # Close to the theoretical maximum.
-            ROOT_ALPHA_MAX
+        (equal_balances_at_invariant(D("2.9998999977e15"), ROOT_ALPHA_MAX),) * 3,
+        D("2.9998999977e15"),  # Close to the theoretical maximum.
+        ROOT_ALPHA_MAX,
     )
 )
 def test_calculateInvariant_reconstruction_alt(args):

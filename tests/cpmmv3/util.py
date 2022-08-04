@@ -113,6 +113,7 @@ def gen_synthetic_balances(
 
     return balances, invariant, root3Alpha
 
+
 def equal_balances_at_invariant(invariant, root3Alpha):
     """b such that (b, b, b) has the given invariant at root3Alpha."""
     return invariant - invariant * root3Alpha

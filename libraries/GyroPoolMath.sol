@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "./GyroFixedPoint.sol";
@@ -31,8 +31,6 @@ library GyroPoolMath {
     uint256 private constant SQRT_1E_NEG_13 = 316227766016;
     uint256 private constant SQRT_1E_NEG_15 = 31622776601;
     uint256 private constant SQRT_1E_NEG_17 = 3162277660;
-
-    uint256 private constant MIN_NEWTON_STEP_SIZE = 5;
 
     // Note: this function is identical to that in WeightedMath.sol audited by Balancer
     function _calcAllTokensInGivenExactBptOut(

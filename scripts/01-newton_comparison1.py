@@ -14,9 +14,11 @@ Decimal = D
 
 import tabulate as tabulatemod
 
+
 def tabulate(*args, **kwargs):
-    kwargs.setdefault('disable_numparse', True)
+    kwargs.setdefault("disable_numparse", True)
     return tabulatemod.tabulate(*args, **kwargs)
+
 
 def dstr(x):
     """Exact representation of a decimal, without fluff; fallback str()"""
@@ -24,6 +26,7 @@ def dstr(x):
         return repr(x)[9:-2]
     return str(x)
     # return repr(x)
+
 
 def main():
     # args = (
@@ -67,78 +70,114 @@ def main():
     #          Decimal('26.188711041986014369')),
     #         Decimal('31046.278348833000000000'),
     #         Decimal('0.999362587428787313'))
-    args = ([Decimal('1029444269637.250423547829820659'),
-             Decimal('0E-18'),
-             Decimal('0E-18')],
-            Decimal('41509849622.621794054000000000'),
-            Decimal('0.200000000096340603'))
+    args = (
+        [
+            Decimal("1029444269637.250423547829820659"),
+            Decimal("0E-18"),
+            Decimal("0E-18"),
+        ],
+        Decimal("41509849622.621794054000000000"),
+        Decimal("0.200000000096340603"),
+    )
 
     balances, invariant, root3Alpha = args
 
     a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root3Alpha)
 
-    invariant_math, log_math = math_implementation.calculateInvariantNewton(a, mb, mc, md, root3Alpha, balances)
+    invariant_math, log_math = math_implementation.calculateInvariantNewton(
+        a, mb, mc, md, root3Alpha, balances
+    )
 
     # TODO GyroThreeMathDebug is slightly out of sync with GyroThreeMath. So this is all a bit outdated.
     gyro_three_math_testing = accounts[0].deploy(GyroThreeMathDebug)
 
     tx = gyro_three_math_testing._calculateInvariantUnderOver(
-            scale(balances),
-            scale(root3Alpha))
+        scale(balances), scale(root3Alpha)
+    )
     invariant_sol_under, under_is_under, invariant_sol_over = unscale(tx.return_value)
     assert under_is_under
 
-    tx1 = gyro_three_math_testing._calculateCubicTerms(scale(balances), scale(root3Alpha))
+    tx1 = gyro_three_math_testing._calculateCubicTerms(
+        scale(balances), scale(root3Alpha)
+    )
     a1, mb1, mc1, md1 = unscale(tx1.return_value)
 
-    start_sol = unscale(gyro_three_math_testing._calculateCubicStartingPoint(*scale((a, mb, mc, md))).return_value)
+    start_sol = unscale(
+        gyro_three_math_testing._calculateCubicStartingPoint(
+            *scale((a, mb, mc, md))
+        ).return_value
+    )
 
     ls = locals()
-    print(tabulate([(k, dstr(ls[k])) for k in 'invariant invariant_math invariant_sol_under invariant_sol_over start_sol'.split()]))
+    print(
+        tabulate(
+            [
+                (k, dstr(ls[k]))
+                for k in "invariant invariant_math invariant_sol_under invariant_sol_over start_sol".split()
+            ]
+        )
+    )
 
     def onix(i, f):
         def ret(t):
             tl = list(t)
             tl[i] = f(tl[i])
             return type(t)(tl)
+
         return ret
 
     def curmap(f):
         return lambda lst: map(f, lst)
 
     print("\n")
-    print(tabulate(
-        map(onix(1, dstr),
-        [('err rel python', invariant_math/invariant - 1),
-         ('err rel sol under', invariant_sol_under/invariant - 1),
-         ('err rel sol over', invariant_sol_over/invariant - 1),
-         ('err rel sol starting', start_sol/invariant - 1)])
-    ))
-    
+    print(
+        tabulate(
+            map(
+                onix(1, dstr),
+                [
+                    ("err rel python", invariant_math / invariant - 1),
+                    ("err rel sol under", invariant_sol_under / invariant - 1),
+                    ("err rel sol over", invariant_sol_over / invariant - 1),
+                    ("err rel sol starting", start_sol / invariant - 1),
+                ],
+            )
+        )
+    )
+
     print("\n")
-    print(tabulate(map(curmap(dstr), [
-        ("a", a, a1),
-        ("mb", mb, mb1),
-        ("mc", mc, mc1),
-        ("md", md, md1),
-    ]), headers=("", "Python", "Solidity")))
+    print(
+        tabulate(
+            map(
+                curmap(dstr),
+                [
+                    ("a", a, a1),
+                    ("mb", mb, mb1),
+                    ("mc", mc, mc1),
+                    ("md", md, md1),
+                ],
+            ),
+            headers=("", "Python", "Solidity"),
+        )
+    )
 
     print("\n----- Python: -----\n")
     # pprint(log_math)
-    keys = ['l', 'delta']
-    print(tabulate(
-        [[dstr(e[k]) for k in keys] for e in log_math],
-        headers=keys
-    ))
+    keys = ["l", "delta"]
+    print(tabulate([[dstr(e[k]) for k in keys] for e in log_math], headers=keys))
 
     print("\n----- Solidity: -----\n")
-    if 'NewtonStep' in tx.events:
+    if "NewtonStep" in tx.events:
         # True unless we're in the lower-order special case.
-        keys = ['l', 'deltaAbs']
+        keys = ["l", "deltaAbs"]
         # pprint([valmap(unscale, e) for e in tx.events['NewtonStep']])
-        print(tabulate(
-            [[dstr(unscale(e[k])) for k in keys] + [e['deltaIsPos']] for e in tx.events['NewtonStep']],
-            headers=keys + ['is pos']
-        ))
+        print(
+            tabulate(
+                [
+                    [dstr(unscale(e[k])) for k in keys] + [e["deltaIsPos"]]
+                    for e in tx.events["NewtonStep"]
+                ],
+                headers=keys + ["is pos"],
+            )
+        )
 
     print(f"\nGas used (Solidity): {tx.gas_used}")

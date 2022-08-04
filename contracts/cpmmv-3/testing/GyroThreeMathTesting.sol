@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSE
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 /// @dev We can't call the functions of the math library for testing b/c they're internal. That's why this contract forwards calls to the math library.
 

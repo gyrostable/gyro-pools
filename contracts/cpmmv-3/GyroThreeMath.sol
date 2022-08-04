@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
@@ -52,29 +52,26 @@ library GyroThreeMath {
     uint8 internal constant _INVARIANT_SHRINKING_FACTOR_PER_STEP = 8;
     uint8 internal constant _INVARIANT_MIN_ITERATIONS = 5;
 
-    uint256 internal constant _MAX_BALANCES = 1e29;  // 1e11 = 100 billion, scaled
-    uint256 internal constant _MIN_ROOT_3_ALPHA = 0.15874010519681997e18;  // 3rd root of 0.004, scaled
-    uint256 internal constant _MAX_ROOT_3_ALPHA = 0.9999666655554938e18;  // 3rd root of 0.9999, scaled
+    uint256 internal constant _MAX_BALANCES = 1e29; // 1e11 = 100 billion, scaled
+    uint256 internal constant _MIN_ROOT_3_ALPHA = 0.15874010519681997e18; // 3rd root of 0.004, scaled
+    uint256 internal constant _MAX_ROOT_3_ALPHA = 0.9999666655554938e18; // 3rd root of 0.9999, scaled
     // Threshold of l where the normal method of computing the newton step would overflow and we need a workaround.
-    uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 4.87e31;  // 4.87e13, scaled
+    uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 4.87e31; // 4.87e13, scaled
     // Threshold of l above which overflows may occur in the Newton iteration. This is far above the theoretically
     // maximum possible (starting or solution or intermediate) value of l, so it would only ever be reached due to some
     // other bug in the Newton iteration.
-    uint256 internal constant _L_MAX = 1e34;  // 1e16, scaled
+    uint256 internal constant _L_MAX = 1e34; // 1e16, scaled
     // Minimum value of l / L+, where L+ is the local minimum of the function f. This is significantly below the
     // theoretically maximum possible (starting or solution or intermediate) value of l, so it would only ever be reached
     // due to a bug in the Newton iteration. We require this because otherwise, rounding errors in `divDownLarge()` may
     // become significant.
-    uint256 internal constant _L_VS_LPLUS_MIN = 1.3e18;  // 1.3, scaled
+    uint256 internal constant _L_VS_LPLUS_MIN = 1.3e18; // 1.3, scaled
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
-        if (!(balances[0] <= _MAX_BALANCES))
-            _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
-        if (!(balances[1] <= _MAX_BALANCES))
-            _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
-        if (!(balances[2] <= _MAX_BALANCES))
-            _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[0] <= _MAX_BALANCES)) _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[1] <= _MAX_BALANCES)) _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[2] <= _MAX_BALANCES)) _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
@@ -118,8 +115,7 @@ library GyroThreeMath {
         rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
 
         // Sanity check; the Newton iteration does not check its own final result, only intermediate results.
-        if (!(rootEst <= _L_MAX))
-            _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX)) _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
     }
 
     /** @dev (Minimum safe value, starting point for Newton iteration). Calibrated to the particular polynomial for
@@ -133,7 +129,7 @@ library GyroThreeMath {
         uint256 // md
     ) internal pure returns (uint256 l_lower, uint256 l0) {
         uint256 radic = mb.mulUpU(mb) + a.mulUpU(mc * 3);
-        uint256 lplus = (mb + radic._sqrt(5)).divUpU(a * 3);  // Upper local minimum
+        uint256 lplus = (mb + radic._sqrt(5)).divUpU(a * 3); // Upper local minimum
         // This formula has been found computationally. It is exact for alpha -> 1, where the factor is 1.5. All
         // factors > 1 are safe. For small alpha values, it is more efficient to fallback to a larger factor.
         uint256 alpha = GyroFixedPoint.ONE - a; // We know that a is in [0, 1].
@@ -186,13 +182,11 @@ library GyroThreeMath {
         uint256 l_lower,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        if (!(rootEst <= _L_MAX))
-            _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX)) _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
 
         // Note: In principle, this check is only relevant for the `else` branch below. But if it's violated, this
         // points to severe problems anyways, so we keep it here.
-        if (!(rootEst >= l_lower))
-            _require(false, GyroThreePoolErrors.INVARIANT_UNDERFLOW);
+        if (!(rootEst >= l_lower)) _require(false, GyroThreePoolErrors.INVARIANT_UNDERFLOW);
 
         uint256 rootEst2 = rootEst.mulDownU(rootEst);
 
@@ -223,8 +217,7 @@ library GyroThreeMath {
             // Same operations as above, but we replace some of the operations with their variants that work for larger
             // numbers.
             deltaMinus = rootEst2.mulDownLargeSmallU(rootEst);
-            deltaMinus = deltaMinus - deltaMinus.mulDownLargeSmallU(root3Alpha).mulDownLargeSmallU(root3Alpha)
-            .mulDownLargeSmallU(root3Alpha);
+            deltaMinus = deltaMinus - deltaMinus.mulDownLargeSmallU(root3Alpha).mulDownLargeSmallU(root3Alpha).mulDownLargeSmallU(root3Alpha);
             // NB: `divDownLarge()` is not exact, but `dfRootEst` is large enough so that the error is on the order of
             // 1e-18. To see why, and why this doesn't overflow, see the Overflow Analysis writeup.
             deltaMinus = deltaMinus.divDownLargeU(dfRootEst);
@@ -234,7 +227,8 @@ library GyroThreeMath {
             deltaPlus = rootEst2.mulDownLargeSmallU(mb);
             // NB: `divDownLarge()` is not exact, but `dfRootEst` is large enough so that the error is on the order of
             // 1e-18. To see why, and why this doesn't overflow, see the Overflow Analysis writeup.
-            deltaPlus = deltaPlus + mc.mulDownU(rootEst); deltaPlus = deltaPlus.divDownLargeU(dfRootEst, 1e12, 1e6);
+            deltaPlus = deltaPlus + mc.mulDownU(rootEst);
+            deltaPlus = deltaPlus.divDownLargeU(dfRootEst, 1e12, 1e6);
             deltaPlus = deltaPlus + md.divDownU(dfRootEst);
         }
 
@@ -270,8 +264,7 @@ library GyroThreeMath {
         // We assume that the virtualOffset carries a relative +/- 3e-18 error due to the invariant  //
         // calculation add an appropriate safety margin.                                             //
         **********************************************************************************************/
-        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO)))
-            _require(false, Errors.MAX_IN_RATIO);
+        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO))) _require(false, Errors.MAX_IN_RATIO);
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
@@ -287,8 +280,7 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
-        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO)))
-            _require(false, Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO))) _require(false, Errors.MAX_OUT_RATIO);
     }
 
     /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the current balances
@@ -318,8 +310,7 @@ library GyroThreeMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
         // the pool than is in it.
-        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO)))
-            _require(false, Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO))) _require(false, Errors.MAX_OUT_RATIO);
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
@@ -331,7 +322,6 @@ library GyroThreeMath {
             amountIn = virtInOver.mulUpU(amountOut).divUpU(virtOutUnder - amountOut);
         }
 
-        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO)))
-            _require(false, Errors.MAX_IN_RATIO);
+        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO))) _require(false, Errors.MAX_IN_RATIO);
     }
 }

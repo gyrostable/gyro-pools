@@ -1,4 +1,4 @@
-pragma solidity ^0.7.0;
+pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/GyroFixedPoint.sol";
@@ -37,8 +37,8 @@ library GyroCEMMMath {
     int256 internal constant _DERIVED_DSQ_NORM_ACCURACY_XP = 1e23; // 1e-15 in extra precision
 
     // Anti-overflow limits: Dynamic values (checked before operations that use them)
-    int256 internal constant _MAX_BALANCES  = 1e34;  // 1e16 in normal precision
-    int256 internal constant _MAX_INVARIANT = 3e37;  // 3e19 in normal precision
+    int256 internal constant _MAX_BALANCES = 1e34; // 1e16 in normal precision
+    int256 internal constant _MAX_INVARIANT = 3e37; // 3e19 in normal precision
 
     // Note that all t values (not tp or tpp) could consist of uint's, as could all Params. But it's complicated to
     // convert all the time, so we make them all signed. We also store all intermediate values signed. An exception are

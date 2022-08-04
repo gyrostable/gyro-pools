@@ -111,16 +111,17 @@ def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_te
 )
 @example(
     params_swap_given_out=(
-            CEMMMathParams(
-                alpha=D('1.252952531697506474'),
-                beta=D('1.253952531697506474'),
-                c=D('0.716706818468612394'),
-                s=D('0.697374602606518401'),
-                l=D('44352613.649477785400000000')),
-            [D('3.769000000000000000'),
-             D('45922537131.376536890000000000')],
-            False,
-            D('1.100200000000000000'))
+        CEMMMathParams(
+            alpha=D("1.252952531697506474"),
+            beta=D("1.253952531697506474"),
+            c=D("0.716706818468612394"),
+            s=D("0.697374602606518401"),
+            l=D("44352613.649477785400000000"),
+        ),
+        [D("3.769000000000000000"), D("45922537131.376536890000000000")],
+        False,
+        D("1.100200000000000000"),
+    )
 )
 def test_invariant_across_calcInGivenOut(params_swap_given_out, gyro_cemm_math_testing):
     params, balances, tokenInIsToken0, amountOut = params_swap_given_out
