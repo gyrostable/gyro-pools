@@ -2,8 +2,8 @@
 pragma solidity ^0.7.0;
 
 interface ILocallyPausable {
-    event Paused();
-    event Unpaused();
+    event PausedLocally();
+    event UnpausedLocally();
     event PauseManagerChanged(address oldPauseManager, address newPauseManager);
 
     /// @notice Changes the account that is allow to pause a pool
@@ -16,7 +16,4 @@ interface ILocallyPausable {
     /// @notice Unpauses the pool
     /// Can only be called by the pause manager
     function unpause() external;
-
-    /// @return whether the pool is locally paused or not
-    function isLocallyPaused() external view returns (bool);
 }

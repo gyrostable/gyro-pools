@@ -26,6 +26,9 @@ import "./GyroTwoPool.sol";
 contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
+    uint256 public constant PAUSE_WINDOW_DURATION = 365 days;
+    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
+
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
@@ -72,7 +75,6 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
         bool oracleEnabled,
         address owner
     ) internal view returns (ExtensibleWeightedPool2Tokens.NewPoolParams memory) {
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
         return
             ExtensibleWeightedPool2Tokens.NewPoolParams({
                 vault: getVault(),
@@ -81,8 +83,8 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
                 token0: tokens[0],
                 token1: tokens[1],
                 swapFeePercentage: swapFeePercentage,
-                pauseWindowDuration: pauseWindowDuration,
-                bufferPeriodDuration: bufferPeriodDuration,
+                pauseWindowDuration: PAUSE_WINDOW_DURATION,
+                bufferPeriodDuration: BUFFER_PERIOD_DURATION,
                 oracleEnabled: oracleEnabled,
                 owner: owner
             });

@@ -128,7 +128,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         SwapRequest memory request,
         uint256 balanceTokenIn,
         uint256 balanceTokenOut
-    ) public virtual override whenNotPaused whenNotLocallyPaused onlyVault(request.poolId) returns (uint256) {
+    ) public virtual override whenNotPaused onlyVault(request.poolId) returns (uint256) {
         bool tokenInIsToken0 = request.tokenIn == _token0;
 
         uint256 scalingFactorTokenIn = _scalingFactor(tokenInIsToken0);
@@ -323,7 +323,6 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
     )
         internal
         override
-        whenNotLocallyPaused
         returns (
             uint256,
             uint256[] memory,
@@ -428,7 +427,7 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
 
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
-        if (_isNotPaused() && !_locallyPaused) {
+        if (_isNotPaused()) {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
@@ -648,5 +647,9 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         uint256 balanceToken1
     ) internal override {
         // Do nothing.
+    }
+
+    function _setPausedState(bool paused) internal override {
+        _setPaused(paused);
     }
 }

@@ -177,7 +177,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
-    ) internal view virtual override whenNotPaused whenNotLocallyPaused returns (uint256) {
+    ) internal view virtual override whenNotPaused returns (uint256) {
         uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
@@ -186,7 +186,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
-    ) internal view virtual override whenNotPaused whenNotLocallyPaused returns (uint256) {
+    ) internal view virtual override whenNotPaused returns (uint256) {
         uint256 virtualOffset = _calculateVirtualOffset();
         return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
@@ -245,7 +245,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         address,
         uint256[] memory scalingFactors,
         bytes memory userData
-    ) internal override whenNotPaused whenNotLocallyPaused returns (uint256, uint256[] memory) {
+    ) internal override whenNotPaused returns (uint256, uint256[] memory) {
         BaseWeightedPool.JoinKind kind = userData.joinKind();
         _require(kind == BaseWeightedPool.JoinKind.INIT, Errors.UNINITIALIZED);
 
@@ -294,7 +294,6 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
     )
         internal
         override
-        whenNotLocallyPaused
         returns (
             uint256 bptAmountOut,
             uint256[] memory amountsIn,
@@ -378,7 +377,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
 
         uint256 root3Alpha = _root3Alpha;
 
-        if (_isNotPaused() && !_locallyPaused) {
+        if (_isNotPaused()) {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
@@ -567,5 +566,9 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );
+    }
+
+    function _setPausedState(bool paused) internal override {
+        _setPaused(paused);
     }
 }

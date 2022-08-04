@@ -6,18 +6,10 @@ import "../interfaces/ILocallyPausable.sol";
 /**
  * @notice This contract is used to allow a pool to be paused directly
  */
-contract LocallyPausable is ILocallyPausable {
+abstract contract LocallyPausable is ILocallyPausable {
     address public pauseManager;
 
-    bool internal _locallyPaused;
-
     string internal constant _NOT_PAUSE_MANAGER = "not pause manager";
-    string internal constant _PAUSED = "pool is locally paused";
-
-    modifier whenNotLocallyPaused() {
-        require(!_locallyPaused, _PAUSED);
-        _;
-    }
 
     constructor(address _pauseManager) {
         pauseManager = _pauseManager;
@@ -34,19 +26,16 @@ contract LocallyPausable is ILocallyPausable {
     /// @inheritdoc ILocallyPausable
     function pause() external override {
         require(pauseManager == msg.sender, _NOT_PAUSE_MANAGER);
-        _locallyPaused = true;
-        emit Paused();
+        _setPausedState(true);
+        emit PausedLocally();
     }
 
     /// @inheritdoc ILocallyPausable
     function unpause() external override {
         require(pauseManager == msg.sender, _NOT_PAUSE_MANAGER);
-        _locallyPaused = false;
-        emit Unpaused();
+        _setPausedState(false);
+        emit UnpausedLocally();
     }
 
-    /// @inheritdoc ILocallyPausable
-    function isLocallyPaused() external view override returns (bool) {
-        return _locallyPaused;
-    }
+    function _setPausedState(bool paused) internal virtual;
 }

@@ -27,6 +27,9 @@ import "./GyroThreePool.sol";
 contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
+    uint256 public constant PAUSE_WINDOW_DURATION = 365 days;
+    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
+
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroThreePool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
@@ -35,12 +38,11 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
      * @dev Deploys a new `GyroThreePool`.
      */
     function create(GyroThreePool.NewPoolConfigParams memory config) external returns (address) {
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
         GyroThreePool.NewPoolParams memory params = GyroThreePool.NewPoolParams({
             vault: getVault(),
             configAddress: gyroConfigAddress,
-            pauseWindowDuration: pauseWindowDuration,
-            bufferPeriodDuration: bufferPeriodDuration,
+            pauseWindowDuration: PAUSE_WINDOW_DURATION,
+            bufferPeriodDuration: BUFFER_PERIOD_DURATION,
             config: config
         });
 
