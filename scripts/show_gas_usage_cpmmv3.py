@@ -16,7 +16,8 @@ from brownie import (
 from brownie.network.transaction import TransactionReceipt
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest, TwoPoolBaseParams, ThreePoolParams
+from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest, TwoPoolBaseParams, ThreePoolParams, \
+    ThreePoolFactoryCreateParams
 
 from tests.support.trace_analyzer import Tracer
 
@@ -84,18 +85,20 @@ admin.deploy(GyroThreeMath)
 
 args = ThreePoolParams(
     vault=mock_vault.address,
-    name="GyroThreePool",  # string
-    symbol="G3P",  # string
-    tokens=list(gyro_erc20_funded),
-    swapFeePercentage=scale(swapFeePercentage),
+    config=ThreePoolFactoryCreateParams(
+        name="GyroThreePool",  # string
+        symbol="G3P",  # string
+        tokens=list(gyro_erc20_funded),
+        swapFeePercentage=scale(swapFeePercentage),
+        owner=admin,  # address
+        root3Alpha=scale(root_3_alpha),
+    ),
     pauseWindowDuration=0,  # uint256
     bufferPeriodDuration=0,  # uint256
-    owner=admin,  # address
-    root3Alpha=scale(root_3_alpha),
-    configAddress= mock_gyro_config.address,
+    config_address= mock_gyro_config.address,
 )
 
-mock_vault_pool = admin.deploy(GyroThreePool, *args)
+mock_vault_pool = admin.deploy(GyroThreePool, args)
 
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None
