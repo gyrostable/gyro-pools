@@ -233,8 +233,7 @@ contract MockVault is IPoolSwapStructs {
             uint256 dummy;
             dummy = pool.balances[request.tokenIn] + pool.balances[request.tokenOut];
             // no-op to prevent the optimizer from removing this code:
-            if (dummy == 0)
-                return;
+            if (dummy == 0) return;
         }
         /*{
             Pool storage pool = pools[request.poolId];

@@ -78,7 +78,8 @@ def join_pool(
         )
     )
 
-@pytest.mark.parametrize('amountIn', [100 * 10**18, 10**11 * 10**18])
+
+@pytest.mark.parametrize("amountIn", [100 * 10**18, 10**11 * 10**18])
 # Note that a pool initialized with assets of 1e11 (= max assets) couldn't be swapped against. So this is really a theoretical upper bound.
 def test_pool_on_initialize(users, mock_vault_pool3, mock_vault, amountIn):
     balances = (0, 0, 0)
@@ -105,7 +106,8 @@ def test_pool_on_initialize(users, mock_vault_pool3, mock_vault, amountIn):
     initial_balances = tuple(initial_balances)
     assert initial_balances == (amountIn, amountIn, amountIn)
 
-@pytest.mark.parametrize('amount_in', [100 * 10**18, 5 * 10**10 * 10**18])
+
+@pytest.mark.parametrize("amount_in", [100 * 10**18, 5 * 10**10 * 10**18])
 # Note that for the second (large) test case, the join (of size = init size) completely fills up the pool.
 def test_pool_on_join(users, mock_vault_pool3, mock_vault, amount_in):
     ##################################################
@@ -173,12 +175,13 @@ def test_pool_on_join(users, mock_vault_pool3, mock_vault, amount_in):
     cubeInvariant_pool = currentInvariant**3
     assert cubeInvariant_calcd == cubeInvariant_pool.approxed()
 
+
 @pytest.mark.parametrize(
-    ('amount_in', 'amountOut'),
+    ("amount_in", "amountOut"),
     [
         (scale(100), scale(5)),
         (scale("0.5e11"), scale("0.499e11")),
-    ]
+    ],
 )
 # ^ NB We join twice here (first init, then normal join with another account)
 def test_pool_on_exit(users, mock_vault_pool3, mock_vault, amount_in, amountOut):
@@ -210,7 +213,9 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault, amount_in, amountOut)
         balances_after_exit,
         0,
         0,
-        (to_decimal(mock_vault_pool3.balanceOf(users[0])) * amountOut / amount_in).floor(),
+        (
+            to_decimal(mock_vault_pool3.balanceOf(users[0])) * amountOut / amount_in
+        ).floor(),
     )
 
     assert unscale(tx.events["PoolBalanceChanged"]["deltas"]) == approxed(
@@ -234,7 +239,13 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault, amount_in, amountOut)
     bptTokensburnt = tx.events["Transfer"][0]["value"]
     assert bptTokensburnt > 0
     # Check that approx. amount of tokens burnt is proportional to the amount of tokens substracted from the pool
-    assert to_decimal(bptTokensburnt) == (to_decimal(total_supply_before_exit) * (to_decimal(amountOut) / to_decimal(balances_after_exit[0]))).approxed()
+    assert (
+        to_decimal(bptTokensburnt)
+        == (
+            to_decimal(total_supply_before_exit)
+            * (to_decimal(amountOut) / to_decimal(balances_after_exit[0]))
+        ).approxed()
+    )
 
     root3Alpha = unscale(mock_vault_pool3.getRoot3Alpha())
 
@@ -248,16 +259,20 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault, amount_in, amountOut)
 
     assert currentInvariant < invariant_before_exit
 
+
 @pytest.mark.parametrize(
-    ('amount_in', 'amount_to_swap'),
-    [
-        (scale(100), scale(10)),
-        (scale("0.495e11"), scale("0.29e11"))
-    ]
+    ("amount_in", "amount_to_swap"),
+    [(scale(100), scale(10)), (scale("0.495e11"), scale("0.29e11"))],
 )
 # ^ NB We join twice here (first init, then normal join with another account)
 def test_swap(
-    users, mock_vault_pool3, mock_vault, gyro_erc20_funded3, gyro_three_math_testing, amount_in, amount_to_swap
+    users,
+    mock_vault_pool3,
+    mock_vault,
+    gyro_erc20_funded3,
+    gyro_three_math_testing,
+    amount_in,
+    amount_to_swap,
 ):
     ## Initialize
     tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], (0, 0, 0), amount_in)

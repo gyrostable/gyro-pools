@@ -9,7 +9,8 @@ from tests.libraries import pool_math_implementation
 from tests.cpmmv3.util import (
     gen_synthetic_balances,
     gen_synthetic_balances_1asset,
-    gen_synthetic_balances_2assets, equal_balances_at_invariant,
+    gen_synthetic_balances_2assets,
+    equal_balances_at_invariant,
 )
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
@@ -89,14 +90,23 @@ def gen_params_liquidityUpdate(draw):
         dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
     return balances, bpt_supply, isIncrease, dsupply
 
+
 @st.composite
 def gen_params_liquidityUpdate_large(draw):
     """A variant that only generates large balances."""
-    balances = draw(st.sampled_from([
-        (D(0), bpool_params.max_balances, D(0)),
-        (bpool_params.max_balances, bpool_params.max_balances, D(0)),
-        (bpool_params.max_balances, bpool_params.max_balances, bpool_params.max_balances),
-    ]))
+    balances = draw(
+        st.sampled_from(
+            [
+                (D(0), bpool_params.max_balances, D(0)),
+                (bpool_params.max_balances, bpool_params.max_balances, D(0)),
+                (
+                    bpool_params.max_balances,
+                    bpool_params.max_balances,
+                    bpool_params.max_balances,
+                ),
+            ]
+        )
+    )
     bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
     isIncrease = draw(st.booleans())
     if isIncrease:
@@ -104,6 +114,7 @@ def gen_params_liquidityUpdate_large(draw):
     else:
         dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
     return balances, bpt_supply, isIncrease, dsupply
+
 
 ###############################################################################################
 # Test invariant correctness via being an approximate root of a certain cubic polynomial.
@@ -134,10 +145,7 @@ def test_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha
     ),
 )
 @example(
-    setup=(
-        (99_000_000_000, 99_000_000_000, 99_000_000_000),
-        999_999_000
-    ),
+    setup=((99_000_000_000, 99_000_000_000, 99_000_000_000), 999_999_000),
     root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_invariant_across_calcInGivenOut(
@@ -169,10 +177,7 @@ def test_invariant_across_calcInGivenOut(
     ),
 )
 @example(
-    setup=(
-        (99_000_000_000, 99_000_000_000, 99_000_000_000),
-        1_000_000_000
-    ),
+    setup=((99_000_000_000, 99_000_000_000, 99_000_000_000), 1_000_000_000),
     root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_invariant_across_calcOutGivenIn(
@@ -196,14 +201,9 @@ def test_invariant_across_calcOutGivenIn(
 @settings(max_examples=10)
 @given(
     balances=gen_balances(),
-    root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX
-    ),
+    root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX),
 )
-@example(
-    balances=(bpool_params.max_balances,)*3,
-    root_three_alpha=ROOT_ALPHA_MAX
-)
+@example(balances=(bpool_params.max_balances,) * 3, root_three_alpha=ROOT_ALPHA_MAX)
 def test_invariant_across_calcOutGivenIn_zeroin(
     gyro_three_math_testing, root_three_alpha, balances
 ):
@@ -224,7 +224,9 @@ def test_invariant_across_calcOutGivenIn_zeroin(
 
 
 @given(
-    params_invariantUpdate=st.one_of(gen_params_liquidityUpdate(), gen_params_liquidityUpdate_large()),
+    params_invariantUpdate=st.one_of(
+        gen_params_liquidityUpdate(), gen_params_liquidityUpdate_large()
+    ),
     root_three_alpha=st.decimals(
         min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
     ),
@@ -636,9 +638,9 @@ def calculate_loss(delta_invariant, invariant, balances):
 )
 @example(
     args=(
-            (equal_balances_at_invariant(D("2.999899e15"), ROOT_ALPHA_MAX),) * 3,
-            D("2.999899e15"),  # Close to and ≤ the theoretical maximum.
-            ROOT_ALPHA_MAX
+        (equal_balances_at_invariant(D("2.999899e15"), ROOT_ALPHA_MAX),) * 3,
+        D("2.999899e15"),  # Close to and ≤ the theoretical maximum.
+        ROOT_ALPHA_MAX,
     )
 )
 def test_calculateInvariant_reconstruction(args, gyro_three_math_testing):
