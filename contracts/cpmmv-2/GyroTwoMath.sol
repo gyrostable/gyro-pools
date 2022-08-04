@@ -178,8 +178,8 @@ library GyroTwoMath {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-            uint256 virtInOver = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
+            uint256 virtInOver = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(GyroFixedPoint.ONE - 1));
 
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
@@ -223,13 +223,8 @@ library GyroTwoMath {
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
-<<<<<<< HEAD
-            uint256 virtInOver   = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
+            uint256 virtInOver = balanceIn.add(virtualOffsetIn.mulUp(GyroFixedPoint.ONE + 2));
             uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(GyroFixedPoint.ONE - 1));
-=======
-            uint256 virtInOver = balanceIn.add(virtualOffsetIn.mulUp(FixedPoint.ONE + 2));
-            uint256 virtOutUnder = balanceOut.add(virtualOffsetOut.mulDown(FixedPoint.ONE - 1));
->>>>>>> 6d4fab5 (nethermind-5.1.4)
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }
