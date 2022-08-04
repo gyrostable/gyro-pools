@@ -26,12 +26,13 @@ import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
 import "../CappedLiquidity.sol";
+import "../LocallyPausable.sol";
 import "./ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2PoolErrors.sol";
 import "./GyroTwoMath.sol";
 import "./GyroTwoOracleMath.sol";
 
-contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, CappedLiquidity {
+contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -46,9 +47,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
         CapParams capParams;
+        address pauseManager;
     }
 
-    constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) CappedLiquidity(params.capParams) {
+    constructor(GyroParams memory params, address configAddress)
+        ExtensibleWeightedPool2Tokens(params.baseParams)
+        CappedLiquidity(params.capParams)
+        LocallyPausable(params.pauseManager)
+    {
         _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
@@ -641,5 +647,9 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         uint256 balanceToken1
     ) internal override {
         // Do nothing.
+    }
+
+    function _setPausedState(bool paused) internal override {
+        _setPaused(paused);
     }
 }

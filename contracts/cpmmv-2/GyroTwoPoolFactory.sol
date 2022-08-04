@@ -26,6 +26,9 @@ import "./GyroTwoPool.sol";
 contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
+    uint256 public constant PAUSE_WINDOW_DURATION = 365 days;
+    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
+
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
@@ -41,28 +44,49 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
         uint256 swapFeePercentage,
         bool oracleEnabled,
         address owner,
-        ICappedLiquidity.CapParams memory capParams
+        ICappedLiquidity.CapParams memory capParams,
+        address pauseManager
     ) external returns (address) {
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
+        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(
+            name,
+            symbol,
+            tokens,
+            swapFeePercentage,
+            oracleEnabled,
+            owner
+        );
 
         GyroTwoPool.GyroParams memory params = GyroTwoPool.GyroParams({
-            baseParams: ExtensibleWeightedPool2Tokens.NewPoolParams({
+            baseParams: baseParams,
+            sqrtAlpha: sqrts[0],
+            sqrtBeta: sqrts[1],
+            capParams: capParams,
+            pauseManager: pauseManager
+        });
+
+        return _create(abi.encode(params, gyroConfigAddress));
+    }
+
+    function _makePoolParams(
+        string memory name,
+        string memory symbol,
+        IERC20[] memory tokens,
+        uint256 swapFeePercentage,
+        bool oracleEnabled,
+        address owner
+    ) internal view returns (ExtensibleWeightedPool2Tokens.NewPoolParams memory) {
+        return
+            ExtensibleWeightedPool2Tokens.NewPoolParams({
                 vault: getVault(),
                 name: name,
                 symbol: symbol,
                 token0: tokens[0],
                 token1: tokens[1],
                 swapFeePercentage: swapFeePercentage,
-                pauseWindowDuration: pauseWindowDuration,
-                bufferPeriodDuration: bufferPeriodDuration,
+                pauseWindowDuration: PAUSE_WINDOW_DURATION,
+                bufferPeriodDuration: BUFFER_PERIOD_DURATION,
                 oracleEnabled: oracleEnabled,
                 owner: owner
-            }),
-            sqrtAlpha: sqrts[0],
-            sqrtBeta: sqrts[1],
-            capParams: capParams
-        });
-
-        return _create(abi.encode(params, gyroConfigAddress));
+            });
     }
 }

@@ -1,6 +1,8 @@
 from typing import NamedTuple, Tuple, Iterable
 
 from tests.support.quantized_decimal import DecimalLike
+from brownie import ZERO_ADDRESS
+
 
 address = str
 
@@ -62,6 +64,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     oracleEnabled: bool
     owner: address
     cap_params: CapParams = CapParams()
+    pause_manager: address = ZERO_ADDRESS
 
 
 class TwoPoolParams(NamedTuple):
@@ -69,20 +72,7 @@ class TwoPoolParams(NamedTuple):
     sqrtAlpha: DecimalLike  # should already be upscaled
     sqrtBeta: DecimalLike  # Should already be upscaled
     cap_params: CapParams = CapParams()
-
-
-class ThreePoolParams(NamedTuple):
-    vault: str
-    name: str
-    symbol: str
-    tokens: list[str]
-    root3Alpha: DecimalLike
-    swapFeePercentage: DecimalLike
-    pauseWindowDuration: DecimalLike
-    bufferPeriodDuration: DecimalLike
-    owner: str
-    configAddress: str
-    cap_params: CapParams = CapParams()
+    pauseManager: address = ZERO_ADDRESS
 
 
 class Vector2(NamedTuple):
@@ -118,10 +108,19 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     name: str
     symbol: str
     tokens: list[str]
-    root3Alpha: DecimalLike
     swapFeePercentage: DecimalLike
+    root3Alpha: DecimalLike
     owner: address
     cap_params: CapParams = CapParams()
+    pauseManager: address = ZERO_ADDRESS
+
+
+class ThreePoolParams(NamedTuple):
+    vault: str
+    config_address: address
+    config: ThreePoolFactoryCreateParams
+    pauseWindowDuration: int
+    bufferPeriodDuration: int
 
 
 # Legacy Aliases

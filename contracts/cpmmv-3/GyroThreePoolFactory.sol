@@ -27,6 +27,9 @@ import "./GyroThreePool.sol";
 contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
+    uint256 public constant PAUSE_WINDOW_DURATION = 365 days;
+    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
+
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroThreePool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
@@ -34,32 +37,15 @@ contract GyroThreePoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindo
     /**
      * @dev Deploys a new `GyroThreePool`.
      */
-    function create(
-        string memory name,
-        string memory symbol,
-        IERC20[] memory tokens,
-        uint256 root3Alpha,
-        uint256 swapFeePercentage,
-        address owner,
-        ICappedLiquidity.CapParams memory capParams
-    ) external returns (address) {
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
+    function create(GyroThreePool.NewPoolConfigParams memory config) external returns (address) {
+        GyroThreePool.NewPoolParams memory params = GyroThreePool.NewPoolParams({
+            vault: getVault(),
+            configAddress: gyroConfigAddress,
+            pauseWindowDuration: PAUSE_WINDOW_DURATION,
+            bufferPeriodDuration: BUFFER_PERIOD_DURATION,
+            config: config
+        });
 
-        return
-            _create(
-                abi.encode(
-                    getVault(),
-                    name,
-                    symbol,
-                    tokens,
-                    root3Alpha,
-                    swapFeePercentage,
-                    pauseWindowDuration,
-                    bufferPeriodDuration,
-                    owner,
-                    gyroConfigAddress,
-                    capParams
-                )
-            );
+        return _create(abi.encode(params));
     }
 }
