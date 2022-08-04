@@ -117,14 +117,12 @@ def gen_params_out_given_in(draw):
 @given(
     setup=gen_params_in_given_out(),
     root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX,
+        min_value=ROOT_ALPHA_MIN,
+        max_value=ROOT_ALPHA_MAX,
     ),
 )
 @example(
-    setup=(
-        (99_000_000_000, 99_000_000_000, 99_000_000_000),
-        999_999_000
-    ),
+    setup=((99_000_000_000, 99_000_000_000, 99_000_000_000), 999_999_000),
     root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_calc_in_given_out(
@@ -200,10 +198,7 @@ def test_calc_in_given_out(
     ),
 )
 @example(
-    setup=(
-        (99_000_000_000, 99_000_000_000, 99_000_000_000),
-        1_000_000_000
-    ),
+    setup=((99_000_000_000, 99_000_000_000, 99_000_000_000), 1_000_000_000),
     root_three_alpha=ROOT_ALPHA_MAX,
 )
 def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
@@ -278,6 +273,7 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     # implemented in python)
     assert out_amount_sol <= out_amount
     assert out_amount_sol == out_amount.approxed(abs=D("5e-18"), rel=D("5e-18"))
+
 
 @mark.skip(reason="Function Removed")
 @given(
@@ -360,9 +356,7 @@ def test_calculate_invariant(
 @example(balances=[D("1e11"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 def test_calcNewtonDelta(gyro_three_math_testing, balances, root_three_alpha):
     a, mb, mc, md = math_implementation.calculateCubicTerms(balances, root_three_alpha)
-    l_lower = D("1.3") * math_implementation.calculateLocalMinimum(
-        a, mb, mc
-    )
+    l_lower = D("1.3") * math_implementation.calculateLocalMinimum(a, mb, mc)
     rootEst = math_implementation.calculateCubic(
         a, mb, mc, md, root_three_alpha, balances
     )

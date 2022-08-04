@@ -366,7 +366,11 @@ class Context:
         else:
             children = "".join(
                 child._format(
-                    prefixes + [i < len(self.children) - 1], t, i == len(self.children) - 1, maxlvl, lvl + 1
+                    prefixes + [i < len(self.children) - 1],
+                    t,
+                    i == len(self.children) - 1,
+                    maxlvl,
+                    lvl + 1,
                 )
                 for i, (t, child) in enumerate(self.children)
             )

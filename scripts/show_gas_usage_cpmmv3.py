@@ -11,13 +11,20 @@ from brownie import (
     MockGyroConfig,
     SimpleERC20,
     Contract,
-    QueryProcessor, history,
+    QueryProcessor,
+    history,
 )
 from brownie.network.transaction import TransactionReceipt
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest, TwoPoolBaseParams, ThreePoolParams, \
-    ThreePoolFactoryCreateParams
+from tests.support.types import (
+    CallJoinPoolGyroParams,
+    SwapKind,
+    SwapRequest,
+    TwoPoolBaseParams,
+    ThreePoolParams,
+    ThreePoolFactoryCreateParams,
+)
 
 from tests.support.trace_analyzer import Tracer
 
@@ -31,8 +38,8 @@ from tabulate import tabulate
 
 alpha = D("0.97")
 
-swapFeePercentage = D('0.1') / D(100)
-protocolSwapFeePercentage = D('0.5') / D(100)
+swapFeePercentage = D("0.1") / D(100)
+protocolSwapFeePercentage = D("0.5") / D(100)
 # protocolSwapFeePercentage = 0
 
 # The following just has to be large enough
@@ -42,7 +49,7 @@ init_amounts_in = [100, 100, 100]
 
 ###########################################
 
-root_3_alpha = alpha**(D(1)/D(3))
+root_3_alpha = alpha ** (D(1) / D(3))
 
 # MOCK POOL FROM FACTORY
 admin = accounts[0]
@@ -95,13 +102,14 @@ args = ThreePoolParams(
     ),
     pauseWindowDuration=0,  # uint256
     bufferPeriodDuration=0,  # uint256
-    config_address= mock_gyro_config.address,
+    config_address=mock_gyro_config.address,
 )
 
 mock_vault_pool = admin.deploy(GyroThreePool, args)
 
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None
+
 
 def main():
     poolId = mock_vault_pool.getPoolId()
@@ -118,7 +126,7 @@ def main():
             poolId,
             users[0],
             users[0],
-            (0, 0, 0),   # current balances
+            (0, 0, 0),  # current balances
             0,
             protocolSwapFeePercentage * 10**18,
             scale(init_amounts_in),
@@ -134,12 +142,13 @@ def main():
         ctx = tracer.trace_tx(tx_total)
         assert len(ctx.children) == 1
         ctx1 = ctx.children[0][1]
-        summary_table.append((label, ctx1.qualified_function_name, ctx1.total_gas_consumed))
+        summary_table.append(
+            (label, ctx1.qualified_function_name, ctx1.total_gas_consumed)
+        )
         print(ctx.format(maxlvl=MAXLVL))
         print()
 
     go(tx_total)
-
 
     ##################################################
     ## Add liqudidity to an already initialized pool
@@ -147,7 +156,7 @@ def main():
     label = "2: Join (Non-Initial After Initial)"
     print(f"----- {label} -----\n")
     (_, balances) = mock_vault.getPoolTokens(poolId)
-    bpt_amount_out = unscale(mock_vault_pool.totalSupply()) * D('0.2')
+    bpt_amount_out = unscale(mock_vault_pool.totalSupply()) * D("0.2")
     tx_total = mock_vault.callJoinPoolGyro(
         CallJoinPoolGyroParams(
             mock_vault_pool.address,
@@ -156,7 +165,7 @@ def main():
             users[1],
             balances,  # current balances
             0,
-            protocolSwapFeePercentage * 10 ** 18,
+            protocolSwapFeePercentage * 10**18,
             [0, 0, 0],  # amounts in not used outside init
             scale(bpt_amount_out),
         )
@@ -229,7 +238,7 @@ def main():
     print(f"----- {label} -----\n")
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
-    bpt_amount_out = unscale(mock_vault_pool.totalSupply()) * D('1.2')
+    bpt_amount_out = unscale(mock_vault_pool.totalSupply()) * D("1.2")
     tx_total = mock_vault.callJoinPoolGyro(
         CallJoinPoolGyroParams(
             mock_vault_pool.address,
@@ -238,7 +247,7 @@ def main():
             users[1],
             balances,  # current balances
             0,
-            protocolSwapFeePercentage * 10 ** 18,
+            protocolSwapFeePercentage * 10**18,
             [0, 0],  # amounts in not used outside init
             scale(bpt_amount_out),
         )
@@ -284,7 +293,7 @@ def main():
     print(f"----- {label} -----\n")
 
     (_, balances) = mock_vault.getPoolTokens(poolId)
-    bpt_amount_in = unscale(mock_vault_pool.balanceOf(users[0])) * D('0.7')
+    bpt_amount_in = unscale(mock_vault_pool.balanceOf(users[0])) * D("0.7")
 
     tx_total = mock_vault.callExitPoolGyro(
         mock_vault_pool.address,
@@ -299,11 +308,7 @@ def main():
 
     go(tx_total)
 
-
     #### Summary Table
     print("Summary:\n")
-    print(tabulate(
-        summary_table,
-        headers=summary_headers
-    ))
+    print(tabulate(summary_table, headers=summary_headers))
     print()

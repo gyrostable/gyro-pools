@@ -10,7 +10,7 @@ from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import qdecimals, scale, to_decimal, unscale
 
 MAX_ALPHA = D("0.9999")
-MAX_ROOT_3_ALPHA = MAX_ALPHA**(D(1)/3)
+MAX_ROOT_3_ALPHA = MAX_ALPHA ** (D(1) / 3)
 
 
 def triple_uniform_integers(min_value=0, max_value=1_000_000_000):
@@ -40,7 +40,8 @@ def gen_root3Alpha():
     balances=(
         bpool_params.max_balances - 500_000_000,
         bpool_params.max_balances - 600_000_000,
-        bpool_params.max_balances - 800_000_000),
+        bpool_params.max_balances - 800_000_000,
+    ),
     root3Alpha=MAX_ROOT_3_ALPHA,
     addl_balances=(500_000_000, 600_000_000, 800_000_000),
 )
