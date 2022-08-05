@@ -7,6 +7,7 @@ from brownie import accounts
 
 address = str
 
+DEFAULT_CAP_MANAGER = "0x66aB6D9362d4F35596279692F0251Db635165871"
 DEFAULT_PAUSE_MANAGER = "0x66aB6D9362d4F35596279692F0251Db635165871"
 
 
@@ -66,6 +67,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     swapFeePercentage: DecimalLike
     oracleEnabled: bool
     owner: address
+    cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pause_manager: address = DEFAULT_PAUSE_MANAGER
 
@@ -74,6 +76,7 @@ class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     sqrtAlpha: DecimalLike  # should already be upscaled
     sqrtBeta: DecimalLike  # Should already be upscaled
+    cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pauseManager: address = DEFAULT_PAUSE_MANAGER
 
@@ -114,6 +117,7 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     swapFeePercentage: DecimalLike
     root3Alpha: DecimalLike
     owner: address
+    cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pauseManager: address = DEFAULT_PAUSE_MANAGER
 

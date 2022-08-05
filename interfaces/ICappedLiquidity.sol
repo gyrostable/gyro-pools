@@ -3,6 +3,9 @@ pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 interface ICappedLiquidity {
+    event CapParamsUpdated(CapParams params);
+    event CapManagerUpdated(address capManager);
+
     struct CapParams {
         bool capEnabled;
         uint120 perAddressCap;

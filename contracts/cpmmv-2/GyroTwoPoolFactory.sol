@@ -46,6 +46,7 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
         uint256 swapFeePercentage,
         bool oracleEnabled,
         address owner,
+        address capManager,
         ICappedLiquidity.CapParams memory capParams,
         address pauseManager
     ) external returns (address) {
@@ -62,6 +63,7 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
             baseParams: baseParams,
             sqrtAlpha: sqrts[0],
             sqrtBeta: sqrts[1],
+            capManager: capManager,
             capParams: capParams,
             pauseManager: pauseManager
         });
