@@ -3,7 +3,7 @@ compiler:
   solc:
     version: 0.7.6
     optimizer:
-      enabled: true
+      enabled: false
       runs: 200
     remappings:
       - "@balancer-labs=node_modules/@balancer-labs"
