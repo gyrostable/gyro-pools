@@ -256,6 +256,7 @@ def gen_args_calcOutGivenIn(draw):
 
     return params, balances, amountIn, tokenInIsToken0
 
+
 # TODO Fix this test. Disabled it b/c I had to merge.
 @pytest.mark.skip(reason="TEMPORARILY disabled: Data generation too slow, fails check")
 @settings(max_examples=100)
