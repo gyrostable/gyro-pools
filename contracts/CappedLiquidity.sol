@@ -21,11 +21,18 @@ abstract contract CappedLiquidity is ICappedLiquidity {
 
     address public override capManager;
 
-    constructor(CapParams memory params) {
-        capManager = msg.sender;
+    constructor(address _capManager, CapParams memory params) {
+        require(_capManager != address(0), _NOT_AUTHORIZED);
+        capManager = _capManager;
         _capParams.capEnabled = params.capEnabled;
         _capParams.perAddressCap = params.perAddressCap;
         _capParams.globalCap = params.globalCap;
+    }
+
+    function setCapManager(address _capManager) external {
+        require(msg.sender == capManager, _NOT_AUTHORIZED);
+        capManager = _capManager;
+        emit CapManagerUpdated(_capManager);
     }
 
     function capParams() external view override returns (CapParams memory) {
@@ -39,6 +46,8 @@ abstract contract CappedLiquidity is ICappedLiquidity {
         _capParams.capEnabled = params.capEnabled;
         _capParams.perAddressCap = params.perAddressCap;
         _capParams.globalCap = params.globalCap;
+
+        emit CapParamsUpdated(_capParams);
     }
 
     function _ensureCap(

@@ -75,15 +75,15 @@ library GyroFixedPoint {
 
         if (product == 0) {
             return 0;
-        } else {
-            // The traditional divUp formula is:
-            // divUp(x, y) := (x + y - 1) / y
-            // To avoid intermediate overflow in the addition, we distribute the division and get:
-            // divUp(x, y) := (x - 1) / y + 1
-            // Note that this requires x != 0, which we already tested for.
-
-            return ((product - 1) / ONE) + 1;
         }
+
+        // The traditional divUp formula is:
+        // divUp(x, y) := (x + y - 1) / y
+        // To avoid intermediate overflow in the addition, we distribute the division and get:
+        // divUp(x, y) := (x - 1) / y + 1
+        // Note that this requires x != 0, which we already tested for.
+
+        return ((product - 1) / ONE) + 1;
     }
 
     function mulUpU(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -91,15 +91,14 @@ library GyroFixedPoint {
 
         if (product == 0) {
             return 0;
-        } else {
-            // The traditional divUp formula is:
-            // divUp(x, y) := (x + y - 1) / y
-            // To avoid intermediate overflow in the addition, we distribute the division and get:
-            // divUp(x, y) := (x - 1) / y + 1
-            // Note that this requires x != 0, which we already tested for.
-
-            return ((product - 1) / ONE) + 1;
         }
+        // The traditional divUp formula is:
+        // divUp(x, y) := (x + y - 1) / y
+        // To avoid intermediate overflow in the addition, we distribute the division and get:
+        // divUp(x, y) := (x - 1) / y + 1
+        // Note that this requires x != 0, which we already tested for.
+
+        return ((product - 1) / ONE) + 1;
     }
 
     function divDown(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -109,14 +108,14 @@ library GyroFixedPoint {
 
         if (a == 0) {
             return 0;
-        } else {
-            uint256 aInflated = a * ONE;
-            if (!(aInflated / a == ONE)) {
-                _require(false, Errors.DIV_INTERNAL); // mul overflow
-            }
-
-            return aInflated / b;
         }
+
+        uint256 aInflated = a * ONE;
+        if (!(aInflated / a == ONE)) {
+            _require(false, Errors.DIV_INTERNAL); // mul overflow
+        }
+
+        return aInflated / b;
     }
 
     function divDownU(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -134,20 +133,20 @@ library GyroFixedPoint {
 
         if (a == 0) {
             return 0;
-        } else {
-            uint256 aInflated = a * ONE;
-            if (!(aInflated / a == ONE)) {
-                _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
-            }
-
-            // The traditional divUp formula is:
-            // divUp(x, y) := (x + y - 1) / y
-            // To avoid intermediate overflow in the addition, we distribute the division and get:
-            // divUp(x, y) := (x - 1) / y + 1
-            // Note that this requires x != 0, which we already tested for.
-
-            return ((aInflated - 1) / b) + 1;
         }
+
+        uint256 aInflated = a * ONE;
+        if (!(aInflated / a == ONE)) {
+            _require(aInflated / a == ONE, Errors.DIV_INTERNAL); // mul overflow
+        }
+
+        // The traditional divUp formula is:
+        // divUp(x, y) := (x + y - 1) / y
+        // To avoid intermediate overflow in the addition, we distribute the division and get:
+        // divUp(x, y) := (x - 1) / y + 1
+        // Note that this requires x != 0, which we already tested for.
+
+        return ((aInflated - 1) / b) + 1;
     }
 
     function divUpU(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -157,9 +156,8 @@ library GyroFixedPoint {
 
         if (a == 0) {
             return 0;
-        } else {
-            return ((a * ONE - 1) / b) + 1;
         }
+        return ((a * ONE - 1) / b) + 1;
     }
 
     /**
@@ -242,9 +240,8 @@ library GyroFixedPoint {
 
         if (raw < maxError) {
             return 0;
-        } else {
-            return sub(raw, maxError);
         }
+        return sub(raw, maxError);
     }
 
     /**

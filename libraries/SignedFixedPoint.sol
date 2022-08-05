@@ -88,7 +88,7 @@ library SignedFixedPoint {
         if (product > 0) return ((product - 1) / ONE) + 1;
         else if (product < 0) return ((product + 1) / ONE) - 1;
         // product == 0
-        else return 0;
+        return 0;
     }
 
     /// @dev Rounds towards 0, i.e., down in absolute value.
@@ -97,12 +97,12 @@ library SignedFixedPoint {
 
         if (a == 0) {
             return 0;
-        } else {
-            int256 aInflated = a * ONE;
-            if (aInflated / a != ONE) _require(false, Errors.DIV_INTERNAL);
-
-            return aInflated / b;
         }
+
+        int256 aInflated = a * ONE;
+        if (aInflated / a != ONE) _require(false, Errors.DIV_INTERNAL);
+
+        return aInflated / b;
     }
 
     /// @dev this implements divDownMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
@@ -115,26 +115,30 @@ library SignedFixedPoint {
     function divUpMag(int256 a, int256 b) internal pure returns (int256) {
         if (b == 0) _require(false, Errors.ZERO_DIVISION);
 
+        if (a == 0) {
+            return 0;
+        }
+
         if (b < 0) {
             // Required so the below is correct.
             b = -b;
             a = -a;
         }
 
-        if (a == 0) {
-            return 0;
-        } else {
-            int256 aInflated = a * ONE;
-            if (aInflated / a != ONE) _require(false, Errors.DIV_INTERNAL);
+        int256 aInflated = a * ONE;
+        if (aInflated / a != ONE) _require(false, Errors.DIV_INTERNAL);
 
-            if (aInflated > 0) return ((aInflated - 1) / b) + 1;
-            else return ((aInflated + 1) / b) - 1;
-        }
+        if (aInflated > 0) return ((aInflated - 1) / b) + 1;
+        return ((aInflated + 1) / b) - 1;
     }
 
     /// @dev this implements divUpMag w/o checking for over/under-flows, which saves significantly on gas if these aren't needed
     function divUpMagU(int256 a, int256 b) internal pure returns (int256) {
         if (b == 0) _require(false, Errors.ZERO_DIVISION);
+
+        if (a == 0) {
+            return 0;
+        }
 
         // TODO check if we can shave off some gas by logically refactoring this vs the below case distinction into one (on a * b or so).
         if (b < 0) {
@@ -143,12 +147,8 @@ library SignedFixedPoint {
             a = -a;
         }
 
-        if (a == 0) {
-            return 0;
-        } else {
-            if (a > 0) return ((a * ONE - 1) / b) + 1;
-            else return ((a * ONE + 1) / b) - 1;
-        }
+        if (a > 0) return ((a * ONE - 1) / b) + 1;
+        return ((a * ONE + 1) / b) - 1;
     }
 
     /// @dev multiplies two extra precision numbers (with 38 decimals)
@@ -177,12 +177,12 @@ library SignedFixedPoint {
 
         if (a == 0) {
             return 0;
-        } else {
-            int256 aInflated = a * ONE_XP;
-            if (aInflated / a != ONE_XP) _require(false, Errors.DIV_INTERNAL);
-
-            return aInflated / b;
         }
+
+        int256 aInflated = a * ONE_XP;
+        if (aInflated / a != ONE_XP) _require(false, Errors.DIV_INTERNAL);
+
+        return aInflated / b;
     }
 
     /// @dev divides two extra precision numbers (with 38 decimals)
@@ -200,9 +200,9 @@ library SignedFixedPoint {
     /// returns normal precision of the product
     function mulDownXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
-        int256 b2 = b % 1e19;
         int256 prod1 = a * b1;
         if (!(a == 0 || prod1 / a == b1)) _require(false, Errors.MUL_OVERFLOW);
+        int256 b2 = b % 1e19;
         int256 prod2 = a * b2;
         if (!(a == 0 || prod2 / a == b2)) _require(false, Errors.MUL_OVERFLOW);
         return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
@@ -226,9 +226,9 @@ library SignedFixedPoint {
     /// returns normal precision of the product
     function mulUpXpToNp(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
-        int256 b2 = b % 1e19;
         int256 prod1 = a * b1;
         if (!(a == 0 || prod1 / a == b1)) _require(false, Errors.MUL_OVERFLOW);
+        int256 b2 = b % 1e19;
         int256 prod2 = a * b2;
         if (!(a == 0 || prod2 / a == b2)) _require(false, Errors.MUL_OVERFLOW);
         return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
