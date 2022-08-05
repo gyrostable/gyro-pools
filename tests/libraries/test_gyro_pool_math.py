@@ -177,17 +177,11 @@ def test_tokens_out_given_exact_bpt_in(
 
 #######################################
 @given(
-    old_invariant=st.decimals(
-        min_value="100", max_value="1000000000000000000"
-    ),
-    new_invariant=st.decimals(
-        min_value="100", max_value="1000000000000000000"
-    ),
+    old_invariant=st.decimals(min_value="100", max_value="1000000000000000000"),
+    new_invariant=st.decimals(min_value="100", max_value="1000000000000000000"),
     current_bpt_supply=st.decimals(min_value="1", max_value="1000000"),
     protocol_fee_gyro_portion=st.decimals(min_value="0.00", max_value="0.5"),
-    protocol_swap_fee_percentage=st.decimals(
-        min_value="0.0", max_value="0.4"
-    ),
+    protocol_swap_fee_percentage=st.decimals(min_value="0.0", max_value="0.4"),
 )
 def test_protocol_fees(
     gyro_two_math_testing,
