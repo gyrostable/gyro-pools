@@ -8,7 +8,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ERC20.sol";
 import "../CappedLiquidity.sol";
 
 contract MockCappedPool is ERC20, CappedLiquidity {
-    constructor(CapParams memory capParams) ERC20("Dummy", "DUM") CappedLiquidity(capParams) {}
+    constructor(address capManager, CapParams memory capParams) ERC20("Dummy", "DUM") CappedLiquidity(capManager, capParams) {}
 
     function joinPool(uint256 amount) external {
         if (_capParams.capEnabled) {

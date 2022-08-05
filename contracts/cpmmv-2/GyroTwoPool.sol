@@ -47,13 +47,14 @@ contract GyroTwoPool is ExtensibleWeightedPool2Tokens, GyroTwoOracleMath, Capped
         NewPoolParams baseParams;
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
+        address capManager;
         CapParams capParams;
         address pauseManager;
     }
 
     constructor(GyroParams memory params, address configAddress)
         ExtensibleWeightedPool2Tokens(params.baseParams)
-        CappedLiquidity(params.capParams)
+        CappedLiquidity(params.capManager, params.capParams)
         LocallyPausable(params.pauseManager)
     {
         _require(params.sqrtAlpha < params.sqrtBeta, Gyro2PoolErrors.SQRT_PARAMS_WRONG);

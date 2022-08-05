@@ -30,7 +30,7 @@ HIGHER_CAP_PARAMS = CapParams(
 
 @pytest.fixture(scope="module")
 def mock_capped_pool(MockCappedPool, admin):
-    return admin.deploy(MockCappedPool, INITIAL_CAP_PARAMS)
+    return admin.deploy(MockCappedPool, admin, INITIAL_CAP_PARAMS)
 
 
 def test_params(mock_capped_pool, alice):
