@@ -78,15 +78,15 @@ contract MockVault is IPoolSwapStructs {
             uint256 managed,
             uint256 lastChangeBlock,
             address assetManager
-        ) {
-            Pool storage pool = pools[poolId];
-            cash = pool.balances[token];
-            // Dummy:
-            managed = 0;
-            lastChangeBlock = 0;
-            assetManager = address(0x0);
+        )
+    {
+        Pool storage pool = pools[poolId];
+        cash = pool.balances[token];
+        // Dummy:
+        managed = 0;
+        lastChangeBlock = 0;
+        assetManager = address(0x0);
     }
-
 
     function registerPool(IVault.PoolSpecialization) external view returns (bytes32) {
         // solhint-disable-previous-line no-empty-blocks

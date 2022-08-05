@@ -89,7 +89,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
     {
         IERC20[] memory tokens = params.config.tokens;
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
-        InputHelpers.ensureArrayIsSorted(tokens);  // For uniqueness and required to make balance reconstruction work
+        InputHelpers.ensureArrayIsSorted(tokens); // For uniqueness and required to make balance reconstruction work
         _require(params.configAddress != address(0), GyroErrors.ZERO_ADDRESS);
 
         _token0 = tokens[0];
@@ -199,30 +199,26 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
      */
     function _getThirdToken(IERC20 x, IERC20 y) internal view returns (IERC20 tokenOther, uint256 scalingFactorOther) {
         // Sort
-        if (x > y)
-            (x, y) = (y, x);
+        if (x > y) (x, y) = (y, x);
 
         if (x == _token0) {
             if (y == _token1) {
                 return (_token2, _scalingFactor2);
             } else {
-                if (y != _token2)
-                    _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+                if (y != _token2) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
                 return (_token1, _scalingFactor1);
             }
         } else {
-            if (!(x == _token1 && y == _token2))
-                _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+            if (!(x == _token1 && y == _token2)) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
             return (_token0, _scalingFactor0);
         }
     }
 
-    function _getScaledTokenBalance(IERC20 token, uint256 scalingFactor)
-        internal view returns (uint256 balance) {
+    function _getScaledTokenBalance(IERC20 token, uint256 scalingFactor) internal view returns (uint256 balance) {
         // Signature of getPoolTokenInfo(): (pool id, token) -> (cash, managed, lastChangeBlock, assetManager)
         // and total amount = cash + managed. See balancer repo, PoolTokens.sol and BalanceAllocation.sol
-        (uint256 cash, uint256 managed,,) = getVault().getPoolTokenInfo(getPoolId(), token);
-        balance = cash + managed;  // can't overflow, see BalanceAllocation.sol
+        (uint256 cash, uint256 managed, , ) = getVault().getPoolTokenInfo(getPoolId(), token);
+        balance = cash + managed; // can't overflow, see BalanceAllocation.sol
         balance = balance.mulDown(scalingFactor);
     }
 
@@ -249,7 +245,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
 
     /** @dev Calculate virtual offsets from unscaled balances. Balances can be retrieved in the most gas-efficient way.*/
     function _calculateVirtualOffset(
-        uint256[] memory balances  // Need to be already scaled up.
+        uint256[] memory balances // Need to be already scaled up.
     ) private view returns (uint256 virtualOffset) {
         uint256 root3Alpha = _root3Alpha;
         uint256 invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
@@ -257,7 +253,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
     }
 
     /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
-    */
+     */
     function _getAllBalances() private view returns (uint256[] memory balances) {
         // The below is more gas-efficient than the following line because the token slots don't have to be read in the
         // vault.
