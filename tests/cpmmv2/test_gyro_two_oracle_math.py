@@ -15,8 +15,8 @@ MIN_SQRTPARAM_SEPARATION = D("1.0001")
 
 @given(
     balances=st.tuples(billion_balance_strategy, billion_balance_strategy),
-    sqrt_alpha=qdecimals(min_value="0.2", max_value="0.9999", places=4),
-    sqrt_beta=qdecimals(min_value="0.2", max_value="1.8", places=4),
+    sqrt_alpha=qdecimals(min_value="0.2", max_value="0.9999"),
+    sqrt_beta=qdecimals(min_value="0.2", max_value="1.8"),
 )
 def test_calc_spot_price(mock_gyro_two_oracle_math, balances, sqrt_alpha, sqrt_beta):
     balances = tuple(D(str(b)) for b in balances)

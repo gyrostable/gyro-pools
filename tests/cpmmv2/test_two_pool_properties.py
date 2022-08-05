@@ -144,7 +144,7 @@ def test_invariant_match_eth_btc(gyro_two_math_testing, balances, params):
 # @settings(max_examples=1_000)
 @given(
     balances=gen_balances(),
-    amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+    amount_out=st.decimals(min_value="1", max_value="1000000"),
     params=gen_params(),
 )
 def test_invariant_across_calcInGivenOut(
@@ -161,7 +161,7 @@ def test_invariant_across_calcInGivenOut(
 ######
 @given(
     balances=gen_balances(),
-    amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+    amount_out=st.decimals(min_value="1", max_value="1000000"),
     params=gen_params_stable(),
 )
 def test_invariant_across_calcInGivenOut_stable(
@@ -177,7 +177,7 @@ def test_invariant_across_calcInGivenOut_stable(
 ######
 @given(
     balances=gen_balances(),
-    amount_out=st.decimals(min_value="1", max_value="1000000", places=4),
+    amount_out=st.decimals(min_value="1", max_value="1000000"),
     params=gen_params_eth_btc(),
 )
 def test_invariant_across_calcInGivenOut_eth_btc(
@@ -206,7 +206,7 @@ def test_invariant_across_calcInGivenOut_eth_btc(
 # @given(
 @given(
     balances=gen_balances(),
-    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    amount_in=st.decimals(min_value="1", max_value="1000000"),
     params=gen_params(),
 )
 def test_invariant_across_calcOutGivenIn(
@@ -223,7 +223,7 @@ def test_invariant_across_calcOutGivenIn(
 ######
 @given(
     balances=gen_balances(),
-    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    amount_in=st.decimals(min_value="1", max_value="1000000"),
     params=gen_params_stable(),
 )
 def test_invariant_across_calcOutGivenIn_stable(
@@ -239,7 +239,7 @@ def test_invariant_across_calcOutGivenIn_stable(
 ######
 @given(
     balances=gen_balances(),
-    amount_in=st.decimals(min_value="1", max_value="1000000", places=4),
+    amount_in=st.decimals(min_value="1", max_value="1000000"),
     params=gen_params_eth_btc(),
 )
 def test_invariant_across_calcOutGivenIn_eth_btc(

@@ -117,7 +117,7 @@ def gen_params(draw):
 
     s = sin(phi)
     c = cos(phi)
-    l = draw(qdecimals(min_value="1", max_value="1e8", places=3))
+    l = draw(qdecimals(min_value="1", max_value="1e8"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
@@ -452,7 +452,7 @@ def test_calculateInvariant_error_not_too_bad(gyro_cemm_math_testing, params, ba
 
 @given(
     params=gen_params(),
-    invariant=st.decimals(min_value="1e-5", max_value="1e12", places=4),
+    invariant=st.decimals(min_value="1e-5", max_value="1e12"),
 )
 def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
     derived = prec_impl.calc_derived_values(params)
@@ -474,7 +474,7 @@ def test_virtualOffsets(gyro_cemm_math_testing, params, invariant):
 @settings(suppress_health_check=[HealthCheck.filter_too_much])
 @given(
     params=gen_params(),
-    invariant=st.decimals(min_value="1e-5", max_value="1e12", places=4),
+    invariant=st.decimals(min_value="1e-5", max_value="1e12"),
 )
 def test_virtualOffsets_sense_check(params, invariant):
     derived = prec_impl.calc_derived_values(params)
