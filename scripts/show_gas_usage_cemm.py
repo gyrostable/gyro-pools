@@ -162,13 +162,23 @@ def main():
     summary_table = []
 
     def go(tx):
-        ctx = tracer.trace_tx(tx_total)
-        assert len(ctx.children) == 1
-        ctx1 = ctx.children[0][1]
-        summary_table.append(
-            (label, ctx1.qualified_function_name, ctx1.total_gas_consumed)
-        )
-        print(ctx.format(maxlvl=MAXLVL))
+        #
+        print(f"Total Gas: {tx.gas_used}")
+        print()
+        # The gas tracer isn't super reliable, so we just let it crash if it has to; we still get the totals without it
+        # at least.
+        try:
+            ctx = tracer.trace_tx(tx)
+            assert len(ctx.children) == 1
+            ctx1 = ctx.children[0][1]
+            summary_table.append(
+                (label, ctx1.qualified_function_name, ctx1.total_gas_consumed)
+            )
+            print(ctx.format(maxlvl=MAXLVL))
+        except:
+            summary_table.append(
+                (label, "(total tx)", tx.gas_used)
+            )
         print()
 
     go(tx_total)
