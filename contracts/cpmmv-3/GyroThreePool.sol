@@ -256,25 +256,29 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         virtualOffset = invariant.mulDown(root3Alpha);
     }
 
+    /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
+    */
+    function _getAllBalances() private view returns (uint256[] memory balances) {
+        // The below is more gas-efficient than the following line because the token slots don't have to be read in the
+        // vault.
+        // (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        balances = new uint256[](3);
+        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor0);
+        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor1);
+        balances[2] = _getScaledTokenBalance(_token2, _scalingFactor2);
+        return balances;
+    }
+
     /** @dev Calculate the offset that that takes real reserves to virtual reserves. Uses only the info in the pool, but
      * is rather expensive because a lot has to be queried from the vault.
      */
     function _calculateVirtualOffset() private view returns (uint256 virtualOffset) {
-        // The below is more gas-efficient than the following line because the token slots don't have to be read in the
-        // vault.
-        // (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        uint256[] memory balances = new uint256[](3);
-        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor0);
-        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor1);
-        balances[2] = _getScaledTokenBalance(_token2, _scalingFactor2);
-        return _calculateVirtualOffset(balances);
+        return _calculateVirtualOffset(_getAllBalances());
     }
 
     /** @dev Calculate the invariant. */
     function _calculateInvariant() private view returns (uint256 invariant) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        _upscaleArray(balances, _scalingFactors());
-        return GyroThreeMath._calculateInvariant(balances, _root3Alpha);
+        return GyroThreeMath._calculateInvariant(_getAllBalances(), _root3Alpha);
     }
 
     function _onSwapGivenIn(
