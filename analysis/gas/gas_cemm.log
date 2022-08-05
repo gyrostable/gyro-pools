@@ -7,7 +7,7 @@ Launching 'ganache-cli --chain.vmErrorsOnRPCResponse true --server.port 8545 --m
 Running 'scripts/show_gas_usage_cemm.py::main'...
 ----- 1: Join (Initial) -----
 
-Total Gas: 231424
+Total Gas: 233568
 
 
 ----- 2: Join (Non-Initial After Initial) -----
@@ -44,7 +44,7 @@ Summary:
 
 Operation                            Function       Gas
 -----------------------------------  ----------  ------
-1: Join (Initial)                    (total tx)  231424
+1: Join (Initial)                    (total tx)  233568
 2: Join (Non-Initial After Initial)  (total tx)  189800
 3: Swap (After Join)                 (total tx)  115491
 4: Swap (After Swap)                 (total tx)  115495
