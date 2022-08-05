@@ -192,9 +192,9 @@ library GyroThreeMath {
 
         // The following is equal to dfRootEst^3 * a but with an order of operations optimized for precision.
         // Subtraction does not underflow since rootEst is chosen so that it's always above the (only) local minimum.
-        // TODO test if this changes the SOR; perhaps undo if there's a problem. (minor optimization)
-        // uint256 dfRootEst = (rootEst * 3).mulDown(rootEst);
-        uint256 dfRootEst = 3 * rootEst2;
+        // SOMEDAY alternative with very slightly worse rounding and slightly lower gas:
+        // uint256 dfRootEst = 3 * rootEst2;
+        uint256 dfRootEst = (rootEst * 3).mulDown(rootEst);
         dfRootEst = dfRootEst - dfRootEst.mulDownU(root3Alpha).mulDownU(root3Alpha).mulDownU(root3Alpha);
         dfRootEst = dfRootEst - 2 * rootEst.mulDownU(mb) - mc;
 
