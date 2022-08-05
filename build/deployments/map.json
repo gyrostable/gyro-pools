@@ -1,19 +1,14 @@
 {
   "137": {
-    "BalancerVault": [
-      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
-    ],
-    "GyroThreePool": [
-      "0xbC9bC9dC07a3C860da97693D94B0F12D6Dccf4b1"
+    "FreezableTransparentUpgradeableProxy": [
+      "0x90f08B3705208E41DbEEB37A42Fb628dD483AdDa",
+      "0x5d8545a7330245150bE0Ce88F8afB0EDc41dFc34"
     ],
     "GyroThreePoolFactory": [
-      "0xC2Fd661cED12D2aaC91CD904bE268FAe7982ca6C"
-    ],
-    "GyroTwoPool": [
-      "0xf353Be94205776387c0C8162b424806b00fCa93f"
+      "0xE59910C7725e15C28bA48bbBb995E7396536d981"
     ],
     "GyroTwoPoolFactory": [
-      "0xBfa5d9669d6C3d5156bEFb9E101F33B015199c35"
+      "0x333FADaf093Cccc04D83AC19f1B6A6F2443ed028"
     ],
     "QueryProcessor": [
       "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768"
