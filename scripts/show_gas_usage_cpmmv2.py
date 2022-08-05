@@ -167,9 +167,7 @@ def main():
             )
             print(ctx.format(maxlvl=MAXLVL))
         except:
-            summary_table.append(
-                (label, "(total tx)", tx.gas_used)
-            )
+            summary_table.append((label, "(total tx)", tx.gas_used))
         print()
 
     go(tx_total)
