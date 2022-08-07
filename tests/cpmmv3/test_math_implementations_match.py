@@ -305,6 +305,15 @@ def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
     ),
     root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX),
 )
+# regression
+@example(
+    balances=(5697, 1952, 28355454532),
+    root_three_alpha=D('0.90000000006273494438051400077'),
+)
+@example(
+    balances=(30192, 62250, 44794),
+    root_three_alpha=D('0.9000000000651515151515152'),
+)
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D(0), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
@@ -341,8 +350,17 @@ def test_calculate_invariant(
 
 @given(
     balances=gen_balances(),
-    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX),
+    root_three_alpha=qdecimals(min_value="0.9", max_value=ROOT_ALPHA_MAX),
     # rootEst=st.decimals(min_value="1", max_value="100000000000"),
+)
+# regression
+@example(
+    balances=(5697, 1952, 28355454532),
+    root_three_alpha=D('0.90000000006273494438051400077'),
+)
+@example(
+    balances=(30192, 62250, 44794),
+    root_three_alpha=D('0.9000000000651515151515152'),
 )
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
