@@ -201,17 +201,15 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         // Sort
         if (x > y) (x, y) = (y, x);
 
+        // We exploit that the variables _token{0,1,2} are sorted.
         if (x == _token0) {
             if (y == _token1) {
                 return (_token2, _scalingFactor2);
-            } else {
-                if (y != _token2) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
-                return (_token1, _scalingFactor1);
-            }
-        } else {
-            if (!(x == _token1 && y == _token2)) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
-            return (_token0, _scalingFactor0);
+            if (y != _token2) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+            return (_token1, _scalingFactor1);
         }
+        if (!(x == _token1 && y == _token2)) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+        return (_token0, _scalingFactor0);
     }
 
     function _getScaledTokenBalance(IERC20 token, uint256 scalingFactor) internal view returns (uint256 balance) {
