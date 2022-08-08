@@ -11,7 +11,8 @@ BALANCER_ADDRESSES = {
 
 GYROSCOPE_ADDRESSES = {
     137: {
-        "gyro_config": "0x429d5e3dcD3b0E643C4ceD35ee4b9334f9Bf81D7",
+        "gyro_config": "0xFdc2e9E03f515804744A40d0f8d25C16e93fbE67",
+        "proxy_admin": "0x83d34ca335d197bcFe403cb38E82CBD734C4CbBE",
     }
 }
 
