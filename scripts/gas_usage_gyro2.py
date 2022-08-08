@@ -1,7 +1,7 @@
 from brownie import (
     accounts,
-    GyroTwoPoolFactory,
-    GyroTwoPool,
+    Gyro2CLPPoolFactory,
+    Gyro2CLPPool,
     MockVault,
     Authorizer,
     MockGyroConfig,
@@ -48,10 +48,10 @@ deployed_query_processor = admin.deploy(QueryProcessor)
 
 # MOCK POOL FROM FACTORY
 
-factory = admin.deploy(GyroTwoPoolFactory, mock_vault, mock_gyro_config.address)
+factory = admin.deploy(Gyro2CLPPoolFactory, mock_vault, mock_gyro_config.address)
 
 args = TwoPoolFactoryCreateParams(
-    name="GyroTwoPoolFromFactory",
+    name="Gyro2CLPPoolFromFactory",
     symbol="G2PF",
     tokens=[gyro_erc20_funded[i].address for i in range(2)],
     sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
@@ -62,7 +62,7 @@ args = TwoPoolFactoryCreateParams(
 
 tx = factory.create(*args)
 
-mock_vault_pool = Contract.from_abi("GyroTwoPool", tx.return_value, GyroTwoPool.abi)
+mock_vault_pool = Contract.from_abi("Gyro2CLPPool", tx.return_value, Gyro2CLPPool.abi)
 
 # JOIN POOL
 

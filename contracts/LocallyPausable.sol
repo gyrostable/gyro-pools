@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.7.6;
 
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";

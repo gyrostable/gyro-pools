@@ -1,6 +1,6 @@
 from brownie import (
-    GyroTwoPoolFactory,
-    GyroThreePoolFactory,
+    Gyro2CLPPoolFactory,
+    Gyro3CLPPoolFactory,
     FreezableTransparentUpgradeableProxy,
 )
 from brownie.network import chain
@@ -12,7 +12,7 @@ from scripts.utils import (
 )
 
 
-@with_deployed(GyroTwoPoolFactory)
+@with_deployed(Gyro2CLPPoolFactory)
 def c2lp(two_pool_factory):
     deployer = get_deployer()
     deployer.deploy(
@@ -24,7 +24,7 @@ def c2lp(two_pool_factory):
     )
 
 
-@with_deployed(GyroThreePoolFactory)
+@with_deployed(Gyro3CLPPoolFactory)
 def c3lp(three_pool_factory):
     deployer = get_deployer()
     deployer.deploy(

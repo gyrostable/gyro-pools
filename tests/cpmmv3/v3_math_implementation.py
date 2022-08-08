@@ -28,7 +28,7 @@ def calculateCubicTerms(balances: Iterable[D], root3Alpha: D) -> tuple[D, D, D, 
     return a, -b, -c, -d
 
 
-# Doesn't completely mirror _calculateCubic in GyroThreeMath.sol
+# Doesn't completely mirror _calculateCubic in Gyro3CLPMath.sol
 def calculateCubic(
     a: D, mb: D, mc: D, md: D, root3Alpha: D, balances: Iterable[D]
 ) -> D:

@@ -25,7 +25,7 @@ import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
-import "../cpmmv-2/ExtensibleWeightedPool2Tokens.sol";
+import "../ExtensibleWeightedPool2Tokens.sol";
 import "./GyroCEMMMath.sol";
 import "./GyroCEMMOracleMath.sol";
 
@@ -528,7 +528,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     // Override unused inherited function
     // this intentionally does not revert so that it will be bypassed on onJoinPool inherited from ExtensibleWeightedPool2Tokens
     // the above overloading implementation of _updateOracle takes different arguments and processes the oracle update in a different place
-    // Note: this is identical to the handling in GyroTwoPool.sol
+    // Note: this is identical to the handling in Gyro2CLPPool.sol
     function _updateOracle(
         uint256,
         uint256,
@@ -537,11 +537,11 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         // Do nothing.
     }
 
-    // Fee helpers. These are exactly the same as in the GyroTwoPool.
+    // Fee helpers. These are exactly the same as in the Gyro2CLPPool.
     // TODO prob about time to make a base class.
 
     /**
-     * Note: This function is identical to that used in GyroTwoPool.sol
+     * Note: This function is identical to that used in Gyro2CLPPool.sol
      * @dev Computes and distributes fees between the Balancer and the Gyro treasury
      * The fees are computed and distributed in BPT rather than using the
      * Balancer regular distribution mechanism which would pay these in underlying
@@ -561,7 +561,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     }
 
     /**
-     * Note: This function is identical to that used in GyroTwoPool.sol
+     * Note: This function is identical to that used in Gyro2CLPPool.sol
      * @dev this function overrides inherited function to make sure it is never used
      */
     function _getDueProtocolFeeAmounts(
@@ -576,7 +576,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
 
     /**
      * @dev
-     * Note: This function is identical to that used in GyroTwoPool.sol.
+     * Note: This function is identical to that used in Gyro2CLPPool.sol.
      * Calculates protocol fee amounts in BPT terms.
      * protocolSwapFeePercentage is not used here b/c we take parameters from GyroConfig instead.
      * Returns: BPT due to Gyro, BPT due to Balancer, receiving address for Gyro fees, receiving address for Balancer
@@ -611,7 +611,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         return (gyroFees, balancerFees, gyroTreasury, balTreasury);
     }
 
-    // Note: This function is identical to that used in GyroTwoPool.sol
+    // Note: This function is identical to that used in Gyro2CLPPool.sol
     function _payFeesBpt(
         uint256 gyroFees,
         uint256 balancerFees,
@@ -628,7 +628,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         }
     }
 
-    // Note: This function is identical to that used in GyroTwoPool.sol
+    // Note: This function is identical to that used in Gyro2CLPPool.sol
     function _getFeesMetadata()
         internal
         view

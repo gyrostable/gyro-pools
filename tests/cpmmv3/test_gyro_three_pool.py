@@ -44,7 +44,7 @@ def test_pool_constructor(mock_vault_pool3):
 
 
 def test_pool_factory(mock_pool3_from_factory):
-    assert mock_pool3_from_factory.name() == "GyroThreePoolFromFactory"
+    assert mock_pool3_from_factory.name() == "Gyro3CLPPoolFromFactory"
     assert mock_pool3_from_factory.symbol() == "G3PF"
     assert mock_pool3_from_factory.getRoot3Alpha() == D("0.97") * 10**18
     assert mock_pool3_from_factory.getSwapFeePercentage() == D(1) * 10**15

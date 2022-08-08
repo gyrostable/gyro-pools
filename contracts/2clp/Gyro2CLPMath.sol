@@ -1,16 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// SPDX-License-Identifier: UNLICENSED
 
 pragma solidity 0.7.6;
 
@@ -20,13 +8,13 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 import "../../libraries/GyroPoolMath.sol";
-import "./Gyro2PoolErrors.sol";
+import "./Gyro2CLPPoolErrors.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
-library GyroTwoMath {
+library Gyro2CLPMath {
     using GyroFixedPoint for uint256;
     // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
     // implementation of the power function, as these ratios are often exponents.
@@ -184,7 +172,7 @@ library GyroTwoMath {
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
-        _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
+        _require(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
 
         // This in particular ensures amountOut < balanceOut.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
@@ -218,7 +206,7 @@ library GyroTwoMath {
       // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.       //
       // We add a very small safety margin to compensate for potential errors in the invariant.      //
       **********************************************************************************************/
-        _require(amountOut < balanceOut, Gyro2PoolErrors.ASSET_BOUNDS_EXCEEDED);
+        _require(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets

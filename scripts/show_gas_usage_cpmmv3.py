@@ -3,9 +3,9 @@ from pprint import pprint
 
 from brownie import (
     accounts,
-    GyroThreePool,
-    GyroThreeMathTesting,
-    GyroThreeMath,
+    Gyro3CLPPool,
+    Gyro3CLPMathTesting,
+    Gyro3CLPMath,
     MockVault,
     Authorizer,
     MockGyroConfig,
@@ -63,7 +63,7 @@ mock_vault = admin.deploy(MockVault, authorizer)
 
 mock_gyro_config = admin.deploy(MockGyroConfig)
 
-gyro_three_math_testing = admin.deploy(GyroThreeMathTesting)
+gyro_three_math_testing = admin.deploy(Gyro3CLPMathTesting)
 
 gyro_erc20_0 = admin.deploy(SimpleERC20)
 gyro_erc20_1 = admin.deploy(SimpleERC20)
@@ -86,14 +86,14 @@ gyro_erc20_funded = tuple(gyro_erc20s)
 # Not used in code, but needs to be deployed.
 admin.deploy(QueryProcessor)
 
-admin.deploy(GyroThreeMath)
+admin.deploy(Gyro3CLPMath)
 
 # MOCK POOL
 
 args = ThreePoolParams(
     vault=mock_vault.address,
     config=ThreePoolFactoryCreateParams(
-        name="GyroThreePool",  # string
+        name="Gyro3CLPPool",  # string
         symbol="G3P",  # string
         tokens=list(gyro_erc20_funded),
         swapFeePercentage=scale(swapFeePercentage),
@@ -105,7 +105,7 @@ args = ThreePoolParams(
     config_address=mock_gyro_config.address,
 )
 
-mock_vault_pool = admin.deploy(GyroThreePool, args)
+mock_vault_pool = admin.deploy(Gyro3CLPPool, args)
 
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None

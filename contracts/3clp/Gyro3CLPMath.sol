@@ -1,16 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// SPDX-License-Identifier: UNLICENSED
 
 pragma solidity 0.7.6;
 
@@ -18,7 +6,7 @@ pragma solidity 0.7.6;
 import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
-import "./GyroThreePoolErrors.sol";
+import "./Gyro3CLPPoolErrors.sol";
 
 import "../../libraries/GyroFixedPoint.sol";
 import "../../libraries/GyroPoolMath.sol";
@@ -35,7 +23,7 @@ import "../../libraries/GyroPoolMath.sol";
  * can be rather large and we need it to high precision. We apply various techniques to prevent an accumulation of
  * errors.
  */
-library GyroThreeMath {
+library Gyro3CLPMath {
     using GyroFixedPoint for uint256;
     using GyroPoolMath for uint256; // number._sqrt(tolerance)
 
@@ -69,9 +57,9 @@ library GyroThreeMath {
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
-        if (!(balances[0] <= _MAX_BALANCES)) _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
-        if (!(balances[1] <= _MAX_BALANCES)) _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
-        if (!(balances[2] <= _MAX_BALANCES)) _require(false, GyroThreePoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[0] <= _MAX_BALANCES)) _require(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[1] <= _MAX_BALANCES)) _require(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[2] <= _MAX_BALANCES)) _require(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
@@ -115,7 +103,7 @@ library GyroThreeMath {
         rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
 
         // Sanity check; the Newton iteration does not check its own final result, only intermediate results.
-        if (!(rootEst <= _L_MAX)) _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX)) _require(false, Gyro3CLPPoolErrors.INVARIANT_TOO_LARGE);
     }
 
     /** @dev (Minimum safe value, starting point for Newton iteration). Calibrated to the particular polynomial for
@@ -169,7 +157,7 @@ library GyroThreeMath {
             if (deltaIsPos) rootEst = rootEst.add(deltaAbs);
             else rootEst = rootEst.sub(deltaAbs);
         }
-        _revert(GyroThreePoolErrors.INVARIANT_DIDNT_CONVERGE);
+        _revert(Gyro3CLPPoolErrors.INVARIANT_DIDNT_CONVERGE);
     }
 
     /** @dev The Newton step -f(l)/f'(l), represented by its absolute value and its sign.
@@ -182,11 +170,11 @@ library GyroThreeMath {
         uint256 l_lower,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        if (!(rootEst <= _L_MAX)) _require(false, GyroThreePoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX)) _require(false, Gyro3CLPPoolErrors.INVARIANT_TOO_LARGE);
 
         // Note: In principle, this check is only relevant for the `else` branch below. But if it's violated, this
         // points to severe problems anyways, so we keep it here.
-        if (!(rootEst >= l_lower)) _require(false, GyroThreePoolErrors.INVARIANT_UNDERFLOW);
+        if (!(rootEst >= l_lower)) _require(false, Gyro3CLPPoolErrors.INVARIANT_UNDERFLOW);
 
         uint256 rootEst2 = rootEst.mulDownU(rootEst);
 

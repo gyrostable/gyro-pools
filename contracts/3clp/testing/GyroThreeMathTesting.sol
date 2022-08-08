@@ -1,14 +1,14 @@
-// SPDX-License-Identifier: UNLICENSE
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.7.6;
 
 /// @dev We can't call the functions of the math library for testing b/c they're internal. That's why this contract forwards calls to the math library.
 
-import "../GyroThreeMath.sol";
+import "../Gyro3CLPMath.sol";
 import "../../../libraries/GyroPoolMath.sol";
 
-contract GyroThreeMathTesting {
+contract Gyro3CLPMathTesting {
     function calculateInvariant(uint256[] memory balances, uint256 root3Alpha) external pure returns (uint256 invariant) {
-        return GyroThreeMath._calculateInvariant(balances, root3Alpha);
+        return Gyro3CLPMath._calculateInvariant(balances, root3Alpha);
     }
 
     function calculateCubicTerms(uint256[] memory balances, uint256 root3Alpha)
@@ -21,7 +21,7 @@ contract GyroThreeMathTesting {
             uint256 md
         )
     {
-        return GyroThreeMath._calculateCubicTerms(balances, root3Alpha);
+        return Gyro3CLPMath._calculateCubicTerms(balances, root3Alpha);
     }
 
     function calculateCubic(
@@ -31,7 +31,7 @@ contract GyroThreeMathTesting {
         uint256 md,
         uint256 root3Alpha
     ) external pure returns (uint256 rootEst) {
-        rootEst = GyroThreeMath._calculateCubic(a, mb, mc, md, root3Alpha);
+        rootEst = Gyro3CLPMath._calculateCubic(a, mb, mc, md, root3Alpha);
     }
 
     function calculateCubicStartingPoint(
@@ -40,7 +40,7 @@ contract GyroThreeMathTesting {
         uint256 mc,
         uint256 md
     ) external pure returns (uint256 l0) {
-        (, l0) = GyroThreeMath._calculateCubicStartingPoint(a, mb, mc, md);
+        (, l0) = Gyro3CLPMath._calculateCubicStartingPoint(a, mb, mc, md);
     }
 
     function runNewtonIteration(
@@ -51,7 +51,7 @@ contract GyroThreeMathTesting {
         uint256 l_lower,
         uint256 rootEst
     ) external pure returns (uint256 rootEstOut) {
-        rootEstOut = GyroThreeMath._runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
+        rootEstOut = Gyro3CLPMath._runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
     function calcNewtonDelta(
@@ -62,7 +62,7 @@ contract GyroThreeMathTesting {
         uint256 l_lower,
         uint256 rootEst
     ) external pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        return GyroThreeMath._calcNewtonDelta(mb, mc, md, root3Alpha, l_lower, rootEst);
+        return Gyro3CLPMath._calcNewtonDelta(mb, mc, md, root3Alpha, l_lower, rootEst);
     }
 
     function liquidityInvariantUpdate(
@@ -80,7 +80,7 @@ contract GyroThreeMathTesting {
         uint256 amountIn,
         uint256 virtualOffset
     ) external pure returns (uint256 amountOut) {
-        return GyroThreeMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffset);
+        return Gyro3CLPMath._calcOutGivenIn(balanceIn, balanceOut, amountIn, virtualOffset);
     }
 
     function calcInGivenOut(
@@ -89,7 +89,7 @@ contract GyroThreeMathTesting {
         uint256 amountOut,
         uint256 virtualOffset
     ) external pure returns (uint256 amountIn) {
-        return GyroThreeMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffset);
+        return Gyro3CLPMath._calcInGivenOut(balanceIn, balanceOut, amountOut, virtualOffset);
     }
 
     function calcAllTokensInGivenExactBptOut(

@@ -48,8 +48,8 @@ def bob(accounts):
 
 
 @pytest.fixture(scope="module")
-def gyro_two_math_testing(admin, GyroTwoMathTesting):
-    return admin.deploy(GyroTwoMathTesting)
+def gyro_two_math_testing(admin, Gyro2CLPMathTesting):
+    return admin.deploy(Gyro2CLPMathTesting)
 
 
 @pytest.fixture(scope="module")
@@ -58,8 +58,8 @@ def gyro_cemm_math_testing(admin, GyroCEMMMathTesting):
 
 
 @pytest.fixture(scope="module")
-def gyro_three_math_testing(admin, GyroThreeMathTesting):
-    return admin.deploy(GyroThreeMathTesting)
+def gyro_three_math_testing(admin, Gyro3CLPMathTesting):
+    return admin.deploy(Gyro3CLPMathTesting)
 
 
 class ContractAsPureWrapper:
@@ -117,7 +117,7 @@ def gyro_erc20_funded(admin, SimpleERC20, users):
     gyro_erc20_0.mint(users[1], TOKENS_PER_USER)
     gyro_erc20_1.mint(users[1], TOKENS_PER_USER)
 
-    # tokens must be ordered when deploying the GyroTwoPool
+    # tokens must be ordered when deploying the Gyro2CLPPool
     if gyro_erc20_0.address.lower() < gyro_erc20_1.address.lower():
         return (gyro_erc20_0, gyro_erc20_1)
     else:
@@ -154,7 +154,7 @@ def balancer_vault(admin, BalancerVault, SimpleERC20, authorizer):
 @pytest.fixture
 def balancer_vault_pool(
     admin,
-    GyroTwoPool,
+    Gyro2CLPPool,
     gyro_erc20_funded,
     balancer_vault,
     mock_gyro_config,
@@ -163,7 +163,7 @@ def balancer_vault_pool(
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=balancer_vault.address,
-            name="GyroTwoPool",  # string
+            name="Gyro2CLPPool",  # string
             symbol="GTP",  # string
             token0=gyro_erc20_funded[0].address,  # IERC20
             token1=gyro_erc20_funded[1].address,  # IERC20
@@ -176,13 +176,13 @@ def balancer_vault_pool(
         sqrtAlpha=D("0.97") * 10**18,  # uint256
         sqrtBeta=D("1.02") * 10**18,  # uint256
     )
-    return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
+    return admin.deploy(Gyro2CLPPool, args, mock_gyro_config.address)
 
 
 @pytest.fixture
 def mock_vault_pool(
     admin,
-    GyroTwoPool,
+    Gyro2CLPPool,
     gyro_erc20_funded,
     mock_vault,
     mock_gyro_config,
@@ -191,7 +191,7 @@ def mock_vault_pool(
     args = TwoPoolParams(
         baseParams=TwoPoolBaseParams(
             vault=mock_vault.address,
-            name="GyroTwoPool",  # string
+            name="Gyro2CLPPool",  # string
             symbol="GTP",  # string
             token0=gyro_erc20_funded[0].address,  # IERC20
             token1=gyro_erc20_funded[1].address,  # IERC20
@@ -204,23 +204,23 @@ def mock_vault_pool(
         sqrtAlpha=D("0.97") * 10**18,  # uint256
         sqrtBeta=D("1.02") * 10**18,  # uint256
     )
-    return admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
+    return admin.deploy(Gyro2CLPPool, args, mock_gyro_config.address)
 
 
 @pytest.fixture
 def mock_pool_from_factory(
     admin,
-    GyroTwoPoolFactory,
-    GyroTwoPool,
+    Gyro2CLPPoolFactory,
+    Gyro2CLPPool,
     mock_vault,
     mock_gyro_config,
     gyro_erc20_funded,
     deployed_query_processor,
 ):
-    factory = admin.deploy(GyroTwoPoolFactory, mock_vault, mock_gyro_config.address)
+    factory = admin.deploy(Gyro2CLPPoolFactory, mock_vault, mock_gyro_config.address)
 
     args = TwoPoolFactoryCreateParams(
-        name="GyroTwoPoolFromFactory",
+        name="Gyro2CLPPoolFromFactory",
         symbol="G2PF",
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
@@ -231,14 +231,16 @@ def mock_pool_from_factory(
 
     tx = factory.create(*args)
     pool_address = tx.events["PoolCreated"]["pool"]
-    pool_from_factory = Contract.from_abi("GyroTwoPool", pool_address, GyroTwoPool.abi)
+    pool_from_factory = Contract.from_abi(
+        "Gyro2CLPPool", pool_address, Gyro2CLPPool.abi
+    )
 
     return pool_from_factory
 
 
 @pytest.fixture
 def mock_vault_pool3(
-    admin, GyroThreePool, gyro_erc20_funded3, mock_vault, mock_gyro_config
+    admin, Gyro3CLPPool, gyro_erc20_funded3, mock_vault, mock_gyro_config
 ):
     args = ThreePoolParams(
         vault=mock_vault.address,
@@ -246,7 +248,7 @@ def mock_vault_pool3(
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
         config=ThreePoolFactoryCreateParams(
-            name="GyroThreePool",  # string
+            name="Gyro3CLPPool",  # string
             symbol="G3P",  # string
             tokens=[gyro_erc20_funded3[i].address for i in range(3)],
             swapFeePercentage=D(1) * 10**15,
@@ -254,22 +256,22 @@ def mock_vault_pool3(
             root3Alpha=D("0.97") * 10**18,
         ),
     )
-    return admin.deploy(GyroThreePool, args)
+    return admin.deploy(Gyro3CLPPool, args)
 
 
 @pytest.fixture
 def mock_pool3_from_factory(
     admin,
-    GyroThreePoolFactory,
-    GyroThreePool,
+    Gyro3CLPPoolFactory,
+    Gyro3CLPPool,
     mock_vault,
     mock_gyro_config,
     gyro_erc20_funded3,
 ):
-    factory = admin.deploy(GyroThreePoolFactory, mock_vault, mock_gyro_config.address)
+    factory = admin.deploy(Gyro3CLPPoolFactory, mock_vault, mock_gyro_config.address)
 
     args = ThreePoolFactoryCreateParams(
-        name="GyroThreePoolFromFactory",
+        name="Gyro3CLPPoolFromFactory",
         symbol="G3PF",
         tokens=[gyro_erc20_funded3[i].address for i in range(3)],
         root3Alpha=D("0.97") * 10**18,
@@ -280,7 +282,7 @@ def mock_pool3_from_factory(
     tx = factory.create(args)
     pool_address = tx.events["PoolCreated"]["pool"]
     pool3_from_factory = Contract.from_abi(
-        "GyroThreePool", pool_address, GyroThreePool.abi
+        "Gyro3CLPPool", pool_address, Gyro3CLPPool.abi
     )
 
     return pool3_from_factory
@@ -289,7 +291,7 @@ def mock_pool3_from_factory(
 @pytest.fixture
 def balancer_vault_pool3(
     admin,
-    GyroThreePool,
+    Gyro3CLPPool,
     gyro_erc20_funded3,
     balancer_vault,
     mock_gyro_config,
@@ -300,7 +302,7 @@ def balancer_vault_pool3(
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
         config=ThreePoolFactoryCreateParams(
-            name="GyroThreePool",  # string
+            name="Gyro3CLPPool",  # string
             symbol="G3P",  # string
             tokens=[gyro_erc20_funded3[i].address for i in range(3)],
             swapFeePercentage=D(1) * 10**15,
@@ -308,7 +310,7 @@ def balancer_vault_pool3(
             root3Alpha=D("0.97") * 10**18,
         ),
     )
-    return admin.deploy(GyroThreePool, args)
+    return admin.deploy(Gyro3CLPPool, args)
 
 
 @pytest.fixture(scope="module")
@@ -327,8 +329,8 @@ def gyro_fixed_point_testing(admin, GyroFixedPointTesting):
 
 
 @pytest.fixture(scope="module")
-def mock_gyro_two_oracle_math(admin, MockGyroTwoOracleMath):
-    return admin.deploy(MockGyroTwoOracleMath)
+def mock_gyro_two_oracle_math(admin, MockGyro2CLPOracleMath):
+    return admin.deploy(MockGyro2CLPOracleMath)
 
 
 @pytest.fixture(scope="module")
@@ -337,8 +339,8 @@ def gyro_cemm_oracle_math_testing(admin, GyroCEMMOracleMathTesting):
 
 
 @pytest.fixture(scope="module")
-def pool_factory(admin, GyroTwoPoolFactory, gyro_config):
-    return admin.deploy(GyroTwoPoolFactory, balancer_vault, gyro_config.address)
+def pool_factory(admin, Gyro2CLPPoolFactory, gyro_config):
+    return admin.deploy(Gyro2CLPPoolFactory, balancer_vault, gyro_config.address)
 
 
 @pytest.fixture
