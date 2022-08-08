@@ -23,6 +23,19 @@ jobs:
       - name: Lint Contracts
         run: yarn run lint
 
+  scripts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup
+      - name: Run CPMM V2 scripts
+        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_cpmmv2.py
+      - name: Run CPMM V3 scripts
+        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_cpmmv3.py
+      - name: Run CEMM scripts
+        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_cemm.py
+
   unit_test:
     runs-on: ubuntu-latest
     timeout-minutes: 15

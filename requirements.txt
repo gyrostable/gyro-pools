@@ -2,3 +2,4 @@ eth-brownie==1.18.1
 numpy
 pandas
 scipy
+tabulate
