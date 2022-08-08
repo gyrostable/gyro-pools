@@ -1,7 +1,7 @@
 import json
 import os
 from os import path
-from brownie import GyroTwoPoolFactory, GyroThreePoolFactory, GyroTwoPool, GyroThreePool  # type: ignore
+from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory, Gyro2CLPPool, Gyro3CLPPool  # type: ignore
 from brownie.network import chain
 
 from scripts.constants import (
@@ -25,7 +25,7 @@ def _get_tokens(config):
     return sorted([get_token_address(token) for token in config["tokens"]])
 
 
-@with_deployed(GyroTwoPoolFactory)
+@with_deployed(Gyro2CLPPoolFactory)
 def c2lp(two_pool_factory):
     deployer = get_deployer()
     pool_config = _get_config()
@@ -41,10 +41,10 @@ def c2lp(two_pool_factory):
         {"from": deployer, **make_tx_params()},
     )
     pool_address = tx.events["PoolCreated"]["pool"]
-    GyroTwoPool.at(pool_address)
+    Gyro2CLPPool.at(pool_address)
 
 
-@with_deployed(GyroThreePoolFactory)
+@with_deployed(Gyro3CLPPoolFactory)
 def c3lp(three_pool_factory):
     deployer = get_deployer()
     pool_config = _get_config()
@@ -58,4 +58,4 @@ def c3lp(three_pool_factory):
         {"from": deployer, **make_tx_params()},
     )
     pool_address = tx.events["PoolCreated"]["pool"]
-    GyroThreePool.at(pool_address)
+    Gyro3CLPPool.at(pool_address)

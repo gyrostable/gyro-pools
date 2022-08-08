@@ -1,4 +1,4 @@
-from brownie import GyroThreePoolFactory, GyroTwoPoolFactory  # type: ignore
+from brownie import Gyro3CLPPoolFactory, Gyro2CLPPoolFactory  # type: ignore
 from brownie.network import chain
 
 from scripts.constants import BALANCER_ADDRESSES, GYROSCOPE_ADDRESSES
@@ -19,8 +19,8 @@ def c2lp():
     from brownie import QueryProcessor  # type: ignore
 
     QueryProcessor.at(BALANCER_ADDRESSES[chain.id]["query_processor"])
-    _deploy_factory(GyroTwoPoolFactory)
+    _deploy_factory(Gyro2CLPPoolFactory)
 
 
 def c3lp():
-    _deploy_factory(GyroThreePoolFactory)
+    _deploy_factory(Gyro3CLPPoolFactory)

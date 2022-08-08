@@ -21,22 +21,22 @@ import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactor
 import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
 import "../../interfaces/ICappedLiquidity.sol";
-import "./GyroTwoPool.sol";
+import "./Gyro2CLPPool.sol";
 
-contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract Gyro2CLPPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
     uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
     uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
 
-    constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroTwoPool).creationCode) {
+    constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(Gyro2CLPPool).creationCode) {
         _require(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);
         _require(address(vault) != address(0), GyroErrors.ZERO_ADDRESS);
         gyroConfigAddress = _gyroConfigAddress;
     }
 
     /**
-     * @dev Deploys a new `GyroTwoPool`.
+     * @dev Deploys a new `Gyro2CLPPool`.
      */
     function create(
         string memory name,
@@ -59,7 +59,7 @@ contract GyroTwoPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow 
             owner
         );
 
-        GyroTwoPool.GyroParams memory params = GyroTwoPool.GyroParams({
+        Gyro2CLPPool.GyroParams memory params = Gyro2CLPPool.GyroParams({
             baseParams: baseParams,
             sqrtAlpha: sqrts[0],
             sqrtBeta: sqrts[1],

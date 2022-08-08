@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSE
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.7.6;
 
 /// @notice IGyroConfig stores the global configuration of the Gyroscope protocol

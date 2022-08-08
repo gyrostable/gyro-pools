@@ -16,16 +16,16 @@ pragma solidity 0.7.6;
 
 import "@balancer-labs/v2-solidity-utils/contracts/test/MockLogCompression.sol";
 
-import "../GyroTwoOracleMath.sol";
+import "../Gyro2CLPOracleMath.sol";
 
-contract MockGyroTwoOracleMath is GyroTwoOracleMath, MockLogCompression {
+contract MockGyro2CLPOracleMath is Gyro2CLPOracleMath, MockLogCompression {
     function calcSpotPrice(
         uint256 balanceA,
         uint256 virtualParameterA,
         uint256 balanceB,
         uint256 virtualParameterB
     ) external pure returns (uint256) {
-        return GyroTwoOracleMath._calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
+        return Gyro2CLPOracleMath._calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
     }
 
     function calcLogSpotPrice(
@@ -34,7 +34,7 @@ contract MockGyroTwoOracleMath is GyroTwoOracleMath, MockLogCompression {
         uint256 balanceB,
         uint256 virtualParameterB
     ) external pure returns (int256) {
-        return GyroTwoOracleMath._calcLogSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
+        return Gyro2CLPOracleMath._calcLogSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
     }
 
     function calcLogBPTPrice(
@@ -44,6 +44,6 @@ contract MockGyroTwoOracleMath is GyroTwoOracleMath, MockLogCompression {
         uint256 virtualParameterB,
         int256 logBptTotalSupply
     ) external pure returns (int256) {
-        return GyroTwoOracleMath._calcLogBPTPrice(balanceA, virtualParameterA, balanceB, virtualParameterB, logBptTotalSupply);
+        return Gyro2CLPOracleMath._calcLogBPTPrice(balanceA, virtualParameterA, balanceB, virtualParameterB, logBptTotalSupply);
     }
 }

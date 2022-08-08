@@ -88,8 +88,8 @@ def main():
         a, mb, mc, md, root3Alpha, balances
     )
 
-    # TODO GyroThreeMathDebug is slightly out of sync with GyroThreeMath. So this is all a bit outdated.
-    gyro_three_math_testing = accounts[0].deploy(GyroThreeMathDebug)
+    # TODO Gyro3CLPMathDebug is slightly out of sync with Gyro3CLPMath. So this is all a bit outdated.
+    gyro_three_math_testing = accounts[0].deploy(Gyro3CLPMathDebug)
 
     tx = gyro_three_math_testing._calculateInvariantUnderOver(
         scale(balances), scale(root3Alpha)

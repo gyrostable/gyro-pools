@@ -3,9 +3,9 @@ from pprint import pprint
 
 from brownie import (
     accounts,
-    GyroTwoPool,
-    GyroTwoMathTesting,
-    GyroTwoMath,
+    Gyro2CLPPool,
+    Gyro2CLPMathTesting,
+    Gyro2CLPMath,
     MockVault,
     Authorizer,
     MockGyroConfig,
@@ -69,7 +69,7 @@ mock_vault = admin.deploy(MockVault, authorizer)
 
 mock_gyro_config = admin.deploy(MockGyroConfig)
 
-gyro_two_math_testing = admin.deploy(GyroTwoMathTesting)
+gyro_two_math_testing = admin.deploy(Gyro2CLPMathTesting)
 
 gyro_erc20_0 = admin.deploy(SimpleERC20)
 gyro_erc20_1 = admin.deploy(SimpleERC20)
@@ -95,13 +95,13 @@ gyro_erc20_funded = order_erc_tokens(gyro_erc20_0, gyro_erc20_1)
 # Not used in code, but needs to be deployed.
 admin.deploy(QueryProcessor)
 
-admin.deploy(GyroTwoMath)
+admin.deploy(Gyro2CLPMath)
 
 # MOCK POOL
 
 base_params = TwoPoolBaseParams(
     vault=mock_vault.address,
-    name="GyroTwoPool",  # string
+    name="Gyro2CLPPool",  # string
     symbol="GTP",  # string
     token0=gyro_erc20_funded[0].address,  # IERC20
     token1=gyro_erc20_funded[1].address,  # IERC20
@@ -118,7 +118,7 @@ args = TwoPoolParams(
     sqrtBeta=scale(sqrt_beta),
 )
 
-mock_vault_pool = admin.deploy(GyroTwoPool, args, mock_gyro_config.address)
+mock_vault_pool = admin.deploy(Gyro2CLPPool, args, mock_gyro_config.address)
 
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None

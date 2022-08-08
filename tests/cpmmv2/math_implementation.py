@@ -36,8 +36,8 @@ def calculateQuadraticTerms(
 
 def calculateQuadratic(a: D, b: D, b_square: D, c: D) -> D:
     """
-    This function is not a complete match to _calculateQuadratic in GyroTwoMath.sol, this is just general quadratic formula
-    This function should match _calculateQuadratic in GyroTwoMath.sol in both inputs and outputs
+    This function is not a complete match to _calculateQuadratic in Gyro2CLPMath.sol, this is just general quadratic formula
+    This function should match _calculateQuadratic in Gyro2CLPMath.sol in both inputs and outputs
     when a > 0, b < 0, and c < 0
     """
     assert float(b * b) == pytest.approx(float(b_square))
@@ -47,7 +47,7 @@ def calculateQuadratic(a: D, b: D, b_square: D, c: D) -> D:
     return numerator / denominator
 
 
-# This function should match _calculateQuadratic in GyroTwoMath.sol in both inputs and outputs
+# This function should match _calculateQuadratic in Gyro2CLPMath.sol in both inputs and outputs
 # when a > 0, b < 0, and c < 0
 
 
