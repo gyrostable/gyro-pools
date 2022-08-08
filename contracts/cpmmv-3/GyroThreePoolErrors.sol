@@ -29,4 +29,5 @@ library GyroThreePoolErrors {
 
     // Input
     uint256 internal constant TOKENS_LENGTH_MUST_BE_3 = 353;
+    uint256 internal constant TOKENS_NOT_AMONG_POOL_TOKENS = 354;
 }

@@ -90,6 +90,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
     {
         IERC20[] memory tokens = params.config.tokens;
         _require(tokens.length == 3, GyroThreePoolErrors.TOKENS_LENGTH_MUST_BE_3);
+        InputHelpers.ensureArrayIsSorted(tokens); // For uniqueness and required to make balance reconstruction work
         _require(params.configAddress != address(0), GyroErrors.ZERO_ADDRESS);
 
         _token0 = tokens[0];
@@ -181,7 +182,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        uint256 virtualOffset = _calculateVirtualOffset();
+        uint256 virtualOffset = _calculateVirtualOffset(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut);
         return _onSwapGivenIn(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
@@ -190,25 +191,88 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         uint256 currentBalanceTokenIn,
         uint256 currentBalanceTokenOut
     ) internal view virtual override whenNotPaused returns (uint256) {
-        uint256 virtualOffset = _calculateVirtualOffset();
+        uint256 virtualOffset = _calculateVirtualOffset(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut);
         return _onSwapGivenOut(swapRequest, currentBalanceTokenIn, currentBalanceTokenOut, virtualOffset);
     }
 
-    /** @dev Calculate the offset that that takes real reserves to virtual reserves.
+    /** @dev Given two tokens x, y, return the third one among the pool tokens that is neither x nor y. x, y do *not*
+     * have to be ordered, but they have to be among the tokens of this pool and different.
      */
-    function _calculateVirtualOffset() private view returns (uint256 virtualOffset) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        _upscaleArray(balances, _scalingFactors());
+    function _getThirdToken(IERC20 x, IERC20 y) internal view returns (IERC20 tokenOther, uint256 scalingFactorOther) {
+        // Sort
+        if (x > y) (x, y) = (y, x);
+
+        // We exploit that the variables _token{0,1,2} are sorted.
+        if (x == _token0) {
+            if (y == _token1) return (_token2, _scalingFactor2);
+            if (y != _token2) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+            return (_token1, _scalingFactor1);
+        }
+        if (!(x == _token1 && y == _token2)) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+        return (_token0, _scalingFactor0);
+    }
+
+    function _getScaledTokenBalance(IERC20 token, uint256 scalingFactor) internal view returns (uint256 balance) {
+        // Signature of getPoolTokenInfo(): (pool id, token) -> (cash, managed, lastChangeBlock, assetManager)
+        // and total amount = cash + managed. See balancer repo, PoolTokens.sol and BalanceAllocation.sol
+        (uint256 cash, uint256 managed, , ) = getVault().getPoolTokenInfo(getPoolId(), token);
+        balance = cash + managed; // can't overflow, see BalanceAllocation.sol
+        balance = balance.mulDown(scalingFactor);
+    }
+
+    /** @dev Calculate the offset that that takes real reserves to virtual reserves. Variant
+     * that uses the info given during swaps to query less from the vault and save gas.
+     */
+    function _calculateVirtualOffset(
+        SwapRequest memory swapRequest,
+        uint256 currentBalanceTokenIn,
+        uint256 currentBalanceTokenOut
+    ) private view returns (uint256 virtualOffset) {
+        // We exploit that everything is symmetric, so we don't have to know which balance is which here
+        uint256[] memory balances = new uint256[](3);
+        balances[0] = currentBalanceTokenIn;
+        balances[1] = currentBalanceTokenOut;
+
+        // Get the third token and query its balance.
+        // This needs to be scaled up, like in BasePool._upscaleArray(). The other balances are already scaled up.
+        (IERC20 token3, uint256 scalingFactor3) = _getThirdToken(swapRequest.tokenIn, swapRequest.tokenOut);
+        balances[2] = _getScaledTokenBalance(token3, scalingFactor3);
+
+        return _calculateVirtualOffset(balances);
+    }
+
+    /** @dev Calculate virtual offsets from unscaled balances. Balances can be retrieved in the most gas-efficient way.*/
+    function _calculateVirtualOffset(
+        uint256[] memory balances // Need to be already scaled up.
+    ) private view returns (uint256 virtualOffset) {
         uint256 root3Alpha = _root3Alpha;
         uint256 invariant = GyroThreeMath._calculateInvariant(balances, root3Alpha);
         virtualOffset = invariant.mulDown(root3Alpha);
     }
 
+    /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
+     */
+    function _getAllBalances() private view returns (uint256[] memory balances) {
+        // The below is more gas-efficient than the following line because the token slots don't have to be read in the
+        // vault.
+        // (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        balances = new uint256[](3);
+        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor0);
+        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor1);
+        balances[2] = _getScaledTokenBalance(_token2, _scalingFactor2);
+        return balances;
+    }
+
+    /** @dev Calculate the offset that that takes real reserves to virtual reserves. Uses only the info in the pool, but
+     * is rather expensive because a lot has to be queried from the vault.
+     */
+    function _calculateVirtualOffset() private view returns (uint256 virtualOffset) {
+        return _calculateVirtualOffset(_getAllBalances());
+    }
+
     /** @dev Calculate the invariant. */
     function _calculateInvariant() private view returns (uint256 invariant) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        _upscaleArray(balances, _scalingFactors());
-        return GyroThreeMath._calculateInvariant(balances, _root3Alpha);
+        return GyroThreeMath._calculateInvariant(_getAllBalances(), _root3Alpha);
     }
 
     function _onSwapGivenIn(
