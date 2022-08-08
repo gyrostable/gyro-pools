@@ -204,8 +204,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
 
         // We exploit that the variables _token{0,1,2} are sorted.
         if (x == _token0) {
-            if (y == _token1) {
-                return (_token2, _scalingFactor2);
+            if (y == _token1) return (_token2, _scalingFactor2);
             if (y != _token2) _require(false, GyroThreePoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
             return (_token1, _scalingFactor1);
         }
