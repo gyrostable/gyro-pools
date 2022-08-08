@@ -308,11 +308,11 @@ def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
 # regression
 @example(
     balances=(5697, 1952, 28355454532),
-    root_three_alpha=D('0.90000000006273494438051400077'),
+    root_three_alpha=D("0.90000000006273494438051400077"),
 )
 @example(
     balances=(30192, 62250, 44794),
-    root_three_alpha=D('0.9000000000651515151515152'),
+    root_three_alpha=D("0.9000000000651515151515152"),
 )
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
@@ -356,11 +356,11 @@ def test_calculate_invariant(
 # regression
 @example(
     balances=(5697, 1952, 28355454532),
-    root_three_alpha=D('0.90000000006273494438051400077'),
+    root_three_alpha=D("0.90000000006273494438051400077"),
 )
 @example(
     balances=(30192, 62250, 44794),
-    root_three_alpha=D('0.9000000000651515151515152'),
+    root_three_alpha=D("0.9000000000651515151515152"),
 )
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
