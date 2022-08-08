@@ -60,6 +60,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
         uint256 swapFeePercentage;
         uint256 root3Alpha;
         address owner;
+        address capManager;
         CapParams capParams;
         address pauseManager;
     }
@@ -84,7 +85,7 @@ contract GyroThreePool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPa
             params.bufferPeriodDuration,
             params.config.owner
         )
-        CappedLiquidity(params.config.capParams)
+        CappedLiquidity(params.config.capManager, params.config.capParams)
         LocallyPausable(params.config.pauseManager)
     {
         IERC20[] memory tokens = params.config.tokens;

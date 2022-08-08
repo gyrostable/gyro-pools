@@ -322,6 +322,11 @@ def signed_math_testing(admin, SignedMathTesting):
 
 
 @pytest.fixture(scope="module")
+def gyro_fixed_point_testing(admin, GyroFixedPointTesting):
+    return admin.deploy(GyroFixedPointTesting)
+
+
+@pytest.fixture(scope="module")
 def mock_gyro_two_oracle_math(admin, MockGyroTwoOracleMath):
     return admin.deploy(MockGyroTwoOracleMath)
 

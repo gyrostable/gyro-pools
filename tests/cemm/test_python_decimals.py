@@ -89,7 +89,7 @@ def test_derivedParams(params):
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
-    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    amountIn=qdecimals(min_value=1, max_value=1_000_000_000),
     tokenInIsToken0=st.booleans(),
 )
 # The following example yields error ≥ 1E-4.
@@ -139,7 +139,7 @@ def test_calcOutGivenIn(params, balances, amountIn, tokenInIsToken0):
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
-    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    amountIn=qdecimals(min_value=1, max_value=1_000_000_000),
     tokenInIsToken0=st.booleans(),
 )
 # @example(
@@ -236,7 +236,7 @@ def mparams2float(params: mimpl.Params) -> mimpl_float.Params:
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
-    amountIn=qdecimals(min_value=1, max_value=1_000_000_000, places=4),
+    amountIn=qdecimals(min_value=1, max_value=1_000_000_000),
     tokenInIsToken0=st.booleans(),
 )
 # @example(

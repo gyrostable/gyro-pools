@@ -33,9 +33,7 @@ def faulty_params(balances, root_three_alpha):
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     ),
-    root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ),
+    root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX),
 )
 def test_calculate_cubic_terms(
     gyro_three_math_testing, balances: Tuple[int, int], root_three_alpha: Decimal
@@ -58,7 +56,7 @@ def test_calculate_cubic_terms(
 
 # @given(
 #     balances=st.tuples(billion_balance_strategy, billion_balance_strategy, billion_balance_strategy),
-#     root_three_alpha=st.decimals(min_value="0.02", max_value="0.99995", places=4),
+#     root_three_alpha=st.decimals(min_value="0.02", max_value="0.99995"),
 # )
 # def test_calculate_quadratic(gyro_three_math_testing, balances, root_three_alpha):
 #     if faulty_params(balances, root_three_alpha):
@@ -193,9 +191,7 @@ def test_calc_in_given_out(
 
 @given(
     setup=gen_params_out_given_in(),
-    root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ),
+    root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX),
 )
 @example(
     setup=((99_000_000_000, 99_000_000_000, 99_000_000_000), 1_000_000_000),
@@ -278,9 +274,7 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
 @mark.skip(reason="Function Removed")
 @given(
     l=qdecimals("1e12", "1e16"),
-    root_three_alpha=st.decimals(
-        min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX, places=4
-    ),
+    root_three_alpha=st.decimals(min_value=ROOT_ALPHA_MIN, max_value=ROOT_ALPHA_MAX),
 )
 @example(l=D("651894673872645.123456789012345678"), root_three_alpha=D(ROOT_ALPHA_MAX))
 def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
@@ -309,7 +303,7 @@ def test_safeLargePow3ADown(l, root_three_alpha, gyro_three_math_testing):
     balances=st.tuples(
         billion_balance_strategy, billion_balance_strategy, billion_balance_strategy
     ),
-    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX),
 )
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))
@@ -347,8 +341,8 @@ def test_calculate_invariant(
 
 @given(
     balances=gen_balances(),
-    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX, places=4),
-    # rootEst=st.decimals(min_value="1", max_value="100000000000", places=4),
+    root_three_alpha=st.decimals(min_value="0.9", max_value=ROOT_ALPHA_MAX),
+    # rootEst=st.decimals(min_value="1", max_value="100000000000"),
 )
 @example(balances=[D("1e10"), D(0), D(0)], root_three_alpha=D(ROOT_ALPHA_MAX))
 @example(balances=[D("1e11"), D("1e11"), D("1e11")], root_three_alpha=D(ROOT_ALPHA_MAX))

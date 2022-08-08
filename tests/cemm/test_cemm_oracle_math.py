@@ -48,7 +48,7 @@ def test_log_spot_price(gyro_cemm_oracle_math_testing, spot_price):
 @given(
     balances=gen_balances(),
     spot_price=price_strategy,
-    bpt_supply=qdecimals(min_value=1, max_value=10_000_000_000, places=4),
+    bpt_supply=qdecimals(min_value=1, max_value=10_000_000_000),
 )
 def test_log_bpt_price(gyro_cemm_oracle_math_testing, balances, spot_price, bpt_supply):
     assume(balances[0] != 0 and balances[1] != 0)
@@ -76,7 +76,7 @@ def test_log_bpt_price(gyro_cemm_oracle_math_testing, balances, spot_price, bpt_
 
 @given(
     invariant=st.decimals(min_value="0.001", max_value="1e11"),
-    bpt_supply=qdecimals(min_value=1, max_value=10_000_000_000, places=4),
+    bpt_supply=qdecimals(min_value=1, max_value=10_000_000_000),
 )
 def test_log_invariant_div_supply(gyro_cemm_oracle_math_testing, invariant, bpt_supply):
     log_bpt_supply = to_decimal(bpt_supply).raw.ln()

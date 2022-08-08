@@ -13,8 +13,8 @@ from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.cemm import cemm_prec_implementation as prec_impl
 
-billions_strategy = st.decimals(min_value="-1e12", max_value="1e12", places=4)
-tens_strategy = st.decimals(min_value="-10", max_value="10", places=4)
+billions_strategy = st.decimals(min_value="-1e12", max_value="1e12")
+tens_strategy = st.decimals(min_value="-10", max_value="10")
 
 
 # @settings(max_examples=1000)
