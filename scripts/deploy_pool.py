@@ -50,12 +50,7 @@ def c2lp(two_pool_factory):
     )
     tx = two_pool_factory.create(
         *params,
-        {
-            "from": deployer,
-            "gas_limit": 1_000_000,
-            "allow_revert": True,
-            **make_tx_params(),
-        },
+        {"from": deployer, **make_tx_params()},
     )
     pool_address = tx.events["PoolCreated"]["pool"]
     Gyro2CLPPool.at(pool_address)
