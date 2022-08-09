@@ -6,18 +6,32 @@ BALANCER_ADDRESSES = {
     137: {
         "query_processor": "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
         "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-    }
+    },
+    1337: {
+        "query_processor": "0x5b1869D9A4C187F2EAa108f3062412ecf0526b24",
+        "vault": "0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B",
+    },
 }
 
 GYROSCOPE_ADDRESSES = {
     137: {
         "gyro_config": "0xFdc2e9E03f515804744A40d0f8d25C16e93fbE67",
         "proxy_admin": "0x83d34ca335d197bcFe403cb38E82CBD734C4CbBE",
-    }
+    },
+    1337: {
+        "proxy_admin": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+        "gyro_config": "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab",
+    },
 }
 
 POOL_OWNER = {
-    137: "0x1645484290842EbAFeDBc9Fa5212D0D16a874865",
+    137: "0xEf63C5ceDEc9d53911162BEd5cE8956AE570387B",
+    1337: "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
+}
+
+PAUSE_MANAGER = {
+    137: "0x148b36E4F96914550145b72E9Dbcd514048CafED",
+    1337: "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
 }
 
 DEPLOYED_POOLS = {
