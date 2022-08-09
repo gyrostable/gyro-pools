@@ -1,4 +1,5 @@
-from brownie import ETH_ADDRESS, ZERO_ADDRESS
+from functools import lru_cache
+from brownie import ETH_ADDRESS, ZERO_ADDRESS, accounts, SimpleERC20
 from brownie.network import chain
 
 STABLE_COINS = ["DAI", "USDT", "USDC", "GUSD", "HUSD", "TUSD", "USDP", "LUSD"]
@@ -37,10 +38,14 @@ _token_addresses = {
 }
 
 
-def get_token_address(name) -> str:
+@lru_cache()
+def get_token_address(name, is_fork=True) -> str:
     chain_id = chain.id
     if chain_id == 1337:
-        chain_id = 1
+        if is_fork:
+            chain_id = 1
+        else:
+            return accounts[0].deploy(SimpleERC20).address
     if chain_id not in _token_addresses:
         raise ValueError(f"chain {chain_id} not supported")
     return _token_addresses[chain_id].get(name, ZERO_ADDRESS)

@@ -63,7 +63,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     name: str
     symbol: str
     tokens: list[str]
-    sqrts: list[DecimalLike]
+    sqrts: list[int]
     swapFeePercentage: DecimalLike
     oracleEnabled: bool
     owner: address
