@@ -20,10 +20,11 @@ import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
+import "../../interfaces/IGyro2CLPPoolFactory.sol";
 import "../../interfaces/ICappedLiquidity.sol";
 import "./Gyro2CLPPool.sol";
 
-contract Gyro2CLPPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
     uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
@@ -49,7 +50,7 @@ contract Gyro2CLPPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow
         address capManager,
         ICappedLiquidity.CapParams memory capParams,
         address pauseManager
-    ) external returns (address) {
+    ) external override returns (address) {
         ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(
             name,
             symbol,
