@@ -28,12 +28,6 @@ library Gyro3CLPMath {
     using GyroFixedPoint for uint256;
     using GyroPoolMath for uint256; // number._sqrt(tolerance)
 
-    // Swap limits: amounts swapped may not be larger than this percentage of total balance.
-    // _MAX_OUT_RATIO also ensures that we never compute swaps that take more out than is in the pool. (because
-    // it's <= ONE)
-    uint256 internal constant _MAX_IN_RATIO = 0.3e18;
-    uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-
     // Stopping criterion for the Newton iteration that computes the invariant:
     // - Stop if the step width doesn't shrink anymore by at least a factor _INVARIANT_SHRINKING_FACTOR_PER_STEP.
     // - ... but in any case, make at least _INVARIANT_MIN_ITERATIONS iterations. This is useful to compensate for a
@@ -253,7 +247,6 @@ library Gyro3CLPMath {
         // We assume that the virtualOffset carries a relative +/- 3e-18 error due to the invariant  //
         // calculation add an appropriate safety margin.                                             //
         **********************************************************************************************/
-        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO))) _require(false, Errors.MAX_IN_RATIO);
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
@@ -269,7 +262,7 @@ library Gyro3CLPMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
         // the balance.
-        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO))) _require(false, Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut)) _grequire(false, Gyro3CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
     }
 
     /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given the current balances
@@ -299,7 +292,7 @@ library Gyro3CLPMath {
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the trader tries to take more out of
         // the pool than is in it.
-        if (!(amountOut <= balanceOut.mulDownU(_MAX_OUT_RATIO))) _require(false, Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut)) _grequire(false, Gyro3CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
 
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
@@ -310,7 +303,5 @@ library Gyro3CLPMath {
 
             amountIn = virtInOver.mulUpU(amountOut).divUpU(virtOutUnder - amountOut);
         }
-
-        if (!(amountIn <= balanceIn.mulDownU(_MAX_IN_RATIO))) _require(false, Errors.MAX_IN_RATIO);
     }
 }

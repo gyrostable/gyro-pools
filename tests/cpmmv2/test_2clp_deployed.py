@@ -434,7 +434,7 @@ def mtest_invariant_across_liquidityInvariantUpdate(
         )
     else:
         loss = (D(0), D(0))
-    loss_ub = loss[0] * sqrt_beta ** 2 + loss[1]
+    loss_ub = loss[0] * sqrt_beta**2 + loss[1]
     assert abs(loss_ub) < D("1e-5")
 
 
@@ -457,8 +457,8 @@ def test_calc_out_given_in_tob(gyro_two_math_testing):
 
     currentInvariant = gyro_two_math_testing.calculateInvariant(
         [balanceIn, balanceOut],  # balances
-        sqrtAlpha * 10 ** 18,  # sqrtAlpha
-        sqrtBeta * 10 ** 18,  # sqrtBeta
+        sqrtAlpha * 10**18,  # sqrtAlpha
+        sqrtBeta * 10**18,  # sqrtBeta
     )
 
     virtualParamIn = currentInvariant / sqrtBeta
@@ -467,9 +467,9 @@ def test_calc_out_given_in_tob(gyro_two_math_testing):
     result = gyro_two_math_testing.calcOutGivenIn(
         balanceIn,  # balanceIn,
         balanceOut,  # balanceOut,
-        amountIn * 10 ** 18,  # amountIn,
+        amountIn * 10**18,  # amountIn,
         virtualParamIn,  # virtualParamIn,
         virtualParamOut,  # virtualParamOut,
     )
 
-    assert result < 10 ** 18
+    assert result < 10**18
