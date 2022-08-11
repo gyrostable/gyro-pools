@@ -257,7 +257,8 @@ library Gyro3CLPMath {
             uint256 virtInOver = balanceIn + virtualOffset.mulUpU(GyroFixedPoint.ONE + 2);
             uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
-            amountOut = virtOutUnder.mulDownU(amountIn).divDownU(virtInOver + amountIn);
+            // Note that the user can define amountIn so we have to check for overflows
+            amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
@@ -301,7 +302,8 @@ library Gyro3CLPMath {
             uint256 virtInOver = balanceIn + virtualOffset.mulUpU(GyroFixedPoint.ONE + 2);
             uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
-            amountIn = virtInOver.mulUpU(amountOut).divUpU(virtOutUnder - amountOut);
+            // Note that the user can define amountOut so we have to check for overflows
+            amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }
     }
 }
