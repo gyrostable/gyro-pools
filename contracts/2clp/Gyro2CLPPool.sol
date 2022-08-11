@@ -57,8 +57,8 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         CappedLiquidity(params.capManager, params.capParams)
         LocallyPausable(params.pauseManager)
     {
-        _require(params.sqrtAlpha < params.sqrtBeta, Gyro2CLPPoolErrors.SQRT_PARAMS_WRONG);
-        _require(configAddress != address(0), GyroErrors.ZERO_ADDRESS);
+        _grequire(params.sqrtAlpha < params.sqrtBeta, Gyro2CLPPoolErrors.SQRT_PARAMS_WRONG);
+        _grequire(configAddress != address(0), GyroErrors.ZERO_ADDRESS);
         _sqrtAlpha = params.sqrtAlpha;
         _sqrtBeta = params.sqrtBeta;
 

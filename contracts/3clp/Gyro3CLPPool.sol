@@ -15,8 +15,6 @@
 pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
-import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
-
 import "../../libraries/GyroConfigKeys.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
@@ -89,9 +87,9 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         LocallyPausable(params.config.pauseManager)
     {
         IERC20[] memory tokens = params.config.tokens;
-        _require(tokens.length == 3, Gyro3CLPPoolErrors.TOKENS_LENGTH_MUST_BE_3);
+        _grequire(tokens.length == 3, Gyro3CLPPoolErrors.TOKENS_LENGTH_MUST_BE_3);
         InputHelpers.ensureArrayIsSorted(tokens); // For uniqueness and required to make balance reconstruction work
-        _require(params.configAddress != address(0), GyroErrors.ZERO_ADDRESS);
+        _grequire(params.configAddress != address(0), GyroErrors.ZERO_ADDRESS);
 
         _token0 = tokens[0];
         _token1 = tokens[1];
@@ -102,7 +100,7 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         _scalingFactor2 = _computeScalingFactor(tokens[2]);
 
         // _require(params.config.root3Alpha < FixedPoint.ONE, Gyro3CLPPoolErrors.PRICE_BOUNDS_WRONG);
-        _require(
+        _grequire(
             Gyro3CLPMath._MIN_ROOT_3_ALPHA <= params.config.root3Alpha && params.config.root3Alpha <= Gyro3CLPMath._MAX_ROOT_3_ALPHA,
             Gyro3CLPPoolErrors.PRICE_BOUNDS_WRONG
         );
@@ -205,10 +203,10 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         // We exploit that the variables _token{0,1,2} are sorted.
         if (x == _token0) {
             if (y == _token1) return (_token2, _scalingFactor2);
-            if (y != _token2) _require(false, Gyro3CLPPoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+            if (y != _token2) _grequire(false, Gyro3CLPPoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
             return (_token1, _scalingFactor1);
         }
-        if (!(x == _token1 && y == _token2)) _require(false, Gyro3CLPPoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
+        if (!(x == _token1 && y == _token2)) _grequire(false, Gyro3CLPPoolErrors.TOKENS_NOT_AMONG_POOL_TOKENS);
         return (_token0, _scalingFactor0);
     }
 

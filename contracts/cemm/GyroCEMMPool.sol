@@ -22,6 +22,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.so
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
 import "../../libraries/GyroConfigKeys.sol";
+import "../../libraries/GyroErrors.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
@@ -73,7 +74,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     event OracleIndexUpdated(uint256 oracleUpdatedIndex);
 
     constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) {
-        _require(configAddress != address(0x0), GyroCEMMPoolErrors.ADDRESS_IS_ZERO_ADDRESS);
+        _grequire(configAddress != address(0x0), GyroCEMMPoolErrors.ADDRESS_IS_ZERO_ADDRESS);
 
         GyroCEMMMath.validateParams(params.cemmParams);
         emit CEMMParamsValidated(true);

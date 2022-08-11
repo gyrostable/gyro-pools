@@ -10,6 +10,7 @@ import "./Gyro3CLPPoolErrors.sol";
 
 import "../../libraries/GyroFixedPoint.sol";
 import "../../libraries/GyroPoolMath.sol";
+import "../../libraries/GyroErrors.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
 // should be fixed.
@@ -57,9 +58,9 @@ library Gyro3CLPMath {
 
     /** @dev The invariant L corresponding to the given balances and alpha. */
     function _calculateInvariant(uint256[] memory balances, uint256 root3Alpha) internal pure returns (uint256 rootEst) {
-        if (!(balances[0] <= _MAX_BALANCES)) _require(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
-        if (!(balances[1] <= _MAX_BALANCES)) _require(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
-        if (!(balances[2] <= _MAX_BALANCES)) _require(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[0] <= _MAX_BALANCES)) _grequire(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[1] <= _MAX_BALANCES)) _grequire(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
+        if (!(balances[2] <= _MAX_BALANCES)) _grequire(false, Gyro3CLPPoolErrors.BALANCES_TOO_LARGE);
         (uint256 a, uint256 mb, uint256 mc, uint256 md) = _calculateCubicTerms(balances, root3Alpha);
         return _calculateCubic(a, mb, mc, md, root3Alpha);
     }
@@ -103,7 +104,7 @@ library Gyro3CLPMath {
         rootEst = _runNewtonIteration(mb, mc, md, root3Alpha, l_lower, rootEst);
 
         // Sanity check; the Newton iteration does not check its own final result, only intermediate results.
-        if (!(rootEst <= _L_MAX)) _require(false, Gyro3CLPPoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX)) _grequire(false, Gyro3CLPPoolErrors.INVARIANT_TOO_LARGE);
     }
 
     /** @dev (Minimum safe value, starting point for Newton iteration). Calibrated to the particular polynomial for
@@ -157,7 +158,7 @@ library Gyro3CLPMath {
             if (deltaIsPos) rootEst = rootEst.add(deltaAbs);
             else rootEst = rootEst.sub(deltaAbs);
         }
-        _revert(Gyro3CLPPoolErrors.INVARIANT_DIDNT_CONVERGE);
+        _grevert(Gyro3CLPPoolErrors.INVARIANT_DIDNT_CONVERGE);
     }
 
     /** @dev The Newton step -f(l)/f'(l), represented by its absolute value and its sign.
@@ -170,11 +171,11 @@ library Gyro3CLPMath {
         uint256 l_lower,
         uint256 rootEst
     ) internal pure returns (uint256 deltaAbs, bool deltaIsPos) {
-        if (!(rootEst <= _L_MAX)) _require(false, Gyro3CLPPoolErrors.INVARIANT_TOO_LARGE);
+        if (!(rootEst <= _L_MAX)) _grequire(false, Gyro3CLPPoolErrors.INVARIANT_TOO_LARGE);
 
         // Note: In principle, this check is only relevant for the `else` branch below. But if it's violated, this
         // points to severe problems anyways, so we keep it here.
-        if (!(rootEst >= l_lower)) _require(false, Gyro3CLPPoolErrors.INVARIANT_UNDERFLOW);
+        if (!(rootEst >= l_lower)) _grequire(false, Gyro3CLPPoolErrors.INVARIANT_UNDERFLOW);
 
         uint256 rootEst2 = rootEst.mulDownU(rootEst);
 
