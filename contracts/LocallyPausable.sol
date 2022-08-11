@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.7.6;
 
-import "@balancer-labs/v2-solidity-utils/contracts/helpers/BalancerErrors.sol";
-
 import "../interfaces/ILocallyPausable.sol";
 import "../libraries/GyroErrors.sol";
 
@@ -15,7 +13,7 @@ abstract contract LocallyPausable is ILocallyPausable {
     string internal constant _NOT_PAUSE_MANAGER = "not pause manager";
 
     constructor(address _pauseManager) {
-        _require(_pauseManager != address(0), GyroErrors.ZERO_ADDRESS);
+        _grequire(_pauseManager != address(0), GyroErrors.ZERO_ADDRESS);
         pauseManager = _pauseManager;
     }
 

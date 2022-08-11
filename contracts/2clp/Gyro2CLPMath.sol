@@ -8,6 +8,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/InputHelpers.sol";
 
 import "../../libraries/GyroPoolMath.sol";
+import "../../libraries/GyroErrors.sol";
 import "./Gyro2CLPPoolErrors.sol";
 
 // These functions start with an underscore, as if they were part of a contract and not a library. At some point this
@@ -172,7 +173,7 @@ library Gyro2CLPMath {
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
-        _require(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
+        _grequire(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
 
         // This in particular ensures amountOut < balanceOut.
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
@@ -206,7 +207,7 @@ library Gyro2CLPMath {
       // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.       //
       // We add a very small safety margin to compensate for potential errors in the invariant.      //
       **********************************************************************************************/
-        _require(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
+        _grequire(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
         _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets

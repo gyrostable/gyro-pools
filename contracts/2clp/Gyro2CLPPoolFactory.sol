@@ -30,8 +30,8 @@ contract Gyro2CLPPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow
     uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
 
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(Gyro2CLPPool).creationCode) {
-        _require(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);
-        _require(address(vault) != address(0), GyroErrors.ZERO_ADDRESS);
+        _grequire(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);
+        _grequire(address(vault) != address(0), GyroErrors.ZERO_ADDRESS);
         gyroConfigAddress = _gyroConfigAddress;
     }
 

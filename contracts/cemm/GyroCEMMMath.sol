@@ -2,6 +2,7 @@ pragma solidity 0.7.6;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/GyroFixedPoint.sol";
+import "../../libraries/GyroErrors.sol";
 import "../../libraries/SignedFixedPoint.sol";
 import "../../libraries/GyroPoolMath.sol";
 import "./GyroCEMMPoolErrors.sol";
@@ -84,17 +85,17 @@ library GyroCEMMMath {
 
     /** @dev Enforces limits and approximate normalization of the rotation vector. */
     function validateParams(Params memory params) internal pure {
-        _require(0 <= params.s && params.s <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
-        _require(0 <= params.c && params.c <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
+        _grequire(0 <= params.s && params.s <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
+        _grequire(0 <= params.c && params.c <= ONE, GyroCEMMPoolErrors.ROTATION_VECTOR_WRONG);
 
         Vector2 memory sc = Vector2(params.s, params.c);
         int256 scnorm2 = scalarProd(sc, sc); // squared norm
-        _require(
+        _grequire(
             ONE - _ROTATION_VECTOR_NORM_ACCURACY <= scnorm2 && scnorm2 <= ONE + _ROTATION_VECTOR_NORM_ACCURACY,
             GyroCEMMPoolErrors.ROTATION_VECTOR_NOT_NORMALIZED
         );
 
-        _require(0 <= params.lambda && params.lambda <= _MAX_STRETCH_FACTOR, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
+        _grequire(0 <= params.lambda && params.lambda <= _MAX_STRETCH_FACTOR, GyroCEMMPoolErrors.STRETCHING_FACTOR_WRONG);
     }
 
     /** @dev Enforces limits and approximate normalization of the derived values.
@@ -102,29 +103,29 @@ library GyroCEMMMath {
     function validateDerivedParamsLimits(Params memory params, DerivedParams memory derived) internal pure {
         int256 norm2;
         norm2 = scalarProdXp(derived.tauAlpha, derived.tauAlpha);
-        _require(
+        _grequire(
             ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP,
             GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED
         );
         norm2 = scalarProdXp(derived.tauBeta, derived.tauBeta);
-        _require(
+        _grequire(
             ONE_XP - _DERIVED_TAU_NORM_ACCURACY_XP <= norm2 && norm2 <= ONE_XP + _DERIVED_TAU_NORM_ACCURACY_XP,
             GyroCEMMPoolErrors.DERIVED_TAU_NOT_NORMALIZED
         );
 
-        _require(derived.u <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
-        _require(derived.v <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
-        _require(derived.w <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
-        _require(derived.z <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _grequire(derived.u <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _grequire(derived.v <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _grequire(derived.w <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
+        _grequire(derived.z <= ONE_XP, GyroCEMMPoolErrors.DERIVED_UVWZ_WRONG);
 
-        _require(
+        _grequire(
             ONE_XP - _DERIVED_DSQ_NORM_ACCURACY_XP <= derived.dSq && derived.dSq <= ONE_XP + _DERIVED_DSQ_NORM_ACCURACY_XP,
             GyroCEMMPoolErrors.DERIVED_DSQ_WRONG
         );
 
         // NB No anti-overflow checks are required given the checks done above and in validateParams().
         int256 mulDenominator = ONE_XP.divXpU(calcAChiAChiInXp(params, derived) - ONE_XP);
-        _require(mulDenominator <= _MAX_INV_INVARIANT_DENOMINATOR_XP, GyroCEMMPoolErrors.INVARIANT_DENOMINATOR_WRONG);
+        _grequire(mulDenominator <= _MAX_INV_INVARIANT_DENOMINATOR_XP, GyroCEMMPoolErrors.INVARIANT_DENOMINATOR_WRONG);
     }
 
     function scalarProd(Vector2 memory t1, Vector2 memory t2) internal pure returns (int256 ret) {
@@ -233,7 +234,7 @@ library GyroCEMMMath {
         DerivedParams memory derived
     ) internal pure returns (int256, int256) {
         (int256 x, int256 y) = (balances[0].toInt256(), balances[1].toInt256());
-        _require(x.add(y) <= _MAX_BALANCES, GyroCEMMPoolErrors.MAX_ASSETS_EXCEEDED);
+        _grequire(x.add(y) <= _MAX_BALANCES, GyroCEMMPoolErrors.MAX_ASSETS_EXCEEDED);
 
         int256 AtAChi = calcAtAChi(x, y, params, derived);
         (int256 sqrt, int256 err) = calcInvariantSqrt(x, y, params, derived);
@@ -270,7 +271,7 @@ library GyroCEMMMath {
         // calculating lambda^2 w/o decimals so that the calculation will never overflow, the lost precision isn't important
         err = err + ((invariant.mulUpXpToNpU(mulDenominator) * ((params.lambda * params.lambda) / 1e36)) * 40) / ONE_XP + 1;
 
-        _require(invariant.add(err) <= _MAX_INVARIANT, GyroCEMMPoolErrors.MAX_INVARIANT_EXCEEDED);
+        _grequire(invariant.add(err) <= _MAX_INVARIANT, GyroCEMMPoolErrors.MAX_INVARIANT_EXCEEDED);
 
         return (invariant, err);
     }
@@ -468,10 +469,10 @@ library GyroCEMMMath {
     ) internal pure {
         if (assetIndex == 0) {
             int256 xPlus = maxBalances0(params, derived, invariant);
-            _require(newBal <= xPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _grequire(newBal <= xPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         } else {
             int256 yPlus = maxBalances1(params, derived, invariant);
-            _require(newBal <= yPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            _grequire(newBal <= yPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
     }
 
@@ -501,7 +502,7 @@ library GyroCEMMMath {
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         int256 balOutNew = calcGiven(balInNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
-        _require(balOutNew.toUint256() < balances[ixOut], assetBoundError);
+        _grequire(balOutNew.toUint256() < balances[ixOut], assetBoundError);
         amountOut = balances[ixOut] - balOutNew.toUint256();
         _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
     }
@@ -531,7 +532,7 @@ library GyroCEMMMath {
         int256 balOutNew = (balances[ixOut] - amountOut).toInt256();
         int256 balInNew = calcGiven(balOutNew, params, derived, invariant);
         uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
-        _require(balInNew.toUint256() > balances[ixIn], assetBoundError);
+        _grequire(balInNew.toUint256() > balances[ixIn], assetBoundError);
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         amountIn = balInNew.toUint256() - balances[ixIn];
         _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
