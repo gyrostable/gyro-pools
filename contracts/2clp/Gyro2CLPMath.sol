@@ -27,10 +27,6 @@ library Gyro2CLPMath {
     // Pool limits that arise from limitations in the fixed point power function (and the imposed 1:100 maximum weight
     // ratio).
 
-    // Swap limits: amounts swapped may not be larger than this percentage of total balance.
-    uint256 internal constant _MAX_IN_RATIO = 0.3e18;
-    uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-
     // Invariant growth limit: non-proportional joins cannot cause the invariant to increase by more than this ratio.
     uint256 internal constant _MAX_INVARIANT_RATIO = 3e18;
     // Invariant shrink limit: non-proportional exits cannot cause the invariant to decrease by less than this ratio.
@@ -163,7 +159,6 @@ library Gyro2CLPMath {
       // We add a very small safety margin to compensate for potential errors in the invariant.     //
       **********************************************************************************************/
 
-        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
@@ -173,10 +168,8 @@ library Gyro2CLPMath {
             amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
-        _grequire(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
-
-        // This in particular ensures amountOut < balanceOut.
-        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        // This ensures amountOut < balanceOut.
+        if (!(amountOut <= balanceOut)) _grequire(false, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
     }
 
     // Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
@@ -207,8 +200,8 @@ library Gyro2CLPMath {
       // We do not use L^2, but rather x' * y', to prevent a potential accumulation of errors.       //
       // We add a very small safety margin to compensate for potential errors in the invariant.      //
       **********************************************************************************************/
-        _grequire(amountOut < balanceOut, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
-        _require(amountOut <= balanceOut.mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balanceOut)) _grequire(false, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
+
         {
             // The factors in total lead to a multiplicative "safety margin" between the employed virtual offsets
             // very slightly larger than 3e-18.
@@ -217,8 +210,6 @@ library Gyro2CLPMath {
 
             amountIn = virtInOver.mulUp(amountOut).divUp(virtOutUnder.sub(amountOut));
         }
-
-        _require(amountIn <= balanceIn.mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
     }
 
     /** @dev calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2

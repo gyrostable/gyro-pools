@@ -113,24 +113,6 @@ def test_calcInGivenOut_pricebounds(gyro_three_math_testing):
         1,
         0,
     )
-    with reverts():
-        run_test_calcInGivenOut_pricebounds(
-            gyro_three_math_testing,
-            [10_000_000, 2_000_000, 10_000],
-            D("0.9998"),
-            5000,
-            2,
-            1,
-        )
-    with reverts():
-        run_test_calcInGivenOut_pricebounds(
-            gyro_three_math_testing,
-            [10_000_000, 2_000_000, 10_000],
-            D("0.9998"),
-            5000,
-            1,
-            2,
-        )
 
 
 def test_calcOutGivenIn_pricebounds(gyro_three_math_testing):
@@ -182,24 +164,6 @@ def test_calcOutGivenIn_pricebounds(gyro_three_math_testing):
         1,
         0,
     )
-    with reverts():
-        run_test_calcInGivenOut_pricebounds(
-            gyro_three_math_testing,
-            [10_000_000, 2_000_000, 10_000],
-            D("0.9998"),
-            5000,
-            2,
-            1,
-        )
-    with reverts():
-        run_test_calcInGivenOut_pricebounds(
-            gyro_three_math_testing,
-            [10_000_000, 2_000_000, 10_000],
-            D("0.9998"),
-            5000,
-            1,
-            2,
-        )
 
 
 def test_InOut_inverse(gyro_three_math_testing):
