@@ -21,10 +21,11 @@ import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactor
 import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
 import "../../interfaces/ICappedLiquidity.sol";
+import "../../interfaces/IGyro3CLPPoolFactory.sol";
 
 import "./Gyro3CLPPool.sol";
 
-contract Gyro3CLPPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract Gyro3CLPPoolFactory is IGyro3CLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
     uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
@@ -37,7 +38,7 @@ contract Gyro3CLPPoolFactory is BasePoolSplitCodeFactory, FactoryWidePauseWindow
     /**
      * @dev Deploys a new `Gyro3CLPPool`.
      */
-    function create(Gyro3CLPPool.NewPoolConfigParams memory config) external returns (address) {
+    function create(Gyro3CLPPool.NewPoolConfigParams memory config) external override returns (address) {
         Gyro3CLPPool.NewPoolParams memory params = Gyro3CLPPool.NewPoolParams({
             vault: getVault(),
             configAddress: gyroConfigAddress,
