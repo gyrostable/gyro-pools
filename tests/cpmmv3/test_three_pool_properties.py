@@ -337,15 +337,15 @@ def mtest_invariant_across_calcInGivenOut(
     # else:
     #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
-    if in_amount <= to_decimal("0.3") * balances[0]:  # and within_bal_ratio:
-        in_amount_sol = unscale(
-            gyro_three_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_offset_sol),
-            )
+    # if in_amount <= to_decimal("0.3") * balances[0]:  # and within_bal_ratio:
+    in_amount_sol = unscale(
+        gyro_three_math_testing.calcInGivenOut(
+            scale(balances[0]),
+            scale(balances[1]),
+            scale(amount_out),
+            scale(virtual_offset_sol),
         )
+    )
     # elif not within_bal_ratio:
     #     with reverts("BAL#357"):  # MIN_BAL_RATIO
     #         gyro_three_math_testing.calcInGivenOut(
@@ -355,15 +355,6 @@ def mtest_invariant_across_calcInGivenOut(
     #             scale(virtual_offset_sol),
     #         )
     #     return D(0), D(0)
-    else:
-        with reverts("BAL#304"):  # MAX_IN_RATIO
-            gyro_three_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_offset_sol),
-            )
-        return D(0), D(0)
 
     event("3Pool-InGivenOut-NoErr")
 
@@ -449,11 +440,8 @@ def mtest_invariant_across_calcOutGivenIn(
     # else:
     #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
 
-    if (
-        out_amount <= to_decimal("0.3") * balances[1]
-        # and within_bal_ratio
-        and out_amount >= 0
-    ):
+    out_amount_sol = 0
+    if out_amount >= 0:
         out_amount_sol = gyro_three_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
@@ -481,15 +469,6 @@ def mtest_invariant_across_calcOutGivenIn(
     #             scale(virtual_offset_sol),
     #         )
     #     return D(0), D(0)
-    else:
-        with reverts("BAL#305"):  # MAX_OUT_RATIO
-            gyro_three_math_testing.calcOutGivenIn(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_in),
-                scale(virtual_offset_sol),
-            )
-        return D(0), D(0)
 
     event("3Pool-OutGivenIn-NoErr")
 

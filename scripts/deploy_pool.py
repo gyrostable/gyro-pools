@@ -1,7 +1,7 @@
 import json
 import os
 from os import path
-from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory, Gyro2CLPPool, Gyro3CLPPool, interface  # type: ignore
+from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory, Gyro2CLPPool, Gyro3CLPPool, interface, FreezableTransparentUpgradeableProxy  # type: ignore
 from brownie.network import chain
 from tests.support.types import CapParams, TwoPoolFactoryCreateParams
 
@@ -29,7 +29,9 @@ def _get_tokens(config, is_fork):
 
 @with_deployed(Gyro2CLPPoolFactory)
 def c2lp(two_pool_factory):
-    two_pool_factory = interface.IGyro2CLPPoolFactory(two_pool_factory.address)
+    two_pool_factory = interface.IGyro2CLPPoolFactory(
+        FreezableTransparentUpgradeableProxy[0].address
+    )
     deployer = get_deployer()
     pool_config = _get_config()
     sqrts = [round(scale(v).raw) for v in pool_config["sqrts"]]
@@ -59,7 +61,9 @@ def c2lp(two_pool_factory):
 
 @with_deployed(Gyro3CLPPoolFactory)
 def c3lp(three_pool_factory):
-    three_pool_factory = interface.IGyro3CLPPoolFactory(three_pool_factory.address)
+    three_pool_factory = interface.IGyro3CLPPoolFactory(
+        FreezableTransparentUpgradeableProxy[1].address
+    )
     deployer = get_deployer()
     pool_config = _get_config()
     tx = three_pool_factory.create(
