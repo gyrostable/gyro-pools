@@ -258,9 +258,7 @@ library Gyro3CLPMath {
             uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
             // Note that the user can define amountIn so we have to check for overflows
-            // divDownU is fine b/c it would have already overflowed in the mulDown
-            // (i.e., we truncate 18 digits following the multiplication and then multiply again by 18 digits withinin the div)
-            amountOut = virtOutUnder.mulDown(amountIn).divDownU(virtInOver.add(amountIn));
+            amountOut = virtOutUnder.mulDown(amountIn).divDown(virtInOver.add(amountIn));
         }
 
         // Note that this in particular reverts if amountOut > balanceOut, i.e., if the out-amount would be more than
