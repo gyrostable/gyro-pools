@@ -33,21 +33,34 @@
     ]
   },
   "137": {
+    "BalancerHelpers": [
+      "0x239e55F427D44C3cc793f49bFB507ebe76638a2b"
+    ],
     "FreezableTransparentUpgradeableProxy": [
       "0x90f08B3705208E41DbEEB37A42Fb628dD483AdDa",
       "0x5d8545a7330245150bE0Ce88F8afB0EDc41dFc34"
     ],
     "Gyro2CLPPool": [
+      "0xaE2A061C9f7a0486fEbfCE17bCfb19DD777dd23c",
+      "0xB72d4d3fDD968F85c4623b1774eC003CbF192972",
       "0xEA68E7C87993b9ceDB2aF0F4969fCf0f40f72BdC"
     ],
     "Gyro2CLPPoolFactory": [
+      "0x3841eE752AE02B3E4260d064621902de1F1Eac46",
       "0x56f1774cded508d5b6902D419db2555F0A91ed5a"
     ],
+    "Gyro3CLPPool": [
+      "0x88856E26914a4503Fb9669e159AaE96d3f3Cb66B"
+    ],
     "Gyro3CLPPoolFactory": [
+      "0xe0D2c78e8b5C94D4dADb2D77d04020E2Fc5f28BD",
       "0xE59910C7725e15C28bA48bbBb995E7396536d981"
     ],
     "QueryProcessor": [
       "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768"
+    ],
+    "Vault": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
     ]
   }
 }
