@@ -1,0 +1,12 @@
+{
+  "name": "Gyroscope 3CLP USDC/TUSD/DAI",
+  "symbol": "3CLP-USDC-TUSD-DAI",
+  "tokens": ["USDC", "TUSD", "DAI"],
+  "root_3_alpha": "0.9997499687",
+  "swap_fee_percentage": "0.0003",
+  "cap": {
+    "enabled": false,
+    "global": "100",
+    "per_address": "10"
+  }
+}

@@ -119,7 +119,7 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     owner: address
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
-    pauseManager: address = DEFAULT_PAUSE_MANAGER
+    pause_manager: address = DEFAULT_PAUSE_MANAGER
 
 
 class ThreePoolParams(NamedTuple):
