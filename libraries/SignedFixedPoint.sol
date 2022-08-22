@@ -44,7 +44,7 @@ library SignedFixedPoint {
     }
 
     function sub(int256 a, int256 b) internal pure returns (int256) {
-        // Fixed Point addition is the same as regular checked addition
+        // Fixed Point subtraction is the same as regular checked subtraction
 
         int256 c = a - b;
         if (!(b <= 0 ? c >= a : c < a)) _require(false, Errors.SUB_OVERFLOW);

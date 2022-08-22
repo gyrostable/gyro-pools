@@ -191,7 +191,7 @@ library GyroCEMMMath {
     }
 
     /** Maximal value for the real reserves x when the respective other balance is 0 for given invariant
-     *  See calculation in Section 2.1.2. Calculation is ordered here for precision, but erorr in r is magnified by lambda
+     *  See calculation in Section 2.1.2. Calculation is ordered here for precision, but error in r is magnified by lambda
      *  Rounds down in signed direction */
     function maxBalances0(
         Params memory p,
@@ -227,7 +227,7 @@ library GyroCEMMMath {
      *  Computes r according to Prop 13 in 2.2.1 Initialization from Real Reserves
      *  orders operations to achieve best precision
      *  Returns an underestimate and a bound on error size.
-     *  Enforces anti-overflow limits on balances and the computed invaraint in the process. */
+     *  Enforces anti-overflow limits on balances and the computed invariant in the process. */
     function calculateInvariantWithError(
         uint256[] memory balances,
         Params memory params,
