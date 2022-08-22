@@ -9,6 +9,9 @@ import "../interfaces/ICappedLiquidity.sol";
 
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/IAuthentication.sol";
 
+/** @dev Enables caps on i) per-LP and ii) total caps on the pool size. Caps are in terms of BPT tokens! Pool functions
+ * have to call _ensureCap() to enforce the cap.
+ */
 abstract contract CappedLiquidity is ICappedLiquidity {
     using GyroFixedPoint for uint256;
 

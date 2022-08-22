@@ -6,14 +6,14 @@ interface ILocallyPausable {
     event UnpausedLocally();
     event PauseManagerChanged(address oldPauseManager, address newPauseManager);
 
-    /// @notice Changes the account that is allow to pause a pool
+    /// @notice Changes the account that is allowed to pause a pool.
     function changePauseManager(address _pauseManager) external;
 
-    /// @notice Pauses the pool
-    /// Can only be called by the pause manager
+    /// @notice Pauses the pool.
+    /// Can only be called by the pause manager.
     function pause() external;
 
-    /// @notice Unpauses the pool
-    /// Can only be called by the pause manager
+    /// @notice Unpauses the pool.
+    /// Can only be called by the pause manager.
     function unpause() external;
 }

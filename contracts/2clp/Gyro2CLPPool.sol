@@ -65,8 +65,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         gyroConfig = IGyroConfig(configAddress);
     }
 
-    // Returns sqrtAlpha and sqrtBeta (square roots of lower and upper price bounds of p_x respectively)
-
+    /// @dev Returns sqrtAlpha and sqrtBeta (square roots of lower and upper price bounds of p_x respectively)
     function getSqrtParameters() external view returns (uint256[2] memory) {
         return _sqrtParameters();
     }
@@ -84,8 +83,8 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
     /// @dev Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
     function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
         _upscaleArray(balances);
+        // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
         (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(balances[0], balances[1], true);
     }
 
@@ -118,8 +117,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         uint256[2] memory sqrtParams = _sqrtParameters();
 
-        // Since the Pool hooks always work with upscaled balances, we manually
-        // upscale here for consistency
+        // Since the Pool hooks always work with upscaled balances, we manually upscale here for consistency
         _upscaleArray(balances);
 
         return Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
@@ -161,7 +159,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             // Fees are subtracted before scaling, to reduce the complexity of the rounding direction analysis.
             // This is amount - fee amount, so we round up (favoring a higher fee amount).
             uint256 feeAmount = request.amount.mulUp(getSwapFeePercentage());
-            // TODO check this call: why do we need to upscale? Should we downscale??
+            // subtract fee and upscale so request.amount is appropriate for the following pool math.
             request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
             uint256 amountOut = _onSwapGivenIn(request, balanceTokenIn, balanceTokenOut, virtualParamIn, virtualParamOut);
@@ -182,6 +180,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         }
     }
 
+    // We assume all amounts to be upscaled correctly
     function _onSwapGivenIn(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
@@ -189,7 +188,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         uint256 virtualParamIn,
         uint256 virtualParamOut
     ) internal pure override returns (uint256) {
-        // Swaps are disabled while the contract is paused.
+        // NB: Swaps are disabled while the contract is paused.
         return Gyro2CLPMath._calcOutGivenIn(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualParamIn, virtualParamOut);
     }
 
@@ -200,13 +199,14 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         uint256 virtualParamIn,
         uint256 virtualParamOut
     ) internal pure override returns (uint256) {
-        // Swaps are disabled while the contract is paused.
+        // NB: Swaps are disabled while the contract is paused.
         return Gyro2CLPMath._calcInGivenOut(currentBalanceTokenIn, currentBalanceTokenOut, swapRequest.amount, virtualParamIn, virtualParamOut);
     }
 
+    /// @dev invariant and virtual offsets.
     function calculateCurrentValues(
-        uint256 balanceTokenIn,
-        uint256 balanceTokenOut,
+        uint256 balanceTokenIn,  // not scaled
+        uint256 balanceTokenOut, // not scaled
         bool tokenInIsToken0
     )
         public
@@ -225,8 +225,8 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
     }
 
     function _calculateCurrentValues(
-        uint256 balanceTokenIn,
-        uint256 balanceTokenOut,
+        uint256 balanceTokenIn,   // scaled
+        uint256 balanceTokenOut,  // scaled
         bool tokenInIsToken0
     )
         internal
@@ -237,7 +237,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             uint256 virtualParamOut
         )
     {
-        // if we have more tokens we might need to get the balances from the Vault
         uint256[] memory balances = new uint256[](2);
         balances[0] = tokenInIsToken0 ? balanceTokenIn : balanceTokenOut;
         balances[1] = tokenInIsToken0 ? balanceTokenOut : balanceTokenIn;
@@ -252,15 +251,13 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         virtualParamOut = tokenInIsToken0 ? virtualParam[1] : virtualParam[0];
     }
 
-    //Note: is public visibility ok for the following function?
-
     /**
      * @dev Called when the Pool is joined for the first time; that is, when the BPT total supply is zero.
      *
      * Returns the amount of BPT to mint, and the token amounts the Pool will receive in return.
      *
      * Minted BPT will be sent to `recipient`, except for _MINIMUM_BPT, which will be deducted from this amount and sent
-     * to the zero address instead. This will cause that BPT to remain forever locked there, preventing total BTP from
+     * to the zero address instead. This will cause that BPT to remain forever locked there, preventing total BPT from
      * ever dropping below that value, and ensuring `_onInitializePool` can only be called once in the entire Pool's
      * lifetime.
      *
@@ -286,6 +283,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
 
         // Set the initial BPT to the value of the invariant times the number of tokens. This makes BPT supply more
         // consistent in Pools with similar compositions but different number of tokens.
+        // Note that the BPT supply also depends on the parameters of the pool.
 
         uint256 bptAmountOut = Math.mul(invariantAfterJoin, 2);
 
@@ -313,7 +311,9 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
      *
      * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      *
-     * Responsibility for updating the oracle has been moved from `onJoinPool()` (without the underscore) to this function. That is because both this function and `_updateOracle()` need access to the invariant and this way we can share the computation.
+     * Responsibility for updating the oracle has been moved from `onJoinPool()` (without the underscore) to this
+     * function. That is because both this function and `_updateOracle()` need access to the invariant and this way we
+     * can share the computation.
      */
     function _onJoinPool(
         bytes32,
@@ -332,11 +332,13 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             uint256[] memory
         )
     {
+        // NB Joins are disabled when the pool is paused.
+
         uint256[2] memory sqrtParams = _sqrtParameters();
 
         // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
         // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
-        // spending gas calculating the fees on each individual swap.
+        // spending gas accounting for fees on each individual swap.
         uint256 invariantBeforeAction = Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
         uint256[2] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
 
@@ -351,9 +353,9 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             _ensureCap(bptAmountOut, balanceOf(recipient), totalSupply());
         }
 
-        // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
-        // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
-        // re-computation.
+        // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent
+        // with  'balances'. Therefore, we can use a simplified method to update the invariant that does not require a
+        // full re-computation.
         // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
         // protocol fee factor.
         _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountOut, totalSupply(), true);
@@ -428,8 +430,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
 
         uint256[2] memory sqrtParams = _sqrtParameters();
 
-        // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
-        // to avoid extra calculations and reduce the potential for errors.
         if (_isNotPaused()) {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
@@ -444,20 +444,20 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
 
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
-            // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
-            // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
-            // re-computation.
-            // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the total
-            // protocol fee factor.
+            // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still
+            // consistent with 'balances'. Therefore, we can use a simplified method to update the invariant that does
+            // not require a full re-computation.
+            // Note: Should this be changed in the future, we also need to reduce the invariant proportionally by the
+            // total protocol fee factor.
             _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountIn, totalSupply(), false);
         } else {
             // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
             // to avoid extra calculations and reduce the potential for errors.
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
-            // Invalidate _lastInvariant. We do not compute the invariant to make sure the pool is not locking
-            // up b/c numerical limits might be violated. Instead, we set the invariant such that any following
-            // (non-paused) join/exit will ignore and recompute it. (see GyroPoolMath._calcProtocolFees())
+            // Invalidate _lastInvariant. We do not compute the invariant to reduce the potential for errors or lockup.
+            // Instead, we set the invariant such that any following (non-paused) join/exit will ignore and recompute
+            // it. (see GyroPoolMath._calcProtocolFees())
             _lastInvariant = type(uint256).max;
         }
 
@@ -642,7 +642,9 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
     }
 
     /**
-     * @dev this variant of the function, called from `onJoinPool()` and `onExitPool()`, which we inherit, is a no-op. We instead have moved responsibility for updating the oracle to `_onJoinPool()` and `_onExitPool()` and the above version is called from there.
+     * @dev this variant of the function, called from `onJoinPool()` and `onExitPool()`, which we inherit, is a no-op.
+     * We instead have moved responsibility for updating the oracle to `_onJoinPool()` and `_onExitPool()` and the above
+     * version is called from there.
      */
     function _updateOracle(
         uint256 lastChangeBlock,

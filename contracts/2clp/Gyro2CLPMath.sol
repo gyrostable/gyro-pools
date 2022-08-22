@@ -15,6 +15,9 @@ import "./Gyro2CLPPoolErrors.sol";
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
+/** @dev Math routines for the 2CLP. Parameters are price bounds [alpha, beta] and sqrt(alpha), sqrt(beta) are used as
+ * parameters.
+ */
 library Gyro2CLPMath {
     using GyroFixedPoint for uint256;
     // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
@@ -52,7 +55,7 @@ library Gyro2CLPMath {
         // 0 = (1-sqrt(alpha/beta)*L^2 - (y/sqrt(beta)+x*sqrt(alpha))*L - x*y)
         // 0 = a*L^2 + b*L + c
         // here a > 0, b < 0, and c < 0, which is a special case that works well w/o negative numbers
-        // taking mb = -b and mc = -c:                            (1/2)
+        // taking mb = -b and mc = -c:                               (1/2)
         //                                  mb + (mb^2 + 4 * a * mc)^                   //
         //                   L =    ------------------------------------------          //
         //                                          2 * a                               //
@@ -132,9 +135,9 @@ library Gyro2CLPMath {
      *   The virtualOffset argument depends on the computed invariant. We add a very small margin to ensure that
      *   potential small errors are not to the detriment of the pool.
      *
-     *   This is the same function as the respective function for the CPMMV3, except for two points: (1) we allow two
-     *   different virtual offsets for the in- and out-asset, respectively; (2) we do not implement a minimum balance
-     *   ratio.
+     *   This is the same function as the respective function for the CPMMV3, except for we allow two
+     *   different virtual offsets for the in- and out-asset, respectively, in that other function.
+     *   SOMEDAY: This could be made literally the same function in the pool math library.
      */
     function _calcOutGivenIn(
         uint256 balanceIn,
@@ -172,12 +175,8 @@ library Gyro2CLPMath {
         if (!(amountOut <= balanceOut)) _grequire(false, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
     }
 
-    // Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
-    // current balances and weights.
-    // Similar to the one before but adapting bc negative values
-
-    /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances.
-     * See _calcOutGivenIn(). */
+    /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given current balances.
+     * See also _calcOutGivenIn(). Adapted for negative values. */
     function _calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -212,13 +211,13 @@ library Gyro2CLPMath {
         }
     }
 
-    /** @dev calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2
+    /** @dev Calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2
      */
     function _calculateVirtualParameter0(uint256 invariant, uint256 _sqrtBeta) internal pure returns (uint256) {
         return invariant.divDown(_sqrtBeta);
     }
 
-    /** @dev calculate virtual offset b for reserves y, as in (x+a)*(y+b)=L^2
+    /** @dev Calculate virtual offset b for reserves y, as in (x+a)*(y+b)=L^2
      */
     function _calculateVirtualParameter1(uint256 invariant, uint256 _sqrtAlpha) internal pure returns (uint256) {
         return invariant.mulDown(_sqrtAlpha);

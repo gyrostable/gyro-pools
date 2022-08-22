@@ -5,7 +5,8 @@ import "../interfaces/ILocallyPausable.sol";
 import "../libraries/GyroErrors.sol";
 
 /**
- * @notice This contract is used to allow a pool to be paused directly
+ * @notice This contract is used to allow a pool to be paused directly, rather than going through Balancer's
+ * authentication system.
  */
 abstract contract LocallyPausable is ILocallyPausable {
     address public pauseManager;
