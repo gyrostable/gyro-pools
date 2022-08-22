@@ -25,9 +25,7 @@ contract Gyro2CLPOracleMath {
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
 
-        // pool weights are hard-coded to 1/2
-        uint256 normalizedWeight = 5e17;
-        return (balanceA.add(virtualParameterA)).divUp(normalizedWeight).divUp((balanceB.add(virtualParameterB)).divUp(normalizedWeight));
+        return (balanceA.add(virtualParameterA)).divUp((balanceB.add(virtualParameterB)));
     }
 
     /**
