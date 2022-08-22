@@ -35,6 +35,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedOracleMath.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
+/** @dev Extensible version (i.e., methods can be overriden) of the WeightedPool2Tokens. */
 abstract contract ExtensibleWeightedPool2Tokens is
     IMinimalSwapInfoPool,
     BasePoolAuthorization,

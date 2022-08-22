@@ -15,31 +15,14 @@ import "./Gyro2CLPPoolErrors.sol";
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
+/** @dev Math routines for the 2CLP. Parameters are price bounds [alpha, beta] and sqrt(alpha), sqrt(beta) are used as
+ * parameters.
+ */
 library Gyro2CLPMath {
     using GyroFixedPoint for uint256;
-    // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
-    // implementation of the power function, as these ratios are often exponents.
-    uint256 internal constant _MIN_WEIGHT = 0.01e18;
-    // Having a minimum normalized weight imposes a limit on the maximum number of tokens;
-    // i.e., the largest possible pool is one where all tokens have exactly the minimum weight.
-    uint256 internal constant _MAX_WEIGHTED_TOKENS = 100;
 
-    // Pool limits that arise from limitations in the fixed point power function (and the imposed 1:100 maximum weight
-    // ratio).
-
-    // Invariant growth limit: non-proportional joins cannot cause the invariant to increase by more than this ratio.
-    uint256 internal constant _MAX_INVARIANT_RATIO = 3e18;
-    // Invariant shrink limit: non-proportional exits cannot cause the invariant to decrease by less than this ratio.
-    uint256 internal constant _MIN_INVARIANT_RATIO = 0.7e18;
-
-    // About swap fees on joins and exits:
-    // Any join or exit that is not perfectly balanced (e.g. all single token joins or exits) is mathematically
-    // equivalent to a perfectly balanced join or  exit followed by a series of swaps. Since these swaps would charge
-    // swap fees, it follows that (some) joins and exits should as well.
-    // On these operations, we split the token amounts in 'taxable' and 'non-taxable' portions, where the 'taxable' part
-    // is the one to which swap fees are applied.
-
-    // Invariant is used to collect protocol swap fees by comparing its value between two times.
+    // Invariant is used to calculate the virtual offsets used in swaps.
+    // It is also used to collect protocol swap fees by comparing its value between two times.
     // So we can round always to the same direction. It is also used to initiate the BPT amount
     // and, because there is a minimum BPT, we round down the invariant.
     function _calculateInvariant(
@@ -52,7 +35,7 @@ library Gyro2CLPMath {
         // 0 = (1-sqrt(alpha/beta)*L^2 - (y/sqrt(beta)+x*sqrt(alpha))*L - x*y)
         // 0 = a*L^2 + b*L + c
         // here a > 0, b < 0, and c < 0, which is a special case that works well w/o negative numbers
-        // taking mb = -b and mc = -c:                            (1/2)
+        // taking mb = -b and mc = -c:                               (1/2)
         //                                  mb + (mb^2 + 4 * a * mc)^                   //
         //                   L =    ------------------------------------------          //
         //                                          2 * a                               //
@@ -132,9 +115,9 @@ library Gyro2CLPMath {
      *   The virtualOffset argument depends on the computed invariant. We add a very small margin to ensure that
      *   potential small errors are not to the detriment of the pool.
      *
-     *   This is the same function as the respective function for the CPMMV3, except for two points: (1) we allow two
-     *   different virtual offsets for the in- and out-asset, respectively; (2) we do not implement a minimum balance
-     *   ratio.
+     *   This is the same function as the respective function for the CPMMV3, except for we allow two
+     *   different virtual offsets for the in- and out-asset, respectively, in that other function.
+     *   SOMEDAY: This could be made literally the same function in the pool math library.
      */
     function _calcOutGivenIn(
         uint256 balanceIn,
@@ -172,12 +155,8 @@ library Gyro2CLPMath {
         if (!(amountOut <= balanceOut)) _grequire(false, Gyro2CLPPoolErrors.ASSET_BOUNDS_EXCEEDED);
     }
 
-    // Computes how many tokens must be sent to a pool in order to take `amountOut`, given the
-    // current balances and weights.
-    // Similar to the one before but adapting bc negative values
-
-    /** @dev Computes how many tokens can be taken out of a pool if `amountIn' are sent, given current balances.
-     * See _calcOutGivenIn(). */
+    /** @dev Computes how many tokens must be sent to a pool in order to take `amountOut`, given current balances.
+     * See also _calcOutGivenIn(). Adapted for negative values. */
     function _calcInGivenOut(
         uint256 balanceIn,
         uint256 balanceOut,
@@ -212,13 +191,13 @@ library Gyro2CLPMath {
         }
     }
 
-    /** @dev calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2
+    /** @dev Calculate virtual offset a for reserves x, as in (x+a)*(y+b)=L^2
      */
     function _calculateVirtualParameter0(uint256 invariant, uint256 _sqrtBeta) internal pure returns (uint256) {
         return invariant.divDown(_sqrtBeta);
     }
 
-    /** @dev calculate virtual offset b for reserves y, as in (x+a)*(y+b)=L^2
+    /** @dev Calculate virtual offset b for reserves y, as in (x+a)*(y+b)=L^2
      */
     function _calculateVirtualParameter1(uint256 invariant, uint256 _sqrtAlpha) internal pure returns (uint256) {
         return invariant.mulDown(_sqrtAlpha);

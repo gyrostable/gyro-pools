@@ -13,9 +13,8 @@ contract FreezableTransparentUpgradeableProxy is TransparentUpgradeableProxy {
         bytes memory _data
     ) payable TransparentUpgradeableProxy(_logic, admin_, _data) {}
 
-    /// @notice Set the admin to address(0), which will result in freezing
-    /// the implementation of the token
-    /// This is a non-reversible action
+    /// @notice Set the admin to address(0), which will result in freezing the implementation of the token.
+    /// This is a non-reversible action.
     function freeze() external ifAdmin {
         bytes32 slot = _ADMIN_SLOT;
         address newAdmin = address(0);

@@ -21,15 +21,11 @@ contract Gyro2CLPOracleMath {
         uint256 balanceB,
         uint256 virtualParameterB
     ) internal pure returns (uint256) {
-        // Max balances are 2^112 and min weights are 0.01, so the division never overflows.
-
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
 
-        // pool weights are hard-coded to 1/2
-        uint256 normalizedWeight = 5e17;
-        return (balanceA.add(virtualParameterA)).divUp(normalizedWeight).divUp((balanceB.add(virtualParameterB)).divUp(normalizedWeight));
+        return (balanceA.add(virtualParameterA)).divUp((balanceB.add(virtualParameterB)));
     }
 
     /**
@@ -47,11 +43,6 @@ contract Gyro2CLPOracleMath {
         uint256 balanceB,
         uint256 virtualParameterB
     ) internal pure returns (int256) {
-        // Max balances are 2^112 and min weights are 0.01, so the division never overflows.
-
-        // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
-        // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
-        // result of zero is therefore only possible with zero balances, which are prevented via other means.
         uint256 spotPrice = _calcSpotPrice(balanceA, virtualParameterA, balanceB, virtualParameterB);
         return LogCompression.toLowResLog(spotPrice);
     }
@@ -63,8 +54,7 @@ contract Gyro2CLPOracleMath {
      * This uses the pool's spot price and so is also manipulable within a block and may not be accurate if the true price
      * is outside of the pool's price bounds.
      *
-     * The return value is a 4 decimal fixed-point number: use `LogCompression.fromLowResLog`
-     * to recover the original value.
+     * The return value is a 4 decimal fixed-point number: use `LogCompression.fromLowResLog` to recover the original value.
      */
     function _calcLogBPTPrice(
         uint256 balanceA,
