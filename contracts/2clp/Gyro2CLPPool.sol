@@ -205,7 +205,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
 
     /// @dev invariant and virtual offsets.
     function calculateCurrentValues(
-        uint256 balanceTokenIn,  // not scaled
+        uint256 balanceTokenIn, // not scaled
         uint256 balanceTokenOut, // not scaled
         bool tokenInIsToken0
     )
@@ -225,8 +225,8 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
     }
 
     function _calculateCurrentValues(
-        uint256 balanceTokenIn,   // scaled
-        uint256 balanceTokenOut,  // scaled
+        uint256 balanceTokenIn, // scaled
+        uint256 balanceTokenOut, // scaled
         bool tokenInIsToken0
     )
         internal
