@@ -45,7 +45,7 @@ library Gyro3CLPMath {
     uint256 internal constant _MAX_ROOT_3_ALPHA = 0.9999666655554938e18; // 3rd root of 0.9999, scaled
 
     // Threshold of l where the normal method of computing the newton step would overflow and we need a workaround.
-    uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 4.87e31; // 4.87e13, scaled
+    uint256 internal constant _L_THRESHOLD_SIMPLE_NUMERICS = 2e31; // 2e13, scaled
 
     // Threshold of l above which overflows may occur in the Newton iteration. This is far above the theoretically
     // maximum possible (starting or solution or intermediate) value of l, so it would only ever be reached due to some
