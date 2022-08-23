@@ -227,15 +227,15 @@ def maxOtherBalances(balances: List[D]) -> List[int]:
 
 
 def calcOutGivenIn(balanceIn: D, balanceOut: D, amountIn: D, virtualOffset: D) -> D:
-    virtIn = balanceIn + virtualOffset
-    virtOut = balanceOut + virtualOffset
+    virtIn = balanceIn + virtualOffset.mul_up(D(1) + D("2e-18"))
+    virtOut = balanceOut + virtualOffset * (D(1) - D("1e-18"))
     amountOut = virtOut.mul_down(amountIn).div_up(virtIn + amountIn)
     return amountOut
 
 
 def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) -> D:
-    virtIn = balanceIn + virtualOffset
-    virtOut = balanceOut + virtualOffset
+    virtIn = balanceIn + virtualOffset.mul_up(D(1) + D("2e-18"))
+    virtOut = balanceOut + virtualOffset * (D(1) - D("1e-18"))
     amountIn = virtIn.mul_up(amountOut).div_up(virtOut - amountOut)
     return amountIn
 
