@@ -6,14 +6,21 @@ This project uses Brownie as its main testing framework but is also
 compatible with hardhat to be able to reuse some of the Balancer testing
 infrastructure if needed.
 
+## Dependencies
+
+To install dependencies use
+
+```bash
+$ yarn
+```
 
 ## Compiling and testing
 
 The project can be compiled and tested using
 
-```
-brownie compile
-brownie test
+```bash
+$ brownie compile
+$ brownie test
 ```
 
 ## Gas Testing
@@ -29,7 +36,7 @@ tracer = Tracer.load()
 print(tracer.trace_tx(tx))
 ```
 
-For this to work, you need to install a version of brownie where a bug has been fixed:
+For this to work, you may need to install a version of brownie where a bug has been fixed:
 ```bash
 $ pip install -U git+https://github.com/danhper/brownie.git@avoid-removing-dependencies
 ```
