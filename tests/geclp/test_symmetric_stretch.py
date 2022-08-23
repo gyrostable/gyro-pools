@@ -1,16 +1,15 @@
 from math import pi, sin, cos
 
 import hypothesis.strategies as st
-import pytest
 
 # from pyrsistent import Invariant
 from brownie.test import given
 from hypothesis import assume, settings, HealthCheck
 import pytest
 
-from tests.cemm import cemm as mimpl
-from tests.cemm import cemm_prec_implementation as prec_impl
-from tests.cemm import util
+from tests.geclp import cemm as mimpl
+from tests.geclp import cemm_prec_implementation as prec_impl
+from tests.geclp import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import *
 from tests.support.util_common import BasicPoolParameters, gen_balances
@@ -46,17 +45,17 @@ bpool_params = BasicPoolParameters(
 
 @st.composite
 def gen_params(draw):
-    phi_degrees = draw(st.floats(45, 50))
+    phi_degrees = 45
     phi = phi_degrees / 360 * 2 * pi
 
     # Price bounds. Choose s.t. the 'peg' lies approximately within the bounds (within 30%).
     # It'd be nonsensical if this was not the case: Why are we using an ellipse then?!
     peg = D(1)  # = price where the flattest point of the ellipse lies.
     alpha = draw(qdecimals("0.05", "0.999"))
-    beta = draw(qdecimals("1.001", "1.1"))
+    beta = D(1) / D(alpha)
     s = sin(phi)
     c = cos(phi)
-    l = draw(qdecimals("5", "1e8"))
+    l = draw(qdecimals("50", "1e8"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
@@ -64,12 +63,12 @@ def gen_params(draw):
 def gen_params_cemm_liquidityUpdate(draw):
     params = draw(gen_params())
     balances = draw(gen_balances(2, bpool_params))
-    bpt_supply = draw(qdecimals(D("1e-1") * max(balances), D("1e4") * max(balances)))
+    bpt_supply = draw(qdecimals(D("1e-4") * max(balances), D("1e6") * max(balances)))
     isIncrease = draw(st.booleans())
     if isIncrease:
-        dsupply = draw(qdecimals(D("1e-5"), D("1e2") * bpt_supply))
+        dsupply = draw(qdecimals(D("1e-5"), D("1e4") * bpt_supply))
     else:
-        dsupply = draw(qdecimals(D("1e-5"), D("0.5") * bpt_supply))
+        dsupply = draw(qdecimals(D("1e-5"), D("0.99") * bpt_supply))
     return params, balances, bpt_supply, isIncrease, dsupply
 
 

@@ -5,7 +5,7 @@ from brownie import *
 from toolz import keyfilter, valmap, second, merge
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.cpmmv3 import v3_math_implementation as math_implementation
+from tests.g3clp import v3_math_implementation as math_implementation
 
 # See test_three_pool_properties.py
 from tests.support.utils import scale, unscale

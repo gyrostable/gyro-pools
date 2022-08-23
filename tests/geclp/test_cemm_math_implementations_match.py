@@ -5,8 +5,8 @@ import pytest
 from brownie.test import given
 from hypothesis import assume, settings, example
 
-from tests.cemm import cemm as mimpl
-from tests.cemm import util
+from tests.geclp import cemm as mimpl
+from tests.geclp import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal import QuantizedDecimal as Decimal
 from tests.support.types import *
@@ -16,7 +16,7 @@ from tests.support.util_common import (
     BasicPoolParameters,
 )
 
-# from tests.cemm.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector, \
+# from tests.geclp.util import params2MathParams, mathParams2DerivedParams, gen_params, gen_balances, gen_balances_vector, \
 #    gen_params_cemm_dinvariant
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 

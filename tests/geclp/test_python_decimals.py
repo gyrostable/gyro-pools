@@ -15,7 +15,7 @@ from brownie.test import given
 from hypothesis import settings, assume, example, HealthCheck
 from hypothesis import strategies as st
 
-from tests.cemm.util import (
+from tests.geclp.util import (
     params2MathParams,
     mathParams2DerivedParams,
     gen_params,
@@ -32,8 +32,8 @@ from tests.support.types import CEMMMathParams
 from tests.support.utils import qdecimals
 import pytest
 
-from tests.cemm import cemm as mimpl
-from tests.cemm import cemm_float as mimpl_float
+from tests.geclp import cemm as mimpl
+from tests.geclp import cemm_float as mimpl_float
 
 MIN_BALANCE_RATIO = D("1E-5")
 MIN_FEE = D("0.0001")
@@ -180,7 +180,7 @@ def mtest_invariant_across_calcOutGivenIn(params, balances, amountIn, tokenInIsT
     fees = MIN_FEE * amountIn
     amountIn -= fees
 
-    mamountOut = f_trade(amountIn)  # This changes the state of the cemm but whatever
+    mamountOut = f_trade(amountIn)  # This changes the state of the geclp but whatever
 
     assume(mamountOut is not None)
 
@@ -268,7 +268,7 @@ def test_invariant_across_calcOutGivenIn_float(
     fees = float(MIN_FEE) * amountIn
     amountIn -= fees
 
-    mamountOut = f_trade(amountIn)  # This changes the state of the cemm but whatever
+    mamountOut = f_trade(amountIn)  # This changes the state of the geclp but whatever
 
     assume(mamountOut is not None)
 

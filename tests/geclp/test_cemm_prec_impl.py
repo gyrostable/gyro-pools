@@ -18,8 +18,8 @@ from tests.support.util_common import (
     gen_balances,
     gen_balances_vector,
 )
-from tests.cemm import cemm_100 as mimpl
-from tests.cemm import cemm_prec_implementation as prec_impl
+from tests.geclp import cemm_100 as mimpl
+from tests.geclp import cemm_prec_implementation as prec_impl
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import *
 from tests.support.utils import scale, to_decimal, qdecimals, unscale, apply_deep
@@ -76,7 +76,7 @@ def paramsTo100(params: CEMMMathParams) -> CEMMMathParams:
 
 def params2MathParams(params: CEMMMathParams) -> mimpl.Params:
     """Map 100-decimal CEMMMathParams to 100-decimal mimpl.Params.
-    This is equal to .util.params2MathParams() but has to be re-written to use the right cemm impl module."""
+    This is equal to .util.params2MathParams() but has to be re-written to use the right geclp impl module."""
     return mimpl.Params(params.alpha, params.beta, params.c, -params.s, params.l)
 
 

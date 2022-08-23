@@ -3,9 +3,9 @@ from operator import sub, add
 import pytest
 from brownie import ZERO_ADDRESS
 
-from tests.cemm.util import params2MathParams
+from tests.geclp.util import params2MathParams
 from tests.conftest import TOKENS_PER_USER
-from tests.cpmmv2 import constants
+from tests.g2clp import constants
 from tests.support.types import (
     CallJoinPoolGyroParams,
     SwapKind,
@@ -14,8 +14,8 @@ from tests.support.types import (
 )
 from tests.support.utils import approxed, unscale, to_decimal
 
-from tests.cemm import cemm as math_implementation
-from tests.cemm import cemm_prec_implementation as prec_impl
+from tests.geclp import cemm as math_implementation
+from tests.geclp import cemm_prec_implementation as prec_impl
 
 
 def test_empty_erc20s(admin, gyro_erc20_empty):

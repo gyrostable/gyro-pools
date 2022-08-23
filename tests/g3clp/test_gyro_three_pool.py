@@ -3,7 +3,7 @@ from math import prod
 import pytest
 from brownie import ZERO_ADDRESS
 from tests.conftest import TOKENS_PER_USER
-from tests.cpmmv3 import constants
+from tests.g3clp import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.utils import unscale, scale, approxed, to_decimal

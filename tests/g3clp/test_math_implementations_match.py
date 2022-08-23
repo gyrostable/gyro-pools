@@ -5,7 +5,7 @@ import hypothesis.strategies as st
 import numpy as np
 from hypothesis import settings, assume, example
 
-import tests.cpmmv3.v3_math_implementation as math_implementation
+import tests.g3clp.v3_math_implementation as math_implementation
 from brownie import reverts
 from brownie.test import given
 from pytest import mark
