@@ -140,7 +140,7 @@ library SignedFixedPoint {
             return 0;
         }
 
-        // TODO check if we can shave off some gas by logically refactoring this vs the below case distinction into one (on a * b or so).
+        // SOMEDAY check if we can shave off some gas by logically refactoring this vs the below case distinction into one (on a * b or so).
         if (b < 0) {
             // Ensure b > 0 so the below is correct.
             b = -b;
@@ -215,7 +215,7 @@ library SignedFixedPoint {
     function mulDownXpToNpU(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
         int256 b2 = b % 1e19;
-        // TODO check if we eliminate these vars and save some gas (by only checking the sign of prod1, say)
+        // SOMEDAY check if we eliminate these vars and save some gas (by only checking the sign of prod1, say)
         int256 prod1 = a * b1;
         int256 prod2 = a * b2;
         return prod1 >= 0 && prod2 >= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 + 1) / 1e19 - 1;
@@ -241,42 +241,13 @@ library SignedFixedPoint {
     function mulUpXpToNpU(int256 a, int256 b) internal pure returns (int256) {
         int256 b1 = b / 1e19;
         int256 b2 = b % 1e19;
-        // TODO check if we eliminate these vars and save some gas (by only checking the sign of prod1, say)
+        // SOMEDAY check if we eliminate these vars and save some gas (by only checking the sign of prod1, say)
         int256 prod1 = a * b1;
         int256 prod2 = a * b2;
         return prod1 <= 0 && prod2 <= 0 ? (prod1 + prod2 / 1e19) / 1e19 : (prod1 + prod2 / 1e19 - 1) / 1e19 + 1;
     }
 
-    // TODO not implementing the pow functions right now b/c it's annoying and slightly ill-defined, and we prob don't need them.
-
-    /**
-     * @dev Returns x^y, assuming both are fixed point numbers, rounding down. The result is guaranteed to not be above
-     * the true value (that is, the error function expected - actual is always positive).
-     * x must be non-negative! y can be negative.
-     */
-    // function powDown(int256 x, int256 y) internal pure returns (int256) {
-    //     _require(x >= 0, Errors.X_OUT_OF_BOUNDS);
-    //     if (y > 0) {
-    //         uint256 uret = FixedPoint.powDown(uint256(x), uint256(y));
-    //     } else {
-    //         // TODO does this cost a lot of precision compared to a direct implementation (which we don't have)?
-    //         return ONE.divDown(FixedPoint.powUp(uint256(x), uint256(-y)));
-    //     }
-    // }
-
-    /**
-     * @dev Returns x^y, assuming both are fixed point numbers, rounding up. The result is guaranteed to not be below
-     * the true value (that is, the error function expected - actual is always negative).
-     * x must be non-negative! y can be negative.
-     */
-    // function powUp(int256 x, int256 y) internal pure returns (int256) {
-    //     _require(x >= 0, Errors.X_OUT_OF_BOUNDS);
-    //     if (y > 0)
-    //         return FixedPoint.powUp(x, y);
-    //     else
-    //         // TODO does this cost a lot of precision compared to a direct implementation (which we don't have)?
-    //         return ONE.divUp(FixedPoint.powDown(x, -y));
-    // }
+    // not implementing the pow functions right now b/c it's annoying and slightly ill-defined, and we don't use them.
 
     /**
      * @dev Returns the complement of a value (1 - x), capped to 0 if x is larger than 1.

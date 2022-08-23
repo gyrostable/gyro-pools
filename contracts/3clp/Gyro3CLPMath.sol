@@ -263,7 +263,7 @@ library Gyro3CLPMath {
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
             // SOMEDAY These factors could further be adjusted to compensate for potential errors in the invariant when
-            // the balances are very large. (this may not be needed, to be revisited later)
+            // the balances are very large. (likely not needed)
             uint256 virtInOver = balanceIn + virtualOffset.mulUpU(GyroFixedPoint.ONE + 2);
             uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
@@ -308,7 +308,7 @@ library Gyro3CLPMath {
             // very slightly larger than 3e-18, compensating for the maximum multiplicative error in the invariant
             // computation.
             // SOMEDAY These factors could further be adjusted to compensate for potential errors in the invariant when
-            // the balances are very large. (this may not be needed, to be revisited later)
+            // the balances are very large. (likely not needed)
             uint256 virtInOver = balanceIn + virtualOffset.mulUpU(GyroFixedPoint.ONE + 2);
             uint256 virtOutUnder = balanceOut + virtualOffset.mulDownU(GyroFixedPoint.ONE - 1);
 
