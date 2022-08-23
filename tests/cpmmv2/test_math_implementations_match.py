@@ -183,7 +183,7 @@ def test_calculate_sqrt(gyro_two_math_testing, input):
 def test_calc_in_given_out(
     gyro_two_math_testing, amount_out, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
-    assume(amount_out <= to_decimal("0.3") * (balances[1]))
+    assume(amount_out <= (balances[1]))
     assume(balances[0] > 0 and balances[1] > 0)
 
     assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
@@ -208,42 +208,15 @@ def test_calc_in_given_out(
         to_decimal(virtual_param_out),
     )
 
-    bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
-    if bal_out_new > bal_in_new:
-        within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    else:
-        within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
-
-    if in_amount <= to_decimal("0.3") * balances[0] and within_bal_ratio:
-        in_amount_sol = unscale(
-            gyro_two_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_param_in),
-                scale(virtual_param_out),
-            )
+    in_amount_sol = unscale(
+        gyro_two_math_testing.calcInGivenOut(
+            scale(balances[0]),
+            scale(balances[1]),
+            scale(amount_out),
+            scale(virtual_param_in),
+            scale(virtual_param_out),
         )
-    elif not within_bal_ratio:
-        with reverts("BAL#357"):  # MIN_BAL_RATIO
-            gyro_two_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_param_in),
-                scale(virtual_param_out),
-            )
-        return
-    else:
-        with reverts("BAL#304"):  # MAX_IN_RATIO
-            gyro_two_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_param_in),
-                scale(virtual_param_out),
-            )
-        return
+    )
 
     # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
     # implemented in python)
@@ -260,7 +233,6 @@ def test_calc_in_given_out(
 def test_calc_out_given_in(
     gyro_two_math_testing, amount_in, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
-    assume(amount_in <= to_decimal("0.3") * (balances[0]))
     assume(balances[0] > 0 and balances[1] > 0)
 
     assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
@@ -285,17 +257,7 @@ def test_calc_out_given_in(
         to_decimal(virtual_param_out),
     )
 
-    bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
-    if bal_out_new > bal_in_new:
-        within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    else:
-        within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
-
-    if (
-        out_amount <= to_decimal("0.3") * balances[1]
-        and within_bal_ratio
-        and out_amount >= 0
-    ):
+    if out_amount <= balances[1] and out_amount >= 0:
         out_amount_sol = unscale(
             gyro_two_math_testing.calcOutGivenIn(
                 scale(balances[0]),
@@ -315,18 +277,8 @@ def test_calc_out_given_in(
                 scale(virtual_param_out),
             )
         return
-    elif not within_bal_ratio:
-        with reverts("BAL#357"):  # MIN_BAL_RATIO
-            gyro_two_math_testing.calcOutGivenIn(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_in),
-                scale(virtual_param_in),
-                scale(virtual_param_out),
-            )
-        return
     else:
-        with reverts("BAL#305"):  # MAX_OUT_RATIO
+        with reverts("GYR#357"):  # ASSET_BOUNDS_EXCEEDED
             gyro_two_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),

@@ -227,20 +227,16 @@ def maxOtherBalances(balances: List[D]) -> List[int]:
 
 
 def calcOutGivenIn(balanceIn: D, balanceOut: D, amountIn: D, virtualOffset: D) -> D:
-    assert amountIn <= balanceIn * _MAX_IN_RATIO
     virtIn = balanceIn + virtualOffset
     virtOut = balanceOut + virtualOffset
     amountOut = virtOut.mul_down(amountIn).div_up(virtIn + amountIn)
-    # assert amountOut <= balanceOut * _MAX_OUT_RATIO
     return amountOut
 
 
 def calcInGivenOut(balanceIn: D, balanceOut: D, amountOut: D, virtualOffset: D) -> D:
-    assert amountOut <= balanceOut * _MAX_OUT_RATIO
     virtIn = balanceIn + virtualOffset
     virtOut = balanceOut + virtualOffset
     amountIn = virtIn.mul_up(amountOut).div_up(virtOut - amountOut)
-    # assert amountIn <= balanceIn * _MAX_IN_RATIO
     return amountIn
 
 

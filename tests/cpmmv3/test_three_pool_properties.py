@@ -306,7 +306,7 @@ def mtest_invariant_across_calcInGivenOut(
     check_sol_inv,
     check_price_impact_direction=False,
 ):
-    assume(amount_out < to_decimal("0.3") * (balances[1]))
+    assume(amount_out < (balances[1]))
 
     invariant = math_implementation.calculateInvariant(
         to_decimal(balances), to_decimal(root_three_alpha)
@@ -331,39 +331,14 @@ def mtest_invariant_across_calcInGivenOut(
         virtual_offset,
     )
 
-    bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
-    # if bal_out_new > bal_in_new:
-    #     within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    # else:
-    #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
-
-    if in_amount <= to_decimal("0.3") * balances[0]:  # and within_bal_ratio:
-        in_amount_sol = unscale(
-            gyro_three_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_offset_sol),
-            )
+    in_amount_sol = unscale(
+        gyro_three_math_testing.calcInGivenOut(
+            scale(balances[0]),
+            scale(balances[1]),
+            scale(amount_out),
+            scale(virtual_offset_sol),
         )
-    # elif not within_bal_ratio:
-    #     with reverts("BAL#357"):  # MIN_BAL_RATIO
-    #         gyro_three_math_testing.calcInGivenOut(
-    #             scale(balances[0]),
-    #             scale(balances[1]),
-    #             scale(amount_out),
-    #             scale(virtual_offset_sol),
-    #         )
-    #     return D(0), D(0)
-    else:
-        with reverts("BAL#304"):  # MAX_IN_RATIO
-            gyro_three_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_offset_sol),
-            )
-        return D(0), D(0)
+    )
 
     event("3Pool-InGivenOut-NoErr")
 
@@ -418,7 +393,6 @@ def mtest_invariant_across_calcOutGivenIn(
     check_sol_inv,
     check_price_impact_direction=False,
 ):
-    assume(amount_in < to_decimal("0.3") * (balances[0]))
 
     fees = MIN_FEE * amount_in
     amount_in -= fees
@@ -443,17 +417,7 @@ def mtest_invariant_across_calcOutGivenIn(
         virtual_offset,
     )
 
-    bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
-    # if bal_out_new > bal_in_new:
-    #     within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    # else:
-    #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
-
-    if (
-        out_amount <= to_decimal("0.3") * balances[1]
-        # and within_bal_ratio
-        and out_amount >= 0
-    ):
+    if out_amount <= balances[1] and out_amount >= 0:
         out_amount_sol = gyro_three_math_testing.calcOutGivenIn(
             scale(balances[0]),
             scale(balances[1]),
@@ -472,17 +436,8 @@ def mtest_invariant_across_calcOutGivenIn(
                 scale(virtual_offset_sol),
             )
         return D(0), D(0)
-    # elif not within_bal_ratio:
-    #     with reverts("BAL#357"):  # MIN_BAL_RATIO
-    #         gyro_three_math_testing.calcOutGivenIn(
-    #             scale(balances[0]),
-    #             scale(balances[1]),
-    #             scale(amount_in),
-    #             scale(virtual_offset_sol),
-    #         )
-    #     return D(0), D(0)
     else:
-        with reverts("BAL#305"):  # MAX_OUT_RATIO
+        with reverts("GYR#357"):  # ASSET_BOUNDS_EXCEEDED
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),

@@ -132,7 +132,7 @@ def test_calc_in_given_out(
 
     # assume(not faulty_params)
 
-    assume(amount_out < to_decimal("0.3") * (balances[1]))
+    assume(amount_out < (balances[1]))
 
     invariant = unscale(
         gyro_three_math_testing.calculateInvariant(
@@ -149,39 +149,14 @@ def test_calc_in_given_out(
         virtual_offset,
     )
 
-    bal_out_new, bal_in_new = (balances[0] + in_amount, balances[1] - amount_out)
-    # if bal_out_new > bal_in_new:
-    #     within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    # else:
-    #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
-
-    if in_amount <= to_decimal("0.3") * balances[0]:  # and within_bal_ratio:
-        in_amount_sol = unscale(
-            gyro_three_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_offset),
-            )
+    in_amount_sol = unscale(
+        gyro_three_math_testing.calcInGivenOut(
+            scale(balances[0]),
+            scale(balances[1]),
+            scale(amount_out),
+            scale(virtual_offset),
         )
-    # elif not within_bal_ratio:
-    #     with reverts("BAL#357"):  # MIN_BAL_RATIO
-    #         gyro_three_math_testing.calcInGivenOut(
-    #             scale(balances[0]),
-    #             scale(balances[1]),
-    #             scale(amount_out),
-    #             scale(virtual_offset),
-    #         )
-    #     return
-    else:
-        with reverts("BAL#304"):  # MAX_IN_RATIO
-            gyro_three_math_testing.calcInGivenOut(
-                scale(balances[0]),
-                scale(balances[1]),
-                scale(amount_out),
-                scale(virtual_offset),
-            )
-        return
+    )
 
     # We don't get a truly exact match b/c of the safety margin used by the Solidity implementation. (this is not
     # implemented in python)
@@ -201,7 +176,6 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
     balances, amount_in = setup
 
     # assume(not faulty_params)
-    assume(amount_in < to_decimal("0.3") * (balances[0]))
 
     invariant = unscale(
         gyro_three_math_testing.calculateInvariant(
@@ -218,17 +192,7 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
         virtual_offset,
     )
 
-    bal_out_new, bal_in_new = (balances[0] + amount_in, balances[1] - out_amount)
-    # if bal_out_new > bal_in_new:
-    #     within_bal_ratio = bal_in_new / bal_out_new > MIN_BAL_RATIO
-    # else:
-    #     within_bal_ratio = bal_out_new / bal_in_new > MIN_BAL_RATIO
-
-    if (
-        out_amount <= to_decimal("0.3") * balances[1]
-        # and within_bal_ratio
-        and out_amount >= 0
-    ):
+    if out_amount <= balances[1] and out_amount >= 0:
         out_amount_sol = unscale(
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
@@ -246,17 +210,8 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
                 scale(virtual_offset),
             )
         return
-    # elif not within_bal_ratio:
-    #     with reverts("BAL#357"):  # MIN_BAL_RATIO
-    #         gyro_three_math_testing.calcOutGivenIn(
-    #             scale(balances[0]),
-    #             scale(balances[1]),
-    #             scale(amount_in),
-    #             scale(virtual_offset),
-    #         )
-    #     return
     else:
-        with reverts("BAL#305"):  # MAX_OUT_RATIO
+        with reverts("GYR#357"):  # ASSET_BOUNDS_EXCEEDED
             gyro_three_math_testing.calcOutGivenIn(
                 scale(balances[0]),
                 scale(balances[1]),
