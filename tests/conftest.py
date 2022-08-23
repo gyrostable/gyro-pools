@@ -19,12 +19,12 @@ from tests.support.types import (
     TwoPoolFactoryCreateParams,
 )
 
-from tests.cemm import cemm_prec_implementation
+from tests.geclp import cemm_prec_implementation
 
 TOKENS_PER_USER = 1000 * 10**18
 
 # This will provide assertion introspection for common test functions defined in this module.
-pytest.register_assert_rewrite("tests.cemm.util", "tests.cpmmv3.util")
+pytest.register_assert_rewrite("tests.geclp.util", "tests.g3clp.util")
 
 
 @pytest.fixture(scope="session")

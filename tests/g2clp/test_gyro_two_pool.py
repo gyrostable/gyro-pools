@@ -2,7 +2,7 @@ import pytest
 from brownie import ZERO_ADDRESS
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.conftest import TOKENS_PER_USER
-from tests.cpmmv2 import constants
+from tests.g2clp import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
 from tests.support.utils import unscale, approxed
 

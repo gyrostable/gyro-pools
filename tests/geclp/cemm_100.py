@@ -1,4 +1,4 @@
-# 100-decimal-place (very high precision) version of `cemm.py`.
+# 100-decimal-place (very high precision) version of `geclp.py`.
 
 from dataclasses import dataclass
 

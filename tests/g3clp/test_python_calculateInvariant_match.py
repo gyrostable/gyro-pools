@@ -9,9 +9,9 @@ from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import to_decimal, qdecimals
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
-import tests.cpmmv3.v3_math_implementation as mimpl
+import tests.g3clp.v3_math_implementation as mimpl
 
-from tests.cpmmv3.util import gen_synthetic_balances, equal_balances_at_invariant
+from tests.g3clp.util import gen_synthetic_balances, equal_balances_at_invariant
 
 from pytest import approx
 

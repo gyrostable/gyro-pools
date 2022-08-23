@@ -7,8 +7,8 @@ import pytest
 from brownie.test import given
 from hypothesis import assume
 
-from tests.cemm import cemm as mimpl
-from tests.cemm import util
+from tests.geclp import cemm as mimpl
+from tests.geclp import util
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import *
 from tests.support.util_common import (

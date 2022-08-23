@@ -5,7 +5,7 @@ import hypothesis.strategies as st
 from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, event
-from tests.cpmmv2 import math_implementation
+from tests.g2clp import math_implementation
 from tests.libraries import pool_math_implementation
 from tests.support.util_common import BasicPoolParameters
 from tests.support.utils import scale, to_decimal, qdecimals, unscale

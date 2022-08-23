@@ -4,8 +4,8 @@ from hypothesis import strategies as st, assume, event
 
 from brownie import reverts
 
-from tests.cemm import cemm as mimpl
-from tests.cemm import cemm_prec_implementation as prec_impl
+from tests.geclp import cemm as mimpl
+from tests.geclp import cemm_prec_implementation as prec_impl
 from tests.libraries import pool_math_implementation
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
@@ -126,9 +126,9 @@ def mtest_zeta(params_px, gyro_cemm_math_testing):
     mparams = params2MathParams(params)
 
     # DEBUG: WEIRD IMPORT ERROR!
-    # Problem: mimpl is actually cemm_100.py, not cemm.py, which leads to problems.
+    # Problem: mimpl is actually cemm_100.py, not geclp.py, which leads to problems.
     assert isinstance(mparams, mimpl.Params)  # Catch weird type error
-    assert str(type(mparams)) == "<class 'tests.cemm.cemm.Params'>"
+    assert str(type(mparams)) == "<class 'tests.geclp.geclp.Params'>"
 
     res_sol = gyro_cemm_math_testing.zeta(scale(params), scale(px))
     res_math = mparams.zeta(px)
@@ -368,7 +368,7 @@ def mtest_calcXGivenY(params, y, r, derivedparams_is_sol: bool, gyro_cemm_math_t
     assume(y / x > bpool_params.min_balance_ratio)
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
-        scale(y), scale(params), derived_scaled, scale(r)  # scale(cemm.r)
+        scale(y), scale(params), derived_scaled, scale(r)  # scale(geclp.r)
     )
     return x, to_decimal(x_sol)
 
@@ -609,8 +609,8 @@ def mtest_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testin
 #     )
 
 #     # To try it out even
-#     assert dx == (dinvariant / r * cemm.x).approxed(abs=1e-5)
-#     assert dy == (dinvariant / r * cemm.y).approxed(abs=1e-5)
+#     assert dx == (dinvariant / r * geclp.x).approxed(abs=1e-5)
+#     assert dy == (dinvariant / r * geclp.y).approxed(abs=1e-5)
 
 
 #####################################################################

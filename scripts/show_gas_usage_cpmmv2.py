@@ -16,7 +16,7 @@ from brownie import (
 )
 from brownie.network.transaction import TransactionReceipt
 
-from tests.cemm import cemm_prec_implementation
+from tests.geclp import cemm_prec_implementation
 from tests.conftest import scale_cemm_params, scale_derived_values
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import (

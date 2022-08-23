@@ -6,7 +6,7 @@ from tests.support.utils import scale, qdecimals
 
 billion_balance_strategy = qdecimals(min_value=0, max_value=1_000_000_000)
 
-from tests.cpmmv2 import math_implementation as cp
+from tests.g2clp import math_implementation as cp
 
 # this is a multiplicative separation
 # This is consistent with tightest price range of 0.9999 - 1.0001

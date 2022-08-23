@@ -4,9 +4,9 @@ import hypothesis.strategies as st
 from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings, example, HealthCheck, event
-import tests.cpmmv3.v3_math_implementation as math_implementation
+import tests.g3clp.v3_math_implementation as math_implementation
 from tests.libraries import pool_math_implementation
-from tests.cpmmv3.util import (
+from tests.g3clp.util import (
     gen_synthetic_balances,
     gen_synthetic_balances_1asset,
     gen_synthetic_balances_2assets,

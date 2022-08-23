@@ -8,7 +8,7 @@ from _pytest.python_api import ApproxDecimal
 from brownie.test import given
 from brownie import reverts
 from hypothesis import assume, settings
-from tests.cemm import cemm as mimpl
+from tests.geclp import cemm as mimpl
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
 from tests.support.quantized_decimal import QuantizedDecimal as D

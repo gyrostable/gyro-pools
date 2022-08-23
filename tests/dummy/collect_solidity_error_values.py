@@ -12,9 +12,9 @@ from hypothesis import settings, example
 from hypothesis import strategies as st
 from toolz import groupby, first, second, valmap
 
-from tests.cemm import util
-from tests.cemm import test_cemm_properties
-from tests.cemm.util import gen_params
+from tests.geclp import util
+from tests.geclp import test_cemm_properties
+from tests.geclp.util import gen_params
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams
@@ -57,7 +57,7 @@ def my_test_calcOutGivenIn(
     bpool_params = copy(test_cemm_properties.bpool_params)
     bpool_params.min_fee = D(
         0
-    )  # For comparability with the other data, from `tests/cemm/test_python_decimals.py`
+    )  # For comparability with the other data, from `tests/geclp/test_python_decimals.py`
     loss_ub, loss_ub_sol = util.mtest_invariant_across_calcOutGivenIn(
         params,
         balances,
