@@ -176,7 +176,7 @@ def calculateInvariantAltFloatWithInfo(balances: Iterable[D], root3Alpha: D):
     f, df = invariantFunctionsFloat(balances, root3Alpha)
     a, mb, mc, md = calculateCubicTermsFloat(map(float, balances), float(root3Alpha))
 
-    # See CPMMV writeup, appendix A.1
+    # See 2/3CLP writeup, appendix A.1
     l_m = mb / (3 * a)
     l_plus = l_m + sqrt(l_m**2 + mc)
     l_0 = 1.5 * l_plus

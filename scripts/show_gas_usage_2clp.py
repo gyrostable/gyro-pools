@@ -123,8 +123,8 @@ mock_vault_pool = admin.deploy(Gyro2CLPPool, args, mock_gyro_config.address)
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
 MAXLVL = None
 
-# TODO the following fct is actually independent of the pool, and so is *most* of the setup. Duplicated for CEMM
-# Prob makes sense to pull apart, though we wanna do sth slightly different for the CPMMV3
+# SOMEDAY duplicate: the following fct is actually independent of the pool, and so is *most* of the setup.
+# Prob makes sense to pull apart, though we wanna do sth slightly different for the 3CLP
 def main():
     poolId = mock_vault_pool.getPoolId()
 

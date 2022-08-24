@@ -56,7 +56,7 @@ brownie compile; brownie run scripts/my_script.py
 There are gas measurement scripts at `scripts/show_gas_usage_*.py`. For example:
 
 ```bash
-$ brownie run scripts/show_gas_usage_cpmmv2.py
+$ brownie run scripts/show_gas_usage_2clp.py
 ```
 
 You can run all the ready-made gas measurements, and store their data, via

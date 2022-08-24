@@ -16,7 +16,7 @@ import "../../libraries/GyroErrors.sol";
 // should be fixed.
 // solhint-disable private-vars-leading-underscore
 
-/** @dev Math routines for the "symmetric" CPMMv3, i.e., the price bounds are [alpha, 1/alpha] for all three asset
+/** @dev Math routines for the "symmetric" 3CLP, i.e., the price bounds are [alpha, 1/alpha] for all three asset
  * pairs. We pass the parameter root3Alpha = 3rd root of alpha. We don't need to compute root3Alpha; instead, we
  * take this as the fundamental parameter and compute alpha = root3Alpha^3 where needed.
  *

@@ -115,7 +115,7 @@ library Gyro2CLPMath {
      *   The virtualOffset argument depends on the computed invariant. We add a very small margin to ensure that
      *   potential small errors are not to the detriment of the pool.
      *
-     *   This is the same function as the respective function for the CPMMV3, except for we allow two
+     *   This is the same function as the respective function for the 3CLP, except for we allow two
      *   different virtual offsets for the in- and out-asset, respectively, in that other function.
      *   SOMEDAY: This could be made literally the same function in the pool math library.
      */
