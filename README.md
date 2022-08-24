@@ -1,6 +1,10 @@
-# Gyroscope Vaults
+# Gyroscope Concentrated Liquidity Pools
 
-Gyroscope vaults based on Balancer V2.
+Gyroscope concentrated liquidity pools based on Balancer V2. 2-CLPs and 3-CLPs.
+
+For docs see: https://docs.gyro.finance/gyroscope-protocol/concentrated-liquidity-pools
+
+## Repo Setup
 
 This project uses Brownie as its main testing framework but is also
 compatible with hardhat to be able to reuse some of the Balancer testing
