@@ -173,7 +173,7 @@ def test_maxBalances(params, invariant, gyro_cemm_math_testing):
 #     xplus = (-b + d.sqrt()) / (D(2)*a)
 #     xminus = (-b - d.sqrt()) / (D(2)*a)
 #
-#     # abs tolerances are what we use for the CPMMv3 to test calculating the invariant. It's kinda
+#     # abs tolerances are what we use for the 3CLP to test calculating the invariant. It's kinda
 #     # hard to test this in isolation without knowledge how big the coefficients are gonna be.
 #     assert int(xplus_sol) == scale(xplus).approxed(abs=1e15)
 #     assert int(xminus_sol) == scale(xminus).approxed(abs=1e15)

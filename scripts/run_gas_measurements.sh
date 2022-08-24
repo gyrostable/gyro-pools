@@ -11,7 +11,7 @@ mkdir -p analysis/gas
 rm -r build/
 brownie compile
 
-for m in cpmmv2 cpmmv3 cemm; do
+for m in 2clp 3clp eclp; do
   echo "$m..." >&2
   brownie run scripts/show_gas_usage_$m.py --silent | ansi2txt > analysis/gas/gas_$m.log
 done

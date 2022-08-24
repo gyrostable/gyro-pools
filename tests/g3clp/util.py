@@ -34,7 +34,7 @@ def gen_feasible_prices(draw: Callable, alpha: D):
 def gen_synthetic_balances_via_prices(
     draw, bparams: BasicPoolParameters, root3Alpha_min: D, root3Alpha_max: D
 ):
-    """Generates an invariant and a price, and from that balances using math from the CPMMv3 paper.
+    """Generates an invariant and a price, and from that balances using math from the 3CLP paper.
 
     Due to rounding errors, the relationship does not hold exactly, i.e., the generated balances also have an error attached.
 

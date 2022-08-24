@@ -29,12 +29,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup
-      - name: Run CPMM V2 scripts
-        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_cpmmv2.py
-      - name: Run CPMM V3 scripts
-        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_cpmmv3.py
-      - name: Run CEMM scripts
-        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_cemm.py
+      - name: Run 2CLP scripts
+        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_2clp.py
+      - name: Run 3CLP scripts
+        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_3clp.py
+      - name: Run ECLP scripts
+        run: rm -rf build/contracts build/interfaces && brownie run scripts/show_gas_usage_eclp.py
 
   unit_test:
     runs-on: ubuntu-latest
