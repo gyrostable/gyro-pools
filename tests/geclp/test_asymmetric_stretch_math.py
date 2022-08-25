@@ -170,7 +170,7 @@ def test_calcXGivenY(params, y, invariant, gyro_cemm_math_testing):
     assert x_sol == scale(x_py).approxed_scaled()
 
 
-@pytest.mark.skip(reason="Imprecision error to fix")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
@@ -196,7 +196,7 @@ def test_calcOutGivenIn(
     # Differences smaller than 1e-12 * balances are ignored.
 
 
-@pytest.mark.skip(reason="Imprecision error to fix")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(
     params=gen_params(),
     balances=gen_balances(2, bpool_params),
@@ -232,7 +232,7 @@ def test_calcInGivenOut(
     )
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
     rnew_py, rnew_sol = util.mtest_liquidityInvariantUpdate(
@@ -242,7 +242,7 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     assert unscale(rnew_sol) == rnew_py.approxed()
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(params_cemm_dinvariant=gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdateEquivalence(
     params_cemm_dinvariant, gyro_cemm_math_testing

@@ -337,12 +337,8 @@ def mtest_calcYGivenX(params, x, r, derivedparams_is_sol: bool, gyro_cemm_math_t
     y = prec_impl.calcYGivenX(x, params, derived, r)
     y_plus = prec_impl.maxBalances1(params, derived, r)
 
-    assume(
-        y < y_plus * (D(1) - bpool_params.min_balance_ratio)
-    )  # O/w out of bounds for this invariant
+    assume(y < y_plus)  # O/w out of bounds for this invariant
     assume(x > 0 and y > 0)
-    assume(x / y > bpool_params.min_balance_ratio)
-    assume(y / x > bpool_params.min_balance_ratio)
 
     y_sol = gyro_cemm_math_testing.calcYGivenX(
         scale(x), scale(params), derived_scaled, scale(r)
@@ -360,12 +356,8 @@ def mtest_calcXGivenY(params, y, r, derivedparams_is_sol: bool, gyro_cemm_math_t
     x = prec_impl.calcXGivenY(y, params, derived, r)
     x_plus = prec_impl.maxBalances0(params, derived, r)
 
-    assume(
-        x < x_plus * (D(1) - bpool_params.min_balance_ratio)
-    )  # O/w out of bounds for this invariant
+    assume(x < x_plus)  # O/w out of bounds for this invariant
     assume(x > 0 and y > 0)
-    assume(x / y > bpool_params.min_balance_ratio)
-    assume(y / x > bpool_params.min_balance_ratio)
 
     x_sol = gyro_cemm_math_testing.calcXGivenY(
         scale(y), scale(params), derived_scaled, scale(r)  # scale(geclp.r)
@@ -383,8 +375,6 @@ def mtest_calcOutGivenIn(
 ):
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
-
-    assume(amountIn <= to_decimal("0.3") * balances[ixIn])
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -425,25 +415,10 @@ def mtest_calcOutGivenIn(
         )
 
     revertCode = None
-    if amountIn + balances[ixIn] > (
-        x_plus * (D(1) - bpool_params.min_balance_ratio)
-        if tokenInIsToken0
-        else y_plus * (D(1) - bpool_params.min_balance_ratio)
-    ):
-        revertCode = "BAL#357"
+    if amountIn + balances[ixIn] > (x_plus if tokenInIsToken0 else y_plus):
+        revertCode = "GYR#357"  # ASSET_BONDS_EXCEEDED
     elif unscale(balOutNew_sol) > balances[ixOut]:
-        revertCode = "BAL#357"
-    elif (balances[ixIn] + amountIn) / unscale(
-        balOutNew_sol
-    ) < bpool_params.min_balance_ratio:
-        revertCode = "BAL#357"
-    elif (
-        unscale(balOutNew_sol) / (balances[ixIn] + amountIn)
-        < bpool_params.min_balance_ratio
-    ):
-        revertCode = "BAL#357"
-    elif balances[ixOut] - unscale(balOutNew_sol) > to_decimal("0.3") * balances[ixOut]:
-        revertCode = "BAL#305"  # MAX_OUT_RATIO
+        revertCode = "BAL#001"  # subtraction underflow
 
     if revertCode is not None:
         with reverts(revertCode):
@@ -482,7 +457,7 @@ def mtest_calcInGivenOut(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    assume(amountOut <= to_decimal("0.3") * balances[ixOut])
+    assume(amountOut <= balances[ixOut])
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -524,26 +499,11 @@ def mtest_calcInGivenOut(
 
     revertCode = None
     if amountIn is None:
-        revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
-    elif unscale(balInNew_sol) > (
-        x_plus * (D(1) - bpool_params.min_balance_ratio)
-        if tokenInIsToken0
-        else y_plus * (D(1) - bpool_params.min_balance_ratio)
-    ):
-        revertCode = "BAL#357"
+        revertCode = "GYR#357"  # ASSET_BOUNDS_EXCEEDED
+    elif unscale(balInNew_sol) > (x_plus if tokenInIsToken0 else y_plus):
+        revertCode = "GYR#357"  # ASSET_BOUNDS_EXCEEDED
     elif unscale(balInNew_sol) < balances[ixIn]:
-        revertCode = "BAL#357"
-    elif (
-        unscale(balInNew_sol) / (balances[ixOut] - amountOut)
-        < bpool_params.min_balance_ratio
-    ):
-        revertCode = "BAL#357"
-    elif (balances[ixOut] - amountOut) / unscale(
-        balInNew_sol
-    ) < bpool_params.min_balance_ratio:
-        revertCode = "BAL#357"
-    elif unscale(balInNew_sol) - balances[ixIn] > to_decimal("0.3") * balances[ixIn]:
-        revertCode = "BAL#304"  # MAX_IN_RATIO
+        revertCode = "BAL#001"  # subtraction underflow
 
     if revertCode is not None:
         with reverts(revertCode):
@@ -642,8 +602,6 @@ def mtest_invariant_across_calcOutGivenIn(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    # assume(amountIn <= to_decimal("0.3") * balances[ixIn])
-
     fees = bpool_params.min_fee * amountIn
     amountIn -= fees
 
@@ -688,49 +646,22 @@ def mtest_invariant_across_calcOutGivenIn(
         )
 
     revertCode = None
-    if amountIn + balances[ixIn] > (
-        x_plus * (D(1) - bpool_params.min_balance_ratio)
-        if tokenInIsToken0
-        else y_plus * (D(1) - bpool_params.min_balance_ratio)
-    ):
-        revertCode = "BAL#357"
-        assume(False)
+    if amountIn + balances[ixIn] > (x_plus if tokenInIsToken0 else y_plus):
+        revertCode = "GYR#357"  # ASSET_BOUNDS_EXCEEDED
     elif unscale(balOutNew_sol) > balances[ixOut]:
-        revertCode = "BAL#357"
-        assume(False)
-    elif (balances[ixIn] + amountIn) / unscale(
-        balOutNew_sol
-    ) < bpool_params.min_balance_ratio:
-        revertCode = "BAL#357"
-        assume(False)
-    elif (
-        unscale(balOutNew_sol) / (balances[ixIn] + amountIn)
-        < bpool_params.min_balance_ratio
-    ):
-        revertCode = "BAL#357"
-        assume(False)
-    elif balances[ixOut] - unscale(balOutNew_sol) > to_decimal("0.3") * balances[ixOut]:
-        revertCode = "BAL#305"  # MAX_OUT_RATIO
-        assume(False)
+        revertCode = "BAL#001"  # subtraction underflow
 
-    ### this is already tested in other functions anyway
-    # if revertCode is not None:
-    #     with reverts(revertCode):
-    #         gyro_cemm_math_testing.calcOutGivenIn(
-    #             scale(balances),
-    #             scale(amountIn),
-    #             tokenInIsToken0,
-    #             scale(params),
-    #             derived_scaled,
-    #             scale(r),
-    #         )
-    #     return (0, 0), (0, 0)
-
-    if (
-        balances[0] < balances[1] * bpool_params.min_balance_ratio
-        or balances[1] < balances[0] * bpool_params.min_balance_ratio
-    ):
-        assume(False)
+    if revertCode is not None:
+        with reverts(revertCode):
+            gyro_cemm_math_testing.calcOutGivenIn(
+                scale(balances),
+                scale(amountIn),
+                tokenInIsToken0,
+                scale(params),
+                derived_scaled,
+                scale(r),
+            )
+        return (0, 0), (0, 0)
 
     amountOut = -mamountOut
 
@@ -753,12 +684,6 @@ def mtest_invariant_across_calcOutGivenIn(
             balances[0] - unscale(to_decimal(amountOut_sol)),
             balances[1] + amountIn + fees,
         )
-
-    if (
-        new_balances[0] < new_balances[1] * bpool_params.min_balance_ratio
-        or new_balances[1] < new_balances[0] * bpool_params.min_balance_ratio
-    ):
-        assume(False)
 
     invariant_after = prec_impl.calculateInvariant(
         [new_balances[0], new_balances[1]], params, derived
@@ -802,7 +727,7 @@ def mtest_invariant_across_calcInGivenOut(
     ixIn = 0 if tokenInIsToken0 else 1
     ixOut = 1 - ixIn
 
-    # assume(amountOut <= to_decimal("0.3") * balances[ixOut])
+    assume(amountOut <= balances[ixOut])
 
     derived = prec_impl.calc_derived_values(params)
     derived_scaled = prec_impl.scale_derived_values(derived)
@@ -846,51 +771,24 @@ def mtest_invariant_across_calcInGivenOut(
 
     revertCode = None
     if amountIn is None:
-        revertCode = "BAL#357"  # ASSET_BOUNDS_EXCEEDED
-        assume(False)
-    elif unscale(balInNew_sol) > (
-        x_plus * (D(1) - bpool_params.min_balance_ratio)
-        if tokenInIsToken0
-        else y_plus * (D(1) - bpool_params.min_balance_ratio)
-    ):
-        revertCode = "BAL#357"
-        assume(False)
+        revertCode = "GYR#357"  # ASSET_BOUNDS_EXCEEDED
+    elif unscale(balInNew_sol) > (x_plus if tokenInIsToken0 else y_plus):
+        revertCode = "GYR#357"  # ASSET_BOUNDS_EXCEEDED
     elif unscale(balInNew_sol) < balances[ixIn]:
-        revertCode = "BAL#357"
-        assume(False)
-    elif (
-        unscale(balInNew_sol) / (balances[ixOut] - amountOut)
-        < bpool_params.min_balance_ratio
-    ):
-        revertCode = "BAL#357"
-        assume(False)
-    elif (balances[ixOut] - amountOut) / unscale(
-        balInNew_sol
-    ) < bpool_params.min_balance_ratio:
-        revertCode = "BAL#357"
-        assume(False)
-    elif unscale(balInNew_sol) - balances[ixIn] > to_decimal("0.3") * balances[ixIn]:
-        revertCode = "BAL#304"  # MAX_IN_RATIO
-        assume(False)
+        revertCode = "BAL#001"  # subtraction underflow
 
-    ### this is already tested in other functions anyway
-    # if revertCode is not None:
-    #     with reverts(revertCode):
-    #         gyro_cemm_math_testing.calcInGivenOut(
-    #             scale(balances),
-    #             scale(amountOut),
-    #             tokenInIsToken0,
-    #             scale(params),
-    #             derived_scaled,
-    #             scale(r),
-    #         )
-    #     return (0, 0), (0, 0)
-
-    if (
-        balances[0] < balances[1] * bpool_params.min_balance_ratio
-        or balances[1] < balances[0] * bpool_params.min_balance_ratio
-    ):
-        assume(False)
+    ## this is already tested in other functions anyway
+    if revertCode is not None:
+        with reverts(revertCode):
+            gyro_cemm_math_testing.calcInGivenOut(
+                scale(balances),
+                scale(amountOut),
+                tokenInIsToken0,
+                scale(params),
+                derived_scaled,
+                scale(r),
+            )
+        return (0, 0), (0, 0)
 
     amountIn_sol = gyro_cemm_math_testing.calcInGivenOut(
         scale(balances),
@@ -920,12 +818,6 @@ def mtest_invariant_across_calcInGivenOut(
     invariant_sol_after = gyro_cemm_math_testing.calculateInvariant(
         scale(new_balances), scale(params), derived_scaled
     )
-
-    if (
-        new_balances[0] < new_balances[1] * bpool_params.min_balance_ratio
-        or new_balances[1] < new_balances[0] * bpool_params.min_balance_ratio
-    ):
-        assume(False)
 
     if invariant_after < invariant_before:
         loss_py = calculate_loss(

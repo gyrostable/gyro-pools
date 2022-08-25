@@ -90,13 +90,13 @@ def test_tau(params_px, gyro_cemm_math_testing):
     util.mtest_tau(params_px, gyro_cemm_math_testing)
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(params=util.gen_params())
 def test_mkDerivedParams(params, gyro_cemm_math_testing):
     util.mtest_mkDerivedParams(params, gyro_cemm_math_testing)
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(params=util.gen_params())
 def test_validateParamsAll(params, gyro_cemm_math_testing):
     util.mtest_validateParamsAll(params, gyro_cemm_math_testing)
@@ -105,7 +105,7 @@ def test_validateParamsAll(params, gyro_cemm_math_testing):
 ### Virtual Offsets and Max Balances ###
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @given(params=util.gen_params(), invariant=util.gen_synthetic_invariant())
 @example(
     params=CEMMMathParams(
@@ -121,7 +121,7 @@ def test_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing):
     util.mtest_virtualOffsets_noderived(params, invariant, gyro_cemm_math_testing)
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params=util.gen_params(), invariant=util.gen_synthetic_invariant())
 @example(
@@ -257,8 +257,7 @@ def gen_args_calcOutGivenIn(draw):
     return params, balances, amountIn, tokenInIsToken0
 
 
-# TODO Fix this test. Disabled it b/c I had to merge.
-@pytest.mark.skip(reason="TEMPORARILY disabled: Data generation too slow, fails check")
+### TODO: Probably needs refactor, see new prec_calcs
 @settings(max_examples=100)
 @given(args=gen_args_calcOutGivenIn())
 def test_calcOutGivenIn(args, gyro_cemm_math_testing):
@@ -280,6 +279,7 @@ def test_calcOutGivenIn(args, gyro_cemm_math_testing):
     # Differences smaller than 1e-12 * balances are ignored.
 
 
+### TODO: Probably needs refactor, see new prec_calcs
 @settings(max_examples=MAX_EXAMPLES)
 @given(
     params=util.gen_params(),
@@ -304,7 +304,7 @@ def test_calcInGivenOut(
     )
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing):
@@ -315,7 +315,7 @@ def test_liquidityInvariantUpdate(params_cemm_dinvariant, gyro_cemm_math_testing
     assert unscale(rnew_sol) == rnew_py.approxed()
 
 
-@pytest.mark.skip(reason="Needs refactor")
+@pytest.mark.skip(reason="Needs refactor, see new prec calcs")
 @settings(max_examples=MAX_EXAMPLES)
 @given(params_cemm_dinvariant=util.gen_params_cemm_dinvariant())
 def test_liquidityInvariantUpdateEquivalence(

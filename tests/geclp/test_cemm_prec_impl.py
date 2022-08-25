@@ -166,7 +166,7 @@ def gen_params_conservative(draw):
 #     assert result_py == unscale(result_sol)
 #     assert result_py > 1
 
-#     # test against the old (imprecise) implementation
+#     # test against the old implementation w/ very high precision
 #     chi = (
 #         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
 #         mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
@@ -189,7 +189,7 @@ def test_calcAChiAChiInXp(gyro_cemm_math_testing, params):
     assert result_py == D2((D3(result_sol) / D3("1e38")).raw)
     assert result_py > 1
 
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     chi = (
         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
         mparams.Ainv_times(derived_m.tauAlpha[0], derived_m.tauAlpha[1])[1],
@@ -229,7 +229,7 @@ def test_calcAtAChi_sense_check(params, balances):
     derived = prec_impl.calc_derived_values(params)
     result_py = prec_impl.calcAtAChi(balances[0], balances[1], params, derived)
 
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
@@ -268,7 +268,7 @@ def test_calcMinAtxAChiySqPlusAtxSq_sense_check(params, balances):
     result_py = prec_impl.calcMinAtxAChiySqPlusAtxSq(
         balances[0], balances[1], params, derived
     )
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
@@ -308,7 +308,7 @@ def test_calc2AtxAtyAChixAChiy_sense_check(params, balances):
     result_py = prec_impl.calc2AtxAtyAChixAChiy(
         balances[0], balances[1], params, derived
     )
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
@@ -347,7 +347,7 @@ def test_calcMinAtyAChixSqPlusAtySq_sense_check(params, balances):
     result_py = prec_impl.calcMinAtyAChixSqPlusAtySq(
         balances[0], balances[1], params, derived
     )
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     At = mparams.A_times(*convd((balances[0], balances[1]), D3))
     chi = (
         mparams.Ainv_times(derived_m.tauBeta[0], derived_m.tauBeta[1])[0],
@@ -429,7 +429,7 @@ def test_calculateInvariant_sense_check(params, balances):
     assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     result_py, err_py = prec_impl.calculateInvariantWithError(balances, params, derived)
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     cemm = mimpl.CEMM.from_x_y(*convd(balances, D3), mparams)
     assert convd(cemm.r, D) == result_py.approxed()
     assert convd(cemm.r, D) == D(result_py + err_py).approxed(abs=D(err_py))
@@ -488,7 +488,7 @@ def test_virtualOffsets_sense_check(params, invariant):
     a_py = prec_impl.virtualOffset0(params, derived, r)
     b_py = prec_impl.virtualOffset1(params, derived, r)
 
-    # test against the old (imprecise) implementation
+    # test against the old implementation w/ very high precision
     mparams = params2MathParams(paramsTo100(params))
     midprice = (mparams.alpha + mparams.beta) / D3(2)
     cemm = mimpl.CEMM.from_px_r(midprice, convd(invariant, D3), mparams)
@@ -710,7 +710,7 @@ def test_solveQuadraticSwap(gyro_cemm_math_testing, params, balances):
     )  # .approxed(abs=error_toly)
 
 
-# note: only test this for conservative parameters b/c old implementation is so imprecise
+# note: this calculation can have some imprecision. We also check that correct rounding direction is achieved, so it's fine
 @settings(suppress_health_check=[HealthCheck.filter_too_much])
 @given(
     params=gen_params(),
@@ -744,7 +744,7 @@ def test_solveQuadraticSwap_sense_check(params, balances):
     )
 
     mparams = params2MathParams(paramsTo100(params))
-    # sense test against old implementation
+    # sense test against old implementation w/ very high precision
     midprice = (mparams.alpha + mparams.beta) / D3(2)
     cemm = mimpl.CEMM.from_px_r(
         midprice, convd(invariant, D3), mparams
@@ -752,9 +752,10 @@ def test_solveQuadraticSwap_sense_check(params, balances):
     y = cemm._compute_y_for_x(convd(balances[0], D3))
     assume(y is not None)  # O/w out of bounds for this invariant
     assume(balances[0] > 0 and y > 0)
-    assert convd(y, D) == val_py.approxed(abs=D("1e-8"))
+    assert convd(y, D) <= val_py
+    assert convd(y, D) == val_py.approxed(abs=D("1e-6"), rel=D("1e-6"))
 
-    # sense test against old implementation
+    # sense test against old implementation w/ very high precision
     midprice = (mparams.alpha + mparams.beta) / D3(2)
     cemm = mimpl.CEMM.from_px_r(
         midprice, convd(invariant, D3), mparams
@@ -762,7 +763,8 @@ def test_solveQuadraticSwap_sense_check(params, balances):
     x = cemm._compute_x_for_y(convd(balances[1], D3))
     assume(x is not None)  # O/w out of bounds for this invariant
     assume(balances[1] > 0 and x > 0)
-    assert convd(x, D) == val_y_py.approxed(abs=D("1e-8"))
+    assert convd(x, D) <= val_y_py
+    assert convd(x, D) == val_y_py.approxed(abs=D("1e-6"), rel=D("1e-6"))
 
 
 # also tests calcXGivenY
