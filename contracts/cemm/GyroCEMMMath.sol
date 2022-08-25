@@ -26,10 +26,6 @@ library GyroCEMMMath {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    // Swap limits: amounts swapped may not be larger than this percentage of total balance.
-    uint256 internal constant _MAX_IN_RATIO = 0.3e18;
-    uint256 internal constant _MAX_OUT_RATIO = 0.3e18;
-
     // Anti-overflow limits: Params and DerivedParams (static, only needs to be checked on pool creation)
     int256 internal constant _ROTATION_VECTOR_NORM_ACCURACY = 1e3; // 1e-15 in normal precision
     int256 internal constant _MAX_STRETCH_FACTOR = 1e26; // 1e8   in normal precision
@@ -469,10 +465,11 @@ library GyroCEMMMath {
     ) internal pure {
         if (assetIndex == 0) {
             int256 xPlus = maxBalances0(params, derived, invariant);
-            _grequire(newBal <= xPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
-        } else {
+            if (!(newBal <= _MAX_BALANCES && newBal <= xPlus)) _grequire(false, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            return;
+        }{
             int256 yPlus = maxBalances1(params, derived, invariant);
-            _grequire(newBal <= yPlus, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
+            if (!(newBal <= _MAX_BALANCES && newBal <= yPlus)) _grequire(false, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
     }
 
@@ -497,14 +494,12 @@ library GyroCEMMMath {
             calcGiven = calcXGivenY;
         }
 
-        _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
-        int256 balInNew = (balances[ixIn] + amountIn).toInt256();
+        int256 balInNew = balances[ixIn].add(amountIn).toInt256(); // checked because amountIn is given by the user.
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         int256 balOutNew = calcGiven(balInNew, params, derived, invariant);
-        uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
-        _grequire(balOutNew.toUint256() < balances[ixOut], assetBoundError);
-        amountOut = balances[ixOut] - balOutNew.toUint256();
-        _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        // Make sub checked as an extra check against numerical error; but this really should never happen
+        amountOut = balances[ixOut].sub(balOutNew.toUint256());
+        // The above line guarantees that amountOut <= balances[ixOut].
     }
 
     function calcInGivenOut(
@@ -528,14 +523,12 @@ library GyroCEMMMath {
             calcGiven = calcYGivenX; // this reverses compared to calcOutGivenIn
         }
 
-        _require(amountOut <= balances[ixOut].mulDown(_MAX_OUT_RATIO), Errors.MAX_OUT_RATIO);
+        if (!(amountOut <= balances[ixOut])) _grequire(false, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         int256 balOutNew = (balances[ixOut] - amountOut).toInt256();
         int256 balInNew = calcGiven(balOutNew, params, derived, invariant);
-        uint256 assetBoundError = GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED;
-        _grequire(balInNew.toUint256() > balances[ixIn], assetBoundError);
+        // The checks in the following two lines should really always succeed; we keep them as extra safety against numerical error.
         checkAssetBounds(params, derived, invariant, balInNew, ixIn);
-        amountIn = balInNew.toUint256() - balances[ixIn];
-        _require(amountIn <= balances[ixIn].mulDown(_MAX_IN_RATIO), Errors.MAX_IN_RATIO);
+        amountIn = balInNew.toUint256().sub(balances[ixIn]);
     }
 
     /** @dev Variables are named for calculating y given x
