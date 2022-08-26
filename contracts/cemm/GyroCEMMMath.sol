@@ -467,7 +467,8 @@ library GyroCEMMMath {
             int256 xPlus = maxBalances0(params, derived, invariant);
             if (!(newBal <= _MAX_BALANCES && newBal <= xPlus)) _grequire(false, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
             return;
-        }{
+        }
+        {
             int256 yPlus = maxBalances1(params, derived, invariant);
             if (!(newBal <= _MAX_BALANCES && newBal <= yPlus)) _grequire(false, GyroCEMMPoolErrors.ASSET_BOUNDS_EXCEEDED);
         }
