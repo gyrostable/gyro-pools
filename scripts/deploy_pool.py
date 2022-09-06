@@ -139,19 +139,6 @@ def eclp():
         DEPLOYED_FACTORIES[chain.id]["eclp"]
     )
     deployer = get_deployer()
-    base_params = TwoPoolBaseParams(
-        "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-        "TEST Gyro CEMM Pool",
-        "GYRO-CEMM",
-        "0x11fb9071e69628d804bf0b197cc61eeacd4aaecf",
-        "0x4ea2110a3e277b10c9b098f61d72f58efa8655db",
-        "90000000000000000",
-        "50000000000000000",
-        "50000000",
-        False,
-        "0x4277f6Ea8567EC89A3E81961598fEf33b43A265F",
-    )
-
     cemm_params = GyroCEMMMathParams(
         "1000000000000000",
         "2000000000000000000",
@@ -159,7 +146,7 @@ def eclp():
         "707106781186547524",
         "50000000000000000000",
     )
-
+    # Pre-calculated derived params from above cemm_params values
     derived_params = GyroCEMMMathDerivedParams(
         [
             "-99979925885928775144265228221440915787",
@@ -175,7 +162,6 @@ def eclp():
         "-79720669675453303560805924511158495",
         "999999999999999998866240933421061152",
     )
-
     params = (
         "TEST Gyro CEMM Pool",
         "GYRO-CEMM",
@@ -189,7 +175,6 @@ def eclp():
         False,
         "0x4277f6Ea8567EC89A3E81961598fEf33b43A265F",
     )
-
     tx = cemm_pool_factory.create(
         *params,
         {
