@@ -66,6 +66,10 @@ def get_deployer() -> LocalAccount:
         return cast(
             LocalAccount, accounts.load("kovan-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
         )
+    if chain_id == 5:  # goerli
+        return cast(
+            LocalAccount, accounts.load("kovan-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
+        )
     raise ValueError(f"chain id {chain_id} not yet supported")
 
 

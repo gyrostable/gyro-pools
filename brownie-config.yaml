@@ -21,3 +21,5 @@ networks:
       evm_version: london
     # Workaround a brownie bug where it would just collect from mempool forever -.- (see Daniel)
     priority_fee: 2 gwei
+
+dotenv: .env

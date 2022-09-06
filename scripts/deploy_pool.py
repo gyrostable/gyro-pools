@@ -1,20 +1,26 @@
-from decimal import Decimal
 import json
 import os
+from decimal import Decimal
 from os import path
 
-from brownie import Gyro2CLPPool, Gyro3CLPPool, interface, Gyro3CLPPoolFactory, web3, Gyro2CLPPoolFactory  # type: ignore
+from brownie import Gyro2CLPPool, Gyro2CLPPoolFactory, Gyro3CLPPool  # type: ignore
+from brownie import Gyro3CLPPoolFactory, GyroCEMMPool, interface  # type: ignore
+from brownie import web3
 from brownie.network import chain
-from scripts.pool_utils import compute_bounds_sqrts
 from tests.support.types import (
     CapParams,
+    CEMMPoolParams,
+    GyroCEMMMathDerivedParams,
+    GyroCEMMMathParams,
     ThreePoolFactoryCreateParams,
+    TwoPoolBaseParams,
     TwoPoolFactoryCreateParams,
 )
 from tests.support.utils import scale
 
 from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER
 from scripts.mainnet_contracts import get_token_address
+from scripts.pool_utils import compute_bounds_sqrts
 from scripts.utils import (
     JSONEncoder,
     abort,
@@ -126,3 +132,72 @@ def c3lp():
 
     if chain.id == 1337:
         persist_3clp_seed_data(pool_address, tokens)
+
+
+def eclp():
+    cemm_pool_factory = interface.IGyroCEMMPoolFactory(
+        DEPLOYED_FACTORIES[chain.id]["eclp"]
+    )
+    deployer = get_deployer()
+    base_params = TwoPoolBaseParams(
+        "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+        "TEST Gyro CEMM Pool",
+        "GYRO-CEMM",
+        "0x11fb9071e69628d804bf0b197cc61eeacd4aaecf",
+        "0x4ea2110a3e277b10c9b098f61d72f58efa8655db",
+        "90000000000000000",
+        "50000000000000000",
+        "50000000",
+        False,
+        "0x4277f6Ea8567EC89A3E81961598fEf33b43A265F",
+    )
+
+    cemm_params = GyroCEMMMathParams(
+        "1000000000000000",
+        "2000000000000000000",
+        "707106781186547524",
+        "707106781186547524",
+        "50000000000000000000",
+    )
+
+    derived_params = GyroCEMMMathDerivedParams(
+        [
+            "-99979925885928775144265228221440915787",
+            "2003601717954248326714904773767014148",
+        ],
+        [
+            "99820484546577868536962848308342019089",
+            "5989229072794672112217770898500521145",
+        ],
+        "99900205216253321727351274847867663526",
+        "3996415395374460214935365647812318782",
+        "1992813677420211890492062487589071518",
+        "-79720669675453303560805924511158495",
+        "999999999999999998866240933421061152",
+    )
+
+    params = (
+        "TEST Gyro CEMM Pool",
+        "GYRO-CEMM",
+        [
+            "0x11fb9071e69628d804bf0b197cc61eeacd4aaecf",
+            "0x4ea2110a3e277b10c9b098f61d72f58efa8655db",
+        ],
+        cemm_params,
+        derived_params,
+        "90000000000000000",
+        False,
+        "0x4277f6Ea8567EC89A3E81961598fEf33b43A265F",
+    )
+
+    tx = cemm_pool_factory.create(
+        *params,
+        {
+            "from": deployer,
+            **make_tx_params(),
+            "gas_limit": 30000000,
+            "allow_revert": True,
+        },
+    )
+    pool_address = tx.events["PoolCreated"]["pool"]
+    GyroCEMMPool.at(pool_address)
