@@ -13,12 +13,12 @@ BALANCER_ADDRESSES = {
     },
     42: {
         "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-        "query_processor": "0x41c7523aA9b369a65983C0ff719B81947B07fc5c"
+        "query_processor": "0x41c7523aA9b369a65983C0ff719B81947B07fc5c",
     },
     5: {
         "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-        "query_processor": "0xF949645042a607fa260D932DF999FE8A02B86247"
-    }
+        "query_processor": "0xF949645042a607fa260D932DF999FE8A02B86247",
+    },
 }
 
 GYROSCOPE_ADDRESSES = {
@@ -30,12 +30,8 @@ GYROSCOPE_ADDRESSES = {
         "proxy_admin": "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1",
         "gyro_config": "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab",
     },
-    42: {
-        "gyro_config": "0x402519E6cc733893af5fFf40e26397268769CBc3"
-    },
-    5: {
-        "gyro_config": "0xfd5E29d7B36d0AfD4cb8A0AFAB5F360d21dE5C63"
-    }
+    42: {"gyro_config": "0x402519E6cc733893af5fFf40e26397268769CBc3"},
+    5: {"gyro_config": "0xfd5E29d7B36d0AfD4cb8A0AFAB5F360d21dE5C63"},
 }
 
 POOL_OWNER = {
@@ -56,16 +52,15 @@ DEPLOYED_POOLS = {
 }
 
 DEPLOYED_FACTORIES = {
+    1337: {
+        "eclp": "0x4339316e04CFfB5961D1c41fEF8E44bfA2A7fBd1",
+    },
     137: {
         "c2lp": "0x5d8545a7330245150bE0Ce88F8afB0EDc41dFc34",
         "c3lp": "0x90f08B3705208E41DbEEB37A42Fb628dD483AdDa",
     },
-    42: {
-        "eclp": "0xd0E45cf9e4E7008B78e679F46778bb28C2e8a5Eb"
-    },
-    5: {
-        "eclp": "0xE1eCD603c9AF89E8AC50E970304463A74f0f7E36"
-    }
+    42: {"eclp": "0xd0E45cf9e4E7008B78e679F46778bb28C2e8a5Eb"},
+    5: {"eclp": "0xE1eCD603c9AF89E8AC50E970304463A74f0f7E36"},
 }
 
 

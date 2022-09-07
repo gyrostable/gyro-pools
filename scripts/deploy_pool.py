@@ -3,6 +3,7 @@ import os
 from decimal import Decimal
 from os import path
 
+<<<<<<< HEAD
 from brownie import Gyro2CLPPool, Gyro2CLPPoolFactory, Gyro3CLPPool  # type: ignore
 from brownie import Gyro3CLPPoolFactory, GyroCEMMPool, interface  # type: ignore
 from brownie import web3
@@ -17,6 +18,23 @@ from tests.support.types import (
     TwoPoolFactoryCreateParams,
 )
 from tests.support.utils import scale
+=======
+from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroCEMMPool, interface, ERC20, GyroCEMMPoolFactory  # type: ignore
+from brownie.network import chain
+from tests.support.types import (
+    CapParams,
+    CEMMMathDerivedParams,
+    CEMMMathParams,
+    ThreePoolFactoryCreateParams,
+    TwoPoolFactoryCreateParams,
+    Vector2,
+)
+from tests.support.utils import scale
+
+from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER
+from scripts.mainnet_contracts import get_token_address
+from scripts.utils import abort, get_deployer, make_tx_params, with_deployed
+>>>>>>> a083045 (Fix deployment scripts for eclp)
 
 from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER
 from scripts.mainnet_contracts import get_token_address
@@ -139,36 +157,42 @@ def eclp():
         DEPLOYED_FACTORIES[chain.id]["eclp"]
     )
     deployer = get_deployer()
-    cemm_params = GyroCEMMMathParams(
-        "1000000000000000",
-        "2000000000000000000",
-        "707106781186547524",
-        "707106781186547524",
-        "50000000000000000000",
+    cemm_params = CEMMMathParams(
+        alpha="1000000000000000",
+        beta="2000000000000000000",
+        c="707106781186547524",
+        s="707106781186547524",
+        l="50000000000000000000",
     )
     # Pre-calculated derived params from above cemm_params values
-    derived_params = GyroCEMMMathDerivedParams(
-        [
+    derived_params = CEMMMathDerivedParams(
+        tauAlpha=Vector2(
             "-99979925885928775144265228221440915787",
             "2003601717954248326714904773767014148",
-        ],
-        [
+        ),
+        tauBeta=Vector2(
             "99820484546577868536962848308342019089",
             "5989229072794672112217770898500521145",
-        ],
-        "99900205216253321727351274847867663526",
-        "3996415395374460214935365647812318782",
-        "1992813677420211890492062487589071518",
-        "-79720669675453303560805924511158495",
-        "999999999999999998866240933421061152",
+        ),
+        u="99900205216253321727351274847867663526",
+        v="3996415395374460214935365647812318782",
+        w="1992813677420211890492062487589071518",
+        z="-79720669675453303560805924511158495",
+        dSq="99999999999999999886624093342106115200",
     )
+
+    token0 = deployer.deploy(ERC20, "Dummy 1", "DUM1")
+    token1 = deployer.deploy(ERC20, "Dummy 2", "DUM2")
+    tokens = (
+        [token0, token1]
+        if token0.address.lower() < token1.address.lower()
+        else [token1, token0]
+    )
+
     params = (
         "TEST Gyro CEMM Pool",
         "GYRO-CEMM",
-        [
-            "0x11fb9071e69628d804bf0b197cc61eeacd4aaecf",
-            "0x4ea2110a3e277b10c9b098f61d72f58efa8655db",
-        ],
+        tokens,
         cemm_params,
         derived_params,
         "90000000000000000",
@@ -180,9 +204,15 @@ def eclp():
         {
             "from": deployer,
             **make_tx_params(),
-            "gas_limit": 30000000,
+            "gas_limit": 30_000_000,
             "allow_revert": True,
         },
     )
-    pool_address = tx.events["PoolCreated"]["pool"]
+    if "PoolCreated" in tx.events:
+        pool_address = tx.events["PoolCreated"]["pool"]
+    else:
+        pool_created = (
+            GyroCEMMPoolFactory[0].events.PoolCreated().processLog(tx.logs[-1])
+        )
+        pool_address = pool_created["args"]["pool"]
     GyroCEMMPool.at(pool_address)
