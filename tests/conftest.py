@@ -346,12 +346,14 @@ def pool_factory(admin, Gyro2CLPPoolFactory, gyro_config):
 @pytest.fixture
 def eclp_pool(
     admin,
-    GyroECLPPool,
+    GyroCELPPool,
+    GyroECLPMath,
     gyro_erc20_funded,
     mock_vault,
     mock_gyro_config,
     deployed_query_processor,
 ):
+    admin.deploy(GyroECLPMath)
     two_pool_base_params = TwoPoolBaseParams(
         vault=mock_vault.address,
         name="GyroECLPTwoPool",  # string

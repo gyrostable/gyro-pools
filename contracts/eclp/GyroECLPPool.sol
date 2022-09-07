@@ -30,7 +30,7 @@ import "../ExtensibleWeightedPool2Tokens.sol";
 import "./GyroECLPMath.sol";
 import "./GyroECLPOracleMath.sol";
 
-contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
+contract GyroECLPPool is ExtensibleWeightedPool2Tokens {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;

@@ -1,4 +1,5 @@
 pragma solidity 0.7.6;
+pragma experimental ABIEncoderV2;
 
 // import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 import "../../libraries/GyroFixedPoint.sol";
@@ -96,7 +97,7 @@ library GyroECLPMath {
 
     /** @dev Enforces limits and approximate normalization of the derived values.
     Does NOT check for internal consistency of 'derived' with 'params'. */
-    function validateDerivedParamsLimits(Params memory params, DerivedParams memory derived) internal pure {
+    function validateDerivedParamsLimits(Params memory params, DerivedParams memory derived) external pure {
         int256 norm2;
         norm2 = scalarProdXp(derived.tauAlpha, derived.tauAlpha);
         _grequire(
@@ -228,7 +229,7 @@ library GyroECLPMath {
         uint256[] memory balances,
         Params memory params,
         DerivedParams memory derived
-    ) internal pure returns (int256, int256) {
+    ) public pure returns (int256, int256) {
         (int256 x, int256 y) = (balances[0].toInt256(), balances[1].toInt256());
         _grequire(x.add(y) <= _MAX_BALANCES, GyroECLPPoolErrors.MAX_ASSETS_EXCEEDED);
 
@@ -276,7 +277,7 @@ library GyroECLPMath {
         uint256[] memory balances,
         Params memory params,
         DerivedParams memory derived
-    ) internal pure returns (uint256 uinvariant) {
+    ) external pure returns (uint256 uinvariant) {
         (int256 invariant, ) = calculateInvariantWithError(balances, params, derived);
         uinvariant = invariant.toUint256();
     }
@@ -435,7 +436,7 @@ library GyroECLPMath {
         Params memory params,
         DerivedParams memory derived,
         int256 invariant
-    ) internal pure returns (uint256 px) {
+    ) external pure returns (uint256 px) {
         // shift by virtual offsets to get v(t)
         Vector2 memory r = Vector2(invariant, invariant); // ignore r rounding for spot price, precision will be lost in TWAP anyway
         Vector2 memory ab = Vector2(virtualOffset0(params, derived, r), virtualOffset1(params, derived, r));
@@ -481,7 +482,7 @@ library GyroECLPMath {
         Params memory params,
         DerivedParams memory derived,
         Vector2 memory invariant
-    ) internal pure returns (uint256 amountOut) {
+    ) external pure returns (uint256 amountOut) {
         function(int256, Params memory, DerivedParams memory, Vector2 memory) pure returns (int256) calcGiven;
         uint8 ixIn;
         uint8 ixOut;
@@ -510,7 +511,7 @@ library GyroECLPMath {
         Params memory params,
         DerivedParams memory derived,
         Vector2 memory invariant
-    ) internal pure returns (uint256 amountIn) {
+    ) external pure returns (uint256 amountIn) {
         function(int256, Params memory, DerivedParams memory, Vector2 memory) pure returns (int256) calcGiven;
         uint8 ixIn;
         uint8 ixOut;
