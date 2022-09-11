@@ -46,7 +46,8 @@ easy_params = CEMMMathParams(
 
 N_ASSETS = 2
 
-# Variant of util.gen_params() with slightly less extreme parameters.
+# Variant of util.gen_params() with slightly less extreme parameters. This is important mainly for the normalized
+# liquidity test. (normalized liquidity can get unstable for extreme parameters and at the end of the trading range)
 @st.composite
 def gen_params(draw, bparams: BasicPoolParameters):
     phi_degrees = draw(st.floats(10, 80))
@@ -60,10 +61,10 @@ def gen_params(draw, bparams: BasicPoolParameters):
 
     alpha_range = [
         D("0.05"),
-        peg * D("1.2")
+        peg
     ]
     beta_range = [
-        peg * D("0.8"),
+        peg,
         D("20.0")
     ]
     alpha = draw(qdecimals(*alpha_range))
@@ -83,7 +84,7 @@ def gen_params(draw, bparams: BasicPoolParameters):
 
     s = sin(phi)
     c = cos(phi)
-    l = draw(qdecimals("1", "1e7"))
+    l = draw(qdecimals("1", "1e6"))
     return CEMMMathParams(alpha, beta, D(c), D(s), l)
 
 
@@ -324,70 +325,68 @@ def test_normalizedLiquidity(gyro_cemm_math_testing, balances: list, params: CEM
     peg = params.s / params.c if ix_in == 1 else params.c / params.s
     balances_outin = [balances[ix_out], balances[ix_in]]
 
-    # Solidity approximation of the derivative. Note that the quotient is ill-defined *at* 0, so we take two trade sizes close to 0.
+    # Approximation of the derivative. Note that the quotient is ill-defined *at* 0, so we take two trade sizes close to 0.
+    # We use an iterative scheme for better precision; we use the python math implementation instead of Solidity for performance.
     if ix_in == 1:
-        amount_in_max = \
-            unscale(gyro_cemm_math_testing.maxBalances1(scale(params), derived_scaled, scale(r_vec))) - balances[1]
+        amount_in_max = prec_impl.maxBalances1(params, derived, r_vec) - balances[1]
     else:
-        amount_in_max = \
-            unscale(gyro_cemm_math_testing.maxBalances0(scale(params), derived_scaled, scale(r_vec))) - balances[0]
+        amount_in_max = prec_impl.maxBalances0(params, derived, r_vec) - balances[0]
 
+    # For the derivative, we essentially approximate the limit
+    # lim Δ -> 0: ((effective price of trading Δ in) - (marginal price of out-asset)) / Δ.
+    # So the normalized liquidity is approximated as
+    # lim Δ -> 0: 0.5 * Δ / ((effective price of trading Δ in) - (marignal price of out-asset))
+    # This is ok because of (math... continuous continuation... Dini's theorem...)
+    if ix_in == 1:
+        p_marginal = derivatives.dyin_dxout(balances, params, fee, r_vec)
+    else:
+        p_marginal = derivatives.dxin_dyout(balances, params, fee, r_vec)
+
+    res_prev = None
+    res = None
     # NB this doesn't quite go to amount_in_max when fee > 0. Could be more clever here but meh.
     # NB This shouldn't be too small either b/c then we run into trouble with fixed-point calcs.
-    amount_in1 = min(amount_in_max * D('0.999'), balances[ix_in] * D('0.001'))
-    amount_in2 = amount_in1 * D('0.99')
-    amount_in1_after_fee = amount_in1 * (1 - fee)
-    amount_in2_after_fee = amount_in2 * (1 - fee)
+    amount_in = min(amount_in_max * D('0.999'), balances[ix_in] * D('0.01')) * 2
+    calcBalOutGivenBalIn = prec_impl.calcXGivenY if ix_in == 1 else prec_impl.calcYGivenX
 
-    amount_out1 = unscale(gyro_cemm_math_testing.calcOutGivenIn(
-        scale(balances),
-        scale(amount_in1_after_fee),
-        ix_in == 0,
-        scale(params),
-        derived_scaled,
-        scale(r_vec)
-    ))
-    amount_out2 = unscale(gyro_cemm_math_testing.calcOutGivenIn(
-        scale(balances),
-        scale(amount_in2_after_fee),
-        ix_in == 0,
-        scale(params),
-        derived_scaled,
-        scale(r_vec)
-    ))
+    res_history = []  # DEBUG
+    # We need some conditions for numerical stability in fixed point.
+    while res_prev is None or (not (res == res_prev.approxed(abs=D('1e-3'), rel=D('1e-3'))) and amount_in >= D('1e-2')):
+        res_prev = res
+        amount_in *= D('0.5')
+        amount_in_after_fee = amount_in * (1 - fee)
+        amount_out = balances[ix_out] - calcBalOutGivenBalIn(balances[ix_in] + amount_in_after_fee, params, derived, r_vec)
+        p_effective = amount_in / amount_out
+        assert p_effective >= bounds[0]
+        # These are actually guaranteed. If they're not satisfied, this means that numerical error has a huge influence.
+        # I've observed this a few times for this test if we don't have this `assume` and the pool is extremely unbalanced.
+        # Note that if this is violated, the higher prices are in the pool's favor, so this is not dangerous per se.
+        # assume(p_eff1 <= bounds[1] and p_eff2 <= bounds[1])
+        # assert (p_eff1 <= bounds[1] and p_eff2 <= bounds[1])
 
-    p_eff1 = amount_in1 / amount_out1
-    p_eff2 = amount_in2 / amount_out2
+        res = D('0.5') * amount_in / (p_effective - p_marginal)
 
-    assert p_eff1 >= bounds[0] and p_eff2 >= bounds[0]
-    assert p_eff2 <= p_eff1
+        res_history.append((amount_in, amount_out, p_effective, res))
 
-    # These are actually guaranteed. If they're not satisfied, this means that numerical error has a huge influence.
-    # I've observed this a few times for this test if we don't have this `assume` and the pool is extremely unbalanced.
-    # Note that if this is violated, the higher prices are in the pool's favor, so this is not dangerous per se.
-    # assume(p_eff1 <= bounds[1] and p_eff2 <= bounds[1])
-    # assert (p_eff1 <= bounds[1] and p_eff2 <= bounds[1])
 
     # Re-writing to improve fixed-point precision
     # d_p_eff_approxed_solidity = (p_eff1 - p_eff2) / (amount_in1 - amount_in2)
     # nliq_approxed_solidity = D('0.5') / d_p_eff_approxed_solidity
-    nliq_approxed_solidity = D('0.5') * (amount_in1 - amount_in2) / (p_eff1 - p_eff2)
+    nliq_approxed_solidity = res
 
     # Analytical solution.
     # We use the point after trading b/c that gives us a slightly better match for some reason.
-    balances_new = balances.copy()
-    balances_new[ix_out] -= amount_out2
-    balances_new[ix_in] += amount_in2_after_fee
     if ix_in == 1:
-        nliq_anl = derivatives.normalized_liquidity_yin(balances_new, params, fee, r_vec)
+        nliq_anl = derivatives.normalized_liquidity_yin(balances, params, fee, r_vec)
     else:
-        nliq_anl = derivatives.normalized_liquidity_xin(balances_new, params, fee, r_vec)
+        nliq_anl = derivatives.normalized_liquidity_xin(balances, params, fee, r_vec)
 
     assert nliq_anl == nliq_approxed_solidity.approxed(rel=D('1e-2'), abs=D('1e-2'))
 
 
 # DEBUG
 from operator import truediv
+from pprint import pprint
 def fmt(x):
     if isinstance(x, (list, tuple, set)):
         return type(x)(map(fmt, x))
