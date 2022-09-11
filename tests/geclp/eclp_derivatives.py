@@ -13,7 +13,15 @@ from tests.geclp import cemm_prec_implementation as prec_impl
 # symmetries. We did not unify most of them here (except the calculation of R, which comes up many times),
 # but this could be done, too.
 
-def _setup(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D], ix_var: int) -> tuple:
+
+def _setup(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D],
+    ix_var: int,
+) -> tuple:
     """
     Convenience function extracts some values we need again and again.
 
@@ -35,14 +43,20 @@ def _setup(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D]
     f = 1 - fee
 
     if ix_var == 0:
-        R = (r ** 2 * (1 - ls * s ** 2) - (x0 - a) ** 2 / l ** 2).sqrt()
+        R = (r**2 * (1 - ls * s**2) - (x0 - a) ** 2 / l**2).sqrt()
     else:
-        R = (r ** 2 * (1 - ls * c ** 2) - (y0 - b) ** 2 / l ** 2).sqrt()
+        R = (r**2 * (1 - ls * c**2) - (y0 - b) ** 2 / l**2).sqrt()
 
     return x0, y0, c, s, l, a, b, ls, f, r, R
 
 
-def dyin_dxout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+def dyin_dxout(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     Derivative of yin as a function of xout at 0. Accounts for fees.
     = d yin / d xout
@@ -56,7 +70,14 @@ def dyin_dxout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D
     ret = 1 / (f * (1 - ls * s**2)) * (ls * s * c - (x0 - a) / (l**2 * R))
     return ret
 
-def dxin_dyout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dxin_dyout(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     Derivative of xin as a function of yout at 0. Accounts for fees.
     = d xin / d yout
@@ -68,21 +89,38 @@ def dxin_dyout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D
     ret = 1 / (f * (1 - ls * c**2)) * (ls * s * c - (y0 - b) / (l**2 * R))
     return ret
 
-def dyout_dxin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dyout_dxin(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 0)
-    ret = f / (1 - ls * s**2) * (
-         ls * s * c - (x0-a) / (l**2 * R)
-    )
+    ret = f / (1 - ls * s**2) * (ls * s * c - (x0 - a) / (l**2 * R))
     return ret
 
-def dxout_dyin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dxout_dyin(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 1)
-    ret = f / (1 - ls * c**2) * (
-        ls * s * c - (y0-b) / (l**2 * R)
-    )
+    ret = f / (1 - ls * c**2) * (ls * s * c - (y0 - b) / (l**2 * R))
     return ret
 
-def dpx_dxout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dpx_dxout(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     Derivative of (Derivative of yin as a fct of xout) as a fct of xout at 0.
     = d^2 yin / d xout^2
@@ -93,12 +131,21 @@ def dpx_dxout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D,
     Only x0 := balances[0] is used.
     """
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 0)
-    ret = 1 / (f * (1 - ls * s**2)) * (
-        1 / (l**2 * R) + (x0 - a)**2 / (l**4 * R**3)
+    ret = (
+        1
+        / (f * (1 - ls * s**2))
+        * (1 / (l**2 * R) + (x0 - a) ** 2 / (l**4 * R**3))
     )
     return ret
 
-def dpy_dyout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dpy_dyout(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     Derivative of (price of y ito. x) as a fct of yout at 0
     = Derivative of (Derivative of xin as a fct of yout) as a fct of yout at 0.
@@ -109,12 +156,21 @@ def dpy_dyout(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D,
     Only y0 := balances[1] is used.
     """
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 1)
-    ret = 1 / (f * (1 - ls * c**2)) * (
-            1 / (l ** 2 * R) + (y0 - b) ** 2 / (l ** 4 * R ** 3)
+    ret = (
+        1
+        / (f * (1 - ls * c**2))
+        * (1 / (l**2 * R) + (y0 - b) ** 2 / (l**4 * R**3))
     )
     return ret
 
-def dpy_dxin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dpy_dxin(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     Derivative of (price of y ito x incl fees as a fct of xin) as a fct of xin at 0.
     = d (1 / (d yout / d xin)) / dxin at 0
@@ -122,12 +178,19 @@ def dpy_dxin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, 
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 0)
     ret = (
         (1 - ls * s**2)
-        * (1 / (l**2 * R) + (x0-a)**2 / (l**4 * R**3))
-        / (ls * s * c - (x0-a) / (l**2 * R))**2
+        * (1 / (l**2 * R) + (x0 - a) ** 2 / (l**4 * R**3))
+        / (ls * s * c - (x0 - a) / (l**2 * R)) ** 2
     )
     return ret
 
-def dpx_dyin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def dpx_dyin(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     Derivative of (price of x ito y incl fees as a fct of yin) as a fct of yin at 0.
     = d (1 / (d xout / d yin)) / d yin at 0
@@ -135,12 +198,19 @@ def dpx_dyin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, 
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 1)
     ret = (
         (1 - ls * c**2)
-        * (1 / (l**2 * R) + (y0-b)**2 / (l**4 * R**3))
-        / (ls * s * c - (y0-b) / (l**2 * R))**2
+        * (1 / (l**2 * R) + (y0 - b) ** 2 / (l**4 * R**3))
+        / (ls * s * c - (y0 - b) / (l**2 * R)) ** 2
     )
     return ret
 
-def normalized_liquidity_yin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def normalized_liquidity_yin(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     0.5 * 1 / (Derivative of (effective price of x ito y incl fees as a fct of yin)) as a fct of yin in the limit yin -> 0.
     = 0.5 * 1 / (d (yin / xout) / d yin) in the limit yin -> 0.
@@ -150,20 +220,29 @@ def normalized_liquidity_yin(balances: list[D], params: CEMMMathParams, fee: D, 
     """
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 1)
     ret = (
-        1 / (1 - ls * c**2)
-        * (R * (ls * s * c * l**2 * R - (y0-b))**2)
-        / (l**2 * R**2 + (y0-b)**2)
+        1
+        / (1 - ls * c**2)
+        * (R * (ls * s * c * l**2 * R - (y0 - b)) ** 2)
+        / (l**2 * R**2 + (y0 - b) ** 2)
     )
     return ret
 
-def normalized_liquidity_xin(balances: list[D], params: CEMMMathParams, fee: D, r_vec: tuple[D, D], r: Optional[D] = None):
+
+def normalized_liquidity_xin(
+    balances: list[D],
+    params: CEMMMathParams,
+    fee: D,
+    r_vec: tuple[D, D],
+    r: Optional[D] = None,
+):
     """
     See normalized_normalized_liquidity_yin. Here with yout and xin.
     """
     x0, y0, c, s, l, a, b, ls, f, r, R = _setup(balances, params, fee, r_vec, r, 0)
     ret = (
-        1 / (1 - ls * s**2)
-        * (R * (ls * s * c * l**2 * R - (x0-a))**2)
-        / (l**2 * R**2 + (x0-a)**2)
+        1
+        / (1 - ls * s**2)
+        * (R * (ls * s * c * l**2 * R - (x0 - a)) ** 2)
+        / (l**2 * R**2 + (x0 - a) ** 2)
     )
     return ret

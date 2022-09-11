@@ -6,6 +6,7 @@ from tests.support.utils import scale, unscale
 gyro_two_math_testing = accounts[0].deploy(Gyro2CLPMathTesting)
 gyro_three_math_testing = accounts[0].deploy(Gyro3CLPMathTesting)
 
+
 def main():
     print("--- 2-CLP: should correctly calculate normalized liquidity, USDC > DAI ---")
     # Here we use x = out balance, y = in balance
@@ -15,7 +16,11 @@ def main():
     sqrtBeta = D("1.000499875")
     f = D(1) - D("0.009")
 
-    l = unscale(gyro_two_math_testing.calculateInvariant(scale([x, y]), scale(sqrtAlpha), scale(sqrtBeta)))
+    l = unscale(
+        gyro_two_math_testing.calculateInvariant(
+            scale([x, y]), scale(sqrtAlpha), scale(sqrtBeta)
+        )
+    )
 
     # See the 2CLP/3CLP paper for why these are correct.
     # The blog post uses 1 / (dS / dyin) where S = yin/xout / p_x - 1.
@@ -34,10 +39,14 @@ def main():
     x = D(1232)
     y = D(1000)
     sqrtAlpha = D("0.9994998749")
-    sqrtBeta =  D("1.000499875")
+    sqrtBeta = D("1.000499875")
     f = D(1) - D("0.009")
 
-    l = unscale(gyro_two_math_testing.calculateInvariant(scale([x, y]), scale(sqrtAlpha), scale(sqrtBeta)))
+    l = unscale(
+        gyro_two_math_testing.calculateInvariant(
+            scale([x, y]), scale(sqrtAlpha), scale(sqrtBeta)
+        )
+    )
 
     nliq_code = (y + l * sqrtAlpha) / 2
     nliq_blog = (x + l / sqrtBeta) / f
@@ -52,7 +61,9 @@ def main():
     z = D(82934)
     root3Alpha = D("0.995647752")
     f = D(1) - D("0.003")
-    l = unscale(gyro_three_math_testing.calculateInvariant(scale([x, y, z]), scale(root3Alpha)))
+    l = unscale(
+        gyro_three_math_testing.calculateInvariant(scale([x, y, z]), scale(root3Alpha))
+    )
 
     nliq_code = (x + l * root3Alpha) / 2
     nliq_blog = (y + l * root3Alpha) / f
