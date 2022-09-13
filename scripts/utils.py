@@ -1,9 +1,12 @@
 from functools import lru_cache, wraps
+import json
 import os
 import sys
 from typing import Any, Dict, cast
 from brownie import accounts, network
 from brownie.network.account import ClefAccount, LocalAccount
+
+from tests.support.quantized_decimal import QuantizedDecimal
 
 DEV_CHAIN_IDS = {1337}
 MAINNET_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000000000"
@@ -85,3 +88,10 @@ def with_deployed(Contract):
         return wrapper
 
     return wrapped
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, QuantizedDecimal):
+            return str(o)
+        return super().default(o)

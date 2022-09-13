@@ -1,6 +1,7 @@
 import json
 import os
 from os import path
+
 from brownie import Gyro2CLPPool, Gyro3CLPPool, interface  # type: ignore
 from brownie.network import chain
 from tests.support.types import (
@@ -8,16 +9,17 @@ from tests.support.types import (
     ThreePoolFactoryCreateParams,
     TwoPoolFactoryCreateParams,
 )
-
-from scripts.constants import (
-    CONFIG_PATH,
-    DEPLOYED_FACTORIES,
-    PAUSE_MANAGER,
-    POOL_OWNER,
-)
-from scripts.mainnet_contracts import get_token_address
-from scripts.utils import abort, get_deployer, make_tx_params, with_deployed
 from tests.support.utils import scale
+
+from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER
+from scripts.mainnet_contracts import get_token_address
+from scripts.utils import (
+    JSONEncoder,
+    abort,
+    get_deployer,
+    make_tx_params,
+    with_deployed,
+)
 
 
 def _get_config():
@@ -44,14 +46,14 @@ def c2lp():
         symbol=pool_config["symbol"],
         tokens=_get_tokens(pool_config),
         sqrts=sqrts,
-        swapFeePercentage=round(scale(pool_config["swap_fee_percentage"]).raw),
+        swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
         oracleEnabled=pool_config["oracle_enabled"],
         owner=POOL_OWNER[chain.id],
         cap_manager=POOL_OWNER[chain.id],
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],
-            global_cap=round(scale(pool_config["cap"]["global"]).raw),
-            per_address_cap=round(scale(pool_config["cap"]["per_address"]).raw),
+            global_cap=scale(pool_config["cap"]["global"]),
+            per_address_cap=scale(pool_config["cap"]["per_address"]),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
     )
@@ -69,26 +71,21 @@ def c3lp():
     )
     deployer = get_deployer()
     pool_config = _get_config()
-    params = (
-        ThreePoolFactoryCreateParams(
-            name=pool_config["name"],
-            symbol=pool_config["symbol"],
-            tokens=_get_tokens(pool_config),
-            root3Alpha=scale(pool_config["root_3_alpha"]),
-            swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
-            owner=POOL_OWNER[chain.id],
-            cap_manager=POOL_OWNER[chain.id],
-            cap_params=CapParams(
-                cap_enabled=pool_config["cap"]["enabled"],
-                global_cap=round(scale(pool_config["cap"]["global"]).raw),
-                per_address_cap=round(scale(pool_config["cap"]["per_address"]).raw),
-            ),
-            pause_manager=PAUSE_MANAGER[chain.id],
+    params = ThreePoolFactoryCreateParams(
+        name=pool_config["name"],
+        symbol=pool_config["symbol"],
+        tokens=_get_tokens(pool_config),
+        root3Alpha=scale(pool_config["root_3_alpha"]),
+        swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
+        owner=POOL_OWNER[chain.id],
+        cap_manager=POOL_OWNER[chain.id],
+        cap_params=CapParams(
+            cap_enabled=pool_config["cap"]["enabled"],
+            global_cap=scale(pool_config["cap"]["global"]),
+            per_address_cap=scale(pool_config["cap"]["per_address"]),
         ),
+        pause_manager=PAUSE_MANAGER[chain.id],
     )
-    tx = three_pool_factory.create(
-        *params,
-        {"from": deployer, **make_tx_params()},
-    )
+    tx = three_pool_factory.create(params, {"from": deployer, **make_tx_params()})
     pool_address = tx.events["PoolCreated"]["pool"]
     Gyro3CLPPool.at(pool_address)
