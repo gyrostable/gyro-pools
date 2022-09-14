@@ -2,7 +2,7 @@ import json
 import os
 from os import path
 
-from brownie import Gyro2CLPPool, Gyro3CLPPool, interface  # type: ignore
+from brownie import Gyro2CLPPool, Gyro3CLPPool, interface, Gyro3CLPPoolFactory, web3, Gyro2CLPPoolFactory  # type: ignore
 from brownie.network import chain
 from tests.support.types import (
     CapParams,
@@ -61,20 +61,42 @@ def c2lp():
         *params,
         {"from": deployer, **make_tx_params()},
     )
-    pool_address = tx.events["PoolCreated"]["pool"]
+    receipt = web3.eth.getTransactionReceipt(tx.txid)
+    evt = Gyro2CLPPoolFactory[0].events.PoolCreated()
+    pool_address = evt.processReceipt(receipt)[0]["args"]["pool"]
     Gyro2CLPPool.at(pool_address)
 
 
+def persist_3clp_seed_data(pool_address, tokens):
+    filepath = path.join(path.dirname(__file__), "../misc/3clp-seed-data-testing.json")
+    amounts = {}
+    first_18 = True
+    for token in tokens:
+        if interface.ERC20(token).decimals() == 6:
+            amounts[token] = 36664
+        elif first_18:
+            amounts[token] = 76675558717198560
+            first_18 = False
+        else:
+            amounts[token] = 36664888493720408
+    seeding_data = {"pool": pool_address, "amounts": amounts}
+    with open(filepath, "w") as f:
+        json.dump(seeding_data, f, indent=4)
+
+
 def c3lp():
-    three_pool_factory = interface.IGyro3CLPPoolFactory(
-        DEPLOYED_FACTORIES[chain.id]["c3lp"]
-    )
+    # three_pool_factory = interface.IGyro3CLPPoolFactory(
+    #     DEPLOYED_FACTORIES[chain.id]["c3lp"]
+    # )
+    three_pool_factory = Gyro3CLPPoolFactory[-1]
     deployer = get_deployer()
     pool_config = _get_config()
+    tokens = _get_tokens(pool_config)
+    print(tokens)
     params = ThreePoolFactoryCreateParams(
         name=pool_config["name"],
         symbol=pool_config["symbol"],
-        tokens=_get_tokens(pool_config),
+        tokens=tokens,
         root3Alpha=scale(pool_config["root_3_alpha"]),
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
         owner=POOL_OWNER[chain.id],
@@ -87,5 +109,10 @@ def c3lp():
         pause_manager=PAUSE_MANAGER[chain.id],
     )
     tx = three_pool_factory.create(params, {"from": deployer, **make_tx_params()})
-    pool_address = tx.events["PoolCreated"]["pool"]
+    receipt = web3.eth.getTransactionReceipt(tx.txid)
+    evt = Gyro3CLPPoolFactory[0].events.PoolCreated()
+    pool_address = evt.processReceipt(receipt)[0]["args"]["pool"]
     Gyro3CLPPool.at(pool_address)
+
+    if chain.id == 1337:
+        persist_3clp_seed_data(pool_address, tokens)

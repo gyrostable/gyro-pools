@@ -2,7 +2,7 @@
   "name": "Gyroscope 2CLP WBTC/WETH",
   "symbol": "2CLP-WBTC-WETH",
   "tokens": ["WBTC", "WETH"],
-  "sqrts": ["0.2236067977", "0.2915475947"],
+  "sqrts": ["0.2236067977", "0.3"],
   "swap_fee_percentage": "0.0025",
   "oracle_enabled": false,
   "cap": {

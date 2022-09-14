@@ -8,8 +8,8 @@ BALANCER_ADDRESSES = {
         "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
     },
     1337: {
-        "query_processor": "0x5b1869D9A4C187F2EAa108f3062412ecf0526b24",
-        "vault": "0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B",
+        "query_processor": "0xCfEB869F69431e42cdB54A4F4f105C19C080A601",
+        "vault": "0xD833215cBcc3f914bD1C9ece3EE7BF8B14f841bb",
     },
 }
 

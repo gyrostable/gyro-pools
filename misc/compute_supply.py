@@ -1,9 +1,9 @@
 ### Calibrate the WETH/WBTC 2-CLP pool
 # set the following
-p_eth = 1721
-p_btc = 22379
-sqrt_alpha = 0.2236  # alpha = 0.05
-sqrt_beta = 0.2916  # beta = 0.085
+p_eth = 1603
+p_btc = 20363
+sqrt_alpha = 0.2236067977  # alpha = 0.05
+sqrt_beta = 0.3  # beta = 0.09
 
 L_init = 1e-2  # can set to w/e, choose x,y are small
 

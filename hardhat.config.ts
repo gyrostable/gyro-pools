@@ -30,6 +30,12 @@ const config: HardhatUserConfig = {
     polygon: {
       url: "https://polygon-rpc.com",
     },
+    hardhat: {
+      chainId: 137,
+      forking: {
+        url: "https://polygon-mainnet.g.alchemy.com/v2/5RhbxHGv1PCMTnG9iZRQ9T7tzYIuy1eS",
+      },
+    },
   },
   etherscan: {
     apiKey: process.env.POLYGONSCAN_TOKEN || "",
