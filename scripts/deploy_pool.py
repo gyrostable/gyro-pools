@@ -31,7 +31,10 @@ def _get_config():
 
 
 def _get_tokens(config):
-    return sorted([get_token_address(token, False) for token in config["tokens"]])
+    return sorted(
+        [get_token_address(token, False) for token in config["tokens"]],
+        key=lambda v: v.lower(),
+    )
 
 
 def c2lp():
@@ -85,14 +88,15 @@ def persist_3clp_seed_data(pool_address, tokens):
 
 
 def c3lp():
-    # three_pool_factory = interface.IGyro3CLPPoolFactory(
-    #     DEPLOYED_FACTORIES[chain.id]["c3lp"]
-    # )
-    three_pool_factory = Gyro3CLPPoolFactory[-1]
+    if chain.id == 1337:
+        three_pool_factory = Gyro3CLPPoolFactory[-1]
+    else:
+        three_pool_factory = interface.IGyro3CLPPoolFactory(
+            DEPLOYED_FACTORIES[chain.id]["c3lp"]
+        )
     deployer = get_deployer()
     pool_config = _get_config()
     tokens = _get_tokens(pool_config)
-    print(tokens)
     params = ThreePoolFactoryCreateParams(
         name=pool_config["name"],
         symbol=pool_config["symbol"],
