@@ -80,10 +80,35 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         return parameter0 ? _sqrtAlpha : _sqrtBeta;
     }
 
+    /** @dev Reads the balance of a token from the balancer vault and returns the scaled amount. Smaller storage access
+     * compared to getVault().getPoolTokens().
+     * Copied from the 3CLP *except* that for the 2CLP, the scalingFactor is interpreted as a regular integer, not a
+     * FixedPoint number. This is an inconsistency between the base contracts.
+     */
+    function _getScaledTokenBalance(IERC20 token, uint256 scalingFactor) internal view returns (uint256 balance) {
+        // Signature of getPoolTokenInfo(): (pool id, token) -> (cash, managed, lastChangeBlock, assetManager)
+        // and total amount = cash + managed. See balancer repo, PoolTokens.sol and BalanceAllocation.sol
+        (uint256 cash, uint256 managed, , ) = getVault().getPoolTokenInfo(getPoolId(), token);
+        balance = cash + managed; // can't overflow, see BalanceAllocation.sol::total() in the Balancer repo.
+        balance = balance * scalingFactor;
+    }
+
+    /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
+     * Essentially copied from the 3CLP.
+     */
+    function _getAllBalances() private view returns (uint256[] memory balances) {
+        // The below is more gas-efficient than the following line because the token slots don't have to be read in the
+        // vault.
+        // (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        balances = new uint256[](2);
+        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor0);
+        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor1);
+        return balances;
+    }
+
     /// @dev Returns virtual offsets a and b for reserves x and y respectively, as in (x+a)*(y+b)=L^2
     function getVirtualParameters() external view returns (uint256[] memory virtualParams) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-        _upscaleArray(balances);
+        uint256[] memory balances = _getAllBalances();
         // _calculateCurrentValues() is defined in terms of an in/out pair, but we just map this to the 0/1 (x/y) pair.
         virtualParams = new uint256[](2);
         (, virtualParams[0], virtualParams[1]) = _calculateCurrentValues(balances[0], balances[1], true);
@@ -115,11 +140,8 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
      * @dev Returns the current value of the invariant.
      */
     function getInvariant() public view override returns (uint256) {
-        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        uint256[] memory balances = _getAllBalances();
         uint256[2] memory sqrtParams = _sqrtParameters();
-
-        // Since the Pool hooks always work with upscaled balances, we manually upscale here for consistency
-        _upscaleArray(balances);
 
         return Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
     }
