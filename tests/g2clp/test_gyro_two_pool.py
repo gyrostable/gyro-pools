@@ -123,9 +123,11 @@ def test_pool_view_methods(users, mock_vault_pool, mock_vault, gyro_two_math_tes
     sqrtAlpha, sqrtBeta = unscale(mock_vault_pool.getSqrtParameters())
     invariant = unscale(mock_vault_pool.getInvariant())
 
-    invariant_math = unscale(gyro_two_math_testing.calculateInvariant(
-        [amountIn, amountIn], scale(sqrtAlpha), scale(sqrtBeta)
-    ))
+    invariant_math = unscale(
+        gyro_two_math_testing.calculateInvariant(
+            [amountIn, amountIn], scale(sqrtAlpha), scale(sqrtBeta)
+        )
+    )
     assert invariant == invariant_math
 
     assert virtual_params[0] == invariant / sqrtBeta

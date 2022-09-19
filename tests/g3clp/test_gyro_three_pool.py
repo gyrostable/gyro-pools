@@ -106,17 +106,23 @@ def test_pool_on_initialize(users, mock_vault_pool3, mock_vault, amountIn):
     initial_balances = tuple(initial_balances)
     assert initial_balances == (amountIn, amountIn, amountIn)
 
+
 @pytest.mark.parametrize("amountIn", [100 * 10**18, 10**11 * 10**18])
-def test_pool_view_methods(users, mock_vault_pool3, mock_vault, amountIn, gyro_three_math_testing):
+def test_pool_view_methods(
+    users, mock_vault_pool3, mock_vault, amountIn, gyro_three_math_testing
+):
     balances = (0, 0)
 
     tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], balances, amountIn)
 
     invariant = unscale(mock_vault_pool3.getInvariant())
     root3Alpha = unscale(mock_vault_pool3.getRoot3Alpha())
-    invariant_math = unscale(gyro_three_math_testing.calculateInvariant(
-        [amountIn, amountIn, amountIn], scale(root3Alpha),
-    ))
+    invariant_math = unscale(
+        gyro_three_math_testing.calculateInvariant(
+            [amountIn, amountIn, amountIn],
+            scale(root3Alpha),
+        )
+    )
     assert invariant == invariant_math
 
 

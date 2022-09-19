@@ -106,6 +106,7 @@ def test_pool_on_initialize(users, cemm_pool, mock_vault):
     assert initial_balances[0] == amountIn
     assert initial_balances[1] == amountIn
 
+
 def test_pool_view_methods(users, cemm_pool, mock_vault):
     balances = (0, 0)
     amountIn = 100 * 10**18
