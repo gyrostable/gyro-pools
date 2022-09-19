@@ -1,10 +1,12 @@
 import pytest
 from brownie import ZERO_ADDRESS
+
+import tests.g2clp.math_implementation as math_impl
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.conftest import TOKENS_PER_USER
 from tests.g2clp import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
-from tests.support.utils import unscale, approxed
+from tests.support.utils import unscale, approxed, scale
 
 
 def test_empty_erc20s(admin, gyro_erc20_empty):
@@ -109,6 +111,27 @@ def test_pool_on_initialize(users, mock_vault_pool, mock_vault):
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
     assert initial_balances[0] == amountIn
     assert initial_balances[1] == amountIn
+
+
+def test_pool_view_methods(users, mock_vault_pool, mock_vault, gyro_two_math_testing):
+    balances = (0, 0)
+    amountIn = 100 * 10**18
+
+    tx = join_pool(mock_vault, mock_vault_pool.address, users[0], balances, amountIn)
+
+    virtual_params = unscale(mock_vault_pool.getVirtualParameters())
+    sqrtAlpha, sqrtBeta = unscale(mock_vault_pool.getSqrtParameters())
+    invariant = unscale(mock_vault_pool.getInvariant())
+
+    invariant_math = unscale(
+        gyro_two_math_testing.calculateInvariant(
+            [amountIn, amountIn], scale(sqrtAlpha), scale(sqrtBeta)
+        )
+    )
+    assert invariant == invariant_math
+
+    assert virtual_params[0] == invariant / sqrtBeta
+    assert virtual_params[1] == invariant * sqrtAlpha
 
 
 def test_pool_on_join(users, mock_vault_pool, mock_vault):
