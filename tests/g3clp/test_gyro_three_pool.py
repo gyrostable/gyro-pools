@@ -106,6 +106,16 @@ def test_pool_on_initialize(users, mock_vault_pool3, mock_vault, amountIn):
     initial_balances = tuple(initial_balances)
     assert initial_balances == (amountIn, amountIn, amountIn)
 
+@pytest.mark.parametrize("amountIn", [100 * 10**18, 10**11 * 10**18])
+def test_pool_view_methods(users, mock_vault_pool3, mock_vault, amountIn):
+    balances = (0, 0)
+
+    tx = join_pool(mock_vault, mock_vault_pool3.address, users[0], balances, amountIn)
+
+    invariant = unscale(mock_vault_pool3.getInvariant())
+    root3Alpha = unscale(mock_vault_pool3.getRoot3Alpha())
+    # We don't test this against anything; we just make sure these fcts don't crash.
+
 
 @pytest.mark.parametrize("amount_in", [100 * 10**18, 5 * 10**10 * 10**18])
 # Note that for the second (large) test case, the join (of size = init size) completely fills up the pool.
