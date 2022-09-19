@@ -15,11 +15,11 @@ gyro_three_math_testing = accounts[0].deploy(Gyro3CLPMathTesting)
 
 def calc_eclp_test_results():
     params = CEMMMathParams(
-        alpha=D('0.050000000000020290'),
-        beta=D('0.397316269897841178'),
-        c=D('0.9551573261744535'),
-        s=D('0.29609877111408056'),
-        l=D('748956.475000000000000000'),
+        alpha=D("0.050000000000020290"),
+        beta=D("0.397316269897841178"),
+        c=D("0.9551573261744535"),
+        s=D("0.29609877111408056"),
+        l=D("748956.475000000000000000"),
     )
     fee = D("0.09")
     x = y = D(100)
@@ -30,7 +30,9 @@ def calc_eclp_test_results():
     # NOTE: The SOR tests (in the SOR repo) uses `tokenInIsToken0=true`, i.e., xin and yout.
 
     derived = cemm_prec_implementation.calc_derived_values(params)
-    invariant, inv_err = cemm_prec_implementation.calculateInvariantWithError(balances, params, derived)
+    invariant, inv_err = cemm_prec_implementation.calculateInvariantWithError(
+        balances, params, derived
+    )
     r_vec = (invariant + 2 * inv_err, invariant)
 
     print("--- derived params ---")
@@ -49,34 +51,50 @@ def calc_eclp_test_results():
 
     print("--- should correctly calculate swap amount for swap exact in ---")
     amount_in = D(10)
-    amount_out = balances[1] - cemm_prec_implementation.calcYGivenX(balances[0] + f * amount_in, params, derived, r_vec)
+    amount_out = balances[1] - cemm_prec_implementation.calcYGivenX(
+        balances[0] + f * amount_in, params, derived, r_vec
+    )
     print(amount_out)
 
     print("--- should correctly calculate swap amount for swap exact out ---")
     amount_out = D(10)
-    amount_in = cemm_prec_implementation.calcXGivenY(balances[1] - amount_out, params, derived, r_vec) - balances[0]
+    amount_in = (
+        cemm_prec_implementation.calcXGivenY(
+            balances[1] - amount_out, params, derived, r_vec
+        )
+        - balances[0]
+    )
     amount_in /= f
     print(amount_in)
 
     print("--- should correctly calculate price after swap exact in ---")
     amount_in = D(10)
-    py = 1 / eclp_derivatives.dyout_dxin([balances[0] + f * amount_in, None], params, fee, r_vec)
+    py = 1 / eclp_derivatives.dyout_dxin(
+        [balances[0] + f * amount_in, None], params, fee, r_vec
+    )
     print(py)
 
     print("--- should correctly calculate price after swap exact out ---")
     amount_out = D(10)
-    py = eclp_derivatives.dxin_dyout([None, balances[1] - amount_out], params, fee, r_vec)
+    py = eclp_derivatives.dxin_dyout(
+        [None, balances[1] - amount_out], params, fee, r_vec
+    )
     print(py)
 
     print("--- should correctly calculate derivative of price after swap exact in ---")
     amount_in = D(10)
-    dpy = eclp_derivatives.dpy_dxin([balances[0] + f * amount_in, None], params, fee, r_vec)
+    dpy = eclp_derivatives.dpy_dxin(
+        [balances[0] + f * amount_in, None], params, fee, r_vec
+    )
     print(dpy)
 
     print("--- should correctly calculate derivative of price after swap exact out ---")
     amount_out = D(10)
-    dpy = eclp_derivatives.dpy_dyout([None, balances[1] - amount_out], params, fee, r_vec)
+    dpy = eclp_derivatives.dpy_dyout(
+        [None, balances[1] - amount_out], params, fee, r_vec
+    )
     print(dpy)
+
 
 def calc_2clp_test_results():
     print("--- 2-CLP: should correctly calculate normalized liquidity, USDC > DAI ---")
@@ -140,6 +158,7 @@ def calc_2clp_test_results():
     nliq_blog = (y + l * root3Alpha) / f
     print(f"OLD (blog post): {nliq_blog}")
     print(f"NEW (code):      {nliq_code}")
+
 
 def main():
     calc_2clp_test_results()
