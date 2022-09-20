@@ -1,0 +1,12 @@
+{
+  "name": "Gyroscope 3CLP BUSD/USDC/USDT",
+  "symbol": "3CLP-BUSD-USDC-USDT",
+  "tokens": ["BUSD", "USDC", "USDT"],
+  "root_3_alpha": "0.9995",
+  "swap_fee_percentage": "0.0003",
+  "cap": {
+    "enabled": true,
+    "global": "200111042",
+    "per_address": "40022208"
+  }
+}

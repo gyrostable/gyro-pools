@@ -1,11 +1,11 @@
-from functools import lru_cache, wraps
 import json
 import os
 import sys
+from functools import lru_cache, wraps
 from typing import Any, Dict, Literal, Union, cast, overload
+
 from brownie import accounts, network
 from brownie.network.account import ClefAccount, LocalAccount
-
 from tests.support.quantized_decimal import QuantizedDecimal
 
 DEV_CHAIN_IDS = {1337}

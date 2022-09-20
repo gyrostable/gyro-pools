@@ -8,40 +8,7 @@ from brownie import (
 )
 from brownie.network import chain
 
-STABLE_COINS = ["DAI", "USDT", "USDC", "GUSD", "HUSD", "TUSD", "USDP", "LUSD"]
-
-_token_addresses = {
-    1: {
-        "DAI": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-        "WBTC": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-        "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        "WETH": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-        "CRV": "0xD533a949740bb3306d119CC777fa900bA034cd52",
-        "TUSD": "0x0000000000085d4780B73119b644AE5ecd22b376",
-        "USDP": "0x8E870D67F660D95d5be530380D0eC0bd388289E1",
-        "PAXG": "0x45804880De22913dAFE09f4980848ECE6EcbAf78",
-        "AAVE": "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
-        "LUSD": "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0",
-        "COMP": "0xc00e94Cb662C3520282E6f5717214004A7f26888",
-        "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        "GUSD": "0x056Fd409E1d7A124BD7017459dFEa2F387b6d5Cd",
-        "HUSD": "0xdF574c24545E5FfEcb9a659c229253D4111d87e1",
-    },
-    137: {
-        "DAI": "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
-        "WBTC": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
-        "USDC": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-        "WETH": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
-        "CRV": "0x172370d5Cd63279eFa6d502DAB29171933a610AF",
-        "TUSD": "0x2e1AD108fF1D8C782fcBbB89AAd783aC49586756",
-        "PAXG": "0x553d3D295e0f695B9228246232eDF400ed3560B5",
-        "AAVE": "0xD6DF932A45C0f255f85145f286eA0b292B21C90B",
-        "COMP": "0x8505b9d2254A7Ae468c0E9dd10Ccea3A837aef5c",
-        "USDT": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
-        "GUSD": "0xC8A94a3d3D2dabC3C1CaffFFDcA6A7543c3e3e65",
-        "HUSD": "0x2088C47Fc0c78356c622F79dBa4CbE1cCfA84A91",
-    },
-}
+from scripts.constants import STABLE_COINS, TOKEN_ADDRESSES
 
 
 @lru_cache()
@@ -58,9 +25,9 @@ def get_token_address(name, is_fork=True) -> str:
                 token = accounts[0].deploy(SimpleERC20)
                 token.mint(accounts[0], 10**24)
             return token.address
-    if chain_id not in _token_addresses:
+    if chain_id not in TOKEN_ADDRESSES:
         raise ValueError(f"chain {chain_id} not supported")
-    return _token_addresses[chain_id].get(name, ZERO_ADDRESS)
+    return TOKEN_ADDRESSES[chain_id].get(name, ZERO_ADDRESS)
 
 
 class TokenAddresses:
@@ -160,7 +127,7 @@ def _chainlink_feed(name) -> str:
     chain_id = chain.id
     if chain_id == 1337:
         chain_id = 1
-    if chain_id not in _token_addresses:
+    if chain_id not in _chainlink_feeds:
         raise ValueError(f"chain {chain_id} not supported")
     return _chainlink_feeds[chain_id].get(name, ZERO_ADDRESS)
 
@@ -217,7 +184,7 @@ def _get_uniswap_pool(name) -> str:
     chain_id = chain.id
     if chain_id == 1337:
         chain_id = 1
-    if chain_id not in _token_addresses:
+    if chain_id not in _uniswap_pools:
         raise ValueError(f"chain {chain_id} not supported")
     return _uniswap_pools[chain_id].get(name, ZERO_ADDRESS)
 

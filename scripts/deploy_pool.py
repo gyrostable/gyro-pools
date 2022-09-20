@@ -1,9 +1,11 @@
+from decimal import Decimal
 import json
 import os
 from os import path
 
 from brownie import Gyro2CLPPool, Gyro3CLPPool, interface, Gyro3CLPPoolFactory, web3, Gyro2CLPPoolFactory  # type: ignore
 from brownie.network import chain
+from scripts.pool_utils import compute_bounds_sqrts
 from tests.support.types import (
     CapParams,
     ThreePoolFactoryCreateParams,
@@ -30,11 +32,11 @@ def _get_config():
         return json.load(f)
 
 
-def _get_tokens(config):
-    return sorted(
-        [get_token_address(token, False) for token in config["tokens"]],
-        key=lambda v: v.lower(),
-    )
+def get_tokens(config, sort=True):
+    tokens = [get_token_address(token, False) for token in config["tokens"]]
+    if sort:
+        tokens.sort(key=lambda v: v.lower())
+    return tokens
 
 
 def c2lp():
@@ -43,20 +45,22 @@ def c2lp():
     )
     deployer = get_deployer()
     pool_config = _get_config()
-    sqrts = [round(scale(v).raw) for v in pool_config["sqrts"]]
+    tokens = get_tokens(pool_config, sort=False)
+    sqrts = compute_bounds_sqrts(tokens, pool_config["bounds"])
+    tokens.sort(key=lambda v: v.lower())
     params = TwoPoolFactoryCreateParams(
         name=pool_config["name"],
         symbol=pool_config["symbol"],
-        tokens=_get_tokens(pool_config),
-        sqrts=sqrts,
+        tokens=tokens,
+        sqrts=[round(scale(v).raw) for v in sqrts],
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
         oracleEnabled=pool_config["oracle_enabled"],
         owner=POOL_OWNER[chain.id],
         cap_manager=POOL_OWNER[chain.id],
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],
-            global_cap=scale(pool_config["cap"]["global"]),
-            per_address_cap=scale(pool_config["cap"]["per_address"]),
+            global_cap=int(scale(pool_config["cap"]["global"])),
+            per_address_cap=int(scale(pool_config["cap"]["per_address"])),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
     )
@@ -68,6 +72,7 @@ def c2lp():
     evt = Gyro2CLPPoolFactory[0].events.PoolCreated()
     pool_address = evt.processReceipt(receipt)[0]["args"]["pool"]
     Gyro2CLPPool.at(pool_address)
+    print(f"Pool deployed at {pool_address}")
 
 
 def persist_3clp_seed_data(pool_address, tokens):
@@ -96,7 +101,7 @@ def c3lp():
         )
     deployer = get_deployer()
     pool_config = _get_config()
-    tokens = _get_tokens(pool_config)
+    tokens = get_tokens(pool_config)
     params = ThreePoolFactoryCreateParams(
         name=pool_config["name"],
         symbol=pool_config["symbol"],
@@ -107,8 +112,8 @@ def c3lp():
         cap_manager=POOL_OWNER[chain.id],
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],
-            global_cap=scale(pool_config["cap"]["global"]),
-            per_address_cap=scale(pool_config["cap"]["per_address"]),
+            global_cap=int(scale(pool_config["cap"]["global"])),
+            per_address_cap=int(scale(pool_config["cap"]["per_address"])),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
     )
@@ -117,6 +122,7 @@ def c3lp():
     evt = Gyro3CLPPoolFactory[0].events.PoolCreated()
     pool_address = evt.processReceipt(receipt)[0]["args"]["pool"]
     Gyro3CLPPool.at(pool_address)
+    print(f"Pool deployed at {pool_address}")
 
     if chain.id == 1337:
         persist_3clp_seed_data(pool_address, tokens)

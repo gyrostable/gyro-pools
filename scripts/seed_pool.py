@@ -7,10 +7,12 @@ from eth_abi import encode_abi
 from scripts.utils import get_deployer
 
 SEED_DATA_PATH = os.environ.get("SEED_DATA_PATH")
+POOL_ADDRESS = os.environ.get("POOL_ADDRESS")
 
 
 def main():
     assert SEED_DATA_PATH, "SEED_DATA_PATH environment variable must be set"
+    assert POOL_ADDRESS, "POOL_ADDRESS environment variable must be set"
     assert os.path.exists(SEED_DATA_PATH), "Config path does not exist"
 
     deployer = get_deployer()
@@ -20,7 +22,7 @@ def main():
 
     vault = Vault[0]
 
-    pool = interface.IBalancerPool(seed_data["pool"])
+    pool = interface.IBalancerPool(POOL_ADDRESS)
 
     pool_id = pool.getPoolId()
     pool_tokens = vault.getPoolTokens(pool_id)[0]
