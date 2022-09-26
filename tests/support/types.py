@@ -1,7 +1,7 @@
 from dataclasses import field
 from typing import NamedTuple, Tuple, Iterable
 
-from tests.support.quantized_decimal import DecimalLike
+from tests.support.quantized_decimal import DecimalLike, QuantizedDecimal
 from brownie import accounts
 
 
@@ -55,8 +55,8 @@ class TwoPoolBaseParams(NamedTuple):
 
 class CapParams(NamedTuple):
     cap_enabled: bool = False
-    per_address_cap: int = 0
-    global_cap: int = 0
+    per_address_cap: DecimalLike = 0
+    global_cap: DecimalLike = 0
 
 
 class TwoPoolFactoryCreateParams(NamedTuple):

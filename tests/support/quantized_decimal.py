@@ -209,6 +209,8 @@ class QuantizedDecimal:
         return repr(self._value)
 
     def __str__(self):
+        if int(self._value) == self._value:
+            return str(int(self._value))
         return str(self._value)
 
     def __format__(self, format_spec: str):

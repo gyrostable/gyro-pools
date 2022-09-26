@@ -13,3 +13,9 @@ contract SimpleERC20 is ERC20, Ownable {
         _mint(to, amount);
     }
 }
+
+contract SimpleERC20CustomDecimal is SimpleERC20 {
+    constructor(uint8 decimals) SimpleERC20() {
+        _setupDecimals(decimals);
+    }
+}
