@@ -346,7 +346,7 @@ def pool_factory(admin, Gyro2CLPPoolFactory, gyro_config):
 @pytest.fixture
 def eclp_pool(
     admin,
-    GyroCELPPool,
+    GyroECLPPool,
     GyroECLPMath,
     gyro_erc20_funded,
     mock_vault,

@@ -3,23 +3,9 @@ import os
 from decimal import Decimal
 from os import path
 
-<<<<<<< HEAD
-from brownie import Gyro2CLPPool, Gyro2CLPPoolFactory, Gyro3CLPPool  # type: ignore
-from brownie import Gyro3CLPPoolFactory, GyroCEMMPool, interface  # type: ignore
-from brownie import web3
-from brownie.network import chain
-from tests.support.types import (
-    CapParams,
-    CEMMPoolParams,
-    GyroCEMMMathDerivedParams,
-    GyroCEMMMathParams,
-    ThreePoolFactoryCreateParams,
-    TwoPoolBaseParams,
-    TwoPoolFactoryCreateParams,
-)
-from tests.support.utils import scale
-=======
 from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroCEMMPool, interface, ERC20, GyroCEMMPoolFactory  # type: ignore
+from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory  # type: ignore
+from brownie import web3
 from brownie.network import chain
 from tests.support.types import (
     CapParams,
@@ -34,7 +20,6 @@ from tests.support.utils import scale
 from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER
 from scripts.mainnet_contracts import get_token_address
 from scripts.utils import abort, get_deployer, make_tx_params, with_deployed
->>>>>>> a083045 (Fix deployment scripts for eclp)
 
 from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER
 from scripts.mainnet_contracts import get_token_address
@@ -201,12 +186,7 @@ def eclp():
     )
     tx = cemm_pool_factory.create(
         *params,
-        {
-            "from": deployer,
-            **make_tx_params(),
-            "gas_limit": 30_000_000,
-            "allow_revert": True,
-        },
+        {"from": deployer, **make_tx_params()},
     )
     if "PoolCreated" in tx.events:
         pool_address = tx.events["PoolCreated"]["pool"]
