@@ -135,25 +135,29 @@ def calc_eclp_test_results_solidity():
     amount_in = D(0)
 
     # First variant: Via calcYGivenX
-    amount_out = balances[1] - unscale(cemm_math_testing.calcYGivenX(
-        scale(balances[0] + f * amount_in),
-        scale(params),
-        cemm_prec_implementation.scale_derived_values(derived),
-        scale(r_vec)
-    ))
+    amount_out = balances[1] - unscale(
+        cemm_math_testing.calcYGivenX(
+            scale(balances[0] + f * amount_in),
+            scale(params),
+            cemm_prec_implementation.scale_derived_values(derived),
+            scale(r_vec),
+        )
+    )
     print(amount_out)
 
     # Second variant: Via calcOutGivenIn
     # The following is gonna revert. That's fine and expected behavior for such a low trade amount.
     try:
-        amount_out = unscale(cemm_math_testing.calcOutGivenIn(
-            scale(balances),
-            scale(f * amount_in),
-            True,
-            scale(params),
-            cemm_prec_implementation.scale_derived_values(derived),
-            scale(r_vec)
-        ))
+        amount_out = unscale(
+            cemm_math_testing.calcOutGivenIn(
+                scale(balances),
+                scale(f * amount_in),
+                True,
+                scale(params),
+                cemm_prec_implementation.scale_derived_values(derived),
+                scale(r_vec),
+            )
+        )
         print(amount_out)
         print("Didn't revert! It should've though!")
     except VirtualMachineError as e:

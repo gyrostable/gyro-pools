@@ -49,7 +49,7 @@ def gen_samples_sqrt(draw):
     # Since the Newton method divides the input by something, the max we can do is 1.15e41. We go to 9e40.
     mantissa = draw(qdecimals(1, 9))
     exponent = draw(qdecimals(-18, 40))
-    return mantissa * D(10)**exponent
+    return mantissa * D(10) ** exponent
 
 
 @settings(max_examples=1_000)
@@ -63,6 +63,7 @@ def test_sqrt(math_testing, a):
     res_sol = math_testing.sqrt(scale(a))
     # Absolute error tolerated in the last decimal + the default relative error.
     assert int(res_sol) == scale(res_math).approxed(abs=D("5"), rel=D("5e-14"))
+
 
 @settings(max_examples=1_000)
 @given(a=gen_samples_sqrt())
