@@ -222,8 +222,6 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         return GyroCEMMMath.calcInGivenOut(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
     }
 
-    //Note: is public visibility ok for the following function?
-
     /**
      * @dev Called when the Pool is joined for the first time; that is, when the BPT total supply is zero.
      *
