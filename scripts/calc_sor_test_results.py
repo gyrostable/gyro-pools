@@ -1,6 +1,7 @@
 from pprint import pprint
 
 from brownie import *
+from brownie.exceptions import VirtualMachineError
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import CEMMMathParams
@@ -94,6 +95,73 @@ def calc_eclp_test_results():
         [None, balances[1] - amount_out], params, fee, r_vec
     )
     print(dpy)
+
+    print("--- BONUS: should not return negative numbers upon swap with 0 amount ---")
+    # NB fees don't matter here.
+    amount_in = D(0)
+    amount_out = balances[1] - cemm_prec_implementation.calcYGivenX(
+        balances[0] + f * amount_in, params, derived, r_vec
+    )
+    print(amount_out)
+
+
+def calc_eclp_test_results_solidity():
+    cemm_math_testing = accounts[0].deploy(GyroCEMMMathTesting)
+
+    """Calculate *some of* the test results via solidity, instead of the python prec impl."""
+    params = CEMMMathParams(
+        alpha=D("0.050000000000020290"),
+        beta=D("0.397316269897841178"),
+        c=D("0.9551573261744535"),
+        s=D("0.29609877111408056"),
+        l=D("748956.475000000000000000"),
+    )
+    fee = D("0.09")
+    x = y = D(100)
+
+    balances = [x, y]
+    f = 1 - fee
+
+    # NOTE: The SOR tests (in the SOR repo) uses `tokenInIsToken0=true`, i.e., xin and yout.
+
+    derived = cemm_prec_implementation.calc_derived_values(params)
+    invariant, inv_err = cemm_prec_implementation.calculateInvariantWithError(
+        balances, params, derived
+    )
+    r_vec = (invariant + 2 * inv_err, invariant)
+
+    print("--- BONUS: should not return negative numbers upon swap with 0 amount ---")
+    # NB fees don't matter here.
+    amount_in = D(0)
+
+    # First variant: Via calcYGivenX
+    amount_out = balances[1] - unscale(
+        cemm_math_testing.calcYGivenX(
+            scale(balances[0] + f * amount_in),
+            scale(params),
+            cemm_prec_implementation.scale_derived_values(derived),
+            scale(r_vec),
+        )
+    )
+    print(amount_out)
+
+    # Second variant: Via calcOutGivenIn
+    # The following is gonna revert. That's fine and expected behavior for such a low trade amount.
+    try:
+        amount_out = unscale(
+            cemm_math_testing.calcOutGivenIn(
+                scale(balances),
+                scale(f * amount_in),
+                True,
+                scale(params),
+                cemm_prec_implementation.scale_derived_values(derived),
+                scale(r_vec),
+            )
+        )
+        print(amount_out)
+        print("Didn't revert! It should've though!")
+    except VirtualMachineError as e:
+        print(f"Reverted! {e}")
 
 
 def calc_2clp_test_results():
