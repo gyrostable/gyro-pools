@@ -42,8 +42,18 @@ def test_decimal_behavior(math_testing, a, b, ops):
         assert scale(b) == solidity_b
 
 
+@st.composite
+def gen_samples_sqrt(draw):
+    # We generate samples that are "logarithmically uniform", to get more diverse orders of magnitude than would
+    # ordinarily be generated.
+    # Since the Newton method divides the input by something, the max we can do is 1.15e41. We go to 9e40.
+    mantissa = draw(qdecimals(1, 9))
+    exponent = draw(qdecimals(-18, 40))
+    return mantissa * D(10)**exponent
+
+
 @settings(max_examples=1_000)
-@given(a=qdecimals(0))
+@given(a=gen_samples_sqrt())
 @example(a=D(1))
 @example(a=D(0))
 @example(a=D("1E-18"))
@@ -54,9 +64,10 @@ def test_sqrt(math_testing, a):
     # Absolute error tolerated in the last decimal + the default relative error.
     assert int(res_sol) == scale(res_math).approxed(abs=D("5"), rel=D("5e-14"))
 
-
-@given(a=qdecimals(0).filter(lambda a: a > 0))
+@settings(max_examples=1_000)
+@given(a=gen_samples_sqrt())
 @example(a=D(1))
+@example(a=D("1E-18"))
 def test_sqrtNewton(math_testing, a):
     res_math = a.sqrt()
     res_sol = math_testing.sqrtNewton(scale(a), 5)
