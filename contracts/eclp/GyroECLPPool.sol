@@ -27,10 +27,10 @@ import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 
 import "../ExtensibleWeightedPool2Tokens.sol";
-import "./GyroCEMMMath.sol";
-import "./GyroCEMMOracleMath.sol";
+import "./GyroECLPMath.sol";
+import "./GyroECLPOracleMath.sol";
 
-contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
+contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -39,7 +39,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
 
     uint256 private constant _MINIMUM_BPT = 1e6;
 
-    /// @notice Parameters of the CEMM pool
+    /// @notice Parameters of the ECLP pool
     int256 public immutable _paramsAlpha;
     int256 public immutable _paramsBeta;
     int256 public immutable _paramsC;
@@ -59,61 +59,61 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
 
     struct GyroParams {
         NewPoolParams baseParams;
-        GyroCEMMMath.Params cemmParams;
-        GyroCEMMMath.DerivedParams derivedCemmParams;
+        GyroECLPMath.Params eclpParams;
+        GyroECLPMath.DerivedParams derivedEclpParams;
     }
 
-    event CEMMParamsValidated(bool paramsValidated);
-    event CEMMDerivedParamsValidated(bool derivedParamsValidated);
+    event ECLPParamsValidated(bool paramsValidated);
+    event ECLPDerivedParamsValidated(bool derivedParamsValidated);
 
     event InvariantAterInitializeJoin(uint256 invariantAfterJoin);
     event InvariantOldAndNew(uint256 oldInvariant, uint256 newInvariant);
 
-    event SwapParams(uint256[] balances, GyroCEMMMath.Vector2 invariant, uint256 amount);
+    event SwapParams(uint256[] balances, GyroECLPMath.Vector2 invariant, uint256 amount);
 
     event OracleIndexUpdated(uint256 oracleUpdatedIndex);
 
     constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) {
-        _grequire(configAddress != address(0x0), GyroCEMMPoolErrors.ADDRESS_IS_ZERO_ADDRESS);
+        _grequire(configAddress != address(0x0), GyroECLPPoolErrors.ADDRESS_IS_ZERO_ADDRESS);
 
-        GyroCEMMMath.validateParams(params.cemmParams);
-        emit CEMMParamsValidated(true);
+        GyroECLPMath.validateParams(params.eclpParams);
+        emit ECLPParamsValidated(true);
 
-        GyroCEMMMath.validateDerivedParamsLimits(params.cemmParams, params.derivedCemmParams);
-        emit CEMMDerivedParamsValidated(true);
+        GyroECLPMath.validateDerivedParamsLimits(params.eclpParams, params.derivedEclpParams);
+        emit ECLPDerivedParamsValidated(true);
 
         (_paramsAlpha, _paramsBeta, _paramsC, _paramsS, _paramsLambda) = (
-            params.cemmParams.alpha,
-            params.cemmParams.beta,
-            params.cemmParams.c,
-            params.cemmParams.s,
-            params.cemmParams.lambda
+            params.eclpParams.alpha,
+            params.eclpParams.beta,
+            params.eclpParams.c,
+            params.eclpParams.s,
+            params.eclpParams.lambda
         );
 
         (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY, _u, _v, _w, _z, _dSq) = (
-            params.derivedCemmParams.tauAlpha.x,
-            params.derivedCemmParams.tauAlpha.y,
-            params.derivedCemmParams.tauBeta.x,
-            params.derivedCemmParams.tauBeta.y,
-            params.derivedCemmParams.u,
-            params.derivedCemmParams.v,
-            params.derivedCemmParams.w,
-            params.derivedCemmParams.z,
-            params.derivedCemmParams.dSq
+            params.derivedEclpParams.tauAlpha.x,
+            params.derivedEclpParams.tauAlpha.y,
+            params.derivedEclpParams.tauBeta.x,
+            params.derivedEclpParams.tauBeta.y,
+            params.derivedEclpParams.u,
+            params.derivedEclpParams.v,
+            params.derivedEclpParams.w,
+            params.derivedEclpParams.z,
+            params.derivedEclpParams.dSq
         );
 
         gyroConfig = IGyroConfig(configAddress);
     }
 
-    /** @dev reconstructs CEMM params structs from immutable arrays */
-    function reconstructCEMMParams() internal view returns (GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory d) {
+    /** @dev reconstructs ECLP params structs from immutable arrays */
+    function reconstructECLPParams() internal view returns (GyroECLPMath.Params memory params, GyroECLPMath.DerivedParams memory d) {
         (params.alpha, params.beta, params.c, params.s, params.lambda) = (_paramsAlpha, _paramsBeta, _paramsC, _paramsS, _paramsLambda);
         (d.tauAlpha.x, d.tauAlpha.y, d.tauBeta.x, d.tauBeta.y) = (_tauAlphaX, _tauAlphaY, _tauBetaX, _tauBetaY);
         (d.u, d.v, d.w, d.z, d.dSq) = (_u, _v, _w, _z, _dSq);
     }
 
-    function getCEMMParams() external view returns (GyroCEMMMath.Params memory params, GyroCEMMMath.DerivedParams memory d) {
-        return reconstructCEMMParams();
+    function getECLPParams() external view returns (GyroECLPMath.Params memory params, GyroECLPMath.DerivedParams memory d) {
+        return reconstructECLPParams();
     }
 
     /**
@@ -127,7 +127,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     //        // upscale here for consistency
     //        _upscaleArray(balances);
     //
-    //        return GyroCEMMMath.calculateInvariant(balances, cemmParams, derived);
+    //        return GyroECLPMath.calculateInvariant(balances, eclpParams, derived);
     //    }
 
     // Swap Hooks
@@ -144,7 +144,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         } else if (request.tokenIn == _token1 && request.tokenOut == _token0) {
             tokenInIsToken0 = false;
         } else {
-            _revert(GyroCEMMPoolErrors.TOKEN_IN_IS_NOT_TOKEN_0);
+            _revert(GyroECLPPoolErrors.TOKEN_IN_IS_NOT_TOKEN_0);
         }
 
         uint256 scalingFactorTokenIn = _scalingFactor(tokenInIsToken0);
@@ -158,16 +158,16 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         // symmetry here, and we identify the two tokens explicitly.
         uint256[] memory balances = _balancesFromTokenInOut(balanceTokenIn, balanceTokenOut, tokenInIsToken0);
 
-        (GyroCEMMMath.Params memory cemmParams, GyroCEMMMath.DerivedParams memory derivedCEMMParams) = reconstructCEMMParams();
-        GyroCEMMMath.Vector2 memory invariant;
+        (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
+        GyroECLPMath.Vector2 memory invariant;
         {
-            (int256 currentInvariant, int256 invErr) = GyroCEMMMath.calculateInvariantWithError(balances, cemmParams, derivedCEMMParams);
+            (int256 currentInvariant, int256 invErr) = GyroECLPMath.calculateInvariantWithError(balances, eclpParams, derivedECLPParams);
             // invariant = overestimate in x-component, underestimate in y-component
-            // No overflow in `+` due to constraints to the different values enforced in GyroCEMMMath.
-            invariant = GyroCEMMMath.Vector2(currentInvariant + 2 * invErr, currentInvariant);
+            // No overflow in `+` due to constraints to the different values enforced in GyroECLPMath.
+            invariant = GyroECLPMath.Vector2(currentInvariant + 2 * invErr, currentInvariant);
 
             // Update price oracle with the pre-swap balances. Vs other pools, we need to do this after invariant is calculated
-            _updateOracle(request.lastChangeBlock, balances, currentInvariant.toUint256(), cemmParams, derivedCEMMParams);
+            _updateOracle(request.lastChangeBlock, balances, currentInvariant.toUint256(), eclpParams, derivedECLPParams);
         }
 
         if (request.kind == IVault.SwapKind.GIVEN_IN) {
@@ -176,7 +176,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             uint256 feeAmount = request.amount.mulUp(getSwapFeePercentage());
             request.amount = _upscale(request.amount.sub(feeAmount), scalingFactorTokenIn);
 
-            uint256 amountOut = _onSwapGivenIn(request, balances, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+            uint256 amountOut = _onSwapGivenIn(request, balances, tokenInIsToken0, eclpParams, derivedECLPParams, invariant);
 
             emit SwapParams(balances, invariant, amountOut);
 
@@ -185,7 +185,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         } else {
             request.amount = _upscale(request.amount, scalingFactorTokenOut);
 
-            uint256 amountIn = _onSwapGivenOut(request, balances, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+            uint256 amountIn = _onSwapGivenOut(request, balances, tokenInIsToken0, eclpParams, derivedECLPParams, invariant);
 
             emit SwapParams(balances, invariant, amountIn);
 
@@ -202,24 +202,24 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         SwapRequest memory swapRequest,
         uint256[] memory balances,
         bool tokenInIsToken0,
-        GyroCEMMMath.Params memory cemmParams,
-        GyroCEMMMath.DerivedParams memory derivedCEMMParams,
-        GyroCEMMMath.Vector2 memory invariant
+        GyroECLPMath.Params memory eclpParams,
+        GyroECLPMath.DerivedParams memory derivedECLPParams,
+        GyroECLPMath.Vector2 memory invariant
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
-        return GyroCEMMMath.calcOutGivenIn(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+        return GyroECLPMath.calcOutGivenIn(balances, swapRequest.amount, tokenInIsToken0, eclpParams, derivedECLPParams, invariant);
     }
 
     function _onSwapGivenOut(
         SwapRequest memory swapRequest,
         uint256[] memory balances,
         bool tokenInIsToken0,
-        GyroCEMMMath.Params memory cemmParams,
-        GyroCEMMMath.DerivedParams memory derivedCEMMParams,
-        GyroCEMMMath.Vector2 memory invariant
+        GyroECLPMath.Params memory eclpParams,
+        GyroECLPMath.DerivedParams memory derivedECLPParams,
+        GyroECLPMath.Vector2 memory invariant
     ) private pure returns (uint256) {
         // Swaps are disabled while the contract is paused.
-        return GyroCEMMMath.calcInGivenOut(balances, swapRequest.amount, tokenInIsToken0, cemmParams, derivedCEMMParams, invariant);
+        return GyroECLPMath.calcInGivenOut(balances, swapRequest.amount, tokenInIsToken0, eclpParams, derivedECLPParams, invariant);
     }
 
     /**
@@ -248,8 +248,8 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         InputHelpers.ensureInputLengthMatch(amountsIn.length, 2);
         _upscaleArray(amountsIn);
 
-        (GyroCEMMMath.Params memory cemmParams, GyroCEMMMath.DerivedParams memory derivedCEMMParams) = reconstructCEMMParams();
-        uint256 invariantAfterJoin = GyroCEMMMath.calculateInvariant(amountsIn, cemmParams, derivedCEMMParams);
+        (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
+        uint256 invariantAfterJoin = GyroECLPMath.calculateInvariant(amountsIn, eclpParams, derivedECLPParams);
 
         emit InvariantAterInitializeJoin(invariantAfterJoin);
 
@@ -302,11 +302,11 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous join
         // or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids spending gas
         // computing them on each individual swap
-        (GyroCEMMMath.Params memory cemmParams, GyroCEMMMath.DerivedParams memory derivedCEMMParams) = reconstructCEMMParams();
-        uint256 invariantBeforeAction = GyroCEMMMath.calculateInvariant(balances, cemmParams, derivedCEMMParams);
+        (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
+        uint256 invariantBeforeAction = GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
 
         // Update price oracle with the pre-exit balances. Vs other pools, we need to do this after invariant is calculated
-        _updateOracle(lastChangeBlock, balances, invariantBeforeAction, cemmParams, derivedCEMMParams);
+        _updateOracle(lastChangeBlock, balances, invariantBeforeAction, eclpParams, derivedECLPParams);
 
         _distributeFees(invariantBeforeAction);
 
@@ -388,7 +388,7 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
     {
         // Exits are not completely disabled while the contract is paused: proportional exits (exact BPT in for tokens
         // out) remain functional.
-        (GyroCEMMMath.Params memory cemmParams, GyroCEMMMath.DerivedParams memory derivedCEMMParams) = reconstructCEMMParams();
+        (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
 
         // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
         // to avoid extra calculations and reduce the potential for errors.
@@ -396,10 +396,10 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
-            uint256 invariantBeforeAction = GyroCEMMMath.calculateInvariant(balances, cemmParams, derivedCEMMParams);
+            uint256 invariantBeforeAction = GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
 
             // Update price oracle with the pre-exit balances. Vs other pools, we need to do this after invariant is calculated
-            _updateOracle(lastChangeBlock, balances, invariantBeforeAction, cemmParams, derivedCEMMParams);
+            _updateOracle(lastChangeBlock, balances, invariantBeforeAction, eclpParams, derivedECLPParams);
 
             _distributeFees(invariantBeforeAction);
 
@@ -484,24 +484,24 @@ contract GyroCEMMPool is ExtensibleWeightedPool2Tokens, GyroCEMMOracleMath {
         uint256 lastChangeBlock,
         uint256[] memory balances,
         uint256 invariant,
-        GyroCEMMMath.Params memory cemmParams,
-        GyroCEMMMath.DerivedParams memory derivedCEMMParams
+        GyroECLPMath.Params memory eclpParams,
+        GyroECLPMath.DerivedParams memory derivedECLPParams
     ) internal {
         bytes32 miscData = _miscData;
         if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            uint256 spotPrice = GyroCEMMMath.calculatePrice(balances, cemmParams, derivedCEMMParams, invariant.toInt256());
+            uint256 spotPrice = GyroECLPMath.calculatePrice(balances, eclpParams, derivedECLPParams, invariant.toInt256());
 
-            int256 logSpotPrice = GyroCEMMOracleMath._calcLogSpotPrice(spotPrice);
+            int256 logSpotPrice = GyroECLPOracleMath._calcLogSpotPrice(spotPrice);
 
             // // can optionally log BPT spot price using this code. Instead, we log L/S
-            // int256 logBPTPrice = GyroCEMMOracleMath._calcLogBPTPrice(
+            // int256 logBPTPrice = GyroECLPOracleMath._calcLogBPTPrice(
             //     balances[0],
             //     balances[1],
             //     spotPrice,
             //     miscData.logTotalSupply()
             // );
 
-            int256 logInvariantDivSupply = GyroCEMMOracleMath._calcLogInvariantDivSupply(invariant, miscData.logTotalSupply());
+            int256 logInvariantDivSupply = GyroECLPOracleMath._calcLogInvariantDivSupply(invariant, miscData.logTotalSupply());
 
             uint256 oracleCurrentIndex = miscData.oracleIndex();
             uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();

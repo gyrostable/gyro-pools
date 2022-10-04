@@ -18,7 +18,7 @@ pragma solidity 0.7.6;
 import "../../libraries/GyroFixedPoint.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/LogCompression.sol";
 
-contract GyroCEMMOracleMath {
+contract GyroECLPOracleMath {
     using GyroFixedPoint for uint256;
 
     /**

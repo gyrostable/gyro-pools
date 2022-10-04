@@ -18,12 +18,12 @@ from hypothesis import assume, example
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 
-from tests.support.types import CEMMMathParams
+from tests.support.types import ECLPMathParams
 from tests.support.util_common import gen_balances, BasicPoolParameters
 from tests.support.utils import scale, unscale, to_decimal, qdecimals
 import hypothesis.strategies as st
 
-import tests.geclp.cemm_prec_implementation as prec_impl
+import tests.geclp.eclp_prec_implementation as prec_impl
 from tests.geclp import eclp_derivatives as derivatives
 
 bpool_params = BasicPoolParameters(
@@ -38,7 +38,7 @@ bpool_params = BasicPoolParameters(
 
 # A simple example to catch weird generic errors. 45° rotation and asymmetric, generous
 # price bounds around 1.
-easy_params = CEMMMathParams(
+easy_params = ECLPMathParams(
     alpha=D("0.5"), beta=D("1.5"), c=1 / D(2).sqrt(), s=1 / D(2).sqrt(), l=D(2)
 )
 
@@ -77,15 +77,15 @@ def gen_params(draw, bparams: BasicPoolParameters):
     s = sin(phi)
     c = cos(phi)
     l = draw(qdecimals("1", "1e6"))
-    return CEMMMathParams(alpha, beta, D(c), D(s), l)
+    return ECLPMathParams(alpha, beta, D(c), D(s), l)
 
 
 def gen_fee():
     return qdecimals(D(0), D("0.1"))
 
 
-def get_derived_values(gyro_cemm_math_testing, balances, params: CEMMMathParams):
-    # This is taken from test_cemm_properties.py and the functions it calls.
+def get_derived_values(gyro_eclp_math_testing, balances, params: ECLPMathParams):
+    # This is taken from test_eclp_properties.py and the functions it calls.
     derived = prec_impl.calc_derived_values(params)  # type: ignore
     derived_scaled = prec_impl.scale_derived_values(derived)
 
@@ -95,7 +95,7 @@ def get_derived_values(gyro_cemm_math_testing, balances, params: CEMMMathParams)
     assume(denominator > D2("1E-5"))  # if this is not the case, error can blow up
 
     invariant_sol, inv_err_sol = unscale(
-        gyro_cemm_math_testing.calculateInvariantWithError(
+        gyro_eclp_math_testing.calculateInvariantWithError(
             scale(balances), scale(params), derived_scaled
         )
     )
@@ -110,7 +110,7 @@ def get_derived_values(gyro_cemm_math_testing, balances, params: CEMMMathParams)
     ix_in=st.integers(0, 1),
 )
 @example(balances=[1000, 1000], params=easy_params, fee=D("0.1"), ix_in=1)
-def test_p(gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, ix_in):
+def test_p(gyro_eclp_math_testing, balances: list, params: ECLPMathParams, fee, ix_in):
     """
     Price of the out-asset in terms of the in-asset
     """
@@ -118,7 +118,7 @@ def test_p(gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, 
     ix_out = 1 - ix_in
 
     r, r_vec, derived, derived_scaled = get_derived_values(
-        gyro_cemm_math_testing, balances, params
+        gyro_eclp_math_testing, balances, params
     )
 
     amount_out = balances[ix_out] * D("0.0001")
@@ -134,7 +134,7 @@ def test_p(gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, 
 
     # Solidity approximation
     amount_in = unscale(
-        gyro_cemm_math_testing.calcInGivenOut(
+        gyro_eclp_math_testing.calcInGivenOut(
             scale(balances),
             scale(amount_out),
             ix_in == 0,
@@ -151,7 +151,7 @@ def test_p(gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, 
     # Note: This calc is not optimized for precision in the same way e.g. the invariant calc is.
     # This is the price of x in terms of y. If our assets are the other way round, we flip, so that we get the price of the out-asset ito. the in-asset.
     p_anl_sol = unscale(
-        gyro_cemm_math_testing.calculatePrice(
+        gyro_eclp_math_testing.calculatePrice(
             scale(balances), scale(params), derived_scaled, scale(r)
         )
     )
@@ -180,7 +180,7 @@ def test_p(gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, 
 )
 @example(balances=[1000, 1000], params=easy_params, fee=D("0.1"), ix_in=1)
 def test_dp_d_swapExactIn(
-    gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, ix_in
+    gyro_eclp_math_testing, balances: list, params: ECLPMathParams, fee, ix_in
 ):
     """
     Derivative of the spot price of the out-asset ito the in-asset as a fct of the in-asset at 0.
@@ -190,13 +190,13 @@ def test_dp_d_swapExactIn(
     ix_out = 1 - ix_in
 
     r, r_vec, derived, derived_scaled = get_derived_values(
-        gyro_cemm_math_testing, balances, params
+        gyro_eclp_math_testing, balances, params
     )
 
     if ix_in == 1:
         amount_in_max = (
             unscale(
-                gyro_cemm_math_testing.maxBalances1(
+                gyro_eclp_math_testing.maxBalances1(
                     scale(params), derived_scaled, scale(r_vec)
                 )
             )
@@ -205,7 +205,7 @@ def test_dp_d_swapExactIn(
     else:
         amount_in_max = (
             unscale(
-                gyro_cemm_math_testing.maxBalances0(
+                gyro_eclp_math_testing.maxBalances0(
                     scale(params), derived_scaled, scale(r_vec)
                 )
             )
@@ -217,7 +217,7 @@ def test_dp_d_swapExactIn(
     amount_in_after_fee = amount_in * (1 - fee)
 
     amount_out = unscale(
-        gyro_cemm_math_testing.calcOutGivenIn(
+        gyro_eclp_math_testing.calcOutGivenIn(
             scale(balances),
             scale(amount_in_after_fee),
             ix_in == 0,
@@ -266,7 +266,7 @@ def test_dp_d_swapExactIn(
 )
 @example(balances=[1000, 1000], params=easy_params, fee=D("0.1"), ix_in=1)
 def test_dp_d_swapExactOut(
-    gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, ix_in
+    gyro_eclp_math_testing, balances: list, params: ECLPMathParams, fee, ix_in
 ):
     """
     Derivative of the spot price of the out-asset ito the in-asset as a fct of the out-asset at 0.
@@ -277,13 +277,13 @@ def test_dp_d_swapExactOut(
 
     balances0 = balances
     r, r_vec, derived, derived_scaled = get_derived_values(
-        gyro_cemm_math_testing, balances, params
+        gyro_eclp_math_testing, balances, params
     )
 
     amount_out = min(1, balances[1] * D("0.0001"))
 
     amount_in = unscale(
-        gyro_cemm_math_testing.calcInGivenOut(
+        gyro_eclp_math_testing.calcInGivenOut(
             scale(balances),
             scale(amount_out),
             ix_in == 0,
@@ -338,7 +338,7 @@ def test_dp_d_swapExactOut(
 )
 @example(balances=[1000, 1000], params=easy_params, fee=D("0.1"), ix_in=1)
 def test_normalizedLiquidity(
-    gyro_cemm_math_testing, balances: list, params: CEMMMathParams, fee, ix_in
+    gyro_eclp_math_testing, balances: list, params: ECLPMathParams, fee, ix_in
 ):
     """
     Normalized liquidity = 0.5 * 1 / (derivative of the effective (i.e., average) price of the out-asset ito. the in-asset as a fct of the in-amount in the limit at 0).
@@ -347,7 +347,7 @@ def test_normalizedLiquidity(
     ix_out = 1 - ix_in
 
     r, r_vec, derived, derived_scaled = get_derived_values(
-        gyro_cemm_math_testing, balances, params
+        gyro_eclp_math_testing, balances, params
     )
 
     # DEBUG

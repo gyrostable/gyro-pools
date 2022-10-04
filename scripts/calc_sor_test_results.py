@@ -4,10 +4,10 @@ from brownie import *
 from brownie.exceptions import VirtualMachineError
 
 from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.support.types import CEMMMathParams
+from tests.support.types import ECLPMathParams
 from tests.support.utils import scale, unscale
 
-from tests.geclp import cemm_prec_implementation
+from tests.geclp import eclp_prec_implementation
 from tests.geclp import eclp_derivatives
 
 gyro_two_math_testing = accounts[0].deploy(Gyro2CLPMathTesting)
@@ -15,7 +15,7 @@ gyro_three_math_testing = accounts[0].deploy(Gyro3CLPMathTesting)
 
 
 def calc_eclp_test_results():
-    params = CEMMMathParams(
+    params = ECLPMathParams(
         alpha=D("0.050000000000020290"),
         beta=D("0.397316269897841178"),
         c=D("0.9551573261744535"),
@@ -30,8 +30,8 @@ def calc_eclp_test_results():
 
     # NOTE: The SOR tests (in the SOR repo) uses `tokenInIsToken0=true`, i.e., xin and yout.
 
-    derived = cemm_prec_implementation.calc_derived_values(params)
-    invariant, inv_err = cemm_prec_implementation.calculateInvariantWithError(
+    derived = eclp_prec_implementation.calc_derived_values(params)
+    invariant, inv_err = eclp_prec_implementation.calculateInvariantWithError(
         balances, params, derived
     )
     r_vec = (invariant + 2 * inv_err, invariant)
@@ -41,10 +41,10 @@ def calc_eclp_test_results():
 
     print()
     print("--- should correctly calculate virtual offset 0 (a) ---")
-    print(cemm_prec_implementation.virtualOffset0(params, derived, r_vec))
+    print(eclp_prec_implementation.virtualOffset0(params, derived, r_vec))
 
     print("--- should correctly calculate virtual offset 1 (b) ---")
-    print(cemm_prec_implementation.virtualOffset1(params, derived, r_vec))
+    print(eclp_prec_implementation.virtualOffset1(params, derived, r_vec))
 
     print()
     print("--- should correctly calculate normalized liquidity ---")
@@ -52,7 +52,7 @@ def calc_eclp_test_results():
 
     print("--- should correctly calculate swap amount for swap exact in ---")
     amount_in = D(10)
-    amount_out = balances[1] - cemm_prec_implementation.calcYGivenX(
+    amount_out = balances[1] - eclp_prec_implementation.calcYGivenX(
         balances[0] + f * amount_in, params, derived, r_vec
     )
     print(amount_out)
@@ -60,7 +60,7 @@ def calc_eclp_test_results():
     print("--- should correctly calculate swap amount for swap exact out ---")
     amount_out = D(10)
     amount_in = (
-        cemm_prec_implementation.calcXGivenY(
+        eclp_prec_implementation.calcXGivenY(
             balances[1] - amount_out, params, derived, r_vec
         )
         - balances[0]
@@ -99,17 +99,17 @@ def calc_eclp_test_results():
     print("--- BONUS: should not return negative numbers upon swap with 0 amount ---")
     # NB fees don't matter here.
     amount_in = D(0)
-    amount_out = balances[1] - cemm_prec_implementation.calcYGivenX(
+    amount_out = balances[1] - eclp_prec_implementation.calcYGivenX(
         balances[0] + f * amount_in, params, derived, r_vec
     )
     print(amount_out)
 
 
 def calc_eclp_test_results_solidity():
-    cemm_math_testing = accounts[0].deploy(GyroCEMMMathTesting)
+    eclp_math_testing = accounts[0].deploy(GyroECLPMathTesting)
 
     """Calculate *some of* the test results via solidity, instead of the python prec impl."""
-    params = CEMMMathParams(
+    params = ECLPMathParams(
         alpha=D("0.050000000000020290"),
         beta=D("0.397316269897841178"),
         c=D("0.9551573261744535"),
@@ -124,8 +124,8 @@ def calc_eclp_test_results_solidity():
 
     # NOTE: The SOR tests (in the SOR repo) uses `tokenInIsToken0=true`, i.e., xin and yout.
 
-    derived = cemm_prec_implementation.calc_derived_values(params)
-    invariant, inv_err = cemm_prec_implementation.calculateInvariantWithError(
+    derived = eclp_prec_implementation.calc_derived_values(params)
+    invariant, inv_err = eclp_prec_implementation.calculateInvariantWithError(
         balances, params, derived
     )
     r_vec = (invariant + 2 * inv_err, invariant)
@@ -136,10 +136,10 @@ def calc_eclp_test_results_solidity():
 
     # First variant: Via calcYGivenX
     amount_out = balances[1] - unscale(
-        cemm_math_testing.calcYGivenX(
+        eclp_math_testing.calcYGivenX(
             scale(balances[0] + f * amount_in),
             scale(params),
-            cemm_prec_implementation.scale_derived_values(derived),
+            eclp_prec_implementation.scale_derived_values(derived),
             scale(r_vec),
         )
     )
@@ -149,12 +149,12 @@ def calc_eclp_test_results_solidity():
     # The following is gonna revert. That's fine and expected behavior for such a low trade amount.
     try:
         amount_out = unscale(
-            cemm_math_testing.calcOutGivenIn(
+            eclp_math_testing.calcOutGivenIn(
                 scale(balances),
                 scale(f * amount_in),
                 True,
                 scale(params),
-                cemm_prec_implementation.scale_derived_values(derived),
+                eclp_prec_implementation.scale_derived_values(derived),
                 scale(r_vec),
             )
         )

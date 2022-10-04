@@ -1,8 +1,8 @@
 from typing import Optional
 
-from tests.support.types import CEMMMathParams
+from tests.support.types import ECLPMathParams
 from tests.support.quantized_decimal import QuantizedDecimal as D
-from tests.geclp import cemm_prec_implementation as prec_impl
+from tests.geclp import eclp_prec_implementation as prec_impl
 
 # Derivative calculations used in the SOR. See `E-CLP SOR derivatives.pdf`. These calculations are all in 18 decimals
 # and they have *not* been optimized for precision. So don't expect super high prec from them (which we also don't
@@ -16,7 +16,7 @@ from tests.geclp import cemm_prec_implementation as prec_impl
 
 def _setup(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D],
@@ -52,7 +52,7 @@ def _setup(
 
 def dyin_dxout(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -73,7 +73,7 @@ def dyin_dxout(
 
 def dxin_dyout(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -92,7 +92,7 @@ def dxin_dyout(
 
 def dyout_dxin(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -104,7 +104,7 @@ def dyout_dxin(
 
 def dxout_dyin(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -116,7 +116,7 @@ def dxout_dyin(
 
 def dpx_dxout(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -141,7 +141,7 @@ def dpx_dxout(
 
 def dpy_dyout(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -166,7 +166,7 @@ def dpy_dyout(
 
 def dpy_dxin(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -186,7 +186,7 @@ def dpy_dxin(
 
 def dpx_dyin(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -206,7 +206,7 @@ def dpx_dyin(
 
 def normalized_liquidity_yin(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,
@@ -230,7 +230,7 @@ def normalized_liquidity_yin(
 
 def normalized_liquidity_xin(
     balances: list[D],
-    params: CEMMMathParams,
+    params: ECLPMathParams,
     fee: D,
     r_vec: tuple[D, D],
     r: Optional[D] = None,

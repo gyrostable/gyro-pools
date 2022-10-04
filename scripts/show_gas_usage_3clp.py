@@ -55,7 +55,7 @@ root_3_alpha = alpha ** (D(1) / D(3))
 admin = accounts[0]
 
 # For experiments with external library calls. Not normally needed.
-# admin.deploy(GyroCEMMMath)
+# admin.deploy(GyroECLPMath)
 
 authorizer = admin.deploy(Authorizer, admin)
 

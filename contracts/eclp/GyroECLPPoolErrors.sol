@@ -16,7 +16,7 @@ pragma solidity 0.7.6;
 
 // solhint-disable
 
-library GyroCEMMPoolErrors {
+library GyroECLPPoolErrors {
     // Input
     uint256 internal constant ADDRESS_IS_ZERO_ADDRESS = 120;
     uint256 internal constant TOKEN_IN_IS_NOT_TOKEN_0 = 121;

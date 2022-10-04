@@ -86,7 +86,7 @@ class Vector2(NamedTuple):
     y: DecimalLike
 
 
-class CEMMMathParams(NamedTuple):
+class ECLPMathParams(NamedTuple):
     alpha: DecimalLike
     beta: DecimalLike
     c: DecimalLike
@@ -94,13 +94,13 @@ class CEMMMathParams(NamedTuple):
     l: DecimalLike
 
 
-class CEMMMathQParams(NamedTuple):
+class ECLPMathQParams(NamedTuple):
     a: DecimalLike
     b: DecimalLike
     c: DecimalLike
 
 
-class CEMMMathDerivedParams(NamedTuple):
+class ECLPMathDerivedParams(NamedTuple):
     tauAlpha: Vector2
     tauBeta: Vector2
     u: DecimalLike
@@ -131,11 +131,11 @@ class ThreePoolParams(NamedTuple):
 
 
 # Legacy Aliases
-GyroCEMMMathParams = CEMMMathParams
-GyroCEMMMathDerivedParams = CEMMMathDerivedParams
+GyroECLPMathParams = ECLPMathParams
+GyroECLPMathDerivedParams = ECLPMathDerivedParams
 
 
-class CEMMPoolParams(NamedTuple):
+class ECLPPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
-    cemmParams: GyroCEMMMathParams
-    derivedCEMMParams: GyroCEMMMathDerivedParams
+    eclpParams: GyroECLPMathParams
+    derivedECLPParams: GyroECLPMathDerivedParams

@@ -16,16 +16,16 @@ from brownie import (
 )
 from brownie.network.transaction import TransactionReceipt
 
-from tests.geclp import cemm_prec_implementation
-from tests.conftest import scale_cemm_params, scale_derived_values
+from tests.geclp import eclp_prec_implementation
+from tests.conftest import scale_eclp_params, scale_derived_values
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import (
     CallJoinPoolGyroParams,
     SwapKind,
     SwapRequest,
     TwoPoolBaseParams,
-    CEMMMathParams,
-    CEMMPoolParams,
+    ECLPMathParams,
+    ECLPPoolParams,
     TwoPoolParams,
 )
 
@@ -61,7 +61,7 @@ init_amounts_in = [100, 100]
 admin = accounts[0]
 
 # For experiments with external library calls. Not normally needed.
-# admin.deploy(GyroCEMMMath)
+# admin.deploy(GyroECLPMath)
 
 authorizer = admin.deploy(Authorizer, admin)
 
