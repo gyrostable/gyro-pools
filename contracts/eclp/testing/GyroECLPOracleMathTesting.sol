@@ -3,12 +3,12 @@
 pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
-import "../GyroCEMMOracleMath.sol";
+import "../GyroECLPOracleMath.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/test/MockLogCompression.sol";
 
-contract GyroCEMMOracleMathTesting is GyroCEMMOracleMath, MockLogCompression {
+contract GyroECLPOracleMathTesting is GyroECLPOracleMath, MockLogCompression {
     function calcLogSpotPrice(uint256 spotPrice) external pure returns (int256 ret) {
-        ret = GyroCEMMOracleMath._calcLogSpotPrice(spotPrice);
+        ret = GyroECLPOracleMath._calcLogSpotPrice(spotPrice);
     }
 
     function calcLogBPTPrice(
@@ -17,10 +17,10 @@ contract GyroCEMMOracleMathTesting is GyroCEMMOracleMath, MockLogCompression {
         uint256 spotPriceA,
         int256 logBptTotalSupply
     ) external pure returns (int256 ret) {
-        ret = GyroCEMMOracleMath._calcLogBPTPrice(balanceA, balanceB, spotPriceA, logBptTotalSupply);
+        ret = GyroECLPOracleMath._calcLogBPTPrice(balanceA, balanceB, spotPriceA, logBptTotalSupply);
     }
 
     function calcLogInvariantDivSupply(uint256 invariant, int256 logBptTotalSupply) external pure returns (int256 ret) {
-        ret = GyroCEMMOracleMath._calcLogInvariantDivSupply(invariant, logBptTotalSupply);
+        ret = GyroECLPOracleMath._calcLogInvariantDivSupply(invariant, logBptTotalSupply);
     }
 }

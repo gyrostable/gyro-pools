@@ -9,9 +9,9 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import (
-    CEMMMathParams,
-    CEMMPoolParams,
-    GyroCEMMMathDerivedParams,
+    ECLPMathParams,
+    ECLPPoolParams,
+    GyroECLPMathDerivedParams,
     ThreePoolParams,
     TwoPoolBaseParams,
     TwoPoolParams,
@@ -19,7 +19,7 @@ from tests.support.types import (
     TwoPoolFactoryCreateParams,
 )
 
-from tests.geclp import cemm_prec_implementation
+from tests.geclp import eclp_prec_implementation
 
 TOKENS_PER_USER = 1000 * 10**18
 
@@ -53,8 +53,8 @@ def gyro_two_math_testing(admin, Gyro2CLPMathTesting):
 
 
 @pytest.fixture(scope="module")
-def gyro_cemm_math_testing(admin, GyroCEMMMathTesting):
-    return admin.deploy(GyroCEMMMathTesting)
+def gyro_eclp_math_testing(admin, GyroECLPMathTesting):
+    return admin.deploy(GyroECLPMathTesting)
 
 
 @pytest.fixture(scope="module")
@@ -334,8 +334,8 @@ def mock_gyro_two_oracle_math(admin, MockGyro2CLPOracleMath):
 
 
 @pytest.fixture(scope="module")
-def gyro_cemm_oracle_math_testing(admin, GyroCEMMOracleMathTesting):
-    return admin.deploy(GyroCEMMOracleMathTesting)
+def gyro_eclp_oracle_math_testing(admin, GyroECLPOracleMathTesting):
+    return admin.deploy(GyroECLPOracleMathTesting)
 
 
 @pytest.fixture(scope="module")
@@ -344,9 +344,9 @@ def pool_factory(admin, Gyro2CLPPoolFactory, gyro_config):
 
 
 @pytest.fixture
-def cemm_pool(
+def eclp_pool(
     admin,
-    GyroCEMMPool,
+    GyroECLPPool,
     gyro_erc20_funded,
     mock_vault,
     mock_gyro_config,
@@ -354,7 +354,7 @@ def cemm_pool(
 ):
     two_pool_base_params = TwoPoolBaseParams(
         vault=mock_vault.address,
-        name="GyroCEMMTwoPool",  # string
+        name="GyroECLPTwoPool",  # string
         symbol="GCTP",  # string
         token0=gyro_erc20_funded[0].address,  # IERC20
         token1=gyro_erc20_funded[1].address,  # IERC20
@@ -365,21 +365,21 @@ def cemm_pool(
         owner=admin,  # address
     )
 
-    cemm_params = CEMMMathParams(
+    eclp_params = ECLPMathParams(
         alpha=D("0.97"),
         beta=D("1.02"),
         c=D("0.7071067811865475244"),
         s=D("0.7071067811865475244"),
         l=D("2"),
     )
-    derived_cemm_params = cemm_prec_implementation.calc_derived_values(cemm_params)
-    args = CEMMPoolParams(
+    derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
+    args = ECLPPoolParams(
         two_pool_base_params,
-        scale_cemm_params(cemm_params),
-        scale_derived_values(derived_cemm_params),
+        scale_eclp_params(eclp_params),
+        scale_derived_values(derived_eclp_params),
     )
     return admin.deploy(
-        GyroCEMMPool, args, mock_gyro_config.address, gas_limit=11250000
+        GyroECLPPool, args, mock_gyro_config.address, gas_limit=11250000
     )
 
 
@@ -408,7 +408,7 @@ class DerivedParams(NamedTuple):
     # dBeta: D2
 
 
-def scale_cemm_params(p: Params) -> Params:
+def scale_eclp_params(p: Params) -> Params:
     params = Params(
         alpha=p.alpha * D("1e18"),
         beta=p.beta * D("1e18"),

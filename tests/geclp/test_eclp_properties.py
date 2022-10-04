@@ -14,8 +14,8 @@ from hypothesis import assume, settings, event, example, HealthCheck
 import pytest
 
 from tests.support.util_common import BasicPoolParameters, gen_balances
-from tests.geclp import cemm as mimpl
-from tests.geclp import cemm_prec_implementation as prec_impl
+from tests.geclp import eclp as mimpl
+from tests.geclp import eclp_prec_implementation as prec_impl
 from tests.geclp import util
 from tests.support.utils import scale, to_decimal, qdecimals, unscale
 from tests.support.types import *
@@ -82,7 +82,7 @@ def gen_params_swap_given_out(draw):
 @given(
     params_swap_given_in=gen_params_swap_given_in(),
 )
-def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_testing):
+def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_eclp_math_testing):
     params, balances, tokenInIsToken0, amountIn = params_swap_given_in
     # the difference is whether invariant is calculated in python or solidity, but swap calculation still in solidity
     loss_py, loss_sol = util.mtest_invariant_across_calcOutGivenIn(
@@ -92,7 +92,7 @@ def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_te
         tokenInIsToken0,
         DP_IN_SOL,
         bpool_params,
-        gyro_cemm_math_testing,
+        gyro_eclp_math_testing,
     )
 
     # compare upper bound on loss in y terms
@@ -111,7 +111,7 @@ def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_te
 )
 @example(
     params_swap_given_out=(
-        CEMMMathParams(
+        ECLPMathParams(
             alpha=D("1.252952531697506474"),
             beta=D("1.253952531697506474"),
             c=D("0.716706818468612394"),
@@ -123,7 +123,7 @@ def test_invariant_across_calcOutGivenIn(params_swap_given_in, gyro_cemm_math_te
         D("1.100200000000000000"),
     )
 )
-def test_invariant_across_calcInGivenOut(params_swap_given_out, gyro_cemm_math_testing):
+def test_invariant_across_calcInGivenOut(params_swap_given_out, gyro_eclp_math_testing):
     params, balances, tokenInIsToken0, amountOut = params_swap_given_out
     # the difference is whether invariant is calculated in python or solidity, but swap calculation still in solidity
     loss_py, loss_sol = util.mtest_invariant_across_calcInGivenOut(
@@ -133,7 +133,7 @@ def test_invariant_across_calcInGivenOut(params_swap_given_out, gyro_cemm_math_t
         tokenInIsToken0,
         DP_IN_SOL,
         bpool_params,
-        gyro_cemm_math_testing,
+        gyro_eclp_math_testing,
     )
 
     # compare upper bound on loss in y terms
@@ -146,20 +146,20 @@ def test_invariant_across_calcInGivenOut(params_swap_given_out, gyro_cemm_math_t
 ################################################################################
 ### test for zero tokens in
 @given(params=util.gen_params(), balances=gen_balances(2, bpool_params))
-def test_zero_tokens_in(gyro_cemm_math_testing, params, balances):
-    util.mtest_zero_tokens_in(gyro_cemm_math_testing, params, balances)
+def test_zero_tokens_in(gyro_eclp_math_testing, params, balances):
+    util.mtest_zero_tokens_in(gyro_eclp_math_testing, params, balances)
 
 
 ################################################################################
 ### test liquidityInvariantUpdate for L change
 
 
-@given(params_cemm_invariantUpdate=util.gen_params_cemm_liquidityUpdate())
+@given(params_eclp_invariantUpdate=util.gen_params_eclp_liquidityUpdate())
 def test_invariant_across_liquidityInvariantUpdate(
-    gyro_cemm_math_testing, params_cemm_invariantUpdate
+    gyro_eclp_math_testing, params_eclp_invariantUpdate
 ):
     util.mtest_invariant_across_liquidityInvariantUpdate(
-        params_cemm_invariantUpdate, gyro_cemm_math_testing
+        params_eclp_invariantUpdate, gyro_eclp_math_testing
     )
 
 

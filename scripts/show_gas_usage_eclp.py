@@ -3,9 +3,9 @@ from pprint import pprint
 
 from brownie import (
     accounts,
-    GyroCEMMPool,
-    GyroCEMMMathTesting,
-    GyroCEMMMath,
+    GyroECLPPool,
+    GyroECLPMathTesting,
+    GyroECLPMath,
     MockVault,
     Authorizer,
     MockGyroConfig,
@@ -16,16 +16,16 @@ from brownie import (
 )
 from brownie.network.transaction import TransactionReceipt
 
-from tests.geclp import cemm_prec_implementation
-from tests.conftest import scale_cemm_params, scale_derived_values
+from tests.geclp import eclp_prec_implementation
+from tests.conftest import scale_eclp_params, scale_derived_values
 from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.support.types import (
     CallJoinPoolGyroParams,
     SwapKind,
     SwapRequest,
     TwoPoolBaseParams,
-    CEMMMathParams,
-    CEMMPoolParams,
+    ECLPMathParams,
+    ECLPPoolParams,
 )
 
 from tests.support.trace_analyzer import Tracer
@@ -62,7 +62,7 @@ s_phi = D(sin(phi_degrees / 360 * 2 * pi))
 admin = accounts[0]
 
 # For experiments with external library calls. Not normally needed.
-# admin.deploy(GyroCEMMMath)
+# admin.deploy(GyroECLPMath)
 
 authorizer = admin.deploy(Authorizer, admin)
 
@@ -70,7 +70,7 @@ mock_vault = admin.deploy(MockVault, authorizer)
 
 mock_gyro_config = admin.deploy(MockGyroConfig)
 
-gyro_cemm_math_testing = admin.deploy(GyroCEMMMathTesting)
+gyro_eclp_math_testing = admin.deploy(GyroECLPMathTesting)
 
 gyro_erc20_0 = admin.deploy(SimpleERC20)
 gyro_erc20_1 = admin.deploy(SimpleERC20)
@@ -96,13 +96,13 @@ gyro_erc20_funded = order_erc_tokens(gyro_erc20_0, gyro_erc20_1)
 # Not used in code, but needs to be deployed.
 admin.deploy(QueryProcessor)
 
-admin.deploy(GyroCEMMMath)
+admin.deploy(GyroECLPMath)
 
 # MOCK POOL
 
 two_pool_base_params = TwoPoolBaseParams(
     vault=mock_vault.address,
-    name="GyroCEMMTwoPool",  # string
+    name="GyroECLPTwoPool",  # string
     symbol="GCTP",  # string
     token0=gyro_erc20_funded[0].address,  # IERC20
     token1=gyro_erc20_funded[1].address,  # IERC20
@@ -113,21 +113,21 @@ two_pool_base_params = TwoPoolBaseParams(
     owner=admin,  # address
 )
 
-cemm_params = CEMMMathParams(
+eclp_params = ECLPMathParams(
     alpha=alpha,
     beta=beta,
     c=c_phi,
     s=s_phi,
     l=l_lambda,
 )
-derived_cemm_params = cemm_prec_implementation.calc_derived_values(cemm_params)
-args = CEMMPoolParams(
+derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
+args = ECLPPoolParams(
     two_pool_base_params,
-    scale_cemm_params(cemm_params),
-    scale_derived_values(derived_cemm_params),
+    scale_eclp_params(eclp_params),
+    scale_derived_values(derived_eclp_params),
 )
 mock_vault_pool = admin.deploy(
-    GyroCEMMPool, args, mock_gyro_config.address, gas_limit=11250000
+    GyroECLPPool, args, mock_gyro_config.address, gas_limit=11250000
 )
 
 # Set to an integer to only show that deep of traces. Nice to avoid visual overload.
