@@ -62,7 +62,8 @@ def test_sqrt(math_testing, a):
     res_math = a.sqrt()
     res_sol = math_testing.sqrt(scale(a))
     # Absolute error tolerated in the last decimal + the default relative error.
-    assert int(res_sol) == scale(res_math).approxed(abs=D("5"), rel=D("5e-14"))
+    # Note this is pretty tight: sqrt(1.0) has relative error 1.001e-14. Could use a higher abs error
+    assert int(res_sol) == scale(res_math).approxed(abs=D("5"), rel=D("1.5e-14"))
 
 
 @settings(max_examples=1_000)
