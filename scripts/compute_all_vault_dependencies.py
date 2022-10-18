@@ -29,7 +29,6 @@ list_of_contracts_eclp = [
 list_of_contracts_top_level = [
     "CappedLiquidity",
     "ExtensibleWeightedPool2Tokens",
-    # "FreezableProxy",
     "LocallyPausable",
 ]
 
