@@ -29,12 +29,22 @@ list_of_contracts_eclp = [
 list_of_contracts_top_level = [
     "CappedLiquidity",
     "ExtensibleWeightedPool2Tokens",
-    "LocallyPausable",
+    "Freezable Proxy" "LocallyPausable",
+]
+
+list_of_libraries = [
+    "Buffer",
+    "GyroConfigKeys",
+    "GyroFixedPoint",
+    "GyroPoolMath",
+    "QueryProcessor",
+    "Samples",
+    "SignedFixedPoint",
 ]
 
 
 def main():
-    with open("all_dependencies.csv", "w", newline="") as csvfile:
+    with open("all_vault_dependencies.csv", "w", newline="") as csvfile:
         fieldnames = ["Gyro Contract", "Dependency Contract", "Path"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -42,6 +52,7 @@ def main():
             list_of_contracts_2_3_clp
             + list_of_contracts_eclp
             + list_of_contracts_top_level
+            + list_of_libraries
         ):
             dependencies = compute_dependencies(contract)
             sorted_dependencies = sorted(dependencies.items(), key=lambda v: v[1])
