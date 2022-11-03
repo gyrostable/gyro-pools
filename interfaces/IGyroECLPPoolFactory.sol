@@ -17,15 +17,15 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "./ICappedLiquidity.sol";
-import "../contracts/cemm/GyroCEMMMath.sol";
+import "../contracts/eclp/GyroECLPMath.sol";
 
-interface IGyroCEMMPoolFactory {
+interface IGyroECLPPoolFactory {
     function create(
         string memory name,
         string memory symbol,
         IERC20[] memory tokens,
-        GyroCEMMMath.Params memory cemmParams,
-        GyroCEMMMath.DerivedParams memory derivedCemmParams,
+        GyroECLPMath.Params memory cemmParams,
+        GyroECLPMath.DerivedParams memory derivedCemmParams,
         uint256 swapFeePercentage,
         bool oracleEnabled,
         address owner

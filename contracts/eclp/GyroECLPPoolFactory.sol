@@ -20,31 +20,31 @@ import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
 import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
-import "../../interfaces/IGyroCEMMPoolFactory.sol";
+import "../../interfaces/IGyroECLPPoolFactory.sol";
 import "../../interfaces/ICappedLiquidity.sol";
-import "./GyroCEMMPool.sol";
+import "./GyroECLPPool.sol";
 
-contract GyroCEMMPoolFactory is IGyroCEMMPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
     uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
     uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
 
-    constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroCEMMPool).creationCode) {
+    constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroECLPPool).creationCode) {
         _grequire(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);
         _grequire(address(vault) != address(0), GyroErrors.ZERO_ADDRESS);
         gyroConfigAddress = _gyroConfigAddress;
     }
 
     /**
-     * @dev Deploys a new `GyroCEMMPool`.
+     * @dev Deploys a new `GyroECLPPool`.
      */
     function create(
         string memory name,
         string memory symbol,
         IERC20[] memory tokens,
-        GyroCEMMMath.Params memory cemmParams,
-        GyroCEMMMath.DerivedParams memory derivedCemmParams,
+        GyroECLPMath.Params memory eclpParams,
+        GyroECLPMath.DerivedParams memory derivedECLPParams,
         uint256 swapFeePercentage,
         bool oracleEnabled,
         address owner
@@ -58,10 +58,10 @@ contract GyroCEMMPoolFactory is IGyroCEMMPoolFactory, BasePoolSplitCodeFactory, 
             owner
         );
 
-        GyroCEMMPool.GyroParams memory params = GyroCEMMPool.GyroParams({
+        GyroECLPPool.GyroParams memory params = GyroECLPPool.GyroParams({
             baseParams: baseParams,
-            cemmParams: cemmParams,
-            derivedCemmParams: derivedCemmParams
+            eclpParams: eclpParams,
+            derivedEclpParams: derivedECLPParams
         });
 
         return _create(abi.encode(params, gyroConfigAddress));

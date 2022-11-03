@@ -53,7 +53,8 @@ def gyro_two_math_testing(admin, Gyro2CLPMathTesting):
 
 
 @pytest.fixture(scope="module")
-def gyro_eclp_math_testing(admin, GyroECLPMathTesting):
+def gyro_eclp_math_testing(admin, GyroECLPMathTesting, GyroECLPMath):
+    admin.deploy(GyroECLPMath)
     return admin.deploy(GyroECLPMathTesting)
 
 
