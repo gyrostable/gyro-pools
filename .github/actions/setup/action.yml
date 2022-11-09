@@ -16,3 +16,6 @@ runs:
     - name: Install Dependencies
       run: yarn
       shell: bash
+    - name: Create dummy dotenv file
+      run: touch .env
+      shell: bash
