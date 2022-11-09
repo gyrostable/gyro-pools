@@ -47,7 +47,10 @@ contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, 
         GyroECLPMath.DerivedParams memory derivedECLPParams,
         uint256 swapFeePercentage,
         bool oracleEnabled,
-        address owner
+        address owner,
+        address capManager,
+        ICappedLiquidity.CapParams memory capParams,
+        address pauseManager
     ) external override returns (address) {
         ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(
             name,
@@ -61,7 +64,10 @@ contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, 
         GyroECLPPool.GyroParams memory params = GyroECLPPool.GyroParams({
             baseParams: baseParams,
             eclpParams: eclpParams,
-            derivedEclpParams: derivedECLPParams
+            derivedEclpParams: derivedECLPParams,
+            capManager: capManager,
+            capParams: capParams,
+            pauseManager: pauseManager
         });
 
         return _create(abi.encode(params, gyroConfigAddress));

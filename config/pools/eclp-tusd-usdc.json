@@ -1,0 +1,20 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP TUSD/USDC",
+  "symbol": "ECLP-TUSD-USDC",
+  "tokens": ["TUSD", "USDC"],
+  "params": {
+    "alpha": "0.98",
+    "beta": "1.020408163265306122",
+    "l": "2500",
+    "s": "0.7071067811865475244",
+    "c": "0.7071067811865475244"
+  },
+  "cap": {
+    "enabled": true,
+    "global": "1000000000",
+    "per_address": "1000000000"
+  },
+  "swap_fee_percentage": "0.0002",
+  "oracle_enabled": true
+}

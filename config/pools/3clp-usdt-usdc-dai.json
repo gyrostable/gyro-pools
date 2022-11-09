@@ -1,4 +1,5 @@
 {
+  "pool_type": "3clp",
   "name": "Gyroscope C3LP USDT/USDC/DAI",
   "symbol": "C3LP-USDT-USDC-DAI",
   "tokens": ["USDT", "USDC", "DAI"],

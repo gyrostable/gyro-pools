@@ -1,4 +1,5 @@
 {
+  "pool_type": "2clp",
   "name": "Gyroscope C2LP USDT/USDC",
   "symbol": "C2LP-USDT-USDC",
   "tokens": ["USDT", "USDC"],

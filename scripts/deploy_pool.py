@@ -3,17 +3,19 @@ import os
 from decimal import Decimal
 from os import path
 
-from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroCEMMPool, interface, ERC20, GyroCEMMPoolFactory  # type: ignore
+from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, ERC20, GyroECLPPoolFactory  # type: ignore
 from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory  # type: ignore
 from brownie import web3
 from brownie.network import chain
+from tests.conftest import scale_eclp_params
+from tests.geclp import eclp_prec_implementation
+from tests.support.quantized_decimal import QuantizedDecimal
 from tests.support.types import (
     CapParams,
-    CEMMMathDerivedParams,
-    CEMMMathParams,
+    ECLPFactoryCreateParams,
+    ECLPMathParamsQD,
     ThreePoolFactoryCreateParams,
     TwoPoolFactoryCreateParams,
-    Vector2,
 )
 from tests.support.utils import scale
 
@@ -138,53 +140,39 @@ def c3lp():
 
 
 def eclp():
-    cemm_pool_factory = interface.IGyroCEMMPoolFactory(
-        DEPLOYED_FACTORIES[chain.id]["eclp"]
-    )
+    if chain.id == 1337:
+        eclp_pool_factory = GyroECLPPoolFactory[-1]
+    else:
+        eclp_pool_factory = interface.IGyroECLPPoolFactory(
+            DEPLOYED_FACTORIES[chain.id]["eclp"]
+        )
     deployer = get_deployer()
-    cemm_params = CEMMMathParams(
-        alpha="1000000000000000",
-        beta="2000000000000000000",
-        c="707106781186547524",
-        s="707106781186547524",
-        l="50000000000000000000",
-    )
-    # Pre-calculated derived params from above cemm_params values
-    derived_params = CEMMMathDerivedParams(
-        tauAlpha=Vector2(
-            "-99979925885928775144265228221440915787",
-            "2003601717954248326714904773767014148",
-        ),
-        tauBeta=Vector2(
-            "99820484546577868536962848308342019089",
-            "5989229072794672112217770898500521145",
-        ),
-        u="99900205216253321727351274847867663526",
-        v="3996415395374460214935365647812318782",
-        w="1992813677420211890492062487589071518",
-        z="-79720669675453303560805924511158495",
-        dSq="99999999999999999886624093342106115200",
-    )
+    pool_config = _get_config()
+    tokens = get_tokens(pool_config)
 
-    token0 = deployer.deploy(ERC20, "Dummy 1", "DUM1")
-    token1 = deployer.deploy(ERC20, "Dummy 2", "DUM2")
-    tokens = (
-        [token0, token1]
-        if token0.address.lower() < token1.address.lower()
-        else [token1, token0]
+    eclp_params = ECLPMathParamsQD(
+        **{k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
     )
+    derived_params = eclp_prec_implementation.calc_derived_values(eclp_params)
 
-    params = (
-        "TEST Gyro CEMM Pool",
-        "GYRO-CEMM",
-        tokens,
-        cemm_params,
-        derived_params,
-        "90000000000000000",
-        False,
-        "0x4277f6Ea8567EC89A3E81961598fEf33b43A265F",
+    params = ECLPFactoryCreateParams(
+        name=pool_config["name"],
+        symbol=pool_config["symbol"],
+        tokens=tokens,
+        params=eclp_params.scale(),
+        derived_params=derived_params.scale(),
+        swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
+        oracle_enabled=pool_config["oracle_enabled"],
+        owner=POOL_OWNER[chain.id],
+        cap_params=CapParams(
+            cap_enabled=pool_config["cap"]["enabled"],
+            global_cap=int(scale(pool_config["cap"]["global"])),
+            per_address_cap=int(scale(pool_config["cap"]["per_address"])),
+        ),
+        pause_manager=PAUSE_MANAGER[chain.id],
     )
-    tx = cemm_pool_factory.create(
+    print(params)
+    tx = eclp_pool_factory.create(
         *params,
         {"from": deployer, **make_tx_params()},
     )
@@ -192,7 +180,7 @@ def eclp():
         pool_address = tx.events["PoolCreated"]["pool"]
     else:
         pool_created = (
-            GyroCEMMPoolFactory[0].events.PoolCreated().processLog(tx.logs[-1])
+            GyroECLPPoolFactory[0].events.PoolCreated().processLog(tx.logs[-1])
         )
         pool_address = pool_created["args"]["pool"]
-    GyroCEMMPool.at(pool_address)
+    GyroECLPPool.at(pool_address)

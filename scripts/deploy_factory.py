@@ -1,4 +1,4 @@
-from brownie import Gyro3CLPPoolFactory, Gyro2CLPPoolFactory, GyroCEMMPoolFactory, GyroCEMMMath  # type: ignore
+from brownie import Gyro3CLPPoolFactory, Gyro2CLPPoolFactory, GyroECLPPoolFactory, GyroECLPMath  # type: ignore
 from brownie.network import chain
 
 from scripts.constants import BALANCER_ADDRESSES, GYROSCOPE_ADDRESSES
@@ -30,7 +30,7 @@ def eclp():
     from brownie import QueryProcessor  # type: ignore
 
     QueryProcessor.at(BALANCER_ADDRESSES[chain.id]["query_processor"])
-    if len(GyroCEMMMath) == 0:
+    if len(GyroECLPMath) == 0:
         deployer = get_deployer()
-        deployer.deploy(GyroCEMMMath, **make_tx_params())
-    _deploy_factory(GyroCEMMPoolFactory)
+        deployer.deploy(GyroECLPMath, **make_tx_params())
+    _deploy_factory(GyroECLPPoolFactory)

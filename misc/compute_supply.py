@@ -3,6 +3,10 @@ import json
 import sys
 from decimal import Decimal
 from os import path
+from tests.geclp import eclp_prec_implementation
+from tests.support.quantized_decimal import QuantizedDecimal
+
+from tests.support.types import ECLPMathParamsQD
 
 
 sys.path.append(path.dirname(path.dirname(__file__)))
@@ -23,6 +27,8 @@ parser.add_argument("-o", "--output", required=True)
 
 
 def compute_amounts_2clp(pool_config: dict, chain_id: int):
+    assert len(pool_config["tokens"]) == 2, "2CLP should have 2 tokens"
+
     token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in pool_config["tokens"]]
     dx, dy = [DECIMALS[t] for t in pool_config["tokens"]]
     sqrt_alpha, sqrt_beta = compute_bounds_sqrts(token_addresses, pool_config["bounds"])
@@ -57,6 +63,8 @@ def compute_amounts_2clp(pool_config: dict, chain_id: int):
 
 
 def compute_amounts_3clp(pool_config: dict, chain_id: int):
+    assert len(pool_config["tokens"]) == 3, "ECLP should have 3 tokens"
+
     tokens = sorted(
         [(TOKEN_ADDRESSES[chain_id][t], DECIMALS[t]) for t in pool_config["tokens"]],
         key=lambda x: x[0].lower(),
@@ -91,16 +99,57 @@ def compute_amounts_3clp(pool_config: dict, chain_id: int):
     }
 
 
+def compute_amounts_eclp(pool_config: dict, chain_id: int):
+    assert len(pool_config["tokens"]) == 2, "ECLP should have 2 tokens"
+
+    token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in pool_config["tokens"]]
+    dx, dy = [DECIMALS[t] for t in pool_config["tokens"]]
+    if token_addresses[0] >= token_addresses[1]:
+        token_addresses = token_addresses[::-1]
+        dx, dy = dy, dx
+
+    prices = get_prices(token_addresses, chain_id)
+    px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
+
+    params = ECLPMathParamsQD(
+        **{k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
+    )
+    derived_params = eclp_prec_implementation.calc_derived_values(params)
+
+    # TODO: add computation
+    x = 0
+    y = 0
+    S_init = 0
+    p_bpt = 0
+
+    return {
+        "amounts": {
+            token_addresses[0]: round(x * 10**dx),
+            token_addresses[1]: round(y * 10**dy),
+        },
+        "params": pool_config["params"],
+        "prices": {
+            token_addresses[0]: float(px),
+            token_addresses[1]: float(py),
+        },
+        "initial_supply": float(S_init),
+        "price_bpt": float(p_bpt),
+    }
+
+
 def main():
     args = parser.parse_args()
     with open(args.config) as f:
         pool_config = json.load(f)
-        if len(pool_config["tokens"]) == 2:
+        pool_type = pool_config["pool_type"]
+        if pool_type == "eclp":
+            result = compute_amounts_eclp(pool_config, args.chain_id)
+        elif pool_type == "2clp":
             result = compute_amounts_2clp(pool_config, args.chain_id)
-        elif len(pool_config["tokens"]) == 3:
+        elif pool_type == "3clp":
             result = compute_amounts_3clp(pool_config, args.chain_id)
         else:
-            raise ValueError("Pool must have 2 or 3 tokens")
+            raise ValueError(f"invalid pool type {pool_type}")
     with open(args.output, "w") as f:
         json.dump(result, f, indent=2)
 

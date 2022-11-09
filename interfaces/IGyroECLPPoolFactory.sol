@@ -24,10 +24,13 @@ interface IGyroECLPPoolFactory {
         string memory name,
         string memory symbol,
         IERC20[] memory tokens,
-        GyroECLPMath.Params memory cemmParams,
-        GyroECLPMath.DerivedParams memory derivedCemmParams,
+        GyroECLPMath.Params memory eclpParams,
+        GyroECLPMath.DerivedParams memory derivedECLPParams,
         uint256 swapFeePercentage,
         bool oracleEnabled,
-        address owner
+        address owner,
+        address capManager,
+        ICappedLiquidity.CapParams memory capParams,
+        address pauseManager
     ) external returns (address);
 }

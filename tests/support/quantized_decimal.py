@@ -41,7 +41,7 @@ class QuantizedDecimal:
     set in `constants`
     """
 
-    def __init__(self, value="0", context: decimal.Context = None):
+    def __init__(self, value: DecimalLike = "0", context: decimal.Context = None):
         if isinstance(value, QuantizedDecimal):
             value = value * DECIMAL_MULT
             self._value = value._value

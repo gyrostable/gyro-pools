@@ -1,4 +1,5 @@
 {
+  "pool_type": "eclp",
   "name": "Gyroscope ECLP USDT/USDC",
   "symbol": "ECLP-USDT-USDC",
   "tokens": ["USDT", "USDC"],
