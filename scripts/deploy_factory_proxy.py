@@ -2,6 +2,7 @@ from brownie import (
     Gyro2CLPPoolFactory,
     Gyro3CLPPoolFactory,
     FreezableTransparentUpgradeableProxy,
+    GyroECLPPoolFactory,
 )
 from brownie.network import chain
 from scripts.constants import GYROSCOPE_ADDRESSES  # type: ignore
@@ -30,6 +31,18 @@ def c3lp(three_pool_factory):
     deployer.deploy(
         FreezableTransparentUpgradeableProxy,
         three_pool_factory,
+        GYROSCOPE_ADDRESSES[chain.id]["proxy_admin"],
+        b"",
+        **make_tx_params(),
+    )
+
+
+@with_deployed(GyroECLPPoolFactory)
+def eclp(eclp_pool_factory):
+    deployer = get_deployer()
+    deployer.deploy(
+        FreezableTransparentUpgradeableProxy,
+        eclp_pool_factory,
         GYROSCOPE_ADDRESSES[chain.id]["proxy_admin"],
         b"",
         **make_tx_params(),

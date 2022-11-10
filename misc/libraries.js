@@ -1,3 +1,4 @@
 module.exports = {
   QueryProcessor: "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
+  GyroECLPMath: "0x2eC9faA1Ed444B52778b559B69e27F502564A530",
 };
