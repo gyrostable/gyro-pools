@@ -3,13 +3,12 @@ import json
 import sys
 from decimal import Decimal
 from os import path
-from tests.geclp import eclp_prec_implementation
+
+sys.path.insert(0, path.dirname(path.dirname(__file__)))
+
 from tests.support.quantized_decimal import QuantizedDecimal
-
 from tests.support.types import ECLPMathParamsQD
-
-
-sys.path.append(path.dirname(path.dirname(__file__)))
+from tests.geclp import eclp_prec_implementation
 
 
 from scripts.coingecko import get_prices
