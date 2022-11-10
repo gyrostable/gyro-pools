@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2;
 import "../GyroECLPOracleMath.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/test/MockLogCompression.sol";
 
-contract GyroECLPOracleMathTesting is GyroECLPOracleMath, MockLogCompression {
+contract GyroECLPOracleMathTesting is MockLogCompression {
     function calcLogSpotPrice(uint256 spotPrice) external pure returns (int256 ret) {
         ret = GyroECLPOracleMath._calcLogSpotPrice(spotPrice);
     }

@@ -1,4 +1,5 @@
 {
+  "pool_type": "2clp",
   "name": "Gyroscope 2CLP WBTC/WETH",
   "symbol": "2CLP-WBTC-WETH",
   "tokens": ["WETH", "WBTC"],

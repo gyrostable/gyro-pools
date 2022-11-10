@@ -29,8 +29,10 @@ import "../../libraries/GyroPoolMath.sol";
 import "../ExtensibleWeightedPool2Tokens.sol";
 import "./GyroECLPMath.sol";
 import "./GyroECLPOracleMath.sol";
+import "../CappedLiquidity.sol";
+import "../LocallyPausable.sol";
 
-contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
+contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -61,6 +63,9 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
         NewPoolParams baseParams;
         GyroECLPMath.Params eclpParams;
         GyroECLPMath.DerivedParams derivedEclpParams;
+        address capManager;
+        CapParams capParams;
+        address pauseManager;
     }
 
     event ECLPParamsValidated(bool paramsValidated);
@@ -73,7 +78,11 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
 
     event OracleIndexUpdated(uint256 oracleUpdatedIndex);
 
-    constructor(GyroParams memory params, address configAddress) ExtensibleWeightedPool2Tokens(params.baseParams) {
+    constructor(GyroParams memory params, address configAddress)
+        ExtensibleWeightedPool2Tokens(params.baseParams)
+        CappedLiquidity(params.capManager, params.capParams)
+        LocallyPausable(params.pauseManager)
+    {
         _grequire(configAddress != address(0x0), GyroECLPPoolErrors.ADDRESS_IS_ZERO_ADDRESS);
 
         GyroECLPMath.validateParams(params.eclpParams);
@@ -285,7 +294,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
     function _onJoinPool(
         bytes32,
         address,
-        address,
+        address recipient,
         uint256[] memory balances,
         uint256 lastChangeBlock,
         uint256, //protocolSwapFeePercentage,
@@ -311,6 +320,10 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
         _distributeFees(invariantBeforeAction);
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, userData);
+
+        if (_capParams.capEnabled) {
+            _ensureCap(bptAmountOut, balanceOf(recipient), totalSupply());
+        }
 
         // Since we pay fees in BPT, they have not changed the invariant and 'invariantBeforeAction' is still consistent with
         // 'balances'. Therefore, we can use a simplified method to update the invariant that does not require a full
@@ -533,6 +546,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
         uint256,
         uint256
     ) internal pure override {
+        // solhint-disable-previous-line no-empty-blocks
         // Do nothing.
     }
 
@@ -644,5 +658,9 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );
+    }
+
+    function _setPausedState(bool paused) internal override {
+        _setPaused(paused);
     }
 }

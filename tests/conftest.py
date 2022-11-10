@@ -10,6 +10,7 @@ from tests.support.quantized_decimal_38 import QuantizedDecimal as D2
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 from tests.support.types import (
     ECLPMathParams,
+    ECLPMathParamsQD,
     ECLPPoolParams,
     GyroECLPMathDerivedParams,
     ThreePoolParams,
@@ -53,7 +54,8 @@ def gyro_two_math_testing(admin, Gyro2CLPMathTesting):
 
 
 @pytest.fixture(scope="module")
-def gyro_eclp_math_testing(admin, GyroECLPMathTesting):
+def gyro_eclp_math_testing(admin, GyroECLPMathTesting, GyroECLPMath):
+    admin.deploy(GyroECLPMath)
     return admin.deploy(GyroECLPMathTesting)
 
 
@@ -347,11 +349,13 @@ def pool_factory(admin, Gyro2CLPPoolFactory, gyro_config):
 def eclp_pool(
     admin,
     GyroECLPPool,
+    GyroECLPMath,
     gyro_erc20_funded,
     mock_vault,
     mock_gyro_config,
     deployed_query_processor,
 ):
+    admin.deploy(GyroECLPMath)
     two_pool_base_params = TwoPoolBaseParams(
         vault=mock_vault.address,
         name="GyroECLPTwoPool",  # string
@@ -365,7 +369,7 @@ def eclp_pool(
         owner=admin,  # address
     )
 
-    eclp_params = ECLPMathParams(
+    eclp_params = ECLPMathParamsQD(
         alpha=D("0.97"),
         beta=D("1.02"),
         c=D("0.7071067811865475244"),
@@ -375,8 +379,8 @@ def eclp_pool(
     derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
     args = ECLPPoolParams(
         two_pool_base_params,
-        scale_eclp_params(eclp_params),
-        scale_derived_values(derived_eclp_params),
+        eclp_params.scale(),
+        derived_eclp_params.scale(),
     )
     return admin.deploy(
         GyroECLPPool, args, mock_gyro_config.address, gas_limit=11250000

@@ -4,7 +4,11 @@ artifacts
 deployments/localhost
 dist/
 .env
-build/
+build/*
+!build/deployments/1
+!build/deployments/5
+!build/deployments/137
+!build/deployments/map.json
 __pycache__
 /typechain/
 .hypothesis/

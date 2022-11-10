@@ -62,7 +62,7 @@ s_phi = D(sin(phi_degrees / 360 * 2 * pi))
 admin = accounts[0]
 
 # For experiments with external library calls. Not normally needed.
-# admin.deploy(GyroECLPMath)
+admin.deploy(GyroECLPMath)
 
 authorizer = admin.deploy(Authorizer, admin)
 
