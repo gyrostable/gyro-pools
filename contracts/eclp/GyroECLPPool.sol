@@ -22,6 +22,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.so
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
 import "../../libraries/GyroConfigKeys.sol";
+import "../../libraries/GyroConfigHelpers.sol";
 import "../../libraries/GyroErrors.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
@@ -36,6 +37,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
     using WeightedPool2TokensMiscData for bytes32;
     using SafeCast for int256;
     using SafeCast for uint256;
+    using GyroConfigHelpers for IGyroConfig;
 
     uint256 private constant _MINIMUM_BPT = 1e6;
     bytes32 private constant POOL_TYPE = "ECLP";
@@ -639,22 +641,9 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
             address
         )
     {
-        bytes32 poolFeeSettingKey = bytes32(uint256(uint160(address(this))));
-
-        // Fetch the swap fee. To do this we first check for a pool-specific fee,
-        // and if not present, use a pool-type specific fee.
-        // Failing that we fall back to the global fee setting.
-        uint256 swapFee = gyroConfig.getUint(poolFeeSettingKey);
-        if (swapFee == 0) {
-            swapFee = gyroConfig.getUint(POOL_TYPE);
-        }
-        if (swapFee == 0) {
-            swapFee = gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY);
-        }
-
         return (
-            swapFee,
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
+            gyroConfig.getSwapFeePercForPool(address(this), POOL_TYPE),
+            gyroConfig.getProtocolFeeGyroPortionForPool(address(this), POOL_TYPE),
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );

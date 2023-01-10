@@ -20,6 +20,9 @@ interface IGyroConfig {
     /// NOTE: We avoid overloading to avoid complications with some clients
     function setUint(bytes32 key, uint256 newValue) external;
 
+    /// @notice Check whether a key exists
+    function hasKey(bytes32 key) external view returns (bool);
+
     /// @notice Set an address config
     function setAddress(bytes32 key, address newValue) external;
 }

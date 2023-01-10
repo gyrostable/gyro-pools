@@ -16,6 +16,7 @@ pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "../../libraries/GyroConfigKeys.sol";
+import "../../libraries/GyroConfigHelpers.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 import "../../libraries/GyroErrors.sol";
@@ -35,6 +36,7 @@ import "../LocallyPausable.sol";
 contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
+    using GyroConfigHelpers for IGyroConfig;
 
     uint256 private immutable _root3Alpha;
 
@@ -632,22 +634,9 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
             address
         )
     {
-        bytes32 poolFeeSettingKey = bytes32(uint256(uint160(address(this))));
-
-        // Fetch the swap fee. To do this we first check for a pool-specific fee,
-        // and if not present, use a pool-type specific fee.
-        // Failing that we fall back to the global fee setting.
-        uint256 swapFee = gyroConfig.getUint(poolFeeSettingKey);
-        if (swapFee == 0) {
-            swapFee = gyroConfig.getUint(POOL_TYPE);
-        }
-        if (swapFee == 0) {
-            swapFee = gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY);
-        }
-
         return (
-            swapFee,
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
+            gyroConfig.getSwapFeePercForPool(address(this), POOL_TYPE),
+            gyroConfig.getProtocolFeeGyroPortionForPool(address(this), POOL_TYPE),
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );
