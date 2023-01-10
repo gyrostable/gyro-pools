@@ -38,6 +38,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
     using SafeCast for uint256;
 
     uint256 private constant _MINIMUM_BPT = 1e6;
+    bytes32 private constant POOL_TYPE = "ECLP";
 
     /// @notice Parameters of the ECLP pool
     int256 public immutable _paramsAlpha;
@@ -638,8 +639,21 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, GyroECLPOracleMath {
             address
         )
     {
+        bytes32 poolFeeSettingKey = bytes32(uint256(uint160(address(this))));
+
+        // Fetch the swap fee. To do this we first check for a pool-specific fee,
+        // and if not present, use a pool-type specific fee.
+        // Failing that we fall back to the global fee setting.
+        uint256 swapFee = gyroConfig.getUint(poolFeeSettingKey);
+        if (swapFee == 0) {
+            swapFee = gyroConfig.getUint(POOL_TYPE);
+        }
+        if (swapFee == 0) {
+            swapFee = gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY);
+        }
+
         return (
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY),
+            swapFee,
             gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
