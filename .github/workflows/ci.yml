@@ -12,10 +12,10 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v2
-      - name: Use Python 3.9.7
+      - name: Use Python 3.9.16
         uses: actions/setup-python@v2
         with:
-          python-version: 3.9.7
+          python-version: 3.9.16
       - name: Install black
         run: pip install black
       - name: Install Dependencies

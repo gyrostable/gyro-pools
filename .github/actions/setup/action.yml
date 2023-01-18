@@ -3,15 +3,15 @@ name: "Setup environment"
 runs:
   using: "composite"
   steps:
-    - name: Use Python 3.9.7
+    - name: Use Python 3.9.16
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9.7
+        python-version: 3.9.16
     - name: Install Requirements
       run: pip3 install install -r requirements.txt
       shell: bash
     - name: Install ganache
-      run: yarn global add ganache
+      run: yarn global add ganache@7.6.0
       shell: bash
     - name: Install Dependencies
       run: yarn

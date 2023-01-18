@@ -5,6 +5,7 @@ pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
 import "../../libraries/GyroConfigKeys.sol";
+import "../../libraries/GyroConfigHelpers.sol";
 import "../../interfaces/IGyroConfig.sol";
 import "../../libraries/GyroPoolMath.sol";
 import "../../libraries/GyroErrors.sol";
@@ -24,12 +25,14 @@ import "../LocallyPausable.sol";
 contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
+    using GyroConfigHelpers for IGyroConfig;
 
     uint256 private immutable _root3Alpha;
 
     IGyroConfig public gyroConfig;
 
     uint256 private constant _MAX_TOKENS = 3;
+    bytes32 private constant POOL_TYPE = "3CLP";
 
     IERC20 internal immutable _token0;
     IERC20 internal immutable _token1;
@@ -621,8 +624,8 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         )
     {
         return (
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_SWAP_FEE_PERC_KEY),
-            gyroConfig.getUint(GyroConfigKeys.PROTOCOL_FEE_GYRO_PORTION_KEY),
+            gyroConfig.getSwapFeePercForPool(address(this), POOL_TYPE),
+            gyroConfig.getProtocolFeeGyroPortionForPool(address(this), POOL_TYPE),
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );
