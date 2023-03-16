@@ -82,7 +82,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         // and total amount = cash + managed. See balancer repo, PoolTokens.sol and BalanceAllocation.sol
         (uint256 cash, uint256 managed, , ) = getVault().getPoolTokenInfo(getPoolId(), token);
         balance = cash + managed; // can't overflow, see BalanceAllocation.sol::total() in the Balancer repo.
-        balance = balance * scalingFactor;
+        balance = balance.mulDown(scalingFactor);
     }
 
     /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
