@@ -56,13 +56,16 @@ def join_pool(
     pool_address,
     sender,
     balances,
-    amount_in,
+    amounts_in,  # Single value or tuple/list of values
     recipient=None,
     pool_id=0,
     protocol_swap_fees=0,
     last_change_block=0,
     amount_out=0,
 ):
+    if not isinstance(amounts_in, (tuple, list)):
+        amounts_in = (amounts_in, amounts_in)
+
     if recipient is None:
         recipient = sender
     return vault.callJoinPoolGyro(
@@ -74,7 +77,7 @@ def join_pool(
             balances,
             last_change_block,
             protocol_swap_fees,
-            [amount_in, amount_in],
+            amounts_in,
             amount_out,
         )
     )

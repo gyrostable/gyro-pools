@@ -1,6 +1,6 @@
 import pytest
 
-from brownie import Contract, accounts
+from brownie import Contract, accounts, ZERO_ADDRESS
 
 from typing import NamedTuple, Tuple
 
@@ -21,6 +21,7 @@ from tests.support.types import (
 )
 
 from tests.geclp import eclp_prec_implementation
+from tests.support.utils import scale
 
 TOKENS_PER_USER = 1000 * 10**18
 
@@ -386,6 +387,55 @@ def eclp_pool(
         GyroECLPPool, args, mock_gyro_config.address, gas_limit=11250000
     )
 
+@pytest.fixture
+def rate_scaled_eclp_pool(
+    admin,
+    RateScaledGyroECLPPool,
+    GyroECLPMath,
+    gyro_erc20_funded,
+    mock_vault,
+    mock_gyro_config,
+    deployed_query_processor,
+    mock_rate_provider
+):
+    admin.deploy(GyroECLPMath)
+    two_pool_base_params = TwoPoolBaseParams(
+        vault=mock_vault.address,
+        name="RateScaledGyroECLPTwoPool",  # string
+        symbol="RSGCTP",  # string
+        token0=gyro_erc20_funded[0].address,  # IERC20
+        token1=gyro_erc20_funded[1].address,  # IERC20
+        swapFeePercentage=D('0.001e18'),
+        pauseWindowDuration=0,  # uint256
+        bufferPeriodDuration=0,  # uint256
+        oracleEnabled=False,  # bool
+        owner=admin,  # address
+    )
+
+    eclp_params = ECLPMathParamsQD(
+        alpha=D("0.97"),
+        beta=D("1.02"),
+        c=D("0.7071067811865475244"),
+        s=D("0.7071067811865475244"),
+        l=D("2"),
+    )
+    derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
+    eclp_pool_args = ECLPPoolParams(
+        two_pool_base_params,
+        eclp_params.scale(),
+        derived_eclp_params.scale(),
+    )
+
+    # Token 0 is scaled by mock_rate_provider, token 1 is unscaled.
+    return admin.deploy(
+        RateScaledGyroECLPPool, eclp_pool_args, mock_gyro_config.address, mock_rate_provider, ZERO_ADDRESS, gas_limit=11250000
+    )
+
+@pytest.fixture
+def mock_rate_provider(admin, MockRateProvider):
+    c = admin.deploy(MockRateProvider)
+    c.mockRate(scale('1.5'))
+    return c
 
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):
