@@ -9,9 +9,12 @@ import "../../libraries/GyroFixedPoint.sol";
 /// @notice Extension of GyroECLPPool where one or both assets can be scaled by a rate provider.
 /// @dev NOTE that we do not implement caching for rates, so this is inefficient when getting rates is expensive.
 contract RateScaledGyroECLPPool is GyroECLPPool {
-    constructor (GyroParams memory params, address configAddress, address rateProvider0_, address rateProvider1_)
-        GyroECLPPool(params, configAddress)
-    {
+    constructor(
+        GyroParams memory params,
+        address configAddress,
+        address rateProvider0_,
+        address rateProvider1_
+    ) GyroECLPPool(params, configAddress) {
         rateProvider0 = IRateProvider(rateProvider0_);
         rateProvider1 = IRateProvider(rateProvider1_);
     }
@@ -24,7 +27,7 @@ contract RateScaledGyroECLPPool is GyroECLPPool {
     IRateProvider public immutable rateProvider0;
     IRateProvider public immutable rateProvider1;
 
-    function _scalingFactor(bool token0) internal override view returns (uint256) {
+    function _scalingFactor(bool token0) internal view override returns (uint256) {
         IRateProvider rateProvider;
         uint256 scalingFactor;
         if (token0) {
@@ -34,16 +37,13 @@ contract RateScaledGyroECLPPool is GyroECLPPool {
             rateProvider = rateProvider1;
             scalingFactor = _scalingFactor1;
         }
-        if (address(rateProvider) != address(0))
-            scalingFactor = scalingFactor.mulDown(rateProvider.getRate());
+        if (address(rateProvider) != address(0)) scalingFactor = scalingFactor.mulDown(rateProvider.getRate());
         return scalingFactor;
     }
 
     function _rateUnscalePrice(uint256 spotPrice) internal view override returns (uint256) {
-        if (address(rateProvider0) != address(0))
-            spotPrice = spotPrice.mulDown(rateProvider0.getRate());
-        if (address(rateProvider1) != address(0))
-            spotPrice = spotPrice.divDown(rateProvider1.getRate());
+        if (address(rateProvider0) != address(0)) spotPrice = spotPrice.mulDown(rateProvider0.getRate());
+        if (address(rateProvider1) != address(0)) spotPrice = spotPrice.divDown(rateProvider1.getRate());
         return spotPrice;
     }
 
@@ -53,6 +53,7 @@ contract RateScaledGyroECLPPool is GyroECLPPool {
         factors[0] = _scalingFactor0;
         factors[1] = _scalingFactor1;
     }
+
     function getScalingFactors() external view returns (uint256[] memory factors) {
         factors = new uint256[](2);
         factors[0] = _scalingFactor(true);

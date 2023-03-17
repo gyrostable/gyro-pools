@@ -387,6 +387,7 @@ def eclp_pool(
         GyroECLPPool, args, mock_gyro_config.address, gas_limit=11250000
     )
 
+
 @pytest.fixture
 def rate_scaled_eclp_pool(
     admin,
@@ -396,7 +397,7 @@ def rate_scaled_eclp_pool(
     mock_vault,
     mock_gyro_config,
     deployed_query_processor,
-    mock_rate_provider
+    mock_rate_provider,
 ):
     admin.deploy(GyroECLPMath)
     two_pool_base_params = TwoPoolBaseParams(
@@ -405,7 +406,7 @@ def rate_scaled_eclp_pool(
         symbol="RSGCTP",  # string
         token0=gyro_erc20_funded[0].address,  # IERC20
         token1=gyro_erc20_funded[1].address,  # IERC20
-        swapFeePercentage=D('0.001e18'),
+        swapFeePercentage=D("0.001e18"),
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
         oracleEnabled=False,  # bool
@@ -428,14 +429,21 @@ def rate_scaled_eclp_pool(
 
     # Token 0 is scaled by mock_rate_provider, token 1 is unscaled.
     return admin.deploy(
-        RateScaledGyroECLPPool, eclp_pool_args, mock_gyro_config.address, mock_rate_provider, ZERO_ADDRESS, gas_limit=11250000
+        RateScaledGyroECLPPool,
+        eclp_pool_args,
+        mock_gyro_config.address,
+        mock_rate_provider,
+        ZERO_ADDRESS,
+        gas_limit=11250000,
     )
+
 
 @pytest.fixture
 def mock_rate_provider(admin, MockRateProvider):
     c = admin.deploy(MockRateProvider)
-    c.mockRate(scale('1.5'))
+    c.mockRate(scale("1.5"))
     return c
+
 
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):

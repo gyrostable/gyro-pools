@@ -753,7 +753,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
     /** @dev Applies the reverse of the internal scaling rate to the relative spot price. _updateOracle() should call
      * this to compute the price that will be stored in the oracle. The default implementation is trivial.
      */
-    function _rateUnscalePrice(uint256 spotPrice) internal virtual view returns (uint256) {
+    function _rateUnscalePrice(uint256 spotPrice) internal view virtual returns (uint256) {
         return spotPrice;
     }
 
@@ -942,7 +942,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * @dev Returns the scaling factor for one of the Pool's tokens. Reverts if `token` is not a token registered by the
      * Pool.
      */
-    function _scalingFactor(bool token0) internal virtual view returns (uint256) {
+    function _scalingFactor(bool token0) internal view virtual returns (uint256) {
         return token0 ? _scalingFactor0 : _scalingFactor1;
     }
 

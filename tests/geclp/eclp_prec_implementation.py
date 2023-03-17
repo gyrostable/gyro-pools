@@ -509,6 +509,7 @@ def scale_derived_values(d: DerivedParams) -> DerivedParams:
     )
     return derived
 
+
 def unscale_derived_values(d: DerivedParams) -> DerivedParams:
     """Use this when values were fetched from the contract & you want to use them here."""
     derived = DerivedParams(
@@ -522,6 +523,7 @@ def unscale_derived_values(d: DerivedParams) -> DerivedParams:
     )
     return derived
 
+
 def unscale_params(p: Params) -> Params:
     """Use this when values were fetched from the contract & you want to use them here."""
     params = Params(
@@ -532,6 +534,7 @@ def unscale_params(p: Params) -> Params:
         l=p.l / D("1e18"),
     )
     return params
+
 
 def calc_invariant_error(params, derived, balances):
     x, y = (D(balances[0]), D(balances[1]))

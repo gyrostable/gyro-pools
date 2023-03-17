@@ -1,4 +1,3 @@
-
 import pytest
 from brownie import ZERO_ADDRESS, MockRateProvider
 
@@ -12,6 +11,7 @@ from . import eclp as math_implementation_old
 
 # Tests are copied and adapted from test_eclp_pool.py
 
+
 def test_pool_reg(mock_vault, rate_scaled_eclp_pool, gyro_erc20_funded):
     eclp_pool = rate_scaled_eclp_pool
     poolId = eclp_pool.getPoolId()
@@ -24,6 +24,7 @@ def test_pool_reg(mock_vault, rate_scaled_eclp_pool, gyro_erc20_funded):
         assert token_addresses[token] == gyro_erc20_funded[token].address
         assert token_balances[token] == 0
 
+
 def rate_scale_balances(rate_scaled_eclp_pool, balances):
     ret = list(balances)
 
@@ -35,18 +36,26 @@ def rate_scale_balances(rate_scaled_eclp_pool, balances):
         ret[1] *= unscale(rateProvider1.getRate())
     return ret
 
+
 def get_eclp_params_args(eclp_pool):
     """Fetch appropriately-scaled ECLP parameters from pool"""
     params, derived = eclp_pool.getECLPParams()
-    return math_implementation.unscale_params(math_implementation.Params(*params)), math_implementation.unscale_derived_values(math_implementation.DerivedParams(*derived))
+    return math_implementation.unscale_params(
+        math_implementation.Params(*params)
+    ), math_implementation.unscale_derived_values(
+        math_implementation.DerivedParams(*derived)
+    )
 
-def test_pool_on_initialize(users, rate_scaled_eclp_pool, mock_rate_provider, mock_vault):
+
+def test_pool_on_initialize(
+    users, rate_scaled_eclp_pool, mock_rate_provider, mock_vault
+):
     eclp_pool = rate_scaled_eclp_pool
-    mock_rate_provider.mockRate(scale('1.5'))
+    mock_rate_provider.mockRate(scale("1.5"))
 
     # Test factors
     factors = unscale(rate_scaled_eclp_pool.getScalingFactors())
-    assert factors[0] == D('1.5')
+    assert factors[0] == D("1.5")
     assert factors[1] == D(1)
 
     balances = (0, 0)
@@ -78,23 +87,26 @@ def test_pool_on_initialize(users, rate_scaled_eclp_pool, mock_rate_provider, mo
     invariant = unscale(eclp_pool.getInvariant())
 
     eclp_params_args = get_eclp_params_args(eclp_pool)
-    rate_scaled_balances = rate_scale_balances(rate_scaled_eclp_pool, unscale(initial_balances))
+    rate_scaled_balances = rate_scale_balances(
+        rate_scaled_eclp_pool, unscale(initial_balances)
+    )
     invariant_expected = math_implementation.calculateInvariant(
-        rate_scaled_balances,
-        *eclp_params_args
+        rate_scaled_balances, *eclp_params_args
     )
 
     assert invariant == invariant_expected.approxed()
 
 
-def test_pool_on_exit(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provider, gyro_eclp_math_testing):
+def test_pool_on_exit(
+    users, rate_scaled_eclp_pool, mock_vault, mock_rate_provider, gyro_eclp_math_testing
+):
     eclp_pool = rate_scaled_eclp_pool
-    ratex = D('1.5')
+    ratex = D("1.5")
     mock_rate_provider.mockRate(scale(ratex))
 
     # We perform a join that will have equal values *after scaling*
     amount_in = 100 * 10**18
-    amounts_in  = (int(amount_in / ratex), amount_in)
+    amounts_in = (int(amount_in / ratex), amount_in)
 
     tx = join_pool(mock_vault, eclp_pool.address, users[0], (0, 0), amounts_in)
 
@@ -133,7 +145,6 @@ def test_pool_on_exit(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provid
         unscale(amounts_out)
     )
 
-
     (_, balancesAfterExit) = mock_vault.getPoolTokens(poolId)
     assert int(balancesAfterExit[0]) == pytest.approx(
         balances_after_join[0] - amounts_out[0]
@@ -161,7 +172,10 @@ def test_pool_on_exit(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provid
 
     # This is the value used in _onExitPool(): The invariant is recalculated each time.
     # B/c recalculation isn't perfectly precise, we only match the stored value approximately.
-    balances_after_join_ratescaled = [int(balances_after_join[0] * ratex), balances_after_join[1]]
+    balances_after_join_ratescaled = [
+        int(balances_after_join[0] * ratex),
+        balances_after_join[1],
+    ]
     sInvariant_after_join = gyro_eclp_math_testing.calculateInvariant(
         balances_after_join_ratescaled, sparams, sdparams
     )
@@ -174,9 +188,11 @@ def test_pool_on_exit(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provid
     assert invariant_after_exit == sInvariant_after_exit
 
 
-def test_pool_swap(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provider, gyro_erc20_funded):
+def test_pool_swap(
+    users, rate_scaled_eclp_pool, mock_vault, mock_rate_provider, gyro_erc20_funded
+):
     eclp_pool = rate_scaled_eclp_pool
-    ratex = D('1.5')
+    ratex = D("1.5")
     mock_rate_provider.mockRate(scale(ratex))
 
     amount_in = 100 * 10**18
@@ -208,14 +224,21 @@ def test_pool_swap(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provider,
     invariant = unscale(eclp_pool.getInvariant())
 
     # Dbl check invariant
-    invariant_expected, invariant_expected_err = math_implementation.calculateInvariantWithError(
-        unscale(rate_scaled_balances),
-        *eclp_params_args
+    (
+        invariant_expected,
+        invariant_expected_err,
+    ) = math_implementation.calculateInvariantWithError(
+        unscale(rate_scaled_balances), *eclp_params_args
     )
-    invariant_expected_vec = (invariant_expected + 2 * invariant_expected_err, invariant_expected)
+    invariant_expected_vec = (
+        invariant_expected + 2 * invariant_expected_err,
+        invariant_expected,
+    )
     assert invariant == invariant_expected
 
-    amount_out_expected_unscaled = unscale(rate_scaled_balances[1]) - math_implementation.calcYGivenX(
+    amount_out_expected_unscaled = unscale(
+        rate_scaled_balances[1]
+    ) - math_implementation.calcYGivenX(
         unscale(rate_scaled_balances[0] + amountToSwapMinusFees_ratescaled),
         *eclp_params_args,
         invariant_expected_vec,
@@ -243,20 +266,18 @@ def test_pool_swap(users, rate_scaled_eclp_pool, mock_vault, mock_rate_provider,
         userData=(0).to_bytes(32, "big"),  # bytes
     )
 
-    tx = mock_vault.callMinimalGyroPoolSwap(
-        eclp_pool.address,
-        swapRequest,
-        *balances
-    )
+    tx = mock_vault.callMinimalGyroPoolSwap(eclp_pool.address, swapRequest, *balances)
 
     assert tx.events["Swap"][0]["tokenIn"] == gyro_erc20_funded[0]
     assert tx.events["Swap"][0]["tokenOut"] == gyro_erc20_funded[1]
     amount_out = tx.events["Swap"][0]["amount"]
 
     # Check against amount without price impact. We should see a nonzero but not huge price impact.
-    amount_out_spot_unscaled = unscale(amountToSwapMinusFees) * unscale(spot_price_before_swap)  # if we had no price impact
+    amount_out_spot_unscaled = unscale(amountToSwapMinusFees) * unscale(
+        spot_price_before_swap
+    )  # if we had no price impact
     assert unscale(amount_out) < amount_out_spot_unscaled
-    assert unscale(amount_out) == amount_out_spot_unscaled.approxed(rel=D('0.05'))
+    assert unscale(amount_out) == amount_out_spot_unscaled.approxed(rel=D("0.05"))
 
     # Check balances
     (_, balances_after_swap) = mock_vault.getPoolTokens(poolId)
