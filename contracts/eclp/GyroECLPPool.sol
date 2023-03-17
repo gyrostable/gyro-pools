@@ -533,8 +533,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     ) internal {
         bytes32 miscData = _miscData;
         if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            uint256 spotPrice = GyroECLPMath.calculatePrice(balances, eclpParams, derivedECLPParams, invariant.toInt256());
-
+            uint256 spotPrice = _getPrice(balances, invariant, eclpParams, derivedECLPParams);
             int256 logSpotPrice = GyroECLPOracleMath._calcLogSpotPrice(spotPrice);
 
             // // can optionally log BPT spot price using this code. Instead, we log L/S
