@@ -153,6 +153,22 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         return GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
     }
 
+    function _getPrice(
+        uint256[] memory balances,
+        uint256 invariant,
+        GyroECLPMath.Params memory eclpParams,
+        GyroECLPMath.DerivedParams memory derivedECLPParams
+    ) internal view returns (uint256 spotPrice) {
+        spotPrice = GyroECLPMath.calculatePrice(balances, eclpParams, derivedECLPParams, invariant.toInt256());
+        spotPrice = _rateUnscalePrice(spotPrice);
+    }
+
+    function getPrice() external view returns (uint256 spotPrice) {
+        uint256[] memory balances = _getAllBalances();
+        (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
+        uint256 invariant = GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
+        return _getPrice(balances, invariant, eclpParams, derivedECLPParams);
+    }
 
     // Swap Hooks
 
