@@ -117,19 +117,42 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         return reconstructECLPParams();
     }
 
+    /** @dev Reads the balance of a token from the balancer vault and returns the scaled amount. Smaller storage access
+     * compared to getVault().getPoolTokens().
+     * Copied from the 3CLP *except* that for the 2CLP, the scalingFactor is interpreted as a regular integer, not a
+     * FixedPoint number. This is an inconsistency between the base contracts.
+     */
+    function _getScaledTokenBalance(IERC20 token, uint256 scalingFactor) internal view returns (uint256 balance) {
+        // Signature of getPoolTokenInfo(): (pool id, token) -> (cash, managed, lastChangeBlock, assetManager)
+        // and total amount = cash + managed. See balancer repo, PoolTokens.sol and BalanceAllocation.sol
+        (uint256 cash, uint256 managed, , ) = getVault().getPoolTokenInfo(getPoolId(), token);
+        balance = cash + managed; // can't overflow, see BalanceAllocation.sol::total() in the Balancer repo.
+        balance = balance.mulDown(scalingFactor);
+    }
+
+    /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
+     * Essentially copied from the 3CLP.
+     */
+    function _getAllBalances() internal view returns (uint256[] memory balances) {
+        // The below is more gas-efficient than the following line because the token slots don't have to be read in the
+        // vault.
+        // (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
+        balances = new uint256[](2);
+        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor(true));
+        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor(false));
+        return balances;
+    }
+
     /**
      * @dev Returns the current value of the invariant.
+     * Note: This function is not used internally; it's public, not external, so we can override it cleanly.
      */
-    // TODO WIP killing this routine to pipe DerivedParams through differently.
-    //    function getInvariant() public view override returns (int256) {
-    //        (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
-    //
-    //        // Since the Pool hooks always work with upscaled balances, we manually
-    //        // upscale here for consistency
-    //        _upscaleArray(balances);
-    //
-    //        return GyroECLPMath.calculateInvariant(balances, eclpParams, derived);
-    //    }
+    function getInvariant() public view override returns (uint256) {
+        uint256[] memory balances = _getAllBalances();
+        (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
+        return GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
+    }
+
 
     // Swap Hooks
 
