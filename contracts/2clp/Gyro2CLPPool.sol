@@ -88,13 +88,13 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
     /** @dev Get all balances in the pool, scaled by the appropriate scaling factors, in a relatively gas-efficient way.
      * Essentially copied from the 3CLP.
      */
-    function _getAllBalances() private view returns (uint256[] memory balances) {
+    function _getAllBalances() internal view returns (uint256[] memory balances) {
         // The below is more gas-efficient than the following line because the token slots don't have to be read in the
         // vault.
         // (, uint256[] memory balances, ) = getVault().getPoolTokens(getPoolId());
         balances = new uint256[](2);
-        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor0);
-        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor1);
+        balances[0] = _getScaledTokenBalance(_token0, _scalingFactor(true));
+        balances[1] = _getScaledTokenBalance(_token1, _scalingFactor(false));
         return balances;
     }
 
