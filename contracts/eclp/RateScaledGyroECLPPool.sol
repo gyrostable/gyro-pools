@@ -41,7 +41,7 @@ contract RateScaledGyroECLPPool is GyroECLPPool {
         return scalingFactor;
     }
 
-    function _rateUnscalePrice(uint256 spotPrice) internal view override returns (uint256) {
+    function _adjustPrice(uint256 spotPrice) internal view override returns (uint256) {
         if (address(rateProvider0) != address(0)) spotPrice = spotPrice.mulDown(rateProvider0.getRate());
         if (address(rateProvider1) != address(0)) spotPrice = spotPrice.divDown(rateProvider1.getRate());
         return spotPrice;

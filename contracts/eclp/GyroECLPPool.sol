@@ -160,7 +160,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         GyroECLPMath.DerivedParams memory derivedECLPParams
     ) internal view returns (uint256 spotPrice) {
         spotPrice = GyroECLPMath.calculatePrice(balances, eclpParams, derivedECLPParams, invariant.toInt256());
-        spotPrice = _rateUnscalePrice(spotPrice);
+        spotPrice = _adjustPrice(spotPrice);
     }
 
     function getPrice() external view returns (uint256 spotPrice) {
