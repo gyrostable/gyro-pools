@@ -225,3 +225,18 @@ class ECLPFactoryCreateParams(NamedTuple):
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pause_manager: address = DEFAULT_PAUSE_MANAGER
+
+
+class RateScaledECLPFactoryCreateParams(NamedTuple):
+    name: str
+    symbol: str
+    tokens: list[str]
+    params: ECLPMathParamsQD
+    derived_params: ECLPMathDerivedParamsQD38
+    rate_providers: list[address]
+    swap_fee_percentage: DecimalLike
+    oracle_enabled: bool
+    owner: str
+    cap_manager: address = DEFAULT_CAP_MANAGER
+    cap_params: CapParams = CapParams()
+    pause_manager: address = DEFAULT_PAUSE_MANAGER

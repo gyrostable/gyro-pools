@@ -347,3 +347,10 @@ def test_pool_swap(users, eclp_pool, mock_vault, gyro_erc20_funded):
     assert balances_after_swap[1] == balances_after_exit[1] - amount_out
 
     assert unscale(amount_out) == amount_out_expected.approxed()
+
+
+def test_pool_factory(mock_eclp_pool_from_factory):
+    """This test does almost nothing but run the creation once to make sure it works."""
+    mock_pool_from_factory = mock_eclp_pool_from_factory
+    assert mock_pool_from_factory.name() == "GyroECLPTwoPool"
+    assert mock_pool_from_factory.symbol() == "GCTP"

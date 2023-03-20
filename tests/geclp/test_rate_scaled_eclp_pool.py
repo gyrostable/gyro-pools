@@ -285,3 +285,10 @@ def test_pool_swap(
     assert balances_after_swap[1] == balances[1] - amount_out
 
     assert unscale(amount_out) == amount_out_expected_unscaled.approxed()
+
+
+def test_pool_factory(mock_rate_scaled_eclp_pool_from_factory):
+    """This test does almost nothing but run the creation once to make sure it works."""
+    mock_pool_from_factory = mock_rate_scaled_eclp_pool_from_factory
+    assert mock_pool_from_factory.name() == "RateScaledGyroECLPTwoPool"
+    assert mock_pool_from_factory.symbol() == "RSGCTP"
