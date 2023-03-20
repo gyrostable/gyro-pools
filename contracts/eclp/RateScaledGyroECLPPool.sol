@@ -19,7 +19,8 @@ contract RateScaledGyroECLPPool is GyroECLPPool {
         rateProvider1 = IRateProvider(rateProvider1_);
     }
 
-    // TODO below to be moved to a separate base contract once I figured out diamond inheritance :/
+    // The below code is general and can be used to add rate scaling to any child of ExtensibleWeightedPool2Tokens.
+    // We don't have it as a base class because of Solidity's limitations with multiple inheritance.
 
     using GyroFixedPoint for uint256;
     using SafeCast for uint256;
@@ -45,18 +46,5 @@ contract RateScaledGyroECLPPool is GyroECLPPool {
         if (address(rateProvider0) != address(0)) spotPrice = spotPrice.mulDown(rateProvider0.getRate());
         if (address(rateProvider1) != address(0)) spotPrice = spotPrice.divDown(rateProvider1.getRate());
         return spotPrice;
-    }
-
-    // DEBUG / TESTING
-    function getRawScalingFactors() external view returns (uint256[] memory factors) {
-        factors = new uint256[](2);
-        factors[0] = _scalingFactor0;
-        factors[1] = _scalingFactor1;
-    }
-
-    function getScalingFactors() external view returns (uint256[] memory factors) {
-        factors = new uint256[](2);
-        factors[0] = _scalingFactor(true);
-        factors[1] = _scalingFactor(false);
     }
 }
