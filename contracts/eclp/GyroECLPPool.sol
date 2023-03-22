@@ -9,6 +9,7 @@ import "../../libraries/GyroFixedPoint.sol";
 
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
+import "@balancer-labs/v2-pool-utils/contracts/interfaces/IRateProvider.sol";
 
 import "../../libraries/GyroConfigKeys.sol";
 import "../../libraries/GyroConfigHelpers.sol";
@@ -51,10 +52,16 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
 
     IGyroConfig public gyroConfig;
 
+    /// @dev for rate scaling
+    IRateProvider public immutable rateProvider0;
+    IRateProvider public immutable rateProvider1;
+
     struct GyroParams {
         NewPoolParams baseParams;
         GyroECLPMath.Params eclpParams;
         GyroECLPMath.DerivedParams derivedEclpParams;
+        address rateProvider0;
+        address rateProvider1;
         address capManager;
         CapParams capParams;
         address pauseManager;
@@ -104,6 +111,9 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         );
 
         gyroConfig = IGyroConfig(configAddress);
+
+        rateProvider0 = IRateProvider(params.rateProvider0);
+        rateProvider1 = IRateProvider(params.rateProvider1);
     }
 
     /** @dev reconstructs ECLP params structs from immutable arrays */
@@ -692,5 +702,27 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
 
     function _setPausedState(bool paused) internal override {
         _setPaused(paused);
+    }
+
+    // Rate scaling
+
+    function _scalingFactor(bool token0) internal view override returns (uint256) {
+        IRateProvider rateProvider;
+        uint256 scalingFactor;
+        if (token0) {
+            rateProvider = rateProvider0;
+            scalingFactor = _scalingFactor0;
+        } else {
+            rateProvider = rateProvider1;
+            scalingFactor = _scalingFactor1;
+        }
+        if (address(rateProvider) != address(0)) scalingFactor = scalingFactor.mulDown(rateProvider.getRate());
+        return scalingFactor;
+    }
+
+    function _adjustPrice(uint256 spotPrice) internal view override returns (uint256) {
+        if (address(rateProvider0) != address(0)) spotPrice = spotPrice.mulDown(rateProvider0.getRate());
+        if (address(rateProvider1) != address(0)) spotPrice = spotPrice.divDown(rateProvider1.getRate());
+        return spotPrice;
     }
 }

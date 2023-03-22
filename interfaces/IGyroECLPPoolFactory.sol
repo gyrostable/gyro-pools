@@ -15,6 +15,7 @@ interface IGyroECLPPoolFactory {
         IERC20[] memory tokens,
         GyroECLPMath.Params memory eclpParams,
         GyroECLPMath.DerivedParams memory derivedECLPParams,
+        address[] memory rateProviders,
         uint256 swapFeePercentage,
         bool oracleEnabled,
         address owner,

@@ -19,7 +19,6 @@ from tests.support.types import (
     ThreePoolFactoryCreateParams,
     TwoPoolFactoryCreateParams,
     ECLPFactoryCreateParams,
-    RateScaledECLPFactoryCreateParams,
 )
 
 from tests.geclp import eclp_prec_implementation
@@ -358,6 +357,7 @@ def eclp_pool(
     mock_gyro_config,
     deployed_query_processor,
 ):
+    """ECLP pool *without* rate scaling (disabled)."""
     admin.deploy(GyroECLPMath)
     two_pool_base_params = TwoPoolBaseParams(
         vault=mock_vault.address,
@@ -419,6 +419,7 @@ def mock_eclp_pool_from_factory(
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         params=eclp_params.scale(),
         derived_params=derived_eclp_params.scale(),
+        rate_providers=[ZERO_ADDRESS, ZERO_ADDRESS],
         swap_fee_percentage=1 * 10**15,
         oracle_enabled=False,  # bool
         owner=admin,  # address
@@ -427,7 +428,7 @@ def mock_eclp_pool_from_factory(
     tx = factory.create(*args)
     pool_address = tx.events["PoolCreated"]["pool"]
     pool_from_factory = Contract.from_abi(
-        "RateScaledGyro2CLPPool", pool_address, GyroECLPPool.abi
+        "GyroECLPPool", pool_address, GyroECLPPool.abi
     )
 
     return pool_from_factory
@@ -436,7 +437,7 @@ def mock_eclp_pool_from_factory(
 @pytest.fixture
 def rate_scaled_eclp_pool(
     admin,
-    RateScaledGyroECLPPool,
+    GyroECLPPool,
     GyroECLPMath,
     gyro_erc20_funded,
     mock_vault,
@@ -444,6 +445,7 @@ def rate_scaled_eclp_pool(
     deployed_query_processor,
     mock_rate_provider,
 ):
+    """ECLP with rate scaling enabled for asset x"""
     admin.deploy(GyroECLPMath)
     two_pool_base_params = TwoPoolBaseParams(
         vault=mock_vault.address,
@@ -470,15 +472,15 @@ def rate_scaled_eclp_pool(
         two_pool_base_params,
         eclp_params.scale(),
         derived_eclp_params.scale(),
+        rateProvider0=mock_rate_provider,
+        rateProvider1=ZERO_ADDRESS,
     )
 
     # Token 0 is scaled by mock_rate_provider, token 1 is unscaled.
     return admin.deploy(
-        RateScaledGyroECLPPool,
+        GyroECLPPool,
         eclp_pool_args,
         mock_gyro_config.address,
-        mock_rate_provider,
-        ZERO_ADDRESS,
         gas_limit=11250000,
     )
 
@@ -486,8 +488,8 @@ def rate_scaled_eclp_pool(
 @pytest.fixture
 def mock_rate_scaled_eclp_pool_from_factory(
     admin,
-    RateScaledGyroECLPPoolFactory,
-    RateScaledGyroECLPPool,
+    GyroECLPPoolFactory,
+    GyroECLPPool,
     GyroECLPMath,
     mock_vault,
     mock_gyro_config,
@@ -497,7 +499,7 @@ def mock_rate_scaled_eclp_pool_from_factory(
 ):
     admin.deploy(GyroECLPMath)
     factory = admin.deploy(
-        RateScaledGyroECLPPoolFactory, mock_vault, mock_gyro_config.address
+        GyroECLPPoolFactory, mock_vault, mock_gyro_config.address
     )
 
     eclp_params = ECLPMathParamsQD(
@@ -509,8 +511,8 @@ def mock_rate_scaled_eclp_pool_from_factory(
     )
     derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
 
-    args = RateScaledECLPFactoryCreateParams(
-        name="RateScaledGyroECLPTwoPool",  # string
+    args = ECLPFactoryCreateParams(
+        name="GyroECLPTwoPool",  # string
         symbol="RSGCTP",  # string
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         params=eclp_params.scale(),
@@ -524,7 +526,7 @@ def mock_rate_scaled_eclp_pool_from_factory(
     tx = factory.create(*args)
     pool_address = tx.events["PoolCreated"]["pool"]
     pool_from_factory = Contract.from_abi(
-        "RateScaledGyroECLPPool", pool_address, RateScaledGyroECLPPool.abi
+        "GyroECLPPool", pool_address, GyroECLPPool.abi
     )
 
     return pool_from_factory
