@@ -725,4 +725,12 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         if (address(rateProvider1) != address(0)) spotPrice = spotPrice.divDown(rateProvider1.getRate());
         return spotPrice;
     }
+
+    /// @notice Convenience function to fetch the two rates used for scaling the two tokens, as of rateProvider{0,1}.
+    /// Note that these rates do *not* contain scaling to account for differences in the number of decimals. The rates
+    /// themselves are always 18-decimals.
+    function getTokenRates() public view returns (uint256 rate0, uint256 rate1) {
+        rate0 = address(rateProvider0) != address(0) ? rateProvider0.getRate() : GyroFixedPoint.ONE;
+        rate1 = address(rateProvider1) != address(0) ? rateProvider1.getRate() : GyroFixedPoint.ONE;
+    }
 }
