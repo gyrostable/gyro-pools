@@ -228,6 +228,107 @@ def calc_2clp_test_results():
     print(f"NEW (code):      {nliq_code}")
 
 
+def calc_rate_scaled_eclp_test_results():
+    params = ECLPMathParams(
+        alpha=D("0.050000000000020290"),
+        beta=D("0.397316269897841178"),
+        c=D("0.9551573261744535"),
+        s=D("0.29609877111408056"),
+        l=D("748956.475000000000000000"),
+    )
+    fee = D("0.09")
+    x, y = D('66.66666666666667'), D(100)  # x = 100/1.5 so that the rate-scaled balances are about equal
+    ratex, ratey = D('1.5'), D('1')
+
+    balances_nonscaled = [x, y]
+    balances = [x * ratex, y * ratey]
+    f = 1 - fee
+
+    # NOTE: The SOR tests (in the SOR repo) uses `tokenInIsToken0=true`, i.e., xin and yout.
+
+    derived = eclp_prec_implementation.calc_derived_values(params)
+    invariant, inv_err = eclp_prec_implementation.calculateInvariantWithError(
+        balances, params, derived
+    )
+    r_vec = (invariant + 2 * inv_err, invariant)
+
+    print("--- derived params ---")
+    pprint(derived._asdict())
+
+    print()
+    print("--- should correctly calculate virtual offset 0 (a, rate-scaled) ---")
+    print(eclp_prec_implementation.virtualOffset0(params, derived, r_vec))
+
+    print("--- should correctly calculate virtual offset 1 (b, rate-scaled) ---")
+    print(eclp_prec_implementation.virtualOffset1(params, derived, r_vec))
+
+    print()
+
+    print("--- should correctly calculate limit amount for swap exact in")
+    amount_in_max = eclp_prec_implementation.calcXGivenY(D(0), params, derived, r_vec) - balances_nonscaled[0]
+    print(amount_in_max / ratex)
+
+    print("--- should correctly calculate limit amount for swap exact out")
+    print(balances[1] / ratey)
+
+    print("--- should correctly calculate normalized liquidity ---")
+    print(D(1)/ratey * eclp_derivatives.normalized_liquidity_xin(balances, params, fee, r_vec))
+
+    print("--- should correctly calculate swap amount for swap exact in ---")
+    amount_in = D(10) * ratex
+    amount_out = balances[1] - eclp_prec_implementation.calcYGivenX(
+        balances[0] + f * amount_in, params, derived, r_vec
+    )
+    print(amount_out / ratey)
+
+    print("--- should correctly calculate swap amount for swap exact out ---")
+    amount_out = D(10) * ratey
+    amount_in = (
+        eclp_prec_implementation.calcXGivenY(
+            balances[1] - amount_out, params, derived, r_vec
+        )
+        - balances[0]
+    )
+    amount_in /= f
+    print(amount_in / ratex)
+
+    print("--- should correctly calculate price after swap exact in ---")
+    amount_in = D(10) * ratex
+    py = 1 / eclp_derivatives.dyout_dxin(
+        [balances[0] + f * amount_in, None], params, fee, r_vec
+    )
+    print(py * ratey / ratex)
+
+    print("--- should correctly calculate price after swap exact out ---")
+    amount_out = D(10) * ratey
+    py = eclp_derivatives.dxin_dyout(
+        [None, balances[1] - amount_out], params, fee, r_vec
+    )
+    print(py * ratey / ratex)
+
+    print("--- should correctly calculate derivative of price after swap exact in ---")
+    amount_in = D(10) * ratex
+    dpy = eclp_derivatives.dpy_dxin(
+        [balances[0] + f * amount_in, None], params, fee, r_vec
+    )
+    print(dpy * ratey)
+
+    print("--- should correctly calculate derivative of price after swap exact out ---")
+    amount_out = D(10)
+    dpy = eclp_derivatives.dpy_dyout(
+        [None, balances[1] - amount_out], params, fee, r_vec
+    )
+    print(dpy * ratey**2 / ratex)
+
+    print("--- BONUS: should not return negative numbers upon swap with 0 amount ---")
+    # NB fees don't matter here.
+    amount_in = D(0) * ratex
+    amount_out = balances[1] - eclp_prec_implementation.calcYGivenX(
+        balances[0] + f * amount_in, params, derived, r_vec
+    )
+    print(amount_out / ratey)
+
+
 def main():
     calc_2clp_test_results()
     calc_eclp_test_results()
