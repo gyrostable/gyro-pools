@@ -237,8 +237,10 @@ def calc_rate_scaled_eclp_test_results():
         l=D("748956.475000000000000000"),
     )
     fee = D("0.09")
-    x, y = D('66.66666666666667'), D(100)  # x = 100/1.5 so that the rate-scaled balances are about equal
-    ratex, ratey = D('1.5'), D('1')
+    x, y = D("66.66666666666667"), D(
+        100
+    )  # x = 100/1.5 so that the rate-scaled balances are about equal
+    ratex, ratey = D("1.5"), D("1")
 
     balances_nonscaled = [x, y]
     balances = [x * ratex, y * ratey]
@@ -265,14 +267,21 @@ def calc_rate_scaled_eclp_test_results():
     print()
 
     print("--- should correctly calculate limit amount for swap exact in")
-    amount_in_max = eclp_prec_implementation.calcXGivenY(D(0), params, derived, r_vec) - balances_nonscaled[0]
+    amount_in_max = (
+        eclp_prec_implementation.calcXGivenY(D(0), params, derived, r_vec)
+        - balances_nonscaled[0]
+    )
     print(amount_in_max / ratex)
 
     print("--- should correctly calculate limit amount for swap exact out")
     print(balances[1] / ratey)
 
     print("--- should correctly calculate normalized liquidity ---")
-    print(D(1)/ratey * eclp_derivatives.normalized_liquidity_xin(balances, params, fee, r_vec))
+    print(
+        D(1)
+        / ratey
+        * eclp_derivatives.normalized_liquidity_xin(balances, params, fee, r_vec)
+    )
 
     print("--- should correctly calculate swap amount for swap exact in ---")
     amount_in = D(10) * ratex

@@ -498,9 +498,7 @@ def mock_rate_scaled_eclp_pool_from_factory(
     deployed_query_processor,
 ):
     admin.deploy(GyroECLPMath)
-    factory = admin.deploy(
-        GyroECLPPoolFactory, mock_vault, mock_gyro_config.address
-    )
+    factory = admin.deploy(GyroECLPPoolFactory, mock_vault, mock_gyro_config.address)
 
     eclp_params = ECLPMathParamsQD(
         alpha=D("0.97"),
