@@ -927,7 +927,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
     /**
      * @dev Returns a scaling factor that, when multiplied to a token amount for `token`, normalizes its balance as if
-     * it had 18 decimals.
+     * it had 18 decimals. The scaling factor itself is 18-decimal FixedPoint, so needs to be multiplied via
+     * `mulDown()` or `mulUp()`, not "*".
      */
     function _computeScalingFactor(IERC20 token) private view returns (uint256) {
         // Tokens that don't implement the `decimals` method are not supported.
@@ -940,7 +941,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
     /**
      * @dev Returns the scaling factor for one of the Pool's tokens. Reverts if `token` is not a token registered by the
-     * Pool.
+     * Pool. The scaling factor is an 18-decimal FixedPoint number.
      */
     function _scalingFactor(bool token0) internal view virtual returns (uint256) {
         return token0 ? _scalingFactor0 : _scalingFactor1;
