@@ -13,6 +13,8 @@ from tests.geclp import eclp_derivatives
 gyro_two_math_testing = accounts[0].deploy(Gyro2CLPMathTesting)
 gyro_three_math_testing = accounts[0].deploy(Gyro3CLPMathTesting)
 
+LIMIT_AMOUNT_IN_BUFFER_FACTOR = D("0.999999000000000000")
+
 
 def calc_eclp_test_results():
     params = ECLPMathParams(
@@ -23,7 +25,8 @@ def calc_eclp_test_results():
         l=D("748956.475000000000000000"),
     )
     fee = D("0.09")
-    x = y = D(100)
+    x = D(100)
+    y = D(100)
 
     balances = [x, y]
     f = 1 - fee
@@ -268,10 +271,9 @@ def calc_rate_scaled_eclp_test_results():
 
     print("--- should correctly calculate limit amount for swap exact in")
     amount_in_max = (
-        eclp_prec_implementation.calcXGivenY(D(0), params, derived, r_vec)
-        - balances_nonscaled[0]
+        eclp_prec_implementation.maxBalances0(params, derived, r_vec) - balances[0]
     )
-    print(amount_in_max / ratex)
+    print(amount_in_max / ratex / f * LIMIT_AMOUNT_IN_BUFFER_FACTOR)
 
     print("--- should correctly calculate limit amount for swap exact out")
     print(balances[1] / ratey)
@@ -283,6 +285,9 @@ def calc_rate_scaled_eclp_test_results():
         * eclp_derivatives.normalized_liquidity_xin(balances, params, fee, r_vec)
     )
 
+    print("--- should match universal normalized liquidity calculation ---")
+    print(D(1) / (ratey * eclp_derivatives.dpy_dxin(balances, params, fee, r_vec)))
+
     print("--- should correctly calculate swap amount for swap exact in ---")
     amount_in = D(10) * ratex
     amount_out = balances[1] - eclp_prec_implementation.calcYGivenX(
@@ -290,7 +295,9 @@ def calc_rate_scaled_eclp_test_results():
     )
     print(amount_out / ratey)
 
-    print("--- should correctly calculate swap amount for swap exact out ---")
+    print(
+        "--- should correctly calculate swap amount for swap exact out (ignore fee) ---"
+    )
     amount_out = D(10) * ratey
     amount_in = (
         eclp_prec_implementation.calcXGivenY(
@@ -298,7 +305,6 @@ def calc_rate_scaled_eclp_test_results():
         )
         - balances[0]
     )
-    amount_in /= f
     print(amount_in / ratex)
 
     print("--- should correctly calculate price after swap exact in ---")
@@ -317,6 +323,15 @@ def calc_rate_scaled_eclp_test_results():
 
     print("--- should correctly calculate derivative of price after swap exact in ---")
     amount_in = D(10) * ratex
+    dpy = eclp_derivatives.dpy_dxin(
+        [balances[0] + f * amount_in, None], params, fee, r_vec
+    )
+    print(dpy * ratey)
+
+    print(
+        "--- should correctly calculate derivative of price after swap exact in at 0 ---"
+    )
+    amount_in = D(0) * ratex
     dpy = eclp_derivatives.dpy_dxin(
         [balances[0] + f * amount_in, None], params, fee, r_vec
     )
