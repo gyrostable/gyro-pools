@@ -61,6 +61,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
     // All token balances are normalized to behave as if the token had 18 decimals. We assume a token's decimals will
     // not change throughout its lifetime, and store the corresponding scaling factor for each at construction time.
     // These factors are always greater than or equal to one: tokens with more than 18 decimals are not supported.
+    // We still store these as 18-decimal (GyroFixedPoint) values for composability.
     uint256 internal immutable _scalingFactor0;
     uint256 internal immutable _scalingFactor1;
 
@@ -454,7 +455,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
         );
 
         // Update current balances by subtracting the protocol fee amounts
-        _mutateAmounts(balances, dueProtocolFeeAmounts, FixedPoint.sub);
+        _mutateAmounts(balances, dueProtocolFeeAmounts, GyroFixedPoint.sub);
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, normalizedWeights, userData);
 
         // Update the invariant with the balances the Pool will have after the join, in order to compute the
@@ -749,6 +750,13 @@ abstract contract ExtensibleWeightedPool2Tokens is
         uint256 balanceToken1
     ) internal virtual;
 
+    /** @dev Applies the reverse of the internal scaling rate to the relative spot price. _updateOracle() should call
+     * this to compute the price that will be stored in the oracle. The default implementation is trivial.
+     */
+    function _adjustPrice(uint256 spotPrice) internal view virtual returns (uint256) {
+        return spotPrice;
+    }
+
     // bytes32 miscData = _miscData;
     // if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
     //     int256 logSpotPrice = WeightedOracleMath._calcLogSpotPrice(
@@ -919,7 +927,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
     /**
      * @dev Returns a scaling factor that, when multiplied to a token amount for `token`, normalizes its balance as if
-     * it had 18 decimals.
+     * it had 18 decimals. The scaling factor itself is 18-decimal FixedPoint, so needs to be multiplied via
+     * `mulDown()` or `mulUp()`, not "*".
      */
     function _computeScalingFactor(IERC20 token) private view returns (uint256) {
         // Tokens that don't implement the `decimals` method are not supported.
@@ -927,14 +936,14 @@ abstract contract ExtensibleWeightedPool2Tokens is
 
         // Tokens with more than 18 decimals are not supported.
         uint256 decimalsDifference = Math.sub(18, tokenDecimals);
-        return 10**decimalsDifference;
+        return 10**decimalsDifference * GyroFixedPoint.ONE;
     }
 
     /**
      * @dev Returns the scaling factor for one of the Pool's tokens. Reverts if `token` is not a token registered by the
-     * Pool.
+     * Pool. The scaling factor is an 18-decimal FixedPoint number.
      */
-    function _scalingFactor(bool token0) internal view returns (uint256) {
+    function _scalingFactor(bool token0) internal view virtual returns (uint256) {
         return token0 ? _scalingFactor0 : _scalingFactor1;
     }
 
@@ -943,7 +952,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * scaling or not.
      */
     function _upscale(uint256 amount, uint256 scalingFactor) internal pure returns (uint256) {
-        return Math.mul(amount, scalingFactor);
+        return GyroFixedPoint.mulDown(amount, scalingFactor);
     }
 
     /**
@@ -951,8 +960,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * instead *mutates* the `amounts` array.
      */
     function _upscaleArray(uint256[] memory amounts) internal view {
-        amounts[0] = Math.mul(amounts[0], _scalingFactor(true));
-        amounts[1] = Math.mul(amounts[1], _scalingFactor(false));
+        amounts[0] = GyroFixedPoint.mulDown(amounts[0], _scalingFactor(true));
+        amounts[1] = GyroFixedPoint.mulDown(amounts[1], _scalingFactor(false));
     }
 
     /**
@@ -960,7 +969,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * whether it needed scaling or not. The result is rounded down.
      */
     function _downscaleDown(uint256 amount, uint256 scalingFactor) internal pure returns (uint256) {
-        return Math.divDown(amount, scalingFactor);
+        return GyroFixedPoint.divDown(amount, scalingFactor);
     }
 
     /**
@@ -968,8 +977,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * but instead *mutates* the `amounts` array.
      */
     function _downscaleDownArray(uint256[] memory amounts) internal view {
-        amounts[0] = Math.divDown(amounts[0], _scalingFactor(true));
-        amounts[1] = Math.divDown(amounts[1], _scalingFactor(false));
+        amounts[0] = GyroFixedPoint.divDown(amounts[0], _scalingFactor(true));
+        amounts[1] = GyroFixedPoint.divDown(amounts[1], _scalingFactor(false));
     }
 
     /**
@@ -977,7 +986,7 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * whether it needed scaling or not. The result is rounded up.
      */
     function _downscaleUp(uint256 amount, uint256 scalingFactor) internal pure returns (uint256) {
-        return Math.divUp(amount, scalingFactor);
+        return GyroFixedPoint.divUp(amount, scalingFactor);
     }
 
     /**
@@ -985,8 +994,8 @@ abstract contract ExtensibleWeightedPool2Tokens is
      * but instead *mutates* the `amounts` array.
      */
     function _downscaleUpArray(uint256[] memory amounts) internal view {
-        amounts[0] = Math.divUp(amounts[0], _scalingFactor(true));
-        amounts[1] = Math.divUp(amounts[1], _scalingFactor(false));
+        amounts[0] = GyroFixedPoint.divUp(amounts[0], _scalingFactor(true));
+        amounts[1] = GyroFixedPoint.divUp(amounts[1], _scalingFactor(false));
     }
 
     function _getAuthorizer() internal view override returns (IAuthorizer) {

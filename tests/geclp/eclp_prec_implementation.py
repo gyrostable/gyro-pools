@@ -510,6 +510,32 @@ def scale_derived_values(d: DerivedParams) -> DerivedParams:
     return derived
 
 
+def unscale_derived_values(d: DerivedParams) -> DerivedParams:
+    """Use this when values were fetched from the contract & you want to use them here."""
+    derived = DerivedParams(
+        tauAlpha=Vector2(d.tauAlpha[0] / D2("1e38"), d.tauAlpha[1] / D2("1e38")),
+        tauBeta=Vector2(d.tauBeta[0] / D2("1e38"), d.tauBeta[1] / D2("1e38")),
+        u=d.u / D2("1e38"),
+        v=d.v / D2("1e38"),
+        w=d.w / D2("1e38"),
+        z=d.z / D2("1e38"),
+        dSq=d.dSq / D2("1e38"),
+    )
+    return derived
+
+
+def unscale_params(p: Params) -> Params:
+    """Use this when values were fetched from the contract & you want to use them here."""
+    params = Params(
+        alpha=p.alpha / D("1e18"),
+        beta=p.beta / D("1e18"),
+        c=p.c / D("1e18"),
+        s=p.s / D("1e18"),
+        l=p.l / D("1e18"),
+    )
+    return params
+
+
 def calc_invariant_error(params, derived, balances):
     x, y = (D(balances[0]), D(balances[1]))
     if D(x) > D("1e11") or D(y) > D("1e11"):

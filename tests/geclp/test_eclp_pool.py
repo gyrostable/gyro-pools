@@ -56,13 +56,16 @@ def join_pool(
     pool_address,
     sender,
     balances,
-    amount_in,
+    amounts_in,  # Single value or tuple/list of values
     recipient=None,
     pool_id=0,
     protocol_swap_fees=0,
     last_change_block=0,
     amount_out=0,
 ):
+    if not isinstance(amounts_in, (tuple, list)):
+        amounts_in = (amounts_in, amounts_in)
+
     if recipient is None:
         recipient = sender
     return vault.callJoinPoolGyro(
@@ -74,7 +77,7 @@ def join_pool(
             balances,
             last_change_block,
             protocol_swap_fees,
-            [amount_in, amount_in],
+            amounts_in,
             amount_out,
         )
     )
@@ -344,3 +347,10 @@ def test_pool_swap(users, eclp_pool, mock_vault, gyro_erc20_funded):
     assert balances_after_swap[1] == balances_after_exit[1] - amount_out
 
     assert unscale(amount_out) == amount_out_expected.approxed()
+
+
+def test_pool_factory(mock_eclp_pool_from_factory):
+    """This test does almost nothing but run the creation once to make sure it works."""
+    mock_pool_from_factory = mock_eclp_pool_from_factory
+    assert mock_pool_from_factory.name() == "GyroECLPTwoPool"
+    assert mock_pool_from_factory.symbol() == "GCTP"

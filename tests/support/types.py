@@ -2,6 +2,8 @@ from __future__ import annotations
 import sys
 from typing import Generic, NamedTuple, Tuple, Iterable, TypeVar
 
+from brownie import ZERO_ADDRESS
+
 from tests.support.quantized_decimal import DecimalLike, QuantizedDecimal as QD
 from tests.support.quantized_decimal_38 import QuantizedDecimal as QD38
 
@@ -208,6 +210,8 @@ class ECLPPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     eclpParams: ECLPMathParamsQD
     derivedECLPParams: ECLPMathDerivedParamsQD38
+    rateProvider0: address = ZERO_ADDRESS
+    rateProvider1: address = ZERO_ADDRESS
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pauseManager: address = DEFAULT_PAUSE_MANAGER
@@ -219,6 +223,7 @@ class ECLPFactoryCreateParams(NamedTuple):
     tokens: list[str]
     params: ECLPMathParamsQD
     derived_params: ECLPMathDerivedParamsQD38
+    rate_providers: list[str]  # Default [ZERO_ADDRESS, ZERO_ADDRESS]
     swap_fee_percentage: DecimalLike
     oracle_enabled: bool
     owner: str
