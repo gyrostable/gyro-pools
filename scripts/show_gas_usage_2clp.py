@@ -33,7 +33,7 @@ from tests.support.trace_analyzer import Tracer
 
 from tabulate import tabulate
 
-################ Config ###################
+################ Config ####################
 
 # All of these values are unscaled.
 from tests.support.utils import scale, unscale
