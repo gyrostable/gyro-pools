@@ -34,21 +34,21 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     uint256 private constant _MINIMUM_BPT = 1e6;
     bytes32 private constant POOL_TYPE = "ECLP";
 
-    /// @notice Parameters of the ECLP pool
-    int256 public immutable _paramsAlpha;
-    int256 public immutable _paramsBeta;
-    int256 public immutable _paramsC;
-    int256 public immutable _paramsS;
-    int256 public immutable _paramsLambda;
-    int256 public immutable _tauAlphaX;
-    int256 public immutable _tauAlphaY;
-    int256 public immutable _tauBetaX;
-    int256 public immutable _tauBetaY;
-    int256 public immutable _u;
-    int256 public immutable _v;
-    int256 public immutable _w;
-    int256 public immutable _z;
-    int256 public immutable _dSq;
+    /// @dev Parameters of the ECLP pool
+    int256 internal immutable _paramsAlpha;
+    int256 internal immutable _paramsBeta;
+    int256 internal immutable _paramsC;
+    int256 internal immutable _paramsS;
+    int256 internal immutable _paramsLambda;
+    int256 internal immutable _tauAlphaX;
+    int256 internal immutable _tauAlphaY;
+    int256 internal immutable _tauBetaX;
+    int256 internal immutable _tauBetaY;
+    int256 internal immutable _u;
+    int256 internal immutable _v;
+    int256 internal immutable _w;
+    int256 internal immutable _z;
+    int256 internal immutable _dSq;
 
     IGyroConfig public gyroConfig;
 
