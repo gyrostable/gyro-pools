@@ -169,6 +169,13 @@
     "BalancerHelpers": [
       "0x239e55F427D44C3cc793f49bFB507ebe76638a2b"
     ],
+    "ConstRateProvider": [
+      "0xC707205b3cFf2df873811F19f789648286AbB85e"
+    ],
+    "ERC20": [
+      "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+      "0x2e1AD108fF1D8C782fcBbB89AAd783aC49586756"
+    ],
     "FreezableTransparentUpgradeableProxy": [
       "0xD4204551BC5397455f8897745d50Ac4F6beE0EF6",
       "0x90f08B3705208E41DbEEB37A42Fb628dD483AdDa",
