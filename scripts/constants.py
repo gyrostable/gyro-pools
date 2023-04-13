@@ -112,3 +112,6 @@ TOKEN_ADDRESSES = {
         "BUSD": "0x9C9e5fD8bbc25984B178FdCE6117Defa39d2db39",
     },
 }
+
+# For testing. map.json should in principle work, too, but Steffen doesn't trust it sorry.
+TEST_CONST_RATE_PROVIDER_POLYGON = "0xC707205b3cFf2df873811F19f789648286AbB85e"
