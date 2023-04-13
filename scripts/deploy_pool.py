@@ -43,7 +43,14 @@ def _get_config():
         return json.load(f)
 
 
-def get_tokens(config, sort=True):
+def get_tokens(config, sort=False):
+    """
+    WARNING: if sort=True, we sort the tokens. However, this can change the meaning of the parameters
+    for some pools. For example, 2-CLP price bounds refer to the relative token0/token1 price and for
+    the E-CLP, all parameters but lambda are related to this relative price. The same applies to token
+    rates.
+    It's much safer to have the tokens already sorted in the config.
+    """
     tokens = [get_token_address(token, False) for token in config["tokens"]]
     if sort:
         tokens.sort(key=lambda v: v.lower())
