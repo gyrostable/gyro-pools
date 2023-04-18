@@ -1,0 +1,21 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP TUSD/USDC Test Scaled",
+  "symbol": "ECLP-TUSD-USDC-TSC",
+  "tokens": ["USDC", "TUSD"],
+  "rate_providers": ["0xC707205b3cFf2df873811F19f789648286AbB85e", "0x0000000000000000000000000000000000000000"],
+  "params": {
+    "alpha": "0.6533333333333333",
+    "beta": "0.6802721088435374",
+    "l": "2500",
+    "s": "0.554700196225229",
+    "c": "0.832050294337844"
+  },
+  "cap": {
+    "enabled": true,
+    "global": "50",
+    "per_address": "10"
+  },
+  "swap_fee_percentage": "0.0002",
+  "oracle_enabled": true
+}
