@@ -107,6 +107,9 @@ def test_pool_on_initialize(users, mock_vault_pool, mock_vault):
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
     assert initial_bpt_tokens > 0
 
+    # This is purely a sanity check. The spot price is close to 1, but *not* equal to 1.00 (even in theory) because the price bounds are not symmetric! This is intentional for this test.
+    assert unscale(initial_bpt_tokens) == unscale(2 * amountIn).approxed(abs=2)
+
     # Check that the amountIn is now stored in the pool balance
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
     assert initial_balances[0] == amountIn
