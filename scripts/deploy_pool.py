@@ -3,7 +3,7 @@ import os
 from decimal import Decimal
 from os import path
 
-from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, ERC20, GyroECLPPoolFactory  # type: ignore
+from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, ERC20, GyroECLPPoolFactory, ZERO_ADDRESS  # type: ignore
 from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory  # type: ignore
 from brownie import web3
 from brownie.network import chain
@@ -43,11 +43,23 @@ def _get_config():
         return json.load(f)
 
 
-def get_tokens(config, sort=True):
+def get_tokens(config, sort=False):
+    """
+    WARNING: if sort=True, we sort the tokens. However, this can change the meaning of the parameters
+    for some pools. For example, 2-CLP price bounds refer to the relative token0/token1 price and for
+    the E-CLP, all parameters but lambda are related to this relative price. The same applies to token
+    rates.
+    It's much safer to have the tokens already sorted in the config.
+    """
     tokens = [get_token_address(token, False) for token in config["tokens"]]
     if sort:
         tokens.sort(key=lambda v: v.lower())
     return tokens
+
+
+def get_rate_providers(config: dict):
+    """Optional field, default 0."""
+    return config.get("rate_providers", [ZERO_ADDRESS, ZERO_ADDRESS])
 
 
 def c2lp():
@@ -149,6 +161,7 @@ def eclp():
     deployer = get_deployer()
     pool_config = _get_config()
     tokens = get_tokens(pool_config)
+    rate_providers = get_rate_providers(pool_config)
 
     eclp_params = ECLPMathParamsQD(
         **{k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
@@ -161,6 +174,7 @@ def eclp():
         tokens=tokens,
         params=eclp_params.scale(),
         derived_params=derived_params.scale(),
+        rate_providers=rate_providers,
         swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
         oracle_enabled=pool_config["oracle_enabled"],
         owner=POOL_OWNER[chain.id],
@@ -179,6 +193,7 @@ def eclp():
     if "PoolCreated" in tx.events:
         pool_address = tx.events["PoolCreated"]["pool"]
     else:
+        # TODO the following crashes. (non-critical, the script still works)
         pool_created = (
             GyroECLPPoolFactory[0].events.PoolCreated().processLog(tx.logs[-1])
         )
