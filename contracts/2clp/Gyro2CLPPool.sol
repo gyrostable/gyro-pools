@@ -139,7 +139,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
     }
 
     function _getPrice(uint256[] memory balances, uint256 virtualParam0, uint256 virtualParam1) internal pure returns (uint256 spotPrice) {
-        return Gyro2CLPOracleMath._calcSpotPrice(balances[0], virtualParam0, balances[1], virtualParam1);
+        return Gyro2CLPMath._calcSpotPriceAinB(balances[0], virtualParam0, balances[1], virtualParam1);
     }
 
     /** @dev Returns the current spot price of token0 quoted in units of token1.
