@@ -15,6 +15,5 @@
     "global": "50",
     "per_address": "10"
   },
-  "swap_fee_percentage": "0.0002",
-  "oracle_enabled": true
+  "swap_fee_percentage": "0.0002"
 }

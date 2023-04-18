@@ -19,7 +19,6 @@ import "../../libraries/GyroPoolMath.sol";
 
 import "../ExtensibleWeightedPool2Tokens.sol";
 import "./GyroECLPMath.sol";
-import "./GyroECLPOracleMath.sol";
 import "../CappedLiquidity.sol";
 import "../LocallyPausable.sol";
 
@@ -74,8 +73,6 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     event InvariantOldAndNew(uint256 oldInvariant, uint256 newInvariant);
 
     event SwapParams(uint256[] balances, GyroECLPMath.Vector2 invariant, uint256 amount);
-
-    event OracleIndexUpdated(uint256 oracleUpdatedIndex);
 
     constructor(GyroParams memory params, address configAddress)
         ExtensibleWeightedPool2Tokens(params.baseParams)
@@ -221,9 +218,6 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
             // invariant = overestimate in x-component, underestimate in y-component
             // No overflow in `+` due to constraints to the different values enforced in GyroECLPMath.
             invariant = GyroECLPMath.Vector2(currentInvariant + 2 * invErr, currentInvariant);
-
-            // Update price oracle with the pre-swap balances. Vs other pools, we need to do this after invariant is calculated
-            _updateOracle(request.lastChangeBlock, balances, currentInvariant.toUint256(), eclpParams, derivedECLPParams);
         }
 
         if (request.kind == IVault.SwapKind.GIVEN_IN) {
@@ -361,9 +355,6 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
         uint256 invariantBeforeAction = GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
 
-        // Update price oracle with the pre-exit balances. Vs other pools, we need to do this after invariant is calculated
-        _updateOracle(lastChangeBlock, balances, invariantBeforeAction, eclpParams, derivedECLPParams);
-
         _distributeFees(invariantBeforeAction);
 
         (uint256 bptAmountOut, uint256[] memory amountsIn) = _doJoin(balances, userData);
@@ -450,16 +441,13 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         // out) remain functional.
         (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
 
-        // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
+        // Note: If the contract is paused, swap protocol fee amounts are not charged
         // to avoid extra calculations and reduce the potential for errors.
         if (_isNotPaused()) {
             // Due protocol swap fee amounts are computed by measuring the growth of the invariant between the previous
             // join or exit event and now - the invariant's growth is due exclusively to swap fees. This avoids
             // spending gas calculating the fees on each individual swap.
             uint256 invariantBeforeAction = GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
-
-            // Update price oracle with the pre-exit balances. Vs other pools, we need to do this after invariant is calculated
-            _updateOracle(lastChangeBlock, balances, invariantBeforeAction, eclpParams, derivedECLPParams);
 
             _distributeFees(invariantBeforeAction);
 
@@ -474,7 +462,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
 
             emit InvariantOldAndNew(invariantBeforeAction, _lastInvariant);
         } else {
-            // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
+            // Note: If the contract is paused, swap protocol fee amounts are not charged
             // to avoid extra calculations and reduce the potential for errors.
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
@@ -533,67 +521,6 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
             balances[0] = balanceTokenOut;
             balances[1] = balanceTokenIn;
         }
-    }
-
-    /**
-     * @dev Updates the Price Oracle based on the Pool's current state (balances, BPT supply and invariant). Must be
-     * called on *all* state-changing functions with the balances *before* the state change happens, and with
-     * `lastChangeBlock` as the number of the block in which any of the balances last changed.
-     */
-    function _updateOracle(
-        uint256 lastChangeBlock,
-        uint256[] memory balances,
-        uint256 invariant,
-        GyroECLPMath.Params memory eclpParams,
-        GyroECLPMath.DerivedParams memory derivedECLPParams
-    ) internal {
-        bytes32 miscData = _miscData;
-        if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            uint256 spotPrice = _getPrice(balances, invariant, eclpParams, derivedECLPParams);
-            int256 logSpotPrice = GyroECLPOracleMath._calcLogSpotPrice(spotPrice);
-
-            // // can optionally log BPT spot price using this code. Instead, we log L/S
-            // int256 logBPTPrice = GyroECLPOracleMath._calcLogBPTPrice(
-            //     balances[0],
-            //     balances[1],
-            //     spotPrice,
-            //     miscData.logTotalSupply()
-            // );
-
-            int256 logInvariantDivSupply = GyroECLPOracleMath._calcLogInvariantDivSupply(invariant, miscData.logTotalSupply());
-
-            uint256 oracleCurrentIndex = miscData.oracleIndex();
-            uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
-            uint256 oracleUpdatedIndex = _processPriceData(
-                oracleCurrentSampleInitialTimestamp,
-                oracleCurrentIndex,
-                logSpotPrice,
-                logInvariantDivSupply, // replaces logBPTPrice
-                miscData.logInvariant()
-            );
-
-            if (oracleCurrentIndex != oracleUpdatedIndex) {
-                // solhint-disable not-rely-on-time
-                miscData = miscData.setOracleIndex(oracleUpdatedIndex);
-                miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
-                _miscData = miscData;
-
-                emit OracleIndexUpdated(oracleUpdatedIndex);
-            }
-        }
-    }
-
-    // Override unused inherited function
-    // this intentionally does not revert so that it will be bypassed on onJoinPool inherited from ExtensibleWeightedPool2Tokens
-    // the above overloading implementation of _updateOracle takes different arguments and processes the oracle update in a different place
-    // Note: this is identical to the handling in Gyro2CLPPool.sol
-    function _updateOracle(
-        uint256,
-        uint256,
-        uint256
-    ) internal pure override {
-        // solhint-disable-previous-line no-empty-blocks
-        // Do nothing.
     }
 
     // Fee helpers. These are exactly the same as in the Gyro2CLPPool.

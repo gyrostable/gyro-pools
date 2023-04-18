@@ -5,7 +5,6 @@
   "tokens": ["WETH", "WBTC"],
   "bounds": ["0.05", "0.09"],
   "swap_fee_percentage": "0.0025",
-  "oracle_enabled": true,
   "cap": {
     "enabled": true,
     "global": "143.370571551357032037",

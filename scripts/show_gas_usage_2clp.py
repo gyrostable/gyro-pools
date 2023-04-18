@@ -44,8 +44,6 @@ beta = D("1.02")
 sqrt_alpha = alpha.sqrt()
 sqrt_beta = beta.sqrt()
 
-oracleEnabled = True
-
 swapFeePercentage = D("0.1") / D(100)
 protocolSwapFeePercentage = D("0.5") / D(100)
 # protocolSwapFeePercentage = 0
@@ -108,7 +106,6 @@ base_params = TwoPoolBaseParams(
     swapFeePercentage=swapFeePercentage * 10**18,
     pauseWindowDuration=0,  # uint256
     bufferPeriodDuration=0,  # uint256
-    oracleEnabled=oracleEnabled,  # bool
     owner=admin,  # address
 )
 

@@ -65,7 +65,6 @@ class TwoPoolBaseParams(NamedTuple):
     swapFeePercentage: DecimalLike
     pauseWindowDuration: DecimalLike
     bufferPeriodDuration: DecimalLike
-    oracleEnabled: bool
     owner: str
 
 
@@ -81,7 +80,6 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     tokens: list[str]
     sqrts: list[int]
     swapFeePercentage: DecimalLike
-    oracleEnabled: bool
     owner: address
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
@@ -225,7 +223,6 @@ class ECLPFactoryCreateParams(NamedTuple):
     derived_params: ECLPMathDerivedParamsQD38
     rate_providers: list[str]  # Default [ZERO_ADDRESS, ZERO_ADDRESS]
     swap_fee_percentage: DecimalLike
-    oracle_enabled: bool
     owner: str
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()

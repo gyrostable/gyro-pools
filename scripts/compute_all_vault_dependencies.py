@@ -8,7 +8,6 @@ from misc.compute_dependencies import compute_dependencies
 
 list_of_contracts_2_3_clp = [
     "Gyro2CLPMath",
-    "Gyro2CLPOracleMath",
     "Gyro2CLPPool",
     "Gyro2CLPPoolErrors",
     "Gyro2CLPPoolFactory",
@@ -21,7 +20,6 @@ list_of_contracts_2_3_clp = [
 
 list_of_contracts_eclp = [
     "GyroECLPMath",
-    "GyroECLPOracleMath",
     "GyroECLPPool",
     "GyroECLPPoolErrors",
 ]
