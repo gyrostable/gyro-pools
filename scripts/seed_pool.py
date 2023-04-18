@@ -23,7 +23,7 @@ def main():
 
     # Doesn't work for some reason
     # vault = Vault[0]
-    vault = Vault.at(BALANCER_ADDRESSES[chain.id]['vault'])
+    vault = Vault.at(BALANCER_ADDRESSES[chain.id]["vault"])
 
     pool = interface.IBalancerPool(POOL_ADDRESS)
 

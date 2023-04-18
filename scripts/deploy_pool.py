@@ -59,7 +59,7 @@ def get_tokens(config, sort=False):
 
 def get_rate_providers(config: dict):
     """Optional field, default 0."""
-    return config.get('rate_providers', [ZERO_ADDRESS, ZERO_ADDRESS])
+    return config.get("rate_providers", [ZERO_ADDRESS, ZERO_ADDRESS])
 
 
 def c2lp():

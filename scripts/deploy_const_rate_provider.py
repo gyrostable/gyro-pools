@@ -19,7 +19,13 @@ from tests.support.types import (
 )
 from tests.support.utils import scale
 
-from scripts.constants import CONFIG_PATH, DEPLOYED_FACTORIES, PAUSE_MANAGER, POOL_OWNER, TEST_CONST_RATE_PROVIDER_POLYGON
+from scripts.constants import (
+    CONFIG_PATH,
+    DEPLOYED_FACTORIES,
+    PAUSE_MANAGER,
+    POOL_OWNER,
+    TEST_CONST_RATE_PROVIDER_POLYGON,
+)
 from scripts.mainnet_contracts import get_token_address
 from scripts.utils import abort, get_deployer, make_tx_params, with_deployed
 
@@ -39,8 +45,8 @@ def set_rate():
     deployer = get_deployer()
     rate_provider = ConstRateProvider.at(TEST_CONST_RATE_PROVIDER_POLYGON)
     params = make_tx_params()
-    params['from'] = deployer
-    rate_provider.setRate(int(1.5*1e18), params)
+    params["from"] = deployer
+    rate_provider.setRate(int(1.5 * 1e18), params)
 
 
 def main():
