@@ -102,7 +102,9 @@ def test_pool_on_initialize(users, mock_vault_pool3, mock_vault, amountIn):
     assert initial_bpt_tokens > 0
 
     # Since the 3CLP always has symmetric price bounds and we've initialized it with equal balances, this check should come out rather precisely.
-    assert unscale(initial_bpt_tokens) == unscale(3 * amountIn).approxed(abs=to_decimal('1e-10'))
+    assert unscale(initial_bpt_tokens) == unscale(3 * amountIn).approxed(
+        abs=to_decimal("1e-10")
+    )
 
     # Check that the amountIn is now stored in the pool balance
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)

@@ -138,19 +138,19 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         return Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
     }
 
-    function _getPrice(uint256[] memory balances, uint256 virtualParam0, uint256 virtualParam1) internal pure returns (uint256 spotPrice) {
+    function _getPrice(
+        uint256[] memory balances,
+        uint256 virtualParam0,
+        uint256 virtualParam1
+    ) internal pure returns (uint256 spotPrice) {
         return Gyro2CLPMath._calcSpotPriceAinB(balances[0], virtualParam0, balances[1], virtualParam1);
     }
 
     /** @dev Returns the current spot price of token0 quoted in units of token1.
-      */
+     */
     function getPrice() external view returns (uint256 spotPrice) {
         uint256[] memory balances = _getAllBalances();
-        (uint256 invariant, uint256 virtualParam0, uint256 virtualParam1) = _calculateCurrentValues(
-            balances[0],
-            balances[1],
-            true
-        );
+        (uint256 invariant, uint256 virtualParam0, uint256 virtualParam1) = _calculateCurrentValues(balances[0], balances[1], true);
         return _getPrice(balances, virtualParam0, virtualParam1);
     }
 
@@ -308,14 +308,10 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         InputHelpers.ensureInputLengthMatch(amountsIn.length, 2);
         _upscaleArray(amountsIn);
 
-        (uint256 invariantAfterJoin, uint256 virtualParam0, uint256 virtualParam1) = _calculateCurrentValues(
-            amountsIn[0],
-            amountsIn[1],
-            true
-        );
+        (uint256 invariantAfterJoin, uint256 virtualParam0, uint256 virtualParam1) = _calculateCurrentValues(amountsIn[0], amountsIn[1], true);
 
         /* We initialize the number of BPT tokens such that one BPT token corresponds to one unit of token1 at the initialized pool price. This makes BPT tokens comparable across pools with different parameters. Note that the invariant does *not* have this property!
-        */
+         */
         uint256 spotPrice = _getPrice(amountsIn, virtualParam0, virtualParam1);
         uint256 bptAmountOut = Math.add(amountsIn[0].mulDown(spotPrice), amountsIn[1]);
 

@@ -303,10 +303,10 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
 
         emit InvariantAterInitializeJoin(invariantAfterJoin);
 
-	/* We initialize the number of BPT tokens such that one BPT token corresponds to one unit of token1 at the initialized pool price. This makes BPT tokens comparable across pools with different parameters. Note that the invariant does *not* have this property!
-	*/
-	uint256 spotPrice = _getPrice(amountsIn, invariantAfterJoin, eclpParams, derivedECLPParams);
-	uint256 bptAmountOut = Math.add(amountsIn[0].mulDown(spotPrice), amountsIn[1]);
+        /* We initialize the number of BPT tokens such that one BPT token corresponds to one unit of token1 at the initialized pool price. This makes BPT tokens comparable across pools with different parameters. Note that the invariant does *not* have this property!
+         */
+        uint256 spotPrice = _getPrice(amountsIn, invariantAfterJoin, eclpParams, derivedECLPParams);
+        uint256 bptAmountOut = Math.add(amountsIn[0].mulDown(spotPrice), amountsIn[1]);
 
         _lastInvariant = invariantAfterJoin;
 

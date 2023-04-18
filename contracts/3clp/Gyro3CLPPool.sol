@@ -322,7 +322,7 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         uint256 virtualOffset = invariantAfterJoin.mulDown(root3Alpha);
 
         /* We initialize the number of BPT tokens such that one BPT token corresponds to one unit of token2 at the initialized pool price. This makes BPT tokens comparable across pools with different parameters. Note that the invariant does *not* have this property!
-        */
+         */
         (uint256 spotPrice0, uint256 spotPrice1) = Gyro3CLPMath._calcSpotPrice01in2(amountsIn, virtualOffset);
 
         uint256 bptAmountOut = amountsIn[0].mulDown(spotPrice0).add(amountsIn[1].mulDown(spotPrice1)).add(amountsIn[2]);
