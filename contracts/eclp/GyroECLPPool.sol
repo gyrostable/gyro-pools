@@ -163,6 +163,9 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         return GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
     }
 
+    /** When rateProvider{0,1} is provided, this returns the *scaled* price, suitable to compare *rate scaled* balances.
+     *  To compare (decimal- but) not-rate-scaled balances, apply _adjustPrice() to the result.
+     */
     function _getPrice(
         uint256[] memory balances,
         uint256 invariant,
@@ -170,14 +173,17 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         GyroECLPMath.DerivedParams memory derivedECLPParams
     ) internal view returns (uint256 spotPrice) {
         spotPrice = GyroECLPMath.calcSpotPrice0in1(balances, eclpParams, derivedECLPParams, invariant.toInt256());
-        spotPrice = _adjustPrice(spotPrice);
     }
 
+    /** Returns the current spot price of token0 quoted in units of token1. When rateProvider{0,1} is provided, the
+      * returned price corresponds to tokens *before* rate scaling.
+      */
     function getPrice() external view returns (uint256 spotPrice) {
         uint256[] memory balances = _getAllBalances();
         (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();
         uint256 invariant = GyroECLPMath.calculateInvariant(balances, eclpParams, derivedECLPParams);
-        return _getPrice(balances, invariant, eclpParams, derivedECLPParams);
+        spotPrice = _getPrice(balances, invariant, eclpParams, derivedECLPParams);
+        spotPrice = _adjustPrice(spotPrice);
     }
 
     // Swap Hooks
