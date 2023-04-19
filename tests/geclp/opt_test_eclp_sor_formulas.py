@@ -44,6 +44,7 @@ easy_params = ECLPMathParams(
 
 N_ASSETS = 2
 
+
 # Variant of util.gen_params() with slightly less extreme parameters. This is important mainly for the normalized
 # liquidity test. (normalized liquidity can get unstable for extreme parameters and at the end of the trading range)
 @st.composite

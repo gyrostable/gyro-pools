@@ -69,7 +69,8 @@ def gyro_three_math_testing(admin, Gyro3CLPMathTesting):
 class ContractAsPureWrapper:
     """Allows using a contract in places where a library of pure functions is expected, for easy debugging or gas measurement.
 
-    Example: ContractAsPureWrapper(GyroMathDebug), then use where GyroMathTesting is expected."""
+    Example: ContractAsPureWrapper(GyroMathDebug), then use where GyroMathTesting is expected.
+    """
 
     def __init__(self, contract, prefix="_"):
         self.contract = contract

@@ -317,12 +317,15 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         InputHelpers.ensureInputLengthMatch(amountsIn.length, 3);
         _upscaleArray(amountsIn, scalingFactors);
 
-        uint256 invariantAfterJoin = Gyro3CLPMath._calculateInvariant(amountsIn, _root3Alpha);
+        uint256 root3Alpha = _root3Alpha;
+        uint256 invariantAfterJoin = Gyro3CLPMath._calculateInvariant(amountsIn, root3Alpha);
+        uint256 virtualOffset = invariantAfterJoin.mulDown(root3Alpha);
 
-        // Set the initial BPT to the value of the invariant times the number of tokens. This makes BPT supply more
-        // consistent in Pools with similar compositions but different number of tokens.
-        // Note that the BPT supply also depends on the parameters of the pool.
-        uint256 bptAmountOut = Math.mul(invariantAfterJoin, 3);
+        /* We initialize the number of BPT tokens such that one BPT token corresponds to one unit of token2 at the initialized pool price. This makes BPT tokens comparable across pools with different parameters. Note that the invariant does *not* have this property!
+         */
+        (uint256 spotPrice0, uint256 spotPrice1) = Gyro3CLPMath._calcSpotPrice01in2(amountsIn, virtualOffset);
+
+        uint256 bptAmountOut = amountsIn[0].mulDown(spotPrice0).add(amountsIn[1].mulDown(spotPrice1)).add(amountsIn[2]);
 
         _lastInvariant = invariantAfterJoin;
 
@@ -477,6 +480,16 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
      */
     function getInvariant() public view override returns (uint256 invariant) {
         return _calculateInvariant();
+    }
+
+    /** @dev Returns the current spot prices of token0 and token1, both quoted in units of token2.
+     */
+    function getPrices() external view returns (uint256 spotPrice0, uint256 spotPrice1) {
+        uint256[] memory balances = _getAllBalances();
+        uint256 root3Alpha = _root3Alpha;
+        uint256 invariant = Gyro3CLPMath._calculateInvariant(balances, root3Alpha);
+        uint256 virtualOffset = invariant.mulDown(root3Alpha);
+        return Gyro3CLPMath._calcSpotPrice01in2(balances, virtualOffset);
     }
 
     function _joinAllTokensInForExactBPTOut(uint256[] memory balances, bytes memory userData)

@@ -91,7 +91,6 @@ def test_calculate_quadratic(
 def test_calculate_quadratic_special(
     gyro_two_math_testing, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
-
     assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
     (a, mb, b_square, mc) = math_implementation.calculateQuadraticTerms(
@@ -115,7 +114,6 @@ def test_calculate_quadratic_special(
 def test_calculate_invariant(
     gyro_two_math_testing, balances: Tuple[int, int], sqrt_alpha, sqrt_beta
 ):
-
     assume(not faulty_params(balances, sqrt_alpha, sqrt_beta))
 
     invariant = math_implementation.calculateInvariant(
@@ -135,7 +133,6 @@ def test_calculate_invariant(
     sqrt_beta=st.decimals(min_value="1.00005", max_value="1.8"),
 )
 def test_calculate_virtual_parameter_0(gyro_two_math_testing, sqrt_beta, invariant):
-
     virtual_parameter = math_implementation.calculateVirtualParameter0(
         to_decimal(invariant), to_decimal(sqrt_beta)
     )
@@ -152,7 +149,6 @@ def test_calculate_virtual_parameter_0(gyro_two_math_testing, sqrt_beta, invaria
     sqrt_alpha=st.decimals(min_value="0.02", max_value="0.99995"),
 )
 def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invariant):
-
     virtual_parameter = math_implementation.calculateVirtualParameter1(
         to_decimal(invariant), to_decimal(sqrt_alpha)
     )
@@ -166,7 +162,6 @@ def test_calculate_virtual_parameter_1(gyro_two_math_testing, sqrt_alpha, invari
 
 @given(input=st.decimals(min_value="0", max_value="100000000"))
 def test_calculate_sqrt(gyro_two_math_testing, input):
-
     sqrt = math_implementation.squareRoot(to_decimal(input))
 
     sqrt_sol = gyro_two_math_testing.sqrt(scale(input))

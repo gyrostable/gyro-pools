@@ -46,7 +46,6 @@ def test_calculate_quadratic_terms(gyro_two_math_testing):
 
 
 def test_calculate_invariant(gyro_two_math_testing):
-
     sqrtAlpha = 0.97
     sqrtBeta = 1.02
     balance0 = 100

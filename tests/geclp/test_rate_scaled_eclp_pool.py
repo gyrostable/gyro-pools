@@ -78,6 +78,10 @@ def test_pool_on_initialize(
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
     assert initial_bpt_tokens > 0
 
+    # Note: This is only a very approximate check. The resulting (rate-scaled) pool price is not 1! But since the price
+    # range is pretty narrow, it's going to be close to 1.
+    assert unscale(initial_bpt_tokens) == unscale(amountIn * D("2.5")).approxed(abs=3)
+
     # Check that the amountIn is now stored in the pool balance
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
     assert initial_balances[0] == amountIn

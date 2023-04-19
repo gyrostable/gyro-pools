@@ -25,7 +25,6 @@ contract Gyro2CLPOracleMath {
         // The rounding direction is irrelevant as we're about to introduce a much larger error when converting to log
         // space. We use `divUp` as it prevents the result from being zero, which would make the logarithm revert. A
         // result of zero is therefore only possible with zero balances, which are prevented via other means.
-
         return (balanceA.add(virtualParameterA)).divUp((balanceB.add(virtualParameterB)));
     }
 
