@@ -14,7 +14,6 @@ interface IGyro2CLPPoolFactory {
         IERC20[] memory tokens,
         uint256[] memory sqrts,
         uint256 swapFeePercentage,
-        bool oracleEnabled,
         address owner,
         address capManager,
         ICappedLiquidity.CapParams memory capParams,

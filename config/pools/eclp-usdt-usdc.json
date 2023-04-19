@@ -4,7 +4,6 @@
   "symbol": "ECLP-USDT-USDC",
   "tokens": ["USDT", "USDC"],
   "swap_fee_percentage": "0.0002",
-  "oracle_enabled": false,
   "params": {
     "alpha": "0.97",
     "beta": "1.02",

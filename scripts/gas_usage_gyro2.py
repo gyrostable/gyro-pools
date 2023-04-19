@@ -56,7 +56,6 @@ args = TwoPoolFactoryCreateParams(
     tokens=[gyro_erc20_funded[i].address for i in range(2)],
     sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
     swapFeePercentage=D(1) * 10**15,
-    oracleEnabled=False,
     owner=admin,
 )
 

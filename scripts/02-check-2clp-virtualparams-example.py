@@ -46,7 +46,6 @@ def main():
         swapFeePercentage=scale(to_decimal(cfg["swap_fee_percentage"])),
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
-        oracleEnabled=cfg["oracle_enabled"],  # bool
         owner=admin,  # address
     )
 

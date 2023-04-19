@@ -21,9 +21,8 @@ import "../LocallyPausable.sol";
 import "../ExtensibleWeightedPool2Tokens.sol";
 import "./Gyro2CLPPoolErrors.sol";
 import "./Gyro2CLPMath.sol";
-import "./Gyro2CLPOracleMath.sol";
 
-contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, CappedLiquidity, LocallyPausable {
+contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, LocallyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
@@ -175,15 +174,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             balanceTokenIn,
             balanceTokenOut,
             tokenInIsToken0
-        );
-
-        // Update price oracle with the pre-swap balances
-        _updateOracle(
-            request.lastChangeBlock,
-            tokenInIsToken0 ? balanceTokenIn : balanceTokenOut,
-            tokenInIsToken0 ? balanceTokenOut : balanceTokenIn,
-            tokenInIsToken0 ? virtualParamIn : virtualParamOut,
-            tokenInIsToken0 ? virtualParamOut : virtualParamIn
         );
 
         if (request.kind == IVault.SwapKind.GIVEN_IN) {
@@ -339,9 +329,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
      *
      * protocolSwapFeePercentage argument is intentionally unused as protocol fees are handled in a different way
      *
-     * Responsibility for updating the oracle has been moved from `onJoinPool()` (without the underscore) to this
-     * function. That is because both this function and `_updateOracle()` need access to the invariant and this way we
-     * can share the computation.
      */
     function _onJoinPool(
         bytes32,
@@ -369,9 +356,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
         // spending gas accounting for fees on each individual swap.
         uint256 invariantBeforeAction = Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
         uint256[2] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
-
-        // Update price oracle with pre-join balances
-        _updateOracle(lastChangeBlock, balances[0], balances[1], virtualParam[0], virtualParam[1]);
 
         _distributeFees(invariantBeforeAction);
 
@@ -465,9 +449,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             uint256 invariantBeforeAction = Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
             uint256[2] memory virtualParam = _getVirtualParameters(sqrtParams, invariantBeforeAction);
 
-            // Update price oracle with the pre-exit balances
-            _updateOracle(lastChangeBlock, balances[0], balances[1], virtualParam[0], virtualParam[1]);
-
             _distributeFees(invariantBeforeAction);
 
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
@@ -479,7 +460,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             // total protocol fee factor.
             _lastInvariant = GyroPoolMath.liquidityInvariantUpdate(invariantBeforeAction, bptAmountIn, totalSupply(), false);
         } else {
-            // Note: If the contract is paused, swap protocol fee amounts are not charged and the oracle is not updated
+            // Note: If the contract is paused, swap protocol fee amounts are not charged
             // to avoid extra calculations and reduce the potential for errors.
             (bptAmountIn, amountsOut) = _doExit(balances, userData);
 
@@ -624,62 +605,6 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, Gyro2CLPOracleMath, Capp
             gyroConfig.getAddress(GyroConfigKeys.GYRO_TREASURY_KEY),
             gyroConfig.getAddress(GyroConfigKeys.BAL_TREASURY_KEY)
         );
-    }
-
-    /**
-     * @dev Updates the Price Oracle based on the Pool's current state (balances, BPT supply and invariant). Must be
-     * called on *all* state-changing functions with the balances *before* the state change happens, and with
-     * `lastChangeBlock` as the number of the block in which any of the balances last changed.
-     */
-    function _updateOracle(
-        uint256 lastChangeBlock,
-        uint256 balanceToken0,
-        uint256 balanceToken1,
-        uint256 virtualParam0,
-        uint256 virtualParam1
-    ) internal {
-        bytes32 miscData = _miscData;
-        if (miscData.oracleEnabled() && block.number > lastChangeBlock) {
-            int256 logSpotPrice = Gyro2CLPOracleMath._calcLogSpotPrice(balanceToken0, virtualParam0, balanceToken1, virtualParam1);
-
-            int256 logBPTPrice = Gyro2CLPOracleMath._calcLogBPTPrice(
-                balanceToken0,
-                virtualParam0,
-                balanceToken1,
-                virtualParam1,
-                miscData.logTotalSupply()
-            );
-
-            uint256 oracleCurrentIndex = miscData.oracleIndex();
-            uint256 oracleCurrentSampleInitialTimestamp = miscData.oracleSampleCreationTimestamp();
-            uint256 oracleUpdatedIndex = _processPriceData(
-                oracleCurrentSampleInitialTimestamp,
-                oracleCurrentIndex,
-                logSpotPrice,
-                logBPTPrice,
-                miscData.logInvariant()
-            );
-
-            if (oracleCurrentIndex != oracleUpdatedIndex) {
-                // solhint-disable not-rely-on-time
-                miscData = miscData.setOracleIndex(oracleUpdatedIndex);
-                miscData = miscData.setOracleSampleCreationTimestamp(block.timestamp);
-                _miscData = miscData;
-            }
-        }
-    }
-
-    /**
-     * @dev this variant of the function, called from `onJoinPool()` and `onExitPool()`, which we inherit, is a no-op.
-     * We instead have moved responsibility for updating the oracle to `_onJoinPool()` and `_onExitPool()` and the above
-     * version is called from there.
-     */
-    function _updateOracle(
-        uint256 lastChangeBlock,
-        uint256 balanceToken0,
-        uint256 balanceToken1
-    ) internal override {
-        // Do nothing.
     }
 
     function _setPausedState(bool paused) internal override {

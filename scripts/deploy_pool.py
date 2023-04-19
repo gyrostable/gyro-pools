@@ -77,7 +77,6 @@ def c2lp():
         tokens=tokens,
         sqrts=[round(scale(v).raw) for v in sqrts],
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
-        oracleEnabled=pool_config["oracle_enabled"],
         owner=POOL_OWNER[chain.id],
         cap_manager=POOL_OWNER[chain.id],
         cap_params=CapParams(
@@ -176,7 +175,6 @@ def eclp():
         derived_params=derived_params.scale(),
         rate_providers=rate_providers,
         swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
-        oracle_enabled=pool_config["oracle_enabled"],
         owner=POOL_OWNER[chain.id],
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],

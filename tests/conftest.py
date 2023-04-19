@@ -175,7 +175,6 @@ def balancer_vault_pool(
             swapFeePercentage=1 * 10**15,  # 0.5%
             pauseWindowDuration=0,  # uint256
             bufferPeriodDuration=0,  # uint256
-            oracleEnabled=False,  # bool
             owner=admin,  # address
         ),
         sqrtAlpha=D("0.97") * 10**18,  # uint256
@@ -203,7 +202,6 @@ def mock_vault_pool(
             swapFeePercentage=D(1) * 10**15,
             pauseWindowDuration=0,  # uint256
             bufferPeriodDuration=0,  # uint256
-            oracleEnabled=False,  # bool
             owner=admin,  # address
         ),
         sqrtAlpha=D("0.97") * 10**18,  # uint256
@@ -230,7 +228,6 @@ def mock_pool_from_factory(
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
         swapFeePercentage=D(1) * 10**15,
-        oracleEnabled=False,
         owner=admin,
     )
 
@@ -334,16 +331,6 @@ def gyro_fixed_point_testing(admin, GyroFixedPointTesting):
 
 
 @pytest.fixture(scope="module")
-def mock_gyro_two_oracle_math(admin, MockGyro2CLPOracleMath):
-    return admin.deploy(MockGyro2CLPOracleMath)
-
-
-@pytest.fixture(scope="module")
-def gyro_eclp_oracle_math_testing(admin, GyroECLPOracleMathTesting):
-    return admin.deploy(GyroECLPOracleMathTesting)
-
-
-@pytest.fixture(scope="module")
 def pool_factory(admin, Gyro2CLPPoolFactory, gyro_config):
     return admin.deploy(Gyro2CLPPoolFactory, balancer_vault, gyro_config.address)
 
@@ -369,7 +356,6 @@ def eclp_pool(
         swapFeePercentage=1 * 10**15,  # 0.5%
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
-        oracleEnabled=False,  # bool
         owner=admin,  # address
     )
 
@@ -422,7 +408,6 @@ def mock_eclp_pool_from_factory(
         derived_params=derived_eclp_params.scale(),
         rate_providers=[ZERO_ADDRESS, ZERO_ADDRESS],
         swap_fee_percentage=1 * 10**15,
-        oracle_enabled=False,  # bool
         owner=admin,  # address
     )
 
@@ -457,7 +442,6 @@ def rate_scaled_eclp_pool(
         swapFeePercentage=D("0.001e18"),
         pauseWindowDuration=0,  # uint256
         bufferPeriodDuration=0,  # uint256
-        oracleEnabled=False,  # bool
         owner=admin,  # address
     )
 
@@ -518,7 +502,6 @@ def mock_rate_scaled_eclp_pool_from_factory(
         derived_params=derived_eclp_params.scale(),
         rate_providers=[mock_rate_provider.address, ZERO_ADDRESS],
         swap_fee_percentage=1 * 10**15,
-        oracle_enabled=False,  # bool
         owner=admin,  # address
     )
 

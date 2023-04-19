@@ -17,7 +17,6 @@ interface IGyroECLPPoolFactory {
         GyroECLPMath.DerivedParams memory derivedECLPParams,
         address[] memory rateProviders,
         uint256 swapFeePercentage,
-        bool oracleEnabled,
         address owner,
         address capManager,
         ICappedLiquidity.CapParams memory capParams,
