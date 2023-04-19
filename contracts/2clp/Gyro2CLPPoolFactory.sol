@@ -39,13 +39,7 @@ contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, 
         ICappedLiquidity.CapParams memory capParams,
         address pauseManager
     ) external override returns (address) {
-        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(
-            name,
-            symbol,
-            tokens,
-            swapFeePercentage,
-            owner
-        );
+        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(name, symbol, tokens, swapFeePercentage, owner);
 
         Gyro2CLPPool.GyroParams memory params = Gyro2CLPPool.GyroParams({
             baseParams: baseParams,

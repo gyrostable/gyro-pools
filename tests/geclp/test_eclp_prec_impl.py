@@ -76,7 +76,8 @@ def paramsTo100(params: ECLPMathParams) -> ECLPMathParams:
 
 def params2MathParams(params: ECLPMathParams) -> mimpl.Params:
     """Map 100-decimal ECLPMathParams to 100-decimal mimpl.Params.
-    This is equal to .util.params2MathParams() but has to be re-written to use the right geclp impl module."""
+    This is equal to .util.params2MathParams() but has to be re-written to use the right geclp impl module.
+    """
     return mimpl.Params(params.alpha, params.beta, params.c, -params.s, params.l)
 
 

@@ -253,7 +253,6 @@ def test_calc_out_given_in(gyro_three_math_testing, root_three_alpha, setup):
 def test_calculate_invariant(
     gyro_three_math_testing, balances: Tuple[int, int, int], root_three_alpha
 ):
-
     assume(not faulty_params(balances, root_three_alpha))
 
     invariant = math_implementation.calculateInvariant(

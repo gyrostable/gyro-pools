@@ -38,7 +38,8 @@ def gen_synthetic_balances_via_prices(
 
     Due to rounding errors, the relationship does not hold exactly, i.e., the generated balances also have an error attached.
 
-    NOTE: There seems to be no advantage using this over gen_synthetic_balances(); prices can be computed when in doubt. Perhaps if one needs specifically chosen prices, but otherwise you're prob better off with the other function."""
+    NOTE: There seems to be no advantage using this over gen_synthetic_balances(); prices can be computed when in doubt. Perhaps if one needs specifically chosen prices, but otherwise you're prob better off with the other function.
+    """
     root3Alpha = draw(qdecimals(root3Alpha_min, root3Alpha_max))
     alpha = root3Alpha**3
 

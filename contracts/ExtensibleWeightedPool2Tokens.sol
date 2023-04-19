@@ -22,12 +22,7 @@ import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.so
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
 
 /** @dev Extensible version (i.e., methods can be overriden) of the WeightedPool2Tokens. */
-abstract contract ExtensibleWeightedPool2Tokens is
-    IMinimalSwapInfoPool,
-    BasePoolAuthorization,
-    BalancerPoolToken,
-    TemporarilyPausable
-{
+abstract contract ExtensibleWeightedPool2Tokens is IMinimalSwapInfoPool, BasePoolAuthorization, BalancerPoolToken, TemporarilyPausable {
     using GyroFixedPoint for uint256;
     using WeightedPoolUserDataHelpers for bytes;
     using WeightedPool2TokensMiscData for bytes32;
