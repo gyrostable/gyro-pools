@@ -119,6 +119,7 @@ def gen_params_liquidityUpdate_large(draw):
 ###############################################################################################
 # Test invariant correctness via being an approximate root of a certain cubic polynomial.
 
+
 # @settings(max_examples=1_000)
 @given(
     balances=gen_balances(),
@@ -136,6 +137,7 @@ def test_sol_invariant_cubic(gyro_three_math_testing, balances, root_three_alpha
 # test calcInGivenOut for invariant change
 # This also ensures that the price impact goes in the right direction and, more specifically, no money can be extracted
 # without putting any in.
+
 
 # @settings(max_examples=1_000)
 @given(
@@ -393,7 +395,6 @@ def mtest_invariant_across_calcOutGivenIn(
     check_sol_inv,
     check_price_impact_direction=False,
 ):
-
     fees = MIN_FEE * amount_in
     amount_in -= fees
 
@@ -565,6 +566,7 @@ def calculate_loss(delta_invariant, invariant, balances):
 
 ###############################################################################################
 # Test reconstruction of synthetic invariant
+
 
 # Balances are generated from a chosen invariant. Then we check if `calculateInvariant()` gets that invariant back.
 @given(

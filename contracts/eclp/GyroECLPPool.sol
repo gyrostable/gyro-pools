@@ -176,8 +176,8 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     }
 
     /** Returns the current spot price of token0 quoted in units of token1. When rateProvider{0,1} is provided, the
-      * returned price corresponds to tokens *before* rate scaling.
-      */
+     * returned price corresponds to tokens *before* rate scaling.
+     */
     function getPrice() external view returns (uint256 spotPrice) {
         uint256[] memory balances = _getAllBalances();
         (GyroECLPMath.Params memory eclpParams, GyroECLPMath.DerivedParams memory derivedECLPParams) = reconstructECLPParams();

@@ -9,7 +9,6 @@ def liquidityInvariantUpdate_deltaBalances(
     deltaBalances: Iterable[D],
     isIncreaseLiq: bool,
 ) -> D:
-
     largest_balance = 0
     for balance in balances:
         if balance > largest_balance:
