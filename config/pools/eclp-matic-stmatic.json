@@ -1,0 +1,17 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP WMATIC/stMATIC",
+  "symbol": "ECLP-WMATIC-stMATIC",
+  "tokens": ["WMATIC", "stMATIC"],
+  "swap_fee_percentage": "0.0002",
+  "params": {
+    "alpha": "0.997000000000000",
+    "beta": "1.00300902708124",
+    "c": "0.7071067811865475244",
+    "s": "0.7071067811865475244",
+    "l": "2000"
+  },
+  "rate_providers": {
+    "stMATIC": "0xdEd6C522d803E35f65318a9a4d7333a22d582199"
+  }
+}

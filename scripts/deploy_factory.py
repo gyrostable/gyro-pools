@@ -1,3 +1,4 @@
+import brownie
 from brownie import Gyro3CLPPoolFactory, Gyro2CLPPoolFactory, GyroECLPPoolFactory, GyroECLPMath  # type: ignore
 from brownie.network import chain
 
@@ -27,12 +28,12 @@ def c3lp():
 
 
 def eclp():
-    try:
-        from brownie import QueryProcessor  # type: ignore
-    except:
-        import brownie
-        QueryProcessor = getattr(brownie, "node_modules/@balancer-labs/QueryProcessor")
-
+    query_processor_attr = (
+        "QueryProcessor"
+        if hasattr(brownie, "QueryProcessor")
+        else "node_modules/@balancer-labs/QueryProcessor"
+    )
+    QueryProcessor = getattr(brownie, query_processor_attr)
 
     QueryProcessor.at(BALANCER_ADDRESSES[chain.id]["query_processor"])
     if len(GyroECLPMath) == 0:

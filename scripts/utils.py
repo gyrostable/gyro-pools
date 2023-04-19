@@ -62,7 +62,9 @@ def get_deployer() -> LocalAccount:
     if chain_id == 1:  # mainnet
         return get_clef_account(MAINNET_DEPLOYER_ADDRESS)
     if chain_id == 137:  # polygon
-        return get_clef_account(POLYGON_DEPLOYER_ADDRESS)
+        return cast(
+            LocalAccount, accounts.load("gyro-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
+        )
     if chain_id == 10:  # optimism
         return cast(
             LocalAccount, accounts.load("optimism-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore

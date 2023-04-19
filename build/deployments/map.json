@@ -233,6 +233,7 @@
       "0xE59910C7725e15C28bA48bbBb995E7396536d981"
     ],
     "GyroECLPMath": [
+      "0x6Cfe4A27c38e66F8aE3b5E1f7d515C4887207f8e",
       "0x2eC9faA1Ed444B52778b559B69e27F502564A530"
     ],
     "GyroECLPPool": [
@@ -240,6 +241,7 @@
       "0x97469E6236bD467cd147065f77752b00EfadCe8a"
     ],
     "GyroECLPPoolFactory": [
+      "0x6878Aa76988a88d42b9000EFC249972222E31a89",
       "0x1CAB842A4472f8Ba2715C90A3BC0b96Ea7345cF2"
     ],
     "QueryProcessor": [
