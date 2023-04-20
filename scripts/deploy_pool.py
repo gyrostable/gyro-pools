@@ -1,14 +1,13 @@
 import json
 import os
-from decimal import Decimal
 from os import path
 from typing import List
+
 
 from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, GyroECLPPoolFactory, ZERO_ADDRESS  # type: ignore
 from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory  # type: ignore
 from brownie import web3
 from brownie.network import chain
-from tests.conftest import scale_eclp_params
 from tests.geclp import eclp_prec_implementation
 from tests.support.quantized_decimal import QuantizedDecimal
 from tests.support.types import (
@@ -192,6 +191,7 @@ def eclp():
         rate_providers=rate_providers,
         swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
         owner=POOL_OWNER[chain.id],
+        cap_manager=POOL_OWNER[chain.id],
         cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
     )

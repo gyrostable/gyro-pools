@@ -22,7 +22,7 @@ THREE_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
 parser = argparse.ArgumentParser(prog="compute-initial-supply")
 parser.add_argument("config")
 parser.add_argument("-c", "--chain-id", type=int, default=137)
-parser.add_argument("-o", "--output", required=True)
+parser.add_argument("-o", "--output")
 
 
 def compute_amounts_2clp(pool_config: dict, chain_id: int):
@@ -149,8 +149,11 @@ def main():
             result = compute_amounts_3clp(pool_config, args.chain_id)
         else:
             raise ValueError(f"invalid pool type {pool_type}")
-    with open(args.output, "w") as f:
-        json.dump(result, f, indent=2)
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(result, f, indent=2)
+    else:
+        print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

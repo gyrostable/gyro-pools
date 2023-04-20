@@ -83,6 +83,8 @@ DECIMALS = {
     "DAI": 18,
     "BUSD": 18,
     "TUSD": 18,
+    "WMATIC": 18,
+    "stMATIC": 18,
 }
 
 STABLE_COINS = ["DAI", "USDT", "USDC", "GUSD", "HUSD", "TUSD", "USDP", "LUSD"]
