@@ -1,7 +1,7 @@
 import json
 import os
 
-from brownie import Vault, interface, chain  # type: ignore
+from brownie import BalancerVault, interface, chain  # type: ignore
 from eth_abi import encode_abi
 
 from scripts.constants import BALANCER_ADDRESSES
@@ -9,6 +9,7 @@ from scripts.utils import get_deployer
 
 SEED_DATA_PATH = os.environ.get("SEED_DATA_PATH")
 POOL_ADDRESS = os.environ.get("POOL_ADDRESS")
+GAS_PRICE = os.environ.get("BROWNIE_GWEI", "100") + " gwei"
 
 
 def main():
@@ -23,7 +24,7 @@ def main():
 
     # Doesn't work for some reason
     # vault = Vault[0]
-    vault = Vault.at(BALANCER_ADDRESSES[chain.id]["vault"])
+    vault = BalancerVault.at(BALANCER_ADDRESSES[chain.id]["vault"])
 
     pool = interface.IBalancerPool(POOL_ADDRESS)
 
@@ -36,14 +37,13 @@ def main():
         erc_token = interface.IERC20(token)
         allowance = erc_token.allowance(deployer, vault)
         if allowance < amount:
-            erc_token.approve(vault, amount, {"from": deployer})
+            erc_token.approve(vault, amount, {"from": deployer, "gas_price": GAS_PRICE})
 
-    max_amounts_in = [seed_data["amounts"][token] for token in pool_tokens]
+    max_amounts_in = [int(seed_data["amounts"][token]) for token in pool_tokens]
 
     encoded_data = encode_abi(["uint256", "uint256[]"], [0, max_amounts_in])
     user_data = (pool_tokens, max_amounts_in, encoded_data, False)
 
-    # TODO gas_price looks far too low. Perhaps just remove this entry unless there's a good reason for it.
-    args = {"from": deployer, "gas_price": "60 gwei"}
+    args = {"from": deployer, "gas_price": GAS_PRICE}
 
     vault.joinPool(pool_id, deployer, deployer, user_data, args)
