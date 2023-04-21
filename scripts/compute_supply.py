@@ -14,25 +14,21 @@ from tests.geclp import eclp_100 as mimpl
 from tests.support.quantized_decimal_100 import QuantizedDecimal as D3
 
 from scripts.coingecko import get_prices
+from scripts.rate_providers import get_rates
 from scripts.constants import DECIMALS, TOKEN_ADDRESSES
 from scripts.pool_utils import compute_bounds_sqrts
 
 from brownie import chain
 
+# Run via:
+# $ brownie run --network=polygon-main $0 main <configfile.json> [outputfile.json]
+
 
 TWO_CLP_L_INIT = Decimal("1e-2")  # can set to w/e, choose so that x,y are small
 THREE_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
-E_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
+E_CLP_L_INIT = Decimal("2e-3")  # can set to w/e, choose so that x,y,z are small
 # SOMEDAY ^ The value of these depends on the parameters actually. A more stable variant would be to
 # initialize from portfolio value instead.
-
-parser = argparse.ArgumentParser(
-    prog="compute-initial-supply",
-    description="Compute initial supply. Run via `brownie run --network=<your network>`",
-    )
-parser.add_argument("config")
-parser.add_argument("-o", "--output")
-
 
 def compute_amounts_2clp(pool_config: dict, chain_id: int):
     assert len(pool_config["tokens"]) == 2, "2CLP should have 2 tokens"
@@ -112,22 +108,6 @@ def compute_amounts_3clp(pool_config: dict, chain_id: int):
         "price_bpt": float(p_bpt),
     }
 
-import sys
-
-def info(type, value, tb):
-    if hasattr(sys, 'ps1') or not sys.stderr.isatty() or type != AssertionError:
-        # we are in interactive mode or we don't have a tty-like
-        # device, so we call the default hook
-        sys.__excepthook__(type, value, tb)
-    else:
-        import traceback, pdb
-        # we are NOT in interactive mode, print the exception...
-        traceback.print_exception(type, value, tb)
-        print
-        # ...then start the debugger in post-mortem mode.
-        pdb.pm()
-
-sys.excepthook = info
 
 def compute_amounts_eclp(pool_config: dict, chain_id: int):
     assert len(pool_config["tokens"]) == 2, "ECLP should have 2 tokens"
@@ -140,7 +120,7 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
 
     # Rate scaling
-    rate_providers_dict = config.get("rate_providers", dict())
+    rate_providers_dict = pool_config.get("rate_providers", dict())
     rate_provider_addresses = [rate_providers_dict.get(k) for k in pool_config["tokens"]]
     rx, ry = get_rates(rate_provider_addresses)
 
@@ -152,8 +132,8 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     )
     # derived_params = eclp_prec_implementation.calc_derived_values(params)
 
-    assert pr >= params.alpha
-    assert pr <= params.beta
+    assert pr_s >= params.alpha
+    assert pr_s <= params.beta
 
     # We run ECLP math calculations using the "old" (unoptimized) implementation but in 100
     # decimals b/c we don't have an optimized implementation for this.
@@ -173,9 +153,14 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
 
     return {
         "amounts": {
-            token_addresses[0]: round(x * 10**dx),
-            token_addresses[1]: round(y * 10**dy),
+            token_addresses[0]: int(x * 10**dx),
+            token_addresses[1]: int(y * 10**dy),
         },
+        "unscaled_amounts": {
+            token_addresses[0]: float(x),
+            token_addresses[1]: float(y),
+        },
+        "scaled_relative_price": float(pr_s),
         "params": pool_config["params"],
         "prices": {
             token_addresses[0]: float(px),
@@ -186,10 +171,9 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     }
 
 
-def main():
-    args = parser.parse_args()
+def main(config: str, output: str = None):
     chain_id = chain.id
-    with open(args.config) as f:
+    with open(config) as f:
         pool_config = json.load(f)
         pool_type = pool_config["pool_type"]
         if pool_type == "eclp":
@@ -200,12 +184,9 @@ def main():
             result = compute_amounts_3clp(pool_config, chain_id)
         else:
             raise ValueError(f"invalid pool type {pool_type}")
-    if args.output:
-        with open(args.output, "w") as f:
+    if output:
+        with open(output, "w") as f:
             json.dump(result, f, indent=2)
     else:
         print(json.dumps(result, indent=2))
 
-
-if __name__ == "__main__":
-    main()

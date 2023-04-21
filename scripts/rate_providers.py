@@ -9,7 +9,7 @@ def get_rates(rate_provider_addresses) -> list[Decimal]:
     ret = []
     for address in rate_provider_addresses:
         if address:
-            c = interfaces.IRateProvider.at(address)
+            c = interface.IRateProvider(address)
             rate = c.getRate()
             # Rates are always 18-decimal.
             ret.append(Decimal(rate) / Decimal(10**18))
