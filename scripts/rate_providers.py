@@ -1,8 +1,8 @@
-
 from brownie import *
 from decimal import Decimal
 
 # This has to be run from inside brownie with the appropriate network.
+
 
 def get_rates(rate_provider_addresses) -> list[Decimal]:
     """Get rates from a list of IRateProvider addresses."""
@@ -16,4 +16,3 @@ def get_rates(rate_provider_addresses) -> list[Decimal]:
         else:
             ret.append(Decimal(1))
     return ret
-

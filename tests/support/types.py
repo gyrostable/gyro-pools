@@ -272,4 +272,3 @@ def params2MathParams(params: ECLPMathParams) -> mimpl_100.Params:
     This is equal to .util.params2MathParams() but has to be re-written to use the right geclp impl module.
     """
     return mimpl_100.Params(params.alpha, params.beta, params.c, -params.s, params.l)
-

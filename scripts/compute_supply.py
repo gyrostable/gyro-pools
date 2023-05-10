@@ -30,6 +30,7 @@ E_CLP_L_INIT = Decimal("2e-3")  # can set to w/e, choose so that x,y,z are small
 # SOMEDAY ^ The value of these depends on the parameters actually. A more stable variant would be to
 # initialize from portfolio value instead.
 
+
 def compute_amounts_2clp(pool_config: dict, chain_id: int):
     assert len(pool_config["tokens"]) == 2, "2CLP should have 2 tokens"
 
@@ -71,7 +72,9 @@ def compute_amounts_2clp(pool_config: dict, chain_id: int):
 def compute_amounts_3clp(pool_config: dict, chain_id: int):
     assert len(pool_config["tokens"]) == 3, "ECLP should have 3 tokens"
 
-    tokens = [(TOKEN_ADDRESSES[chain_id][t], DECIMALS[t]) for t in pool_config["tokens"]]
+    tokens = [
+        (TOKEN_ADDRESSES[chain_id][t], DECIMALS[t]) for t in pool_config["tokens"]
+    ]
     tokens_sorted = sorted(
         tokens,
         key=lambda x: x[0].lower(),
@@ -81,7 +84,7 @@ def compute_amounts_3clp(pool_config: dict, chain_id: int):
     prices_dict = get_prices([t for t, _ in tokens], chain_id)
     prices = [Decimal.from_float(prices_dict[t]) for t, _ in tokens]
     px, py, pz = prices
-    pxz, pyz = px/pz, py/pz
+    pxz, pyz = px / pz, py / pz
 
     cbrt_alpha = Decimal(pool_config["root_3_alpha"])
 
@@ -121,7 +124,9 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
 
     # Rate scaling
     rate_providers_dict = pool_config.get("rate_providers", dict())
-    rate_provider_addresses = [rate_providers_dict.get(k) for k in pool_config["tokens"]]
+    rate_provider_addresses = [
+        rate_providers_dict.get(k) for k in pool_config["tokens"]
+    ]
     rx, ry = get_rates(rate_provider_addresses)
 
     # rate-scaled relative price
@@ -189,4 +194,3 @@ def main(config: str, output: str = None):
             json.dump(result, f, indent=2)
     else:
         print(json.dumps(result, indent=2))
-
