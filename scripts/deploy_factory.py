@@ -27,7 +27,12 @@ def c3lp():
 
 
 def eclp():
-    from brownie import QueryProcessor  # type: ignore
+    try:
+        from brownie import QueryProcessor  # type: ignore
+    except:
+        import brownie
+        QueryProcessor = getattr(brownie, "node_modules/@balancer-labs/QueryProcessor")
+
 
     QueryProcessor.at(BALANCER_ADDRESSES[chain.id]["query_processor"])
     if len(GyroECLPMath) == 0:

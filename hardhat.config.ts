@@ -30,6 +30,9 @@ const config: HardhatUserConfig = {
     polygon: {
       url: "https://polygon-rpc.com",
     },
+    optimism: {
+      url: "https://mainnet.optimism.io",
+    },
     hardhat: {
       chainId: 137,
       forking: {

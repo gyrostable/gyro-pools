@@ -1,4 +1,15 @@
 {
+  "10": {
+    "GyroECLPMath": [
+      "0x4e56F19235FF2a14C76332877a35D6aF5bDE07EC"
+    ],
+    "GyroECLPPoolFactory": [
+      "0xefdE1c764Df6522a068b38106563DE166Ac97f58"
+    ],
+    "QueryProcessor": [
+      "0xD7FAD3bd59D6477cbe1BE7f646F7f1BA25b230f8"
+    ]
+  },
   "1337": {
     "Authorizer": [
       "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550",

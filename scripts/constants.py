@@ -15,6 +15,10 @@ BALANCER_ADDRESSES = {
         "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
         "query_processor": "0x41c7523aA9b369a65983C0ff719B81947B07fc5c",
     },
+    10: {
+        "query_processor": "0xD7FAD3bd59D6477cbe1BE7f646F7f1BA25b230f8",
+        "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+    },
     5: {
         "vault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
         "query_processor": "0xF949645042a607fa260D932DF999FE8A02B86247",
@@ -32,6 +36,10 @@ GYROSCOPE_ADDRESSES = {
     },
     42: {"gyro_config": "0x402519E6cc733893af5fFf40e26397268769CBc3"},
     5: {"gyro_config": "0xfd5E29d7B36d0AfD4cb8A0AFAB5F360d21dE5C63"},
+    10: {
+        "gyro_config": "0x32Acb44fC929339b9F16F0449525cC590D2a23F3",
+        "proxy_admin": "0x00A2a9BBD352Ab46274433FAA9Fec35fE3aBB4a8",
+    },
 }
 
 POOL_OWNER = {

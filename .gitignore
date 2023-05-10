@@ -5,9 +5,12 @@ deployments/localhost
 dist/
 .env
 build/*
+!build/deployments
+build/deployments/*
 !build/deployments/1
 !build/deployments/5
 !build/deployments/137
+!build/deployments/10
 !build/deployments/map.json
 __pycache__
 /typechain/
