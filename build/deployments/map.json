@@ -1,5 +1,8 @@
 {
   "10": {
+    "FreezableTransparentUpgradeableProxy": [
+      "0x9b683cA24B0e013512E2566b68704dBe9677413c"
+    ],
     "GyroECLPMath": [
       "0x4e56F19235FF2a14C76332877a35D6aF5bDE07EC"
     ],
