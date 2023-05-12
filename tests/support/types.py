@@ -3,10 +3,14 @@ import sys
 from typing import Generic, NamedTuple, Tuple, Iterable, TypeVar
 
 from brownie import ZERO_ADDRESS
+import decimal
 
 from tests.support.quantized_decimal import DecimalLike, QuantizedDecimal as QD
 from tests.support.quantized_decimal_38 import QuantizedDecimal as QD38
+from tests.support.quantized_decimal_100 import QuantizedDecimal as QD100
+from tests.support.utils import apply_deep
 
+from tests.geclp import eclp_100 as mimpl_100
 
 # NOTE: Python 3.9 and 3.10 disallow multiple inheritance for NamedTuple
 # This behavior is "fixed" in 3.11, so we just need this nasty monkey patching
@@ -227,3 +231,44 @@ class ECLPFactoryCreateParams(NamedTuple):
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pause_manager: address = DEFAULT_PAUSE_MANAGER
+
+
+def convd(x, totype, dofloat=True, dostr=True):
+    """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
+
+    `dofloat`: Also convert floats.
+
+    `dostr`: Also convert str.
+
+    Example: convd(x, D3)"""
+
+    def go(y):
+        if isinstance(y, decimal.Decimal):
+            return totype(y)
+        elif isinstance(y, (QD, QD38, QD100)):
+            return totype(y.raw)
+        elif dofloat and isinstance(y, float):
+            return totype(y)
+        elif dostr and isinstance(y, str):
+            return totype(y)
+        else:
+            return y
+
+    return apply_deep(x, go)
+
+
+def paramsTo100(params: ECLPMathParams) -> ECLPMathParams:
+    """Convert params to a high-precision version. This is more than just type conversion, we also re-normalize!"""
+    params = convd(params, QD100)
+    pd = params._asdict()
+    d = (params.s**2 + params.c**2).sqrt()
+    pd["s"] /= d
+    pd["c"] /= d
+    return ECLPMathParams(**pd)
+
+
+def params2MathParams(params: ECLPMathParams) -> mimpl_100.Params:
+    """Map 100-decimal ECLPMathParams to 100-decimal mimpl.Params.
+    This is equal to .util.params2MathParams() but has to be re-written to use the right geclp impl module.
+    """
+    return mimpl_100.Params(params.alpha, params.beta, params.c, -params.s, params.l)

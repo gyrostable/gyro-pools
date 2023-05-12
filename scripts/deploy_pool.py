@@ -1,13 +1,13 @@
 import json
 import os
-from decimal import Decimal
 from os import path
+from typing import List
 
-from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, ERC20, GyroECLPPoolFactory, ZERO_ADDRESS  # type: ignore
+
+from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, GyroECLPPoolFactory, ZERO_ADDRESS  # type: ignore
 from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory  # type: ignore
 from brownie import web3
 from brownie.network import chain
-from tests.conftest import scale_eclp_params
 from tests.geclp import eclp_prec_implementation
 from tests.support.quantized_decimal import QuantizedDecimal
 from tests.support.types import (
@@ -57,9 +57,24 @@ def get_tokens(config, sort=False):
     return tokens
 
 
-def get_rate_providers(config: dict):
-    """Optional field, default 0."""
-    return config.get("rate_providers", [ZERO_ADDRESS, ZERO_ADDRESS])
+def get_rate_providers(tokens: List[str], config: dict) -> List[str]:
+    """Optional field, default 0x0."""
+    config_rate_providers = config.get("rate_providers", {})
+    rate_providers = [
+        config_rate_providers.get(t, ZERO_ADDRESS) for t in config["tokens"]
+    ]
+    if tokens[0].lower() > tokens[1].lower():
+        rate_providers = rate_providers[::-1]
+    return rate_providers
+
+
+def get_cap_params(pool_config: dict) -> CapParams:
+    raw_params = pool_config.get("cap", {})
+    return CapParams(
+        cap_enabled=raw_params.get("enabled", False),
+        global_cap=int(scale(raw_params.get("global", 0))),
+        per_address_cap=int(scale(raw_params.get("per_address", 0))),
+    )
 
 
 def c2lp():
@@ -159,9 +174,9 @@ def eclp():
         )
     deployer = get_deployer()
     pool_config = _get_config()
-    tokens = get_tokens(pool_config)
-    rate_providers = get_rate_providers(pool_config)
-
+    tokens = get_tokens(pool_config, sort=False)
+    rate_providers = get_rate_providers(tokens, pool_config)
+    tokens.sort(key=lambda v: v.lower())
     eclp_params = ECLPMathParamsQD(
         **{k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
     )
@@ -176,11 +191,8 @@ def eclp():
         rate_providers=rate_providers,
         swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
         owner=POOL_OWNER[chain.id],
-        cap_params=CapParams(
-            cap_enabled=pool_config["cap"]["enabled"],
-            global_cap=int(scale(pool_config["cap"]["global"])),
-            per_address_cap=int(scale(pool_config["cap"]["per_address"])),
-        ),
+        cap_manager=POOL_OWNER[chain.id],
+        cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
     )
     print(params)

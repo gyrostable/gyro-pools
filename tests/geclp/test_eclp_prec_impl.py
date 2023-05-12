@@ -40,47 +40,6 @@ def test_dummy():
     print(decimal.getcontext().prec)
 
 
-def convd(x, totype, dofloat=True, dostr=True):
-    """totype: one of D, D2, D3, i.e., some QuantizedDecimal implementation.
-
-    `dofloat`: Also convert floats.
-
-    `dostr`: Also convert str.
-
-    Example: convd(x, D3)"""
-
-    def go(y):
-        if isinstance(y, decimal.Decimal):
-            return totype(y)
-        elif isinstance(y, (D, D2, D3)):
-            return totype(y.raw)
-        elif dofloat and isinstance(y, float):
-            return totype(y)
-        elif dostr and isinstance(y, str):
-            return totype(y)
-        else:
-            return y
-
-    return apply_deep(x, go)
-
-
-def paramsTo100(params: ECLPMathParams) -> ECLPMathParams:
-    """Convert params to a high-precision version. This is more than just type conversion, we also re-normalize!"""
-    params = convd(params, D3)
-    pd = params._asdict()
-    d = (params.s**2 + params.c**2).sqrt()
-    pd["s"] /= d
-    pd["c"] /= d
-    return ECLPMathParams(**pd)
-
-
-def params2MathParams(params: ECLPMathParams) -> mimpl.Params:
-    """Map 100-decimal ECLPMathParams to 100-decimal mimpl.Params.
-    This is equal to .util.params2MathParams() but has to be re-written to use the right geclp impl module.
-    """
-    return mimpl.Params(params.alpha, params.beta, params.c, -params.s, params.l)
-
-
 bpool_params = BasicPoolParameters(
     MIN_PRICE_SEPARATION,
     MAX_IN_RATIO,
