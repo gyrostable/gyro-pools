@@ -3,6 +3,7 @@ import os
 
 from brownie import BalancerVault, interface, chain  # type: ignore
 from eth_abi import encode_abi
+from brownie import web3
 
 from scripts.constants import BALANCER_ADDRESSES
 from scripts.utils import get_deployer
@@ -29,7 +30,10 @@ def main():
     pool = interface.IBalancerPool(POOL_ADDRESS)
 
     pool_id = pool.getPoolId()
-    pool_tokens = vault.getPoolTokens(pool_id)[0]
+    pool_tokens = [a for a in vault.getPoolTokens(pool_id)[0]]
+    seed_data["amounts"] = {
+        web3.toChecksumAddress(k): v for k, v in seed_data["amounts"].items()
+    }
 
     assert set(seed_data["amounts"]) == set(pool_tokens), "Invalid pool tokens"
 

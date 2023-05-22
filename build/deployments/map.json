@@ -1,10 +1,16 @@
 {
   "10": {
+    "BalancerVault": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    ],
     "FreezableTransparentUpgradeableProxy": [
       "0x9b683cA24B0e013512E2566b68704dBe9677413c"
     ],
     "GyroECLPMath": [
       "0x4e56F19235FF2a14C76332877a35D6aF5bDE07EC"
+    ],
+    "GyroECLPPool": [
+      "0x58910d5bd045a20A37dE147f8ACEa75B2d881f61"
     ],
     "GyroECLPPoolFactory": [
       "0xefdE1c764Df6522a068b38106563DE166Ac97f58"

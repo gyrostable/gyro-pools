@@ -117,17 +117,20 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
 
     token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in pool_config["tokens"]]
     dx, dy = [DECIMALS[t] for t in pool_config["tokens"]]
-    assert token_addresses[0] <= token_addresses[1]
-
     prices = get_prices(token_addresses, chain_id)
     px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
-
     # Rate scaling
     rate_providers_dict = pool_config.get("rate_providers", dict())
     rate_provider_addresses = [
         rate_providers_dict.get(k) for k in pool_config["tokens"]
     ]
     rx, ry = get_rates(rate_provider_addresses)
+
+    if token_addresses[0] > token_addresses[1]:
+        token_addresses = token_addresses[::-1]
+        dx, dy = dy, dx
+        px, py = py, px
+        rx, ry = ry, rx
 
     # rate-scaled relative price
     pr_s = ry / rx * px / py
