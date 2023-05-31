@@ -1,6 +1,6 @@
 from brownie import interface, chain, ZERO_ADDRESS, accounts
 from scripts.constants import GYROSCOPE_ADDRESSES
-from scripts.utils import format_to_bytes
+from scripts.utils import format_to_bytes, get_deployer, make_tx_params
 
 
 KEYS = [
@@ -12,6 +12,7 @@ KEYS = [
 
 
 def main():
+    account = get_deployer()
     gyro_config = interface.IGyroConfig(GYROSCOPE_ADDRESSES[chain.id]["gyro_config"])
     keys = gyro_config.listKeys()
     for key, value in KEYS:
@@ -19,4 +20,4 @@ def main():
         if formatted_key in keys:
             continue
         method = "setUint" if isinstance(value, int) else "setAddress"
-        getattr(gyro_config, method)(formatted_key, value, {"from": accounts[0]})
+        getattr(gyro_config, method)(formatted_key, value, {"from": get_deployer(), **make_tx_params()})
