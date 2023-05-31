@@ -20,4 +20,6 @@ def main():
         if formatted_key in keys:
             continue
         method = "setUint" if isinstance(value, int) else "setAddress"
-        getattr(gyro_config, method)(formatted_key, value, {"from": get_deployer(), **make_tx_params()})
+        getattr(gyro_config, method)(
+            formatted_key, value, {"from": get_deployer(), **make_tx_params()}
+        )
