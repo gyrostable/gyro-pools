@@ -7,6 +7,11 @@ interface ILocallyPausable {
     event UnpausedLocally();
     event PauseManagerChanged(address oldPauseManager, address newPauseManager);
 
+    struct PauseParams {
+        uint256 pauseWindowDuration;
+        uint256 bufferPeriodDuration;
+    }
+
     /// @notice Changes the account that is allowed to pause a pool.
     function changePauseManager(address _pauseManager) external;
 

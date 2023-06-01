@@ -100,8 +100,6 @@ args = ThreePoolParams(
         owner=admin,  # address
         root3Alpha=scale(root_3_alpha),
     ),
-    pauseWindowDuration=0,  # uint256
-    bufferPeriodDuration=0,  # uint256
     config_address=mock_gyro_config.address,
 )
 

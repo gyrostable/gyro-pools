@@ -6,6 +6,7 @@ compiler:
       enabled: true
       runs: 200
     remappings:
+      - "@balancer-labs/v2-solidity-utils/contracts/helpers/TemporarilyPausable.sol=contracts/TemporarilyPausable.sol"
       - "@balancer-labs=node_modules/@balancer-labs"
       - "@openzeppelin=node_modules/@openzeppelin"
 

@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "./ICappedLiquidity.sol";
+import "./ILocallyPausable.sol";
 import "../contracts/eclp/GyroECLPMath.sol";
 
 interface IGyroECLPPoolFactory {
@@ -20,6 +21,7 @@ interface IGyroECLPPoolFactory {
         address owner,
         address capManager,
         ICappedLiquidity.CapParams memory capParams,
-        address pauseManager
+        address pauseManager,
+        ILocallyPausable.PauseParams memory pauseParams
     ) external returns (address);
 }

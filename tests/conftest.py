@@ -247,8 +247,6 @@ def mock_vault_pool3(
     args = ThreePoolParams(
         vault=mock_vault.address,
         config_address=mock_gyro_config.address,
-        pauseWindowDuration=0,  # uint256
-        bufferPeriodDuration=0,  # uint256
         config=ThreePoolFactoryCreateParams(
             name="Gyro3CLPPool",  # string
             symbol="G3P",  # string
@@ -301,8 +299,6 @@ def balancer_vault_pool3(
     args = ThreePoolParams(
         vault=balancer_vault.address,
         config_address=mock_gyro_config.address,
-        pauseWindowDuration=0,  # uint256
-        bufferPeriodDuration=0,  # uint256
         config=ThreePoolFactoryCreateParams(
             name="Gyro3CLPPool",  # string
             symbol="G3P",  # string

@@ -17,9 +17,6 @@ import "./Gyro3CLPPool.sol";
 contract Gyro3CLPPoolFactory is IGyro3CLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
     address public immutable gyroConfigAddress;
 
-    uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
-    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
-
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(Gyro3CLPPool).creationCode) {
         gyroConfigAddress = _gyroConfigAddress;
     }
@@ -28,13 +25,7 @@ contract Gyro3CLPPoolFactory is IGyro3CLPPoolFactory, BasePoolSplitCodeFactory, 
      * @dev Deploys a new `Gyro3CLPPool`.
      */
     function create(Gyro3CLPPool.NewPoolConfigParams memory config) external override returns (address) {
-        Gyro3CLPPool.NewPoolParams memory params = Gyro3CLPPool.NewPoolParams({
-            vault: getVault(),
-            configAddress: gyroConfigAddress,
-            pauseWindowDuration: PAUSE_WINDOW_DURATION,
-            bufferPeriodDuration: BUFFER_PERIOD_DURATION,
-            config: config
-        });
+        Gyro3CLPPool.NewPoolParams memory params = Gyro3CLPPool.NewPoolParams({vault: getVault(), configAddress: gyroConfigAddress, config: config});
 
         return _create(abi.encode(params));
     }

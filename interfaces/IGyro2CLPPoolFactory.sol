@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 import "./ICappedLiquidity.sol";
+import "./ILocallyPausable.sol";
 
 interface IGyro2CLPPoolFactory {
     function create(
@@ -17,6 +18,7 @@ interface IGyro2CLPPoolFactory {
         address owner,
         address capManager,
         ICappedLiquidity.CapParams memory capParams,
-        address pauseManager
+        address pauseManager,
+        ILocallyPausable.PauseParams memory pauseParams
     ) external returns (address);
 }
