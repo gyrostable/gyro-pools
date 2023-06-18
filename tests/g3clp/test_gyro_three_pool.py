@@ -286,7 +286,7 @@ def test_pool_on_exit(users, mock_vault_pool3, mock_vault, amount_in, amountOut)
 
 @pytest.mark.parametrize(
     ("amount_in", "amount_to_swap"),
-    [(scale(100), scale(10)), (scale("0.495e11"), scale("0.29e11"))],
+    [(scale(100), scale(10)), (scale("0.355e11"), scale("0.29e11"))],
 )
 # ^ NB We join twice here (first init, then normal join with another account)
 def test_swap(
