@@ -12,7 +12,13 @@ from tests.support.types import (
     SwapRequest,
     ECLPMathParams,
 )
-from tests.support.utils import approxed, unscale, to_decimal, get_invariant_div_supply, get_transfer_event
+from tests.support.utils import (
+    approxed,
+    unscale,
+    to_decimal,
+    get_invariant_div_supply,
+    get_transfer_event,
+)
 
 from tests.geclp import eclp as math_implementation
 from tests.geclp import eclp_prec_implementation as prec_impl
@@ -312,7 +318,9 @@ def test_pool_swap(users, eclp_pool, mock_vault, gyro_erc20_funded):
 
     # No swaps have been made so no protocol fees have accrued.
     assert eclp_pool.getActualSupply() == eclp_pool.totalSupply()
-    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(eclp_pool)
+    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
+        eclp_pool
+    )
 
     amount_to_swap = 10 * 10**18
 
@@ -374,7 +382,9 @@ def test_pool_swap(users, eclp_pool, mock_vault, gyro_erc20_funded):
     )
     # Post-exit supply matches pre-exit actual supply, minus tokens burnt in exit, and the two agree again.
     assert eclp_pool.getActualSupply() == eclp_pool.totalSupply()
-    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(eclp_pool)
+    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
+        eclp_pool
+    )
     ev = get_transfer_event(tx, from_addr=users[0])
     bptTokensburnt = ev["value"]
     assert ev["to"] == ZERO_ADDRESS

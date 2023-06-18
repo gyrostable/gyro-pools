@@ -5,7 +5,14 @@ from tests.g2clp import constants
 from .test_eclp_pool import join_pool
 from .util import params2MathParams
 from ..support.types import ECLPMathParams, SwapRequest, SwapKind
-from ..support.utils import unscale, to_decimal as D, approxed, scale, get_transfer_event, get_invariant_div_supply
+from ..support.utils import (
+    unscale,
+    to_decimal as D,
+    approxed,
+    scale,
+    get_transfer_event,
+    get_invariant_div_supply,
+)
 from . import eclp_prec_implementation as math_implementation
 from . import eclp as math_implementation_old
 
@@ -309,7 +316,9 @@ def test_pool_swap(
     )
     # Post-exit supply matches pre-exit actual supply, minus tokens burnt in exit, and the two agree again.
     assert eclp_pool.getActualSupply() == eclp_pool.totalSupply()
-    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(eclp_pool)
+    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
+        eclp_pool
+    )
     ev = get_transfer_event(tx, from_addr=users[0])
     bptTokensburnt = ev["value"]
     assert ev["to"] == ZERO_ADDRESS
