@@ -608,7 +608,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     }
 
     /** @notice Effective BPT supply.
-     *  
+     *
      *  This is the same as `totalSupply()` but also accounts for the fact that the pool owes
      *  protocol fees to the pool in the form of unminted LP shares created on the next join/exit,
      *  diluting LPers. Thus, this is the totalSupply() that the next join/exit operation will see.
@@ -618,7 +618,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
      */
     function getActualSupply() external view returns (uint256) {
         uint256 supply = totalSupply();
-        (uint256 gyroFees, uint256 balancerFees,,) = _getDueProtocolFeeAmounts(_lastInvariant, getInvariant());
+        (uint256 gyroFees, uint256 balancerFees, , ) = _getDueProtocolFeeAmounts(_lastInvariant, getInvariant());
         return supply.add(gyroFees).add(balancerFees);
     }
 
@@ -626,7 +626,7 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     function getInvariantDivActualSupply() external view returns (uint256) {
         uint256 invariant = getInvariant();
         uint256 supply = totalSupply();
-        (uint256 gyroFees, uint256 balancerFees,,) = _getDueProtocolFeeAmounts(_lastInvariant, invariant);
+        (uint256 gyroFees, uint256 balancerFees, , ) = _getDueProtocolFeeAmounts(_lastInvariant, invariant);
         uint256 actualSupply = supply.add(gyroFees).add(balancerFees);
         return invariant.divDown(actualSupply);
     }
