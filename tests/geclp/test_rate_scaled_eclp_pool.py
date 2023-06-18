@@ -5,7 +5,7 @@ from tests.g2clp import constants
 from .test_eclp_pool import join_pool
 from .util import params2MathParams
 from ..support.types import ECLPMathParams, SwapRequest, SwapKind
-from ..support.utils import unscale, to_decimal as D, approxed, scale
+from ..support.utils import unscale, to_decimal as D, approxed, scale, get_transfer_event, get_invariant_div_supply
 from . import eclp_prec_implementation as math_implementation
 from . import eclp as math_implementation_old
 
@@ -128,7 +128,8 @@ def test_pool_on_exit(
     amount_out = 5 * 10**18
     amounts_out = (int(amount_out / ratex), amount_out)
 
-    total_supply_before_exit = eclp_pool.totalSupply()
+    # We use actual supply, not totalSupply here because a tiny amount of protocol fees may be paid due to rounding errors.
+    actual_supply_before_exit = eclp_pool.getActualSupply()
     (_, balances_after_join) = mock_vault.getPoolTokens(poolId)
 
     invariant_after_join = eclp_pool.getLastInvariant()
@@ -158,13 +159,13 @@ def test_pool_on_exit(
     )
 
     ## Check BTP Token minting
-    assert tx.events["Transfer"][0]["from"] == users[0]
-    assert tx.events["Transfer"][0]["to"] == ZERO_ADDRESS
-    bptTokensburnt = tx.events["Transfer"][0]["value"]
+    ev = get_transfer_event(tx, from_addr=users[0])
+    assert ev["to"] == ZERO_ADDRESS
+    bptTokensburnt = ev["value"]
     assert bptTokensburnt > 0
     # Check that approx. amount of tokens burnt is proportional to the amount of tokens substracted from the pool
     assert unscale(bptTokensburnt) == approxed(
-        unscale(total_supply_before_exit * amounts_out[0] // balances_after_join[0])
+        unscale(actual_supply_before_exit * amounts_out[0] // balances_after_join[0])
     )
     assert bptTokensburnt == bptTokensToBurn
 
@@ -186,7 +187,7 @@ def test_pool_on_exit(
     assert unscale(sInvariant_after_join) == unscale(invariant_after_join).approxed()
 
     sInvariant_after_exit = gyro_eclp_math_testing.liquidityInvariantUpdate(
-        sInvariant_after_join, bptTokensToBurn, total_supply_before_exit, False
+        sInvariant_after_join, bptTokensToBurn, actual_supply_before_exit, False
     )
 
     assert invariant_after_exit == sInvariant_after_exit
@@ -289,6 +290,33 @@ def test_pool_swap(
     assert balances_after_swap[1] == balances[1] - amount_out
 
     assert unscale(amount_out) == amount_out_expected_unscaled.approxed()
+
+    # Now there are unaccounted-for protocol fees (see conftest: we have protocol fees enabled!)
+    actual_supply_after_swap = eclp_pool.getActualSupply()
+    assert actual_supply_after_swap > eclp_pool.totalSupply()
+    assert eclp_pool.getInvariantDivActualSupply() < get_invariant_div_supply(eclp_pool)
+
+    bpt_tokens_to_redeem = eclp_pool.balanceOf(users[0]) // 2
+    tx = mock_vault.callExitPoolGyro(
+        eclp_pool.address,
+        0,
+        users[0],
+        users[0],
+        mock_vault.getPoolTokens(poolId)[1],
+        0,
+        0,
+        bpt_tokens_to_redeem,
+    )
+    # Post-exit supply matches pre-exit actual supply, minus tokens burnt in exit, and the two agree again.
+    assert eclp_pool.getActualSupply() == eclp_pool.totalSupply()
+    assert eclp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(eclp_pool)
+    ev = get_transfer_event(tx, from_addr=users[0])
+    bptTokensburnt = ev["value"]
+    assert ev["to"] == ZERO_ADDRESS
+    assert bptTokensburnt == bpt_tokens_to_redeem
+    total_supply_expd = actual_supply_after_swap - bptTokensburnt
+    total_supply = eclp_pool.totalSupply()
+    assert total_supply == total_supply_expd  # The actual test
 
 
 def test_pool_factory(mock_rate_scaled_eclp_pool_from_factory):

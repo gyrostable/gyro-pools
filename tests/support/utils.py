@@ -118,3 +118,20 @@ def qdecimals(
         allow_infinity=allow_infinity,
         **kwargs
     ).map(QuantizedDecimal)
+
+
+def get_invariant_div_supply(pool):
+    """Shorthand. pool = any CLP"""
+    return scale(unscale(pool.getInvariant()) / unscale(pool.totalSupply()))
+
+
+def get_transfer_event(tx, from_addr=None, to_addr=None):
+    """Finds the first transfer event from or to a specific address (or the first one if none specified)."""
+    for ev in tx.events['Transfer']:
+        if from_addr is not None and ev['from'] != from_addr:
+            continue
+        if to_addr is not None and ev['to'] != to_addr:
+            continue
+        return ev
+    raise(ValueError("Transfer event not found"))
+
