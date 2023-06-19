@@ -23,8 +23,11 @@ from tests.support.types import (
 
 from tests.geclp import eclp_prec_implementation
 from tests.support.utils import scale
+from scripts.utils import format_to_bytes
 
 TOKENS_PER_USER = 1000 * 10**18
+
+DEFAULT_PROTOCOL_FEE = scale("0.2")
 
 # This will provide assertion introspection for common test functions defined in this module.
 pytest.register_assert_rewrite("tests.geclp.util", "tests.g3clp.util")
@@ -99,7 +102,12 @@ def deployed_query_processor(admin, QueryProcessor):
 
 @pytest.fixture(scope="module")
 def mock_gyro_config(admin, MockGyroConfig):
-    return admin.deploy(MockGyroConfig)
+    # Set some default values.
+    ret = admin.deploy(MockGyroConfig)
+
+    formatted_key = format_to_bytes("PROTOCOL_SWAP_FEE_PERC", 32, output_hex=True)
+    ret.setUint(formatted_key, DEFAULT_PROTOCOL_FEE, {"from": admin})
+    return ret
 
 
 @pytest.fixture

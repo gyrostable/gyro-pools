@@ -6,7 +6,13 @@ from tests.support.quantized_decimal import QuantizedDecimal as D
 from tests.conftest import TOKENS_PER_USER
 from tests.g2clp import constants
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
-from tests.support.utils import unscale, approxed, scale
+from tests.support.utils import (
+    unscale,
+    approxed,
+    scale,
+    get_transfer_event,
+    get_invariant_div_supply,
+)
 
 
 def test_empty_erc20s(admin, gyro_erc20_empty):
@@ -303,6 +309,12 @@ def test_swap(
 
     (_, balances_after_exit) = mock_vault.getPoolTokens(poolId)
 
+    # No swaps have been made so no protocol fees have accrued.
+    assert mock_vault_pool.getActualSupply() == mock_vault_pool.totalSupply()
+    assert mock_vault_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
+        mock_vault_pool
+    )
+
     amount_to_swap = 10 * 10**18
     (
         current_invariant,
@@ -351,3 +363,34 @@ def test_swap(
     assert balances_after_swap[1] == balances_after_exit[1] - amount_out
 
     assert int(amount_out) == pytest.approx(amount_out_expected)
+
+    # Now there are unaccounted-for protocol fees (see conftest: we have protocol fees enabled!)
+    actual_supply_after_swap = mock_vault_pool.getActualSupply()
+    assert actual_supply_after_swap > mock_vault_pool.totalSupply()
+    assert mock_vault_pool.getInvariantDivActualSupply() < get_invariant_div_supply(
+        mock_vault_pool
+    )
+
+    bpt_tokens_to_redeem = mock_vault_pool.balanceOf(users[0]) // 2
+    tx = mock_vault.callExitPoolGyro(
+        mock_vault_pool.address,
+        0,
+        users[0],
+        users[0],
+        mock_vault.getPoolTokens(poolId)[1],
+        0,
+        0,
+        bpt_tokens_to_redeem,
+    )
+    # Post-exit supply matches pre-exit actual supply, minus tokens burnt in exit, and the two agree again.
+    assert mock_vault_pool.getActualSupply() == mock_vault_pool.totalSupply()
+    assert mock_vault_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
+        mock_vault_pool
+    )
+    ev = get_transfer_event(tx, from_addr=users[0])
+    bptTokensburnt = ev["value"]
+    assert ev["to"] == ZERO_ADDRESS
+    assert bptTokensburnt == bpt_tokens_to_redeem
+    total_supply_expd = actual_supply_after_swap - bptTokensburnt
+    total_supply = mock_vault_pool.totalSupply()
+    assert total_supply == total_supply_expd  # The actual test
