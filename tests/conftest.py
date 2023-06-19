@@ -27,6 +27,8 @@ from scripts.utils import format_to_bytes
 
 TOKENS_PER_USER = 1000 * 10**18
 
+DEFAULT_PROTOCOL_FEE = scale("0.2")
+
 # This will provide assertion introspection for common test functions defined in this module.
 pytest.register_assert_rewrite("tests.geclp.util", "tests.g3clp.util")
 
@@ -104,7 +106,7 @@ def mock_gyro_config(admin, MockGyroConfig):
     ret = admin.deploy(MockGyroConfig)
 
     formatted_key = format_to_bytes("PROTOCOL_SWAP_FEE_PERC", 32, output_hex=True)
-    ret.setUint(formatted_key, scale("0.2"), {"from": admin})
+    ret.setUint(formatted_key, DEFAULT_PROTOCOL_FEE, {"from": admin})
     return ret
 
 

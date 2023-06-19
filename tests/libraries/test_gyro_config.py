@@ -3,11 +3,13 @@ import pytest
 from eth_utils import keccak
 from eth_abi import encode_abi
 
+from tests.conftest import DEFAULT_PROTOCOL_FEE
+
 
 @pytest.mark.parametrize(
     "setting,method,initial_value",
     (
-        (b"PROTOCOL_SWAP_FEE_PERC", "getSwapFeePercForPool", 0),
+        (b"PROTOCOL_SWAP_FEE_PERC", "getSwapFeePercForPool", DEFAULT_PROTOCOL_FEE),
         (b"PROTOCOL_FEE_GYRO_PORTION", "getProtocolFeeGyroPortionForPool", 1e18),
     ),
 )
