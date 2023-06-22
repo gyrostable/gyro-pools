@@ -12,6 +12,6 @@
     "l": "1300"
   },
   "rate_providers": {
-    "WETH": "0x9aa3cd420f830E049e2b223D0b07D8c809C94d15"
+    "wstETH": "0x9aa3cd420f830E049e2b223D0b07D8c809C94d15"
   }
 }
