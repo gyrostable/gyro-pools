@@ -1,0 +1,17 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP wstETH/WETH",
+  "symbol": "ECLP-wstETH-WETH",
+  "tokens": ["wstETH", "WETH"],
+  "swap_fee_percentage": "0.0002",
+  "params": {
+    "alpha": "0.996700000000000",
+    "beta": "1.0025000000000",
+    "c": "0.707106781186548",
+    "s": "0.707106781186548",
+    "l": "1300"
+  },
+  "rate_providers": {
+    "WETH": "0x9aa3cd420f830E049e2b223D0b07D8c809C94d15"
+  }
+}
