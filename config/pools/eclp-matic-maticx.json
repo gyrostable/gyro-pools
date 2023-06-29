@@ -1,0 +1,17 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP WMATIC/MATICX",
+  "symbol": "ECLP-WMATIC-MATICX",
+  "tokens": ["WMATIC", "MATICX"],
+  "swap_fee_percentage": "0.0002",
+  "params": {
+    "alpha": "0.997500000000000",
+    "beta": "1.00100000000000000",
+    "c": "0.7071067811865475244",
+    "s": "0.7071067811865475244",
+    "l": "2750"
+  },
+  "rate_providers": {
+    "MATICX": "0xeE652bbF72689AA59F0B8F981c9c90e2A8Af8d8f"
+  }
+}
