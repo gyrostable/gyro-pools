@@ -39,9 +39,10 @@ contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, 
         address owner,
         address capManager,
         ICappedLiquidity.CapParams memory capParams,
-        address pauseManager
+        address pauseManager,
+        ILocallyPausable.PauseParams memory pauseParams
     ) external override returns (address) {
-        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(name, symbol, tokens, swapFeePercentage, owner);
+        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(name, symbol, tokens, swapFeePercentage, owner, pauseParams);
 
         GyroECLPPool.GyroParams memory params = GyroECLPPool.GyroParams({
             baseParams: baseParams,
@@ -62,7 +63,8 @@ contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, 
         string memory symbol,
         IERC20[] memory tokens,
         uint256 swapFeePercentage,
-        address owner
+        address owner,
+        ILocallyPausable.PauseParams memory pauseParams
     ) internal view returns (ExtensibleWeightedPool2Tokens.NewPoolParams memory) {
         return
             ExtensibleWeightedPool2Tokens.NewPoolParams({
@@ -72,8 +74,8 @@ contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, 
                 token0: tokens[0],
                 token1: tokens[1],
                 swapFeePercentage: swapFeePercentage,
-                pauseWindowDuration: PAUSE_WINDOW_DURATION,
-                bufferPeriodDuration: BUFFER_PERIOD_DURATION,
+                pauseWindowDuration: pauseParams.pauseWindowDuration,
+                bufferPeriodDuration: pauseParams.bufferPeriodDuration,
                 owner: owner
             });
     }

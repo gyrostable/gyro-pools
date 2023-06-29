@@ -55,14 +55,13 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
         address capManager;
         CapParams capParams;
         address pauseManager;
+        PauseParams pauseParams;
     }
 
     struct NewPoolParams {
         IVault vault;
         address configAddress;
         NewPoolConfigParams config;
-        uint256 pauseWindowDuration;
-        uint256 bufferPeriodDuration;
     }
 
     constructor(NewPoolParams memory params)
@@ -73,8 +72,8 @@ contract Gyro3CLPPool is ExtensibleBaseWeightedPool, CappedLiquidity, LocallyPau
             params.config.tokens,
             new address[](3),
             params.config.swapFeePercentage,
-            params.pauseWindowDuration,
-            params.bufferPeriodDuration,
+            params.config.pauseParams.pauseWindowDuration,
+            params.config.pauseParams.bufferPeriodDuration,
             params.config.owner
         )
         CappedLiquidity(params.config.capManager, params.config.capParams)

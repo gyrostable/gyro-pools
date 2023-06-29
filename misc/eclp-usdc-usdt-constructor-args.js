@@ -3,7 +3,7 @@ module.exports = [
     [
       "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
       "Gyroscope ECLP USDT/USDC",
-      "ECLP-TUSD-USDC",
+      "ECLP-USDT-USDC",
       "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
       "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
       200000000000000,

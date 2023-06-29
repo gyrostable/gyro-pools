@@ -78,6 +78,11 @@ class CapParams(NamedTuple):
     global_cap: DecimalLike = 0
 
 
+class PauseParams(NamedTuple):
+    pause_window_duration: DecimalLike = 90 * 86400
+    buffer_period_duration: DecimalLike = 30 * 86400
+
+
 class TwoPoolFactoryCreateParams(NamedTuple):
     name: str
     symbol: str
@@ -88,6 +93,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pause_manager: address = DEFAULT_PAUSE_MANAGER
+    pause_params: PauseParams = PauseParams()
 
 
 class TwoPoolParams(NamedTuple):
@@ -193,14 +199,13 @@ class ThreePoolFactoryCreateParams(NamedTuple):
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pause_manager: address = DEFAULT_PAUSE_MANAGER
+    pause_params: PauseParams = PauseParams()
 
 
 class ThreePoolParams(NamedTuple):
     vault: str
     config_address: address
     config: ThreePoolFactoryCreateParams
-    pauseWindowDuration: int
-    bufferPeriodDuration: int
 
 
 # Legacy Aliases
@@ -231,6 +236,7 @@ class ECLPFactoryCreateParams(NamedTuple):
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pause_manager: address = DEFAULT_PAUSE_MANAGER
+    pause_params: PauseParams = PauseParams()
 
 
 def convd(x, totype, dofloat=True, dostr=True):

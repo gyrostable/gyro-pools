@@ -11,6 +11,7 @@ import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.
 
 import "../../interfaces/IGyro2CLPPoolFactory.sol";
 import "../../interfaces/ICappedLiquidity.sol";
+import "../../interfaces/ILocallyPausable.sol";
 import "./Gyro2CLPPool.sol";
 
 contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
@@ -37,9 +38,10 @@ contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, 
         address owner,
         address capManager,
         ICappedLiquidity.CapParams memory capParams,
-        address pauseManager
+        address pauseManager,
+        ILocallyPausable.PauseParams memory pauseParams
     ) external override returns (address) {
-        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(name, symbol, tokens, swapFeePercentage, owner);
+        ExtensibleWeightedPool2Tokens.NewPoolParams memory baseParams = _makePoolParams(name, symbol, tokens, swapFeePercentage, owner, pauseParams);
 
         Gyro2CLPPool.GyroParams memory params = Gyro2CLPPool.GyroParams({
             baseParams: baseParams,
@@ -58,7 +60,8 @@ contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, 
         string memory symbol,
         IERC20[] memory tokens,
         uint256 swapFeePercentage,
-        address owner
+        address owner,
+        ILocallyPausable.PauseParams memory pauseParams
     ) internal view returns (ExtensibleWeightedPool2Tokens.NewPoolParams memory) {
         return
             ExtensibleWeightedPool2Tokens.NewPoolParams({
@@ -68,8 +71,8 @@ contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, 
                 token0: tokens[0],
                 token1: tokens[1],
                 swapFeePercentage: swapFeePercentage,
-                pauseWindowDuration: PAUSE_WINDOW_DURATION,
-                bufferPeriodDuration: BUFFER_PERIOD_DURATION,
+                pauseWindowDuration: pauseParams.pauseWindowDuration,
+                bufferPeriodDuration: pauseParams.bufferPeriodDuration,
                 owner: owner
             });
     }
