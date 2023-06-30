@@ -126,7 +126,13 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     ]
     rx, ry = get_rates(rate_provider_addresses)
 
+    raw_params = {k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
     if token_addresses[0] > token_addresses[1]:
+        print("wrong order")
+        raw_params["alpha"], raw_params["beta"] = (
+            1 / raw_params["beta"],
+            1 / raw_params["alpha"],
+        )
         token_addresses = token_addresses[::-1]
         dx, dy = dy, dx
         px, py = py, px
@@ -135,9 +141,7 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     # rate-scaled relative price
     pr_s = ry / rx * px / py
 
-    params = ECLPMathParamsQD(
-        **{k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
-    )
+    params = ECLPMathParamsQD(**raw_params)
     # derived_params = eclp_prec_implementation.calc_derived_values(params)
 
     assert pr_s >= params.alpha
