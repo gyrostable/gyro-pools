@@ -89,6 +89,8 @@ DECIMALS = {
     "WMATIC": 18,
     "stMATIC": 18,
     "MATICX": 18,
+    "wstETH": 18,
+    "bb-rf-aWETH": 18,
 }
 
 STABLE_COINS = ["DAI", "USDT", "USDC", "GUSD", "HUSD", "TUSD", "USDP", "LUSD"]

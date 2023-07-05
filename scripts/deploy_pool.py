@@ -182,6 +182,7 @@ def eclp():
             1 / raw_params["beta"],
             1 / raw_params["alpha"],
         )
+        raw_params["c"], raw_params["s"] = raw_params["s"], raw_params["c"]
     tokens.sort(key=lambda v: v.lower())
     eclp_params = ECLPMathParamsQD(**raw_params)
     derived_params = eclp_prec_implementation.calc_derived_values(eclp_params)

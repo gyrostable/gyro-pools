@@ -2,7 +2,9 @@ import argparse
 import json
 import sys
 from decimal import Decimal
+import os
 from os import path
+import pprint
 
 sys.path.insert(0, path.dirname(path.dirname(__file__)))
 
@@ -26,7 +28,7 @@ from brownie import chain
 
 TWO_CLP_L_INIT = Decimal("1e-2")  # can set to w/e, choose so that x,y are small
 THREE_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
-E_CLP_L_INIT = Decimal("2e-3")  # can set to w/e, choose so that x,y,z are small
+E_CLP_L_INIT = Decimal("2e-7")  # can set to w/e, choose so that x,y,z are small
 # SOMEDAY ^ The value of these depends on the parameters actually. A more stable variant would be to
 # initialize from portfolio value instead.
 
@@ -128,11 +130,11 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
 
     raw_params = {k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
     if token_addresses[0] > token_addresses[1]:
-        print("wrong order")
         raw_params["alpha"], raw_params["beta"] = (
             1 / raw_params["beta"],
             1 / raw_params["alpha"],
         )
+        raw_params["c"], raw_params["s"] = raw_params["s"], raw_params["c"]
         token_addresses = token_addresses[::-1]
         dx, dy = dy, dx
         px, py = py, px
@@ -140,6 +142,16 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
 
     # rate-scaled relative price
     pr_s = ry / rx * px / py
+
+    if os.environ.get("DEBUG"):
+        print("token_addresses", token_addresses)
+        print("raw_params", end=" ")
+        pprint.pprint(raw_params)
+        print("rx", rx)
+        print("ry", ry)
+        print("px", px)
+        print("py", py)
+        print("pr_s", pr_s)
 
     params = ECLPMathParamsQD(**raw_params)
     # derived_params = eclp_prec_implementation.calc_derived_values(params)

@@ -2,7 +2,7 @@
   "pool_type": "eclp",
   "name": "Gyroscope ECLP bb-rf-aWETH/wstETH",
   "symbol": "ECLP-bb-rf-aWETH-wstETH",
-  "tokens": ["bb-rf-aWETH", "wstETH"],
+  "tokens": ["wstETH", "bb-rf-aWETH"],
   "swap_fee_percentage": "0.0002",
   "params": {
     "alpha": "0.996700000000000",

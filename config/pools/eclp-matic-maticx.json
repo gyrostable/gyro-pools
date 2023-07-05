@@ -3,10 +3,10 @@
   "name": "Gyroscope ECLP WMATIC/MATICX",
   "symbol": "ECLP-WMATIC-MATICX",
   "tokens": ["WMATIC", "MATICX"],
-  "swap_fee_percentage": "0.0002",
+  "swap_fee_percentage": "0.0001",
   "params": {
-    "alpha": "0.997500000000000",
-    "beta": "1.00100000000000000",
+    "alpha": "0.999000999000999001",
+    "beta": "1.00250626566416040",
     "c": "0.7071067811865475244",
     "s": "0.7071067811865475244",
     "l": "2750"
