@@ -176,10 +176,15 @@ def eclp():
     pool_config = _get_config()
     tokens = get_tokens(pool_config, sort=False)
     rate_providers = get_rate_providers(tokens, pool_config)
+    raw_params = {k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
+    if tokens[0] > tokens[1]:
+        raw_params["alpha"], raw_params["beta"] = (
+            1 / raw_params["beta"],
+            1 / raw_params["alpha"],
+        )
+        raw_params["c"], raw_params["s"] = raw_params["s"], raw_params["c"]
     tokens.sort(key=lambda v: v.lower())
-    eclp_params = ECLPMathParamsQD(
-        **{k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
-    )
+    eclp_params = ECLPMathParamsQD(**raw_params)
     derived_params = eclp_prec_implementation.calc_derived_values(eclp_params)
 
     params = ECLPFactoryCreateParams(
