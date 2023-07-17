@@ -22,12 +22,16 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 200,
           },
+          // remappings: ["@balancer-labs/v2-solidity-utils/contracts/helpers/TemporarilyPausable.sol=contracts/TemporarilyPausable.sol"],
         },
       },
     ],
     // overrides: hardhatBaseConfig.overrides("xxx"),
   },
   networks: {
+    mainnet: {
+      url: `https://mainnet.infura.io/v3/${process.env.WEB3_INFURA_PROJECT_ID}`,
+    },
     polygon: {
       url: "https://polygon-rpc.com",
     },
@@ -42,7 +46,10 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: process.env.POLYGONSCAN_TOKEN || "",
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_TOKEN || "",
+      polygon: process.env.POLYGONSCAN_TOKEN || "",
+    },
   },
 };
 

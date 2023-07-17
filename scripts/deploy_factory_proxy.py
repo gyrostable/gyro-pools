@@ -45,5 +45,6 @@ def eclp(eclp_pool_factory):
         eclp_pool_factory,
         GYROSCOPE_ADDRESSES[chain.id]["proxy_admin"],
         b"",
+        publish_source=True,
         **make_tx_params(),
     )
