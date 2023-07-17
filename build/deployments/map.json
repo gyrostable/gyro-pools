@@ -1,4 +1,24 @@
 {
+  "1": {
+    "BalancerVault": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    ],
+    "FreezableTransparentUpgradeableProxy": [
+      "0x412a5B2e7a678471985542757A6855847D4931D5"
+    ],
+    "GyroECLPMath": [
+      "0xF89A1713998593A441cdA571780F0900Dbef20f9"
+    ],
+    "GyroECLPPool": [
+      "0xe0E8AC08De6708603cFd3D23B613d2f80e3b7afB"
+    ],
+    "GyroECLPPoolFactory": [
+      "0x968348C6135C25e7160AD0671C8C9CA2eD2bb982"
+    ],
+    "QueryProcessor": [
+      "0x469b58680774AAc9Ad66447eFB4EF634756A2cC5"
+    ]
+  },
   "10": {
     "BalancerVault": [
       "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
