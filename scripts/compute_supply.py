@@ -26,7 +26,7 @@ from brownie import chain
 # $ brownie run --network=polygon-main $0 main <configfile.json> [outputfile.json]
 
 
-TWO_CLP_L_INIT = Decimal("1e-2")  # can set to w/e, choose so that x,y are small
+TWO_CLP_L_INIT = Decimal("1e1")  # can set to w/e, choose so that x,y are small
 THREE_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
 E_CLP_L_INIT = Decimal("2e-7")  # can set to w/e, choose so that x,y,z are small
 # SOMEDAY ^ The value of these depends on the parameters actually. A more stable variant would be to
@@ -39,10 +39,16 @@ def compute_amounts_2clp(pool_config: dict, chain_id: int):
     token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in pool_config["tokens"]]
     dx, dy = [DECIMALS[t] for t in pool_config["tokens"]]
     sqrt_alpha, sqrt_beta = compute_bounds_sqrts(token_addresses, pool_config["bounds"])
-    assert token_addresses[0] <= token_addresses[1]
 
     prices = get_prices(token_addresses, chain_id)
     px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
+    if token_addresses[0].lower() > token_addresses[1].lower():
+        token_addresses = token_addresses[::-1]
+        dx, dy = dy, dx
+        px, py = py, px
+
+    assert token_addresses[0] <= token_addresses[1]
+
     pr = px / py
 
     assert pr >= sqrt_alpha**2

@@ -1,0 +1,13 @@
+{
+  "pool_type": "2clp",
+  "name": "Gyroscope C2LP PGYD/USDC",
+  "symbol": "C2LP-PGYD-USDC",
+  "tokens": ["PGYD", "USDC"],
+  "bounds": ["0.999", "1.001"],
+  "swap_fee_percentage": "0.0002",
+  "cap": {
+    "enabled": false,
+    "global": "0",
+    "per_address": "0"
+  }
+}
