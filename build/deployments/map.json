@@ -302,6 +302,23 @@
       "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
     ]
   },
+  "42161": {
+    "FreezableTransparentUpgradeableProxy": [
+      "0xdCA5f1F0d7994A32BC511e7dbA0259946653Eaf6"
+    ],
+    "GyroECLPMath": [
+      "0x41E9ac0bfed353c2dE21a980dA0EbB8A464D946A"
+    ],
+    "GyroECLPPool": [
+      "0x0d3504E07E70f59396eE8FE35273d1417FFADa52"
+    ],
+    "GyroECLPPoolFactory": [
+      "0x721325c9cbb8c2636db50075eB062b445C951e5f"
+    ],
+    "QueryProcessor": [
+      "0x6783995f91A3D7f7C24B523669488F96cCa88d31"
+    ]
+  },
   "5": {
     "ERC20": [
       "0x2bC5F9e746a9294b862FFdcCE118419925A6b978",

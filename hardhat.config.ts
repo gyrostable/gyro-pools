@@ -38,6 +38,9 @@ const config: HardhatUserConfig = {
     optimism: {
       url: "https://mainnet.optimism.io",
     },
+    arbitrumOne: {
+      url: "https://arb1.arbitrum.io/rpc",
+    },
     hardhat: {
       chainId: 137,
       forking: {
@@ -49,6 +52,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       mainnet: process.env.ETHERSCAN_TOKEN || "",
       polygon: process.env.POLYGONSCAN_TOKEN || "",
+      arbitrumOne: process.env.ARBISCAN_TOKEN || "",
     },
   },
 };
