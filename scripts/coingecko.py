@@ -8,6 +8,10 @@ LEGACY_MAPPINGS = {
     "0x9c9e5fd8bbc25984b178fdce6117defa39d2db39": "0xdab529f40e671a1d4bf91361c21bf9f0c9712ab7",
 }
 
+COIN_IDS = {
+    "0xb23C20EFcE6e24Acca0Cef9B7B7aA196b84EC942": "rocket-pool-eth",
+}
+
 
 def get_asset_platforms():
     r = requests.get("https://api.coingecko.com/api/v3/asset_platforms")
@@ -43,11 +47,14 @@ def get_coin_ids(addresses: List[str], platform_id: str) -> List[str]:
     coins = get_coins()
     coin_ids = []
     for address in addresses:
-        coin = find(
-            coins,
-            lambda x: x["platforms"].get(platform_id, "").lower() == address.lower(),
-        )
-        coin_ids.append(coin["id"])
+        coin_id = COIN_IDS.get(address)
+        if not coin_id:
+            coin_id = find(
+                coins,
+                lambda x: x["platforms"].get(platform_id, "").lower()
+                == address.lower(),
+            )["id"]
+        coin_ids.append(coin_id)
     return coin_ids
 
 

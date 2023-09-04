@@ -41,6 +41,9 @@ const config: HardhatUserConfig = {
     arbitrumOne: {
       url: "https://arb1.arbitrum.io/rpc",
     },
+    zkevm: {
+      url: "https://zkevm-rpc.com",
+    },
     hardhat: {
       chainId: 137,
       forking: {
@@ -53,7 +56,18 @@ const config: HardhatUserConfig = {
       mainnet: process.env.ETHERSCAN_TOKEN || "",
       polygon: process.env.POLYGONSCAN_TOKEN || "",
       arbitrumOne: process.env.ARBISCAN_TOKEN || "",
+      zkevm: process.env.ZKEVM_TOKEN || "",
     },
+    customChains: [
+      {
+        network: "zkevm",
+        chainId: 1101,
+        urls: {
+          apiURL: "https://api-zkevm.polygonscan.com/api",
+          browserURL: "https://zkevm.polygonscan.com/",
+        },
+      },
+    ],
   },
 };
 

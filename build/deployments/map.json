@@ -42,6 +42,26 @@
       "0xD7FAD3bd59D6477cbe1BE7f646F7f1BA25b230f8"
     ]
   },
+  "1101": {
+    "BalancerVault": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    ],
+    "FreezableTransparentUpgradeableProxy": [
+      "0x5D56EA1B2595d2dbe4f5014b967c78ce75324f0c"
+    ],
+    "GyroECLPMath": [
+      "0x5d3Be8aaE57bf0D1986Ff7766cC9607B6cC99b89"
+    ],
+    "GyroECLPPool": [
+      "0x114b2857dEE84971e093bAEde6a0a16e2B415bc5"
+    ],
+    "GyroECLPPoolFactory": [
+      "0xeFc86Ad52Fb6e1521E51a99b3638A8AEaFD228c1"
+    ],
+    "QueryProcessor": [
+      "0x8A5eB9A5B726583a213c7e4de2403d2DfD42C8a6"
+    ]
+  },
   "1337": {
     "Authorizer": [
       "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550",

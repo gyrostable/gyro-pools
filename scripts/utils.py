@@ -69,6 +69,10 @@ def get_deployer() -> LocalAccount:
         return cast(
             LocalAccount, accounts.load("ftl-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
         )
+    if chain_id == 1101:  # zkevm
+        return cast(
+            LocalAccount, accounts.load("ftl-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
+        )
     if chain_id == 42161:  # arbitrum
         return cast(
             LocalAccount, accounts.load("ftl-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
