@@ -1,0 +1,18 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP wstETH/rETH",
+  "symbol": "ECLP-wstETH-rETH",
+  "tokens": ["wstETH", "rETH"],
+  "swap_fee_percentage": "0.0001",
+  "params": {
+    "alpha": "0.9880",
+    "beta": "1.0010",
+    "c": "0.707212855157482970",
+    "s": "0.707000691300935725",
+    "l": "400"
+  },
+  "rate_providers": {
+    "wstETH": "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
+    "rETH": "0x1a8F81c256aee9C640e14bB0453ce247ea0DFE6F"
+  }
+}
