@@ -1,0 +1,18 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP wstETH/cbETH",
+  "symbol": "ECLP-wstETH-cbETH",
+  "tokens": ["wstETH", "cbETH"],
+  "swap_fee_percentage": "0.0001",
+  "params": {
+    "alpha": "0.9980",
+    "beta": "1.0030",
+    "c": "0.7071067811865475244",
+    "s": "0.7071067811865475244",
+    "l": "3000"
+  },
+  "rate_providers": {
+    "wstETH": "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768",
+    "cbETH": "0x7311E4BB8a72e7B300c5B8BDE4de6CdaA822a5b1"
+  }
+}
