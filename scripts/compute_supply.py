@@ -28,7 +28,7 @@ from brownie import chain
 
 TWO_CLP_L_INIT = Decimal("1e1")  # can set to w/e, choose so that x,y are small
 THREE_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
-E_CLP_L_INIT = Decimal("2e-4")  # can set to w/e, choose so that x,y,z are small
+E_CLP_L_INIT = Decimal("2e-2")  # can set to w/e, choose so that x,y,z are small
 # SOMEDAY ^ The value of these depends on the parameters actually. A more stable variant would be to
 # initialize from portfolio value instead.
 

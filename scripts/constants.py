@@ -135,6 +135,8 @@ DECIMALS = {
     "sDAI": 18,
     "LUSD": 18,
     "crvUSD": 18,
+    "USDP": 18,
+    "GUSD": 2,
 }
 
 STABLE_COINS = [
