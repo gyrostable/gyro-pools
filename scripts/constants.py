@@ -131,9 +131,11 @@ DECIMALS = {
     "PGYD": 18,
     "rETH": 18,
     "cbETH": 18,
+    "R": 18,
+    "sDAI": 18,
 }
 
-STABLE_COINS = ["DAI", "USDT", "USDC", "GUSD", "HUSD", "TUSD", "USDP", "LUSD"]
+STABLE_COINS = ["DAI", "USDT", "USDC", "GUSD", "HUSD", "TUSD", "USDP", "LUSD", "R"]
 
 TOKEN_ADDRESSES = {
     1: {
@@ -155,6 +157,8 @@ TOKEN_ADDRESSES = {
         "wstETH": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
         "swETH": "0xf951E335afb289353dc249e82926178EaC7DEd78",
         "cbETH": "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704",
+        "R": "0x183015a9bA6fF60230fdEaDc3F43b3D788b13e21",
+        "sDAI": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
     },
     10: {
         "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",

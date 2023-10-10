@@ -1,0 +1,17 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP R/sDAI",
+  "symbol": "ECLP-R-sDAI",
+  "tokens": ["R", "sDAI"],
+  "swap_fee_percentage": "0.0005",
+  "params": {
+    "alpha": "0.9900",
+    "beta": "1.0010",
+    "c": "0.7071067811865475244",
+    "s": "0.7071067811865475244",
+    "l": "700"
+  },
+  "rate_providers": {
+    "sDAI": "0xc7177B6E18c1Abd725F5b75792e5F7A3bA5DBC2c"
+  }
+}
