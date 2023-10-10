@@ -1,0 +1,14 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP USDC/USDT",
+  "symbol": "ECLP-USDC-USDT",
+  "tokens": ["USDC", "USDT"],
+  "swap_fee_percentage": "0.0002",
+  "params": {
+    "alpha": "0.998502246630054918",
+    "beta": "1.001502253380070105",
+    "c": "0.707106781186547524",
+    "s": "0.707106781186547524",
+    "l": "3500"
+  }
+}

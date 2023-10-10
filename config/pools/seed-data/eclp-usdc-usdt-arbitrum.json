@@ -1,0 +1,24 @@
+{
+  "amounts": {
+    "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": 32778,
+    "0xaf88d065e77c8cC2239327C5EDb3A432268e5831": 892277
+  },
+  "unscaled_amounts": {
+    "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": 0.03277850942359246,
+    "0xaf88d065e77c8cC2239327C5EDb3A432268e5831": 0.8922774386727532
+  },
+  "scaled_relative_price": 1.001,
+  "params": {
+    "alpha": "0.998502246630054918",
+    "beta": "1.001502253380070105",
+    "c": "0.707106781186547524",
+    "s": "0.707106781186547524",
+    "l": "3500"
+  },
+  "prices": {
+    "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": 1.001,
+    "0xaf88d065e77c8cC2239327C5EDb3A432268e5831": 1.0
+  },
+  "initial_supply": 0.9250887266057692,
+  "price_bpt": 1.0
+}
