@@ -325,6 +325,9 @@
     ]
   },
   "42161": {
+    "BalancerVault": [
+      "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+    ],
     "FreezableTransparentUpgradeableProxy": [
       "0xdCA5f1F0d7994A32BC511e7dbA0259946653Eaf6"
     ],
@@ -332,6 +335,7 @@
       "0x41E9ac0bfed353c2dE21a980dA0EbB8A464D946A"
     ],
     "GyroECLPPool": [
+      "0xb6911f80B1122f41C19B299a69dCa07100452bf9",
       "0x0d3504E07E70f59396eE8FE35273d1417FFADa52"
     ],
     "GyroECLPPoolFactory": [
