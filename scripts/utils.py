@@ -60,7 +60,12 @@ def get_deployer() -> LocalAccount:
     if chain_id == 1111:  # live-mainnet-fork
         return find_account(MAINNET_DEPLOYER_ADDRESS)
     if chain_id == 1:  # mainnet
-        return get_clef_account(MAINNET_DEPLOYER_ADDRESS)
+        if os.environ.get("USE_CLEF"):
+            return get_clef_account(MAINNET_DEPLOYER_ADDRESS)
+        else:
+            return cast(
+                LocalAccount, accounts.load("ftl-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
+            )
     if chain_id == 137:  # polygon
         return cast(
             LocalAccount, accounts.load("gyro-deployer", BROWNIE_ACCOUNT_PASSWORD)  # type: ignore
