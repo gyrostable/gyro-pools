@@ -109,8 +109,12 @@ def c2lp():
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
         pause_params=PauseParams(
-            pause_window_duration=int(pool_config["pause"]["window_duration_days"]*24*60*60),
-            buffer_period_duration=int(pool_config["pause"]["buffer_duration_days"]*24*60*60),
+            pause_window_duration=int(
+                pool_config["pause"]["window_duration_days"] * 24 * 60 * 60
+            ),
+            buffer_period_duration=int(
+                pool_config["pause"]["buffer_duration_days"] * 24 * 60 * 60
+            ),
         ),
     )
     tx = two_pool_factory.create(
@@ -166,8 +170,12 @@ def c3lp():
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
         pause_params=PauseParams(
-            pause_window_duration=int(pool_config["pause"]["window_duration_days"]*24*60*60),
-            buffer_period_duration=int(pool_config["pause"]["buffer_duration_days"]*24*60*60),
+            pause_window_duration=int(
+                pool_config["pause"]["window_duration_days"] * 24 * 60 * 60
+            ),
+            buffer_period_duration=int(
+                pool_config["pause"]["buffer_duration_days"] * 24 * 60 * 60
+            ),
         ),
     )
     tx = three_pool_factory.create(params, {"from": deployer, **make_tx_params()})
@@ -216,8 +224,12 @@ def eclp():
         cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
         pause_params=PauseParams(
-            pause_window_duration=int(pool_config["pause"]["window_duration_days"]*24*60*60),
-            buffer_period_duration=int(pool_config["pause"]["buffer_duration_days"]*24*60*60),
+            pause_window_duration=int(
+                pool_config["pause"]["window_duration_days"] * 24 * 60 * 60
+            ),
+            buffer_period_duration=int(
+                pool_config["pause"]["buffer_duration_days"] * 24 * 60 * 60
+            ),
         ),
     )
     print(params)
