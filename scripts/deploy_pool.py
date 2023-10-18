@@ -16,6 +16,7 @@ from tests.support.types import (
     ECLPMathParamsQD,
     ThreePoolFactoryCreateParams,
     TwoPoolFactoryCreateParams,
+    PauseParams,
 )
 from tests.support.utils import scale
 
@@ -100,6 +101,10 @@ def c2lp():
             per_address_cap=int(scale(pool_config["cap"]["per_address"])),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
+        pause_params=PauseParams(
+            pause_window_duration=int(pool_config["pause"]["window_duration_days"]*24*60*60),
+            buffer_period_duration=int(pool_config["pause"]["buffer_duration_days"]*24*60*60),
+        ),
     )
     tx = two_pool_factory.create(
         *params,
@@ -153,6 +158,10 @@ def c3lp():
             per_address_cap=int(scale(pool_config["cap"]["per_address"])),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
+        pause_params=PauseParams(
+            pause_window_duration=int(pool_config["pause"]["window_duration_days"]*24*60*60),
+            buffer_period_duration=int(pool_config["pause"]["buffer_duration_days"]*24*60*60),
+        ),
     )
     tx = three_pool_factory.create(params, {"from": deployer, **make_tx_params()})
     receipt = web3.eth.getTransactionReceipt(tx.txid)
@@ -199,6 +208,10 @@ def eclp():
         cap_manager=POOL_OWNER[chain.id],
         cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
+        pause_params=PauseParams(
+            pause_window_duration=int(pool_config["pause"]["window_duration_days"]*24*60*60),
+            buffer_period_duration=int(pool_config["pause"]["buffer_duration_days"]*24*60*60),
+        ),
     )
     print(params)
     tx = eclp_pool_factory.create(
