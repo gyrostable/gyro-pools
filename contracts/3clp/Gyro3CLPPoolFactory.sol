@@ -7,14 +7,13 @@ pragma experimental ABIEncoderV2;
 import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 
 import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
-import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
 import "../../interfaces/ICappedLiquidity.sol";
 import "../../interfaces/IGyro3CLPPoolFactory.sol";
 
 import "./Gyro3CLPPool.sol";
 
-contract Gyro3CLPPoolFactory is IGyro3CLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract Gyro3CLPPoolFactory is IGyro3CLPPoolFactory, BasePoolSplitCodeFactory {
     address public immutable gyroConfigAddress;
 
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(Gyro3CLPPool).creationCode) {

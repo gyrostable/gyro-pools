@@ -7,18 +7,14 @@ pragma experimental ABIEncoderV2;
 import "@balancer-labs/v2-vault/contracts/interfaces/IVault.sol";
 
 import "@balancer-labs/v2-pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
-import "@balancer-labs/v2-pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
 import "../../interfaces/IGyro2CLPPoolFactory.sol";
 import "../../interfaces/ICappedLiquidity.sol";
 import "../../interfaces/ILocallyPausable.sol";
 import "./Gyro2CLPPool.sol";
 
-contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory {
     address public immutable gyroConfigAddress;
-
-    uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
-    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
 
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(Gyro2CLPPool).creationCode) {
         _grequire(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);

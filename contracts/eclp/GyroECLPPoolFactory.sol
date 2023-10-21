@@ -13,11 +13,8 @@ import "../../interfaces/IGyroECLPPoolFactory.sol";
 import "../../interfaces/ICappedLiquidity.sol";
 import "./GyroECLPPool.sol";
 
-contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory, FactoryWidePauseWindow {
+contract GyroECLPPoolFactory is IGyroECLPPoolFactory, BasePoolSplitCodeFactory {
     address public immutable gyroConfigAddress;
-
-    uint256 public constant PAUSE_WINDOW_DURATION = 90 days;
-    uint256 public constant BUFFER_PERIOD_DURATION = 30 days;
 
     constructor(IVault vault, address _gyroConfigAddress) BasePoolSplitCodeFactory(vault, type(GyroECLPPool).creationCode) {
         _grequire(_gyroConfigAddress != address(0), GyroErrors.ZERO_ADDRESS);
