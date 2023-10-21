@@ -6,11 +6,10 @@ from eth_abi import encode_abi
 from brownie import web3
 
 from scripts.constants import BALANCER_ADDRESSES
-from scripts.utils import get_deployer
+from scripts.utils import get_deployer, make_tx_params
 
 SEED_DATA_PATH = os.environ.get("SEED_DATA_PATH")
 POOL_ADDRESS = os.environ.get("POOL_ADDRESS")
-GAS_PRICE = os.environ.get("BROWNIE_GWEI", "100") + " gwei"
 
 
 def main():
@@ -41,13 +40,13 @@ def main():
         erc_token = interface.IERC20(token)
         allowance = erc_token.allowance(deployer, vault)
         if allowance < amount:
-            erc_token.approve(vault, amount, {"from": deployer, "gas_price": GAS_PRICE})
+            erc_token.approve(vault, amount, {"from": deployer, **make_tx_params()})
 
     max_amounts_in = [int(seed_data["amounts"][token]) for token in pool_tokens]
 
     encoded_data = encode_abi(["uint256", "uint256[]"], [0, max_amounts_in])
     user_data = (pool_tokens, max_amounts_in, encoded_data, False)
 
-    args = {"from": deployer, "gas_price": GAS_PRICE}
+    args = {"from": deployer, **make_tx_params()}
 
     vault.joinPool(pool_id, deployer, deployer, user_data, args)
