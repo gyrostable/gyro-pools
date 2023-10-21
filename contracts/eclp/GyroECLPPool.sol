@@ -578,7 +578,7 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
             address
         )
     {
-        (uint256 protocolSwapFeePerc, uint256 protocolFeeGyroPortion, address gyroTreasury, address balTreasury) = _getFeesMetadata();
+        (uint256 protocolSwapFeePerc, uint256 protocolFeeGyroPortion, address gyroTreasury, address balTreasury) = getFeesMetadata();
 
         // Early return if the protocol swap fee percentage is zero, saving gas.
         if (protocolSwapFeePerc == 0) {
@@ -615,8 +615,8 @@ contract GyroECLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
     }
 
     // Note: This function is identical to that used in Gyro2CLPPool.sol
-    function _getFeesMetadata()
-        internal
+    function getFeesMetadata()
+        public
         view
         returns (
             uint256,
