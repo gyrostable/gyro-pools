@@ -16,6 +16,7 @@ from tests.support.types import (
     ECLPMathParamsQD,
     ThreePoolFactoryCreateParams,
     TwoPoolFactoryCreateParams,
+    PauseParams,
 )
 from tests.support.utils import scale
 
@@ -77,6 +78,13 @@ def get_cap_params(pool_config: dict) -> CapParams:
     )
 
 
+def get_cap_manager(pool_config: dict, chain_id: int) -> str:
+    if "cap" in pool_config and pool_config["cap"]["enabled"]:
+        return POOL_OWNER[chain_id]
+    else:
+        return ZERO_ADDRESS
+
+
 def c2lp():
     two_pool_factory = interface.IGyro2CLPPoolFactory(
         DEPLOYED_FACTORIES[chain.id]["c2lp"]
@@ -93,13 +101,21 @@ def c2lp():
         sqrts=[round(scale(v).raw) for v in sqrts],
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
         owner=POOL_OWNER[chain.id],
-        cap_manager=POOL_OWNER[chain.id],
+        cap_manager=get_cap_manager(pool_config, chain.id),
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],
             global_cap=int(scale(pool_config["cap"]["global"])),
             per_address_cap=int(scale(pool_config["cap"]["per_address"])),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
+        pause_params=PauseParams(
+            pause_window_duration=int(
+                pool_config["pause"]["window_duration_days"] * 24 * 60 * 60
+            ),
+            buffer_period_duration=int(
+                pool_config["pause"]["buffer_duration_days"] * 24 * 60 * 60
+            ),
+        ),
     )
     tx = two_pool_factory.create(
         *params,
@@ -146,13 +162,21 @@ def c3lp():
         root3Alpha=scale(pool_config["root_3_alpha"]),
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
         owner=POOL_OWNER[chain.id],
-        cap_manager=POOL_OWNER[chain.id],
+        cap_manager=get_cap_manager(pool_config, chain.id),
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],
             global_cap=int(scale(pool_config["cap"]["global"])),
             per_address_cap=int(scale(pool_config["cap"]["per_address"])),
         ),
         pause_manager=PAUSE_MANAGER[chain.id],
+        pause_params=PauseParams(
+            pause_window_duration=int(
+                pool_config["pause"]["window_duration_days"] * 24 * 60 * 60
+            ),
+            buffer_period_duration=int(
+                pool_config["pause"]["buffer_duration_days"] * 24 * 60 * 60
+            ),
+        ),
     )
     tx = three_pool_factory.create(params, {"from": deployer, **make_tx_params()})
     receipt = web3.eth.getTransactionReceipt(tx.txid)
@@ -196,9 +220,17 @@ def eclp():
         rate_providers=rate_providers,
         swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
         owner=POOL_OWNER[chain.id],
-        cap_manager=POOL_OWNER[chain.id],
+        cap_manager=get_cap_manager(pool_config, chain.id),
         cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
+        pause_params=PauseParams(
+            pause_window_duration=int(
+                pool_config["pause"]["window_duration_days"] * 24 * 60 * 60
+            ),
+            buffer_period_duration=int(
+                pool_config["pause"]["buffer_duration_days"] * 24 * 60 * 60
+            ),
+        ),
     )
     print(params)
     tx = eclp_pool_factory.create(
