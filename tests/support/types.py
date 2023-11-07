@@ -88,6 +88,7 @@ class TwoPoolFactoryCreateParams(NamedTuple):
     symbol: str
     tokens: list[str]
     sqrts: list[int]
+    rate_providers: list[str]  # Default [ZERO_ADDRESS, ZERO_ADDRESS]
     swapFeePercentage: DecimalLike
     owner: address
     cap_manager: address = DEFAULT_CAP_MANAGER
@@ -100,6 +101,8 @@ class TwoPoolParams(NamedTuple):
     baseParams: TwoPoolBaseParams
     sqrtAlpha: DecimalLike  # should already be upscaled
     sqrtBeta: DecimalLike  # Should already be upscaled
+    rateProvider0: address = ZERO_ADDRESS
+    rateProvider1: address = ZERO_ADDRESS
     cap_manager: address = DEFAULT_CAP_MANAGER
     cap_params: CapParams = CapParams()
     pauseManager: address = DEFAULT_PAUSE_MANAGER
