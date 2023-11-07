@@ -16,8 +16,6 @@ from tests.support.utils import (
 
 from math import sqrt
 
-from icecream import ic
-
 
 # TODO is this actually testing anything? The original was w/ balancer_vault_pool.
 def test_pool_reg(mock_vault, rate_scaled_2clp_pool, gyro_erc20_funded):
