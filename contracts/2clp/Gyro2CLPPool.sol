@@ -9,6 +9,7 @@ import "../../libraries/GyroFixedPoint.sol";
 
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPoolUserDataHelpers.sol";
 import "@balancer-labs/v2-pool-weighted/contracts/WeightedPool2TokensMiscData.sol";
+import "@balancer-labs/v2-pool-utils/contracts/interfaces/IRateProvider.sol";
 
 import "../../libraries/GyroConfigKeys.sol";
 import "../../libraries/GyroConfigHelpers.sol";
@@ -34,10 +35,16 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
 
     IGyroConfig public gyroConfig;
 
+    /// @dev for rate scaling
+    IRateProvider public immutable rateProvider0;
+    IRateProvider public immutable rateProvider1;
+
     struct GyroParams {
         NewPoolParams baseParams;
         uint256 sqrtAlpha; // A: Should already be upscaled
         uint256 sqrtBeta; // A: Should already be upscaled. Could be passed as an array[](2)
+        address rateProvider0;
+        address rateProvider1;
         address capManager;
         CapParams capParams;
         address pauseManager;
@@ -54,6 +61,9 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         _sqrtBeta = params.sqrtBeta;
 
         gyroConfig = IGyroConfig(configAddress);
+
+        rateProvider0 = IRateProvider(params.rateProvider0);
+        rateProvider1 = IRateProvider(params.rateProvider1);
     }
 
     /// @dev Returns sqrtAlpha and sqrtBeta (square roots of lower and upper price bounds of p_x respectively)
@@ -633,5 +643,29 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
 
     function _setPausedState(bool paused) internal override {
         _setPaused(paused);
+    }
+
+    // Rate scaling
+    // Same as for ECLP
+    // SOMEDAY ECLP's code and this code could be moved to ExtensibleWeightedPool2Tokens.
+
+    function _scalingFactor(bool token0) internal view override returns (uint256) {
+        IRateProvider rateProvider;
+        uint256 scalingFactor;
+        if (token0) {
+            rateProvider = rateProvider0;
+            scalingFactor = _scalingFactor0;
+        } else {
+            rateProvider = rateProvider1;
+            scalingFactor = _scalingFactor1;
+        }
+        if (address(rateProvider) != address(0)) scalingFactor = scalingFactor.mulDown(rateProvider.getRate());
+        return scalingFactor;
+    }
+
+    function _adjustPrice(uint256 spotPrice) internal view override returns (uint256) {
+        if (address(rateProvider0) != address(0)) spotPrice = spotPrice.mulDown(rateProvider0.getRate());
+        if (address(rateProvider1) != address(0)) spotPrice = spotPrice.divDown(rateProvider1.getRate());
+        return spotPrice;
     }
 }

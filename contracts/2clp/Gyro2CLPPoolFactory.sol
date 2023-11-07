@@ -30,6 +30,7 @@ contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory {
         string memory symbol,
         IERC20[] memory tokens,
         uint256[] memory sqrts,
+        address[] memory rateProviders,
         uint256 swapFeePercentage,
         address owner,
         address capManager,
@@ -43,6 +44,8 @@ contract Gyro2CLPPoolFactory is IGyro2CLPPoolFactory, BasePoolSplitCodeFactory {
             baseParams: baseParams,
             sqrtAlpha: sqrts[0],
             sqrtBeta: sqrts[1],
+            rateProvider0: rateProviders[0],
+            rateProvider1: rateProviders[1],
             capManager: capManager,
             capParams: capParams,
             pauseManager: pauseManager
