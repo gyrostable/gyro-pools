@@ -24,9 +24,7 @@ def test_pool_reg(mock_vault, rate_scaled_2clp_pool, gyro_erc20_funded):
     poolId = rate_scaled_2clp_pool.getPoolId()
 
     # Check pool and token registration
-    (token_addresses, token_balances) = mock_vault.getPoolTokens(
-        poolId
-    )
+    (token_addresses, token_balances) = mock_vault.getPoolTokens(poolId)
 
     for token in range(constants.NUM_TOKENS):
         assert token_addresses[token] == gyro_erc20_funded[token].address
@@ -78,7 +76,9 @@ def test_pool_on_initialize(users, rate_scaled_2clp_pool, mock_vault):
     balances = (0, 0)
     amountIn = 100 * 10**18
 
-    tx = join_pool(mock_vault, rate_scaled_2clp_pool.address, users[0], balances, amountIn)
+    tx = join_pool(
+        mock_vault, rate_scaled_2clp_pool.address, users[0], balances, amountIn
+    )
 
     poolId = rate_scaled_2clp_pool.getPoolId()
 
@@ -97,7 +97,9 @@ def test_pool_on_initialize(users, rate_scaled_2clp_pool, mock_vault):
 
     # This is purely a sanity check. The spot price is close to 1, but *not* equal to 1.00 (even in theory) because the price bounds are not symmetric! This is intentional for this test.
     # We multiply by 2.5 b/c we have 1 x = 1.5 x rate-scaled + 1 y
-    assert unscale(initial_bpt_tokens) == unscale(D("2.5") * amountIn).approxed(rel=D('0.02'))
+    assert unscale(initial_bpt_tokens) == unscale(D("2.5") * amountIn).approxed(
+        rel=D("0.02")
+    )
 
     # Check that the amountIn is now stored in the pool balance
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
@@ -105,11 +107,15 @@ def test_pool_on_initialize(users, rate_scaled_2clp_pool, mock_vault):
     assert initial_balances[1] == amountIn
 
 
-def test_pool_view_methods(users, rate_scaled_2clp_pool, mock_vault, gyro_two_math_testing):
+def test_pool_view_methods(
+    users, rate_scaled_2clp_pool, mock_vault, gyro_two_math_testing
+):
     balances = (0, 0)
     amountIn = 100 * 10**18
 
-    tx = join_pool(mock_vault, rate_scaled_2clp_pool.address, users[0], balances, amountIn)
+    tx = join_pool(
+        mock_vault, rate_scaled_2clp_pool.address, users[0], balances, amountIn
+    )
 
     virtual_params = unscale(rate_scaled_2clp_pool.getVirtualParameters())
     sqrtAlpha, sqrtBeta = unscale(rate_scaled_2clp_pool.getSqrtParameters())
@@ -136,7 +142,9 @@ def test_pool_on_join(users, rate_scaled_2clp_pool, mock_vault, mock_rate_provid
     amount_in = 100 * 10**18
     amount_in_u = float(unscale(amount_in))
 
-    tx = join_pool(mock_vault, rate_scaled_2clp_pool.address, users[0], (0, 0), amount_in)
+    tx = join_pool(
+        mock_vault, rate_scaled_2clp_pool.address, users[0], (0, 0), amount_in
+    )
 
     initial_bpt_tokens = tx.events["Transfer"][1]["value"]
 
@@ -146,9 +154,10 @@ def test_pool_on_join(users, rate_scaled_2clp_pool, mock_vault, mock_rate_provid
 
     # Check pool's invariant after initialization
     currentInvariant = float(unscale(rate_scaled_2clp_pool.getLastInvariant()))
-    actualInvariant = sqrt((amount_in_u * float(ratex) + currentInvariant / sqrtBeta) * (
-        amount_in_u + currentInvariant * sqrtAlpha
-    ))
+    actualInvariant = sqrt(
+        (amount_in_u * float(ratex) + currentInvariant / sqrtBeta)
+        * (amount_in_u + currentInvariant * sqrtAlpha)
+    )
     assert currentInvariant == pytest.approx(actualInvariant, rel=1e-10, abs=1e-10)
 
     poolId = rate_scaled_2clp_pool.getPoolId()
@@ -189,9 +198,10 @@ def test_pool_on_join(users, rate_scaled_2clp_pool, mock_vault, mock_rate_provid
     assert newInvariant > currentInvariant
 
     currentInvariant = float(unscale(rate_scaled_2clp_pool.getLastInvariant()))
-    actualInvariant = sqrt((balancesAfterJoin_u[0] * float(ratex) + currentInvariant / sqrtBeta) * (
-        balancesAfterJoin_u[1] + currentInvariant * sqrtAlpha
-    ))
+    actualInvariant = sqrt(
+        (balancesAfterJoin_u[0] * float(ratex) + currentInvariant / sqrtBeta)
+        * (balancesAfterJoin_u[1] + currentInvariant * sqrtAlpha)
+    )
     assert currentInvariant == pytest.approx(actualInvariant, rel=1e-10, abs=1e-10)
 
 
@@ -202,7 +212,9 @@ def test_exit_pool(users, rate_scaled_2clp_pool, mock_vault, mock_rate_provider)
     amount_in = 100 * 10**18
     amount_in_u = float(unscale(amount_in))
 
-    tx = join_pool(mock_vault, rate_scaled_2clp_pool.address, users[0], (0, 0), amount_in)
+    tx = join_pool(
+        mock_vault, rate_scaled_2clp_pool.address, users[0], (0, 0), amount_in
+    )
 
     poolId = rate_scaled_2clp_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
@@ -255,20 +267,28 @@ def test_exit_pool(users, rate_scaled_2clp_pool, mock_vault, mock_rate_provider)
         total_supply_before_exit * (amountOut / balances_after_join[0])
     )
 
-    sqrt_alpha, sqrtBeta = [v / 10**18 for v in rate_scaled_2clp_pool.getSqrtParameters()]
+    sqrt_alpha, sqrtBeta = [
+        v / 10**18 for v in rate_scaled_2clp_pool.getSqrtParameters()
+    ]
 
     ## Check new pool's invariant
     invariant_after_exit = rate_scaled_2clp_pool.getLastInvariant()
     invariant_after_exit_u = float(unscale(invariant_after_exit))
     assert invariant_after_join > invariant_after_exit
-    invariant = sqrt((float(ratex) * balancesAfterExit_u[0] + invariant_after_exit_u / sqrtBeta) * (
-        balancesAfterExit_u[1] + invariant_after_exit_u * sqrt_alpha
-    ))
+    invariant = sqrt(
+        (float(ratex) * balancesAfterExit_u[0] + invariant_after_exit_u / sqrtBeta)
+        * (balancesAfterExit_u[1] + invariant_after_exit_u * sqrt_alpha)
+    )
     assert invariant == pytest.approx(invariant_after_exit_u, rel=1e-10, abs=1e-10)
 
 
 def test_swap(
-    users, rate_scaled_2clp_pool, mock_vault, gyro_erc20_funded, gyro_two_math_testing, mock_rate_provider
+    users,
+    rate_scaled_2clp_pool,
+    mock_vault,
+    gyro_erc20_funded,
+    gyro_two_math_testing,
+    mock_rate_provider,
 ):
     ratex = D("1.5")
     mock_rate_provider.mockRate(scale(ratex))
@@ -276,7 +296,9 @@ def test_swap(
     amount_in = 100 * 10**18
     amount_in_u = float(unscale(amount_in))
 
-    tx = join_pool(mock_vault, rate_scaled_2clp_pool.address, users[0], (0, 0), amount_in)
+    tx = join_pool(
+        mock_vault, rate_scaled_2clp_pool.address, users[0], (0, 0), amount_in
+    )
 
     poolId = rate_scaled_2clp_pool.getPoolId()
     (_, initial_balances) = mock_vault.getPoolTokens(poolId)
@@ -307,9 +329,12 @@ def test_swap(
     (_, balances_after_exit) = mock_vault.getPoolTokens(poolId)
 
     # No swaps have been made so no protocol fees have accrued.
-    assert rate_scaled_2clp_pool.getActualSupply() == rate_scaled_2clp_pool.totalSupply()
-    assert rate_scaled_2clp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
-        rate_scaled_2clp_pool
+    assert (
+        rate_scaled_2clp_pool.getActualSupply() == rate_scaled_2clp_pool.totalSupply()
+    )
+    assert (
+        rate_scaled_2clp_pool.getInvariantDivActualSupply()
+        == get_invariant_div_supply(rate_scaled_2clp_pool)
     )
 
     amount_to_swap = 10 * 10**18
@@ -365,8 +390,9 @@ def test_swap(
     # Now there are unaccounted-for protocol fees (see conftest: we have protocol fees enabled!)
     actual_supply_after_swap = rate_scaled_2clp_pool.getActualSupply()
     assert actual_supply_after_swap > rate_scaled_2clp_pool.totalSupply()
-    assert rate_scaled_2clp_pool.getInvariantDivActualSupply() < get_invariant_div_supply(
-        rate_scaled_2clp_pool
+    assert (
+        rate_scaled_2clp_pool.getInvariantDivActualSupply()
+        < get_invariant_div_supply(rate_scaled_2clp_pool)
     )
 
     bpt_tokens_to_redeem = rate_scaled_2clp_pool.balanceOf(users[0]) // 2
@@ -381,9 +407,12 @@ def test_swap(
         bpt_tokens_to_redeem,
     )
     # Post-exit supply matches pre-exit actual supply, minus tokens burnt in exit, and the two agree again.
-    assert rate_scaled_2clp_pool.getActualSupply() == rate_scaled_2clp_pool.totalSupply()
-    assert rate_scaled_2clp_pool.getInvariantDivActualSupply() == get_invariant_div_supply(
-        rate_scaled_2clp_pool
+    assert (
+        rate_scaled_2clp_pool.getActualSupply() == rate_scaled_2clp_pool.totalSupply()
+    )
+    assert (
+        rate_scaled_2clp_pool.getInvariantDivActualSupply()
+        == get_invariant_div_supply(rate_scaled_2clp_pool)
     )
     ev = get_transfer_event(tx, from_addr=users[0])
     bptTokensburnt = ev["value"]
@@ -399,4 +428,3 @@ def test_pool_factory(rate_scaled_2clp_pool_from_factory):
     mock_pool_from_factory = rate_scaled_2clp_pool_from_factory
     assert mock_pool_from_factory.name() == "RateScaledGyro2CLPPoolFromFactory"
     assert mock_pool_from_factory.symbol() == "RSG2PF"
-
