@@ -499,7 +499,7 @@ def mock_rate_scaled_eclp_pool_from_factory(
     derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
 
     args = ECLPFactoryCreateParams(
-        name="GyroECLPTwoPool",  # string
+        name="RateScaledGyroECLPTwoPool",  # string
         symbol="RSGCTP",  # string
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         params=eclp_params.scale(),
