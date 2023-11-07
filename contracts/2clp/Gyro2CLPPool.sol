@@ -147,6 +147,9 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         return Gyro2CLPMath._calculateInvariant(balances, sqrtParams[0], sqrtParams[1]);
     }
 
+    /** When rateProvider{0,1} is provided, this returns the *scaled* price, suitable to compare *rate scaled* balances.
+     *  To compare (decimal- but) not-rate-scaled balances, apply _adjustPrice() to the result.
+     */
     function _getPrice(
         uint256[] memory balances,
         uint256 virtualParam0,
@@ -155,12 +158,14 @@ contract Gyro2CLPPool is ExtensibleWeightedPool2Tokens, CappedLiquidity, Locally
         return Gyro2CLPMath._calcSpotPriceAinB(balances[0], virtualParam0, balances[1], virtualParam1);
     }
 
-    /** @dev Returns the current spot price of token0 quoted in units of token1.
+    /** Returns the current spot price of token0 quoted in units of token1. When rateProvider{0,1} is provided, the
+     * returned price corresponds to tokens *before* rate scaling.
      */
     function getPrice() external view returns (uint256 spotPrice) {
         uint256[] memory balances = _getAllBalances();
         (uint256 invariant, uint256 virtualParam0, uint256 virtualParam1) = _calculateCurrentValues(balances[0], balances[1], true);
-        return _getPrice(balances, virtualParam0, virtualParam1);
+        spotPrice = _getPrice(balances, virtualParam0, virtualParam1);
+        spotPrice = _adjustPrice(spotPrice);
     }
 
     // Swap Hooks
