@@ -4,9 +4,12 @@ import sys
 from functools import lru_cache, wraps
 from typing import Any, Dict, Literal, Union, cast, overload
 
-from brownie import accounts, network
+from brownie import accounts, network, interface, chain
 from brownie.network.account import ClefAccount, LocalAccount
 from tests.support.quantized_decimal import QuantizedDecimal
+
+from scripts.constants import TOKEN_ADDRESSES
+
 
 DEV_CHAIN_IDS = {1337}
 MAINNET_DEPLOYER_ADDRESS = "0x8780779CAF2bC6D402DA5c3EC79A5007bB2edD90"
@@ -147,3 +150,8 @@ def format_to_bytes(message: Union[str, bytes], length: int, output_hex: bool = 
     if output_hex:
         return "0x" + result.hex()
     return result
+
+
+def get_token(name: str):
+    return interface.IERC20(TOKEN_ADDRESSES[chain.id][name])
+
