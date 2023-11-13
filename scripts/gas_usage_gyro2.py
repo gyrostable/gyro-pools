@@ -10,6 +10,7 @@ from brownie import (
     Contract,
 )
 from tests.support.quantized_decimal import QuantizedDecimal as D
+from tests.support.trace_analyzer import ZERO_ADDRESS
 from tests.support.types import CallJoinPoolGyroParams, SwapKind, SwapRequest
 from tests.support.types import TwoPoolFactoryCreateParams
 
@@ -55,6 +56,7 @@ args = TwoPoolFactoryCreateParams(
     symbol="G2PF",
     tokens=[gyro_erc20_funded[i].address for i in range(2)],
     sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
+    rate_providers=[ZERO_ADDRESS, ZERO_ADDRESS],
     swapFeePercentage=D(1) * 10**15,
     owner=admin,
 )

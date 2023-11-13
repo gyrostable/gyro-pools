@@ -14,6 +14,7 @@ interface IGyro2CLPPoolFactory {
         string memory symbol,
         IERC20[] memory tokens,
         uint256[] memory sqrts,
+        address[] memory rateProviders,
         uint256 swapFeePercentage,
         address owner,
         address capManager,

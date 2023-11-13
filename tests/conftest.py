@@ -235,6 +235,70 @@ def mock_pool_from_factory(
         symbol="G2PF",
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
+        rate_providers=[ZERO_ADDRESS, ZERO_ADDRESS],
+        swapFeePercentage=D(1) * 10**15,
+        owner=admin,
+    )
+
+    tx = factory.create(*args)
+    pool_address = tx.events["PoolCreated"]["pool"]
+    pool_from_factory = Contract.from_abi(
+        "Gyro2CLPPool", pool_address, Gyro2CLPPool.abi
+    )
+
+    return pool_from_factory
+
+
+@pytest.fixture
+def rate_scaled_2clp_pool(
+    admin,
+    Gyro2CLPPool,
+    gyro_erc20_funded,
+    mock_vault,
+    mock_gyro_config,
+    deployed_query_processor,
+    mock_rate_provider,
+):
+    """2CLP with rate scaling enabled for asset x"""
+    args = TwoPoolParams(
+        baseParams=TwoPoolBaseParams(
+            vault=mock_vault.address,
+            name="RateScaledGyro2CLPPool",  # string
+            symbol="RSGTP",  # string
+            token0=gyro_erc20_funded[0].address,  # IERC20
+            token1=gyro_erc20_funded[1].address,  # IERC20
+            swapFeePercentage=D(1) * 10**15,
+            pauseWindowDuration=0,  # uint256
+            bufferPeriodDuration=0,  # uint256
+            owner=admin,  # address
+        ),
+        sqrtAlpha=D("0.97") * 10**18,  # uint256
+        sqrtBeta=D("1.02") * 10**18,  # uint256
+        rateProvider0=mock_rate_provider,
+        rateProvider1=ZERO_ADDRESS,
+    )
+    return admin.deploy(Gyro2CLPPool, args, mock_gyro_config.address)
+
+
+@pytest.fixture
+def rate_scaled_2clp_pool_from_factory(
+    admin,
+    Gyro2CLPPoolFactory,
+    Gyro2CLPPool,
+    mock_vault,
+    mock_gyro_config,
+    gyro_erc20_funded,
+    deployed_query_processor,
+    mock_rate_provider,
+):
+    factory = admin.deploy(Gyro2CLPPoolFactory, mock_vault, mock_gyro_config.address)
+
+    args = TwoPoolFactoryCreateParams(
+        name="RateScaledGyro2CLPPoolFromFactory",
+        symbol="RSG2PF",
+        tokens=[gyro_erc20_funded[i].address for i in range(2)],
+        sqrts=[D("0.97") * 10**18, D("1.02") * 10**18],
+        rate_providers=[mock_rate_provider.address, ZERO_ADDRESS],
         swapFeePercentage=D(1) * 10**15,
         owner=admin,
     )
@@ -499,7 +563,7 @@ def mock_rate_scaled_eclp_pool_from_factory(
     derived_eclp_params = eclp_prec_implementation.calc_derived_values(eclp_params)
 
     args = ECLPFactoryCreateParams(
-        name="GyroECLPTwoPool",  # string
+        name="RateScaledGyroECLPTwoPool",  # string
         symbol="RSGCTP",  # string
         tokens=[gyro_erc20_funded[i].address for i in range(2)],
         params=eclp_params.scale(),
