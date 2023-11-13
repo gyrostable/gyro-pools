@@ -17,9 +17,9 @@ def _deploy_factory(contract):
 
 
 def c2lp():
-    from brownie import QueryProcessor  # type: ignore
+    # from brownie import QueryProcessor  # type: ignore
 
-    QueryProcessor.at(BALANCER_ADDRESSES[chain.id]["query_processor"])
+    # QueryProcessor.at(BALANCER_ADDRESSES[chain.id]["query_processor"])
     _deploy_factory(Gyro2CLPPoolFactory)
 
 
