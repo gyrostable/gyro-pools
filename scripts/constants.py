@@ -137,6 +137,7 @@ DECIMALS = {
     "crvUSD": 18,
     "USDP": 18,
     "GUSD": 2,
+    "GYD": 18,
 }
 
 STABLE_COINS = [
