@@ -45,7 +45,9 @@ def get_prices_or_configured(tokens: list[str], token_addresses: list[str], chai
         if v is not None:
             address2confd_price[token2address[token]] = float(v)
 
-    token_addresses_to_fetch = [a for a in token_addresses if a not in address2confd_price]
+    token_addresses_to_fetch = [
+        a for a in token_addresses if a not in address2confd_price
+    ]
     address2fetched_price = get_prices(token_addresses_to_fetch, chain_id)
 
     return address2confd_price | address2fetched_price
@@ -146,7 +148,7 @@ def compute_amounts_3clp(pool_config: dict, chain_id: int):
 
 
 def compute_amounts_eclp(pool_config: dict, chain_id: int):
-    tokens = pool_config['tokens']
+    tokens = pool_config["tokens"]
 
     assert len(tokens) == 2, "ECLP should have 2 tokens"
 
@@ -154,13 +156,11 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     dx, dy = [DECIMALS[t] for t in tokens]
 
     prices = get_prices_or_configured(tokens, token_addresses, chain_id)
-    
+
     px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
     # Rate scaling
     rate_providers_dict = pool_config.get("rate_providers", dict())
-    rate_provider_addresses = [
-        rate_providers_dict.get(k) for k in tokens
-    ]
+    rate_provider_addresses = [rate_providers_dict.get(k) for k in tokens]
     rx, ry = get_rates(rate_provider_addresses)
 
     raw_params = {k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
@@ -206,10 +206,10 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     # Use configured target amounts, if any. AT MOST ONE may be configured.
     # Configured amounts are rate-scaled but not decimal-scaled.
     # SOMEDAY would be nice to configured non-rate-scaled amounts but I don't need it rn.
-    if x_s_tgt := maybe_get_env(f'AMOUNT_RS_{tokens[0]}', QuantizedDecimal):
+    if x_s_tgt := maybe_get_env(f"AMOUNT_RS_{tokens[0]}", QuantizedDecimal):
         x_s *= x_s_tgt / x_s
         y_s *= x_s_tgt / x_s
-    elif y_s_tgt := maybe_get_env(f'AMOUNT_RS_{tokens[1]}', QuantizedDecimal):
+    elif y_s_tgt := maybe_get_env(f"AMOUNT_RS_{tokens[1]}", QuantizedDecimal):
         x_s *= y_s_tgt / y_s
         y_s *= y_s_tgt / y_s
 
