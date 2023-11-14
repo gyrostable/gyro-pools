@@ -59,6 +59,8 @@ def get_coin_ids(addresses: List[str], platform_id: str) -> List[str]:
 
 
 def get_prices(addresses: List[str], chain_id: int = 1) -> Dict[str, float]:
+    if not addresses:
+        return {}
     asset_platform_id = get_asset_platform_id(chain_id)
     mapped_addresses = [LEGACY_MAPPINGS.get(a.lower(), a) for a in addresses]
     coin_ids = get_coin_ids(mapped_addresses, asset_platform_id)

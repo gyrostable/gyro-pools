@@ -26,6 +26,31 @@ from brownie import chain
 # $ brownie run --network=polygon-main $0 main <configfile.json> [outputfile.json]
 
 
+def maybe_get_env(k: str, str2type):
+    """Get and convert enviornment var, if exists."""
+    ret = os.environ.get(k)
+    if ret is None:
+        return None
+    return str2type(ret)
+
+
+def get_prices_or_configured(tokens: list[str], token_addresses: list[str], chain_id):
+    """Like coingecko.get_prices() but allow prices (for untracked tokens) to be overridden using PRICE_XXX environment variables."""
+    # (code looks unclean but whatever)
+    token2address = {t: a for t, a in zip(tokens, token_addresses)}
+
+    address2confd_price = {}
+    for token in tokens:
+        v = os.environ.get(f"PRICE_{token}")
+        if v is not None:
+            address2confd_price[token2address[token]] = float(v)
+
+    token_addresses_to_fetch = [a for a in token_addresses if a not in address2confd_price]
+    address2fetched_price = get_prices(token_addresses_to_fetch, chain_id)
+
+    return address2confd_price | address2fetched_price
+
+
 TWO_CLP_L_INIT = Decimal("1e1")  # can set to w/e, choose so that x,y are small
 THREE_CLP_L_INIT = 100  # can set to w/e, choose so that x,y,z are small
 E_CLP_L_INIT = Decimal("2e-2")  # can set to w/e, choose so that x,y,z are small
@@ -121,16 +146,20 @@ def compute_amounts_3clp(pool_config: dict, chain_id: int):
 
 
 def compute_amounts_eclp(pool_config: dict, chain_id: int):
-    assert len(pool_config["tokens"]) == 2, "ECLP should have 2 tokens"
+    tokens = pool_config['tokens']
 
-    token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in pool_config["tokens"]]
-    dx, dy = [DECIMALS[t] for t in pool_config["tokens"]]
-    prices = get_prices(token_addresses, chain_id)
+    assert len(tokens) == 2, "ECLP should have 2 tokens"
+
+    token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in tokens]
+    dx, dy = [DECIMALS[t] for t in tokens]
+
+    prices = get_prices_or_configured(tokens, token_addresses, chain_id)
+    
     px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
     # Rate scaling
     rate_providers_dict = pool_config.get("rate_providers", dict())
     rate_provider_addresses = [
-        rate_providers_dict.get(k) for k in pool_config["tokens"]
+        rate_providers_dict.get(k) for k in tokens
     ]
     rx, ry = get_rates(rate_provider_addresses)
 
@@ -142,6 +171,7 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
         )
         raw_params["c"], raw_params["s"] = raw_params["s"], raw_params["c"]
         token_addresses = token_addresses[::-1]
+        tokens = tokens[::-1]
         dx, dy = dy, dx
         px, py = py, px
         rx, ry = ry, rx
@@ -172,6 +202,16 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     mparams_100 = params2MathParams(paramsTo100(params))
     eclp = mimpl.ECLP.from_px_r(pr_100, r_100, mparams_100)
     x_s, y_s = convd(eclp.x, QuantizedDecimal), convd(eclp.y, QuantizedDecimal)
+
+    # Use configured target amounts, if any. AT MOST ONE may be configured.
+    # Configured amounts are rate-scaled but not decimal-scaled.
+    # SOMEDAY would be nice to configured non-rate-scaled amounts but I don't need it rn.
+    if x_s_tgt := maybe_get_env(f'AMOUNT_RS_{tokens[0]}', QuantizedDecimal):
+        x_s *= x_s_tgt / x_s
+        y_s *= x_s_tgt / x_s
+    elif y_s_tgt := maybe_get_env(f'AMOUNT_RS_{tokens[1]}', QuantizedDecimal):
+        x_s *= y_s_tgt / y_s
+        y_s *= y_s_tgt / y_s
 
     # Go from rate-scaled to non-rate-scaled amounts
     x = x_s / rx
