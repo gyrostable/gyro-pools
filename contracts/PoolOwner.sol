@@ -5,7 +5,6 @@ pragma solidity 0.7.6;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@balancer-labs/v2-pool-utils/contracts/BasePool.sol";
 
 contract PoolOwner is Ownable {
     using Address for address;
@@ -13,6 +12,8 @@ contract PoolOwner is Ownable {
 
     event FeeManagerAdded(address indexed manager);
     event FeeManagerRemoved(address indexed manager);
+
+    bytes4 internal constant _SET_SWAP_FEE_SELECTOR = bytes4(keccak256("setSwapFeePercentage(uint256)"));
 
     EnumerableSet.AddressSet internal _feeManagers;
 
@@ -37,7 +38,7 @@ contract PoolOwner is Ownable {
 
     function executeAction(address target, bytes calldata data) external returns (bytes memory) {
         bytes4 selector = _getSelector(data);
-        if (selector == BasePool.setSwapFeePercentage.selector) {
+        if (selector == _SET_SWAP_FEE_SELECTOR) {
             require(msg.sender == owner() || _feeManagers.contains(msg.sender), "PoolOwner: not owner or fee manager");
         } else {
             require(msg.sender == owner(), "PoolOwner: not owner");
