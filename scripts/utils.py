@@ -154,4 +154,3 @@ def format_to_bytes(message: Union[str, bytes], length: int, output_hex: bool = 
 
 def get_token(name: str):
     return interface.IERC20(TOKEN_ADDRESSES[chain.id][name])
-
