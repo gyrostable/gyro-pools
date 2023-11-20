@@ -22,9 +22,19 @@ from scripts.pool_utils import compute_bounds_sqrts
 
 from brownie import chain
 
+# DEBUG
+from icecream import ic
+
 # Run via:
 # $ brownie run --network=polygon-main $0 main <configfile.json> [outputfile.json]
 
+# Environment price & amount info:
+# ONLY implemented for ECLP right now.
+# For any token XXX of the pool tokens:
+# PRICE_XXX=<num> - Do not fetch prices for XXX but use the provided price instead. For tokens with unknown/unreliable prices.
+# PRICE_XXX_VIA_RATE=YYY - Fetch prices for YYY instead and use the configured rate provider (if any) to convert.
+# AMOUNT_RS_XXX=<num> - Use <num> amount (decimal-scaled, post-rate-scaling) for token XXX.
+# You can only have one of PRICE_XXX and PRICE_XXX_VIA and AMOUNT_RS_XXX for at most one token.
 
 def maybe_get_env(k: str, str2type):
     """Get and convert enviornment var, if exists."""
@@ -34,23 +44,44 @@ def maybe_get_env(k: str, str2type):
     return str2type(ret)
 
 
-def get_prices_or_configured(tokens: list[str], token_addresses: list[str], chain_id):
-    """Like coingecko.get_prices() but allow prices (for untracked tokens) to be overridden using PRICE_XXX environment variables."""
-    # (code looks unclean but whatever)
-    token2address = {t: a for t, a in zip(tokens, token_addresses)}
+def get_prices_or_configured(tokens: list[str], token_addresses: list[str], rates: list[Decimal], chain_id):
+    """Like coingecko.get_prices() but allow prices (for untracked tokens) to be overridden using PRICE_XXX and PRICE_XXX_VIA_RATE environment variables."""
+    # (code looks overengineered but whatever)
 
-    address2confd_price = {}
-    for token in tokens:
-        v = os.environ.get(f"PRICE_{token}")
-        if v is not None:
-            address2confd_price[token2address[token]] = float(v)
+    cfgs = []
+    addrs_to_fetch = []
+    for token, address, rate in zip(tokens, token_addresses, rates):
+        cfg = {'token': token, 'address': address, 'rate': rate}
+        if (v := os.environ.get(f"PRICE_{token}")) is not None:
+            cfg['type'] = 'const'
+            cfg['value'] = float(v)
+        elif (v := os.environ.get(f"PRICE_{token}_VIA_RATE")) is not None:
+            cfg['type'] = 'via'
+            cfg['via_address'] = TOKEN_ADDRESSES[chain_id][v]
+            addrs_to_fetch.append(cfg['via_address'])
+        else:
+            cfg['type'] = 'fetch'
+            addrs_to_fetch.append(cfg['address'])
+        cfgs.append(cfg)
 
-    token_addresses_to_fetch = [
-        a for a in token_addresses if a not in address2confd_price
-    ]
-    address2fetched_price = get_prices(token_addresses_to_fetch, chain_id)
+    ic(cfgs)
 
-    return address2confd_price | address2fetched_price
+    addrs_to_fetch = list(set(addrs_to_fetch))
+    addr2price = get_prices(addrs_to_fetch, chain_id)
+
+    ic(addr2price)
+
+    ret = {}
+    for cfg in cfgs:
+        if cfg['type'] == 'const':
+            ret[cfg['address']] = cfg['value']
+        elif cfg['type'] == 'via':
+            ret[cfg['address']] = addr2price[cfg['via_address']] * float(cfg['rate'])
+        elif cfg['type'] == 'fetch':
+            ret[cfg['address']] = addr2price[cfg['address']]
+        else:
+            assert False
+    return ret
 
 
 TWO_CLP_L_INIT = Decimal("1e1")  # can set to w/e, choose so that x,y are small
@@ -155,13 +186,14 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in tokens]
     dx, dy = [DECIMALS[t] for t in tokens]
 
-    prices = get_prices_or_configured(tokens, token_addresses, chain_id)
-
-    px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
     # Rate scaling
     rate_providers_dict = pool_config.get("rate_providers", dict())
     rate_provider_addresses = [rate_providers_dict.get(k) for k in tokens]
-    rx, ry = get_rates(rate_provider_addresses)
+    rates = get_rates(rate_provider_addresses)
+    rx, ry = rates
+
+    prices = get_prices_or_configured(tokens, token_addresses, rates, chain_id)
+    px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
 
     raw_params = {k: QuantizedDecimal(v) for k, v in pool_config["params"].items()}
     if token_addresses[0] > token_addresses[1]:
@@ -191,6 +223,8 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
 
     params = ECLPMathParamsQD(**raw_params)
     # derived_params = eclp_prec_implementation.calc_derived_values(params)
+
+    ic(rx, ry, px, py, pr_s)
 
     assert pr_s >= params.alpha
     assert pr_s <= params.beta
