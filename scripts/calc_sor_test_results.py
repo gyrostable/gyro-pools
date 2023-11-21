@@ -245,14 +245,13 @@ def calc_rate_scaled_2clp_test_results():
     # ratex, ratey = D("1"), D("1")
 
     calc_rate_scaled_2clp_test_results_xin_yout(
-        "DAI > USDC",
-        x, y, ratex, ratey, sqrtAlpha, sqrtBeta, f
+        "DAI > USDC", x, y, ratex, ratey, sqrtAlpha, sqrtBeta, f
     )
     print()
     calc_rate_scaled_2clp_test_results_xin_yout(
-        "USDC > DAI",
-        y, x, ratey, ratex, D(1)/sqrtBeta, D(1)/sqrtAlpha, f
+        "USDC > DAI", y, x, ratey, ratex, D(1) / sqrtBeta, D(1) / sqrtAlpha, f
     )
+
 
 def calc_rate_scaled_2clp_test_results_xin_yout(
     label, xu, yu, ratex, ratey, sqrtAlpha, sqrtBeta, f
@@ -275,42 +274,65 @@ def calc_rate_scaled_2clp_test_results_xin_yout(
     yp = y + b
 
     print(f"--- {label} should correctly limit amounts ---")
-    print("    xmax in: ", (l * (1 / sqrtAlpha - 1 / sqrtBeta) - x) / ratex / f * LIMIT_AMOUNT_IN_BUFFER_FACTOR)
+    print(
+        "    xmax in: ",
+        (l * (1 / sqrtAlpha - 1 / sqrtBeta) - x)
+        / ratex
+        / f
+        * LIMIT_AMOUNT_IN_BUFFER_FACTOR,
+    )
     print("    ymax out: ", y / ratey * LIMIT_AMOUNT_IN_BUFFER_FACTOR)
     # print("ymax: ", l * (sqrtBeta - sqrtAlpha))
 
     print(f"--- {label} should correctly calculate normalized liquidity ---")
-    nliq_code = (x + l / sqrtBeta) / 2 / ratey   # Some old code (unused) that confused the two directions
-    nliq_blog = (y + l * sqrtAlpha) / f / ratey  # Old blog post, has nothing to do with what we're doing rn.
-    nliq_math = yp / 2 / ratey                   # Math computing directly
-    nliq_code_uni = 1 / (2 * xp / lsq) / ratey   # Universal formula that uses the price derivative. Current code.
+    nliq_code = (
+        (x + l / sqrtBeta) / 2 / ratey
+    )  # Some old code (unused) that confused the two directions
+    nliq_blog = (
+        (y + l * sqrtAlpha) / f / ratey
+    )  # Old blog post, has nothing to do with what we're doing rn.
+    nliq_math = yp / 2 / ratey  # Math computing directly
+    nliq_code_uni = (
+        1 / (2 * xp / lsq) / ratey
+    )  # Universal formula that uses the price derivative. Current code.
     # print(f"OLD (blog post): {nliq_blog}")
     print("    Code universal (current impl):", nliq_code_uni)
     # print("    Blog:                         ", nliq_blog)
     # print("    Code (old?):                  ", nliq_code)
     print("    Math:                         ", nliq_math)
-    
-    print(f"--- {label} SwapExactIn: should correctly calculate amountOut given amountIn ---")
-    xin = D('13.5')
+
+    print(
+        f"--- {label} SwapExactIn: should correctly calculate amountOut given amountIn ---"
+    )
+    xin = D("13.5")
     yout = g2clp_mimpl.calcOutGivenIn(x, y, xin * ratex * f, a, b) / ratey
     print(f"    y out: {yout}")
 
     print(f"--- {label} SwapExactIn: should correctly calculate newSpotPrice ---")
-    print("    price: ", 1 / (f * lsq / (xp + f * xin * ratex)**2) * ratey / ratex)
+    print("    price: ", 1 / (f * lsq / (xp + f * xin * ratex) ** 2) * ratey / ratex)
 
-    print(f"--- {label} SwapExactIn: should correctly calculate derivative of spot price function at newSpotPrice ---")
+    print(
+        f"--- {label} SwapExactIn: should correctly calculate derivative of spot price function at newSpotPrice ---"
+    )
     print("    derivative: ", 2 * (xp + f * xin * ratex) / lsq * ratey)
 
-    print(f"--- {label} SwapExactOut: should correctly calculate amountOut given amountIn ---")
-    yout = D('45.568')
+    print(
+        f"--- {label} SwapExactOut: should correctly calculate amountOut given amountIn ---"
+    )
+    yout = D("45.568")
     xin = g2clp_mimpl.calcInGivenOut(x, y, yout * ratey, a, b) / f / ratex
     print(f"    x in: {xin}")
 
     print(f"--- {label} SwapExactOut: should correctly calculate newSpotPrice ---")
-    print("    price: ", 1 /f * lsq / ((yp - yout * ratey)**2) * ratey / ratex)
+    print("    price: ", 1 / f * lsq / ((yp - yout * ratey) ** 2) * ratey / ratex)
 
-    print(f"--- {label} SwapExactOut: should correctly calculate derivative of spot price function at newSpotPrice ---")
-    print("    derivative: ", 2 * 1 / f * lsq / (yp - yout * ratey)**3 * ratey**2 / ratex)
+    print(
+        f"--- {label} SwapExactOut: should correctly calculate derivative of spot price function at newSpotPrice ---"
+    )
+    print(
+        "    derivative: ",
+        2 * 1 / f * lsq / (yp - yout * ratey) ** 3 * ratey**2 / ratex,
+    )
 
 
 def calc_rate_scaled_eclp_test_results():
@@ -394,7 +416,10 @@ def calc_rate_scaled_eclp_test_results():
     py = 1 / eclp_derivatives.dyout_dxin(
         # Note: We do *not* account for the fact that fees go into the pool because that only happens *after* the swap.
         # The SOR wants us to consider what happens when we *expand* the swap by a larger amount.
-        [balances[0] + f * amount_in, None], params, fee, r_vec
+        [balances[0] + f * amount_in, None],
+        params,
+        fee,
+        r_vec,
     )
     print(py * ratey / ratex)
 

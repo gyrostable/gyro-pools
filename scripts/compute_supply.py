@@ -36,6 +36,7 @@ from icecream import ic
 # AMOUNT_RS_XXX=<num> - Use <num> amount (decimal-scaled, post-rate-scaling) for token XXX.
 # You can only have one of PRICE_XXX and PRICE_XXX_VIA and AMOUNT_RS_XXX for at most one token.
 
+
 def maybe_get_env(k: str, str2type):
     """Get and convert enviornment var, if exists."""
     ret = os.environ.get(k)
@@ -44,24 +45,26 @@ def maybe_get_env(k: str, str2type):
     return str2type(ret)
 
 
-def get_prices_or_configured(tokens: list[str], token_addresses: list[str], rates: list[Decimal], chain_id):
+def get_prices_or_configured(
+    tokens: list[str], token_addresses: list[str], rates: list[Decimal], chain_id
+):
     """Like coingecko.get_prices() but allow prices (for untracked tokens) to be overridden using PRICE_XXX and PRICE_XXX_VIA_RATE environment variables."""
     # (code looks overengineered but whatever)
 
     cfgs = []
     addrs_to_fetch = []
     for token, address, rate in zip(tokens, token_addresses, rates):
-        cfg = {'token': token, 'address': address, 'rate': rate}
+        cfg = {"token": token, "address": address, "rate": rate}
         if (v := os.environ.get(f"PRICE_{token}")) is not None:
-            cfg['type'] = 'const'
-            cfg['value'] = float(v)
+            cfg["type"] = "const"
+            cfg["value"] = float(v)
         elif (v := os.environ.get(f"PRICE_{token}_VIA_RATE")) is not None:
-            cfg['type'] = 'via'
-            cfg['via_address'] = TOKEN_ADDRESSES[chain_id][v]
-            addrs_to_fetch.append(cfg['via_address'])
+            cfg["type"] = "via"
+            cfg["via_address"] = TOKEN_ADDRESSES[chain_id][v]
+            addrs_to_fetch.append(cfg["via_address"])
         else:
-            cfg['type'] = 'fetch'
-            addrs_to_fetch.append(cfg['address'])
+            cfg["type"] = "fetch"
+            addrs_to_fetch.append(cfg["address"])
         cfgs.append(cfg)
 
     ic(cfgs)
@@ -73,12 +76,12 @@ def get_prices_or_configured(tokens: list[str], token_addresses: list[str], rate
 
     ret = {}
     for cfg in cfgs:
-        if cfg['type'] == 'const':
-            ret[cfg['address']] = cfg['value']
-        elif cfg['type'] == 'via':
-            ret[cfg['address']] = addr2price[cfg['via_address']] * float(cfg['rate'])
-        elif cfg['type'] == 'fetch':
-            ret[cfg['address']] = addr2price[cfg['address']]
+        if cfg["type"] == "const":
+            ret[cfg["address"]] = cfg["value"]
+        elif cfg["type"] == "via":
+            ret[cfg["address"]] = addr2price[cfg["via_address"]] * float(cfg["rate"])
+        elif cfg["type"] == "fetch":
+            ret[cfg["address"]] = addr2price[cfg["address"]]
         else:
             assert False
     return ret
