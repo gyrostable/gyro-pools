@@ -4,7 +4,11 @@
       "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
     ],
     "FreezableTransparentUpgradeableProxy": [
+      "0x99fafeBb9471963D7f480C1F30257439B59Eb1Af",
       "0x412a5B2e7a678471985542757A6855847D4931D5"
+    ],
+    "Gyro2CLPPoolFactory": [
+      "0x579653927BF509B361F6e3813f5D4B95331d98c9"
     ],
     "GyroECLPMath": [
       "0xF89A1713998593A441cdA571780F0900Dbef20f9"
