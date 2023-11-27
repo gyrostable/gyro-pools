@@ -1,4 +1,3 @@
-
 # Like compute_supply but initialize with fixed values. This essentially only resolves contract addreses and handles decimals.
 
 # Usage: brownie run <this> eclp "{'DAI': 10, 'GYD': 10}" --network=mainnet
@@ -13,6 +12,7 @@ import json
 
 from brownie import *
 
+
 def eclp(dict_s: str, outfile: str):
     """dict_s: Dict of {asset: amount} in *unscaled* values. Python-compatible syntax, will be eval'd."""
     cfg = eval(dict_s)
@@ -25,7 +25,7 @@ def eclp(dict_s: str, outfile: str):
         amount = int(scale(D(uamount), decimals))
         ret[token_address] = amount
 
-    ret = {'amounts': ret}
+    ret = {"amounts": ret}
 
     with open(outfile, "w") as f:
         json.dump(ret, f, indent=2)
