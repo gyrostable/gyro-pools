@@ -5,7 +5,7 @@ from typing import List
 
 
 from brownie import Gyro2CLPPool, Gyro3CLPPool, GyroECLPPool, interface, GyroECLPPoolFactory, ZERO_ADDRESS  # type: ignore
-from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory  # type: ignore
+from brownie import Gyro2CLPPoolFactory, Gyro3CLPPoolFactory, PoolOwner  # type: ignore
 from brownie import web3
 from brownie.network import chain
 from tests.geclp import eclp_prec_implementation
@@ -96,7 +96,7 @@ def c2lp():
         sqrts=[round(scale(v).raw) for v in sqrts],
         rate_providers=rate_providers,
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
-        owner=POOL_OWNER[chain.id],
+        owner=PoolOwner[0],
         cap_manager=POOL_OWNER[chain.id],
         cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
@@ -153,7 +153,7 @@ def c3lp():
         tokens=tokens,
         root3Alpha=scale(pool_config["root_3_alpha"]),
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
-        owner=POOL_OWNER[chain.id],
+        owner=PoolOwner[0],
         cap_manager=POOL_OWNER[chain.id],
         cap_params=CapParams(
             cap_enabled=pool_config["cap"]["enabled"],
@@ -211,7 +211,7 @@ def eclp():
         derived_params=derived_params.scale(),
         rate_providers=rate_providers,
         swap_fee_percentage=scale(pool_config["swap_fee_percentage"]),
-        owner=POOL_OWNER[chain.id],
+        owner=PoolOwner[0],
         cap_manager=POOL_OWNER[chain.id],
         cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
