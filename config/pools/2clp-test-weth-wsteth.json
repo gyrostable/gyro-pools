@@ -1,0 +1,15 @@
+{
+  "pool_type": "2clp",
+  "name": "Gyroscope 2CLP WSTETH/WETH",
+  "symbol": "2CLP-WSTETH-WETH",
+  "tokens": ["wstETH", "WETH"],
+  "bounds": ["0.9967", "1.0025"],
+  "swap_fee_percentage": "0.0001",
+  "rate_providers": {
+    "wstETH": "0x72D07D7DcA67b8A406aD1Ec34ce969c90bFEE768"
+  },
+  "pause": {
+    "window_duration_days": 3650,
+    "buffer_duration_days": 30
+  }
+}
