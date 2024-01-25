@@ -95,43 +95,92 @@ E_CLP_L_INIT = Decimal("2e-2")  # can set to w/e, choose so that x,y,z are small
 
 
 def compute_amounts_2clp(pool_config: dict, chain_id: int):
-    assert len(pool_config["tokens"]) == 2, "2CLP should have 2 tokens"
+    tokens = pool_config["tokens"]
+    assert len(tokens) == 2, "2CLP should have 2 tokens"
 
     token_addresses = [TOKEN_ADDRESSES[chain_id][t] for t in pool_config["tokens"]]
     dx, dy = [DECIMALS[t] for t in pool_config["tokens"]]
-    sqrt_alpha, sqrt_beta = compute_bounds_sqrts(token_addresses, pool_config["bounds"])
 
-    prices = get_prices(token_addresses, chain_id)
+    # Rate scaling
+    rate_providers_dict = pool_config.get("rate_providers", dict())
+    rate_provider_addresses = [rate_providers_dict.get(k) for k in tokens]
+    rates = get_rates(rate_provider_addresses)
+    rx, ry = rates
+
+    prices = get_prices_or_configured(tokens, token_addresses, rates, chain_id)
     px, py = [Decimal.from_float(prices[a]) for a in token_addresses]
+
+    # sqrt_alpha, sqrt_beta are already flipped if needed!
+    sqrt_alpha, sqrt_beta = compute_bounds_sqrts(token_addresses, pool_config["bounds"])
     if token_addresses[0].lower() > token_addresses[1].lower():
         token_addresses = token_addresses[::-1]
+        tokens = tokens[::-1]
         dx, dy = dy, dx
         px, py = py, px
+        rx, ry = ry, rx
 
     assert token_addresses[0] <= token_addresses[1]
 
-    pr = px / py
+    # rate-scaled relative price
+    pr_s = ry / rx * px / py
 
-    assert pr >= sqrt_alpha**2
-    assert pr <= sqrt_beta**2
+    if os.environ.get("DEBUG"):
+        print("tokens", tokens)
+        print("token_addresses", token_addresses)
+        print("raw_params", end=" ")
+        pprint.pprint(sqrt_alpha, sqrt_beta)
+        print("rx", rx)
+        print("ry", ry)
+        print("px", px)
+        print("py", py)
+        print("pr_s", pr_s)
+
+    ic(rx, ry, px, py, pr_s)
+
+    assert pr_s >= sqrt_alpha**2
+    assert pr_s <= sqrt_beta**2
 
     L_init = TWO_CLP_L_INIT
 
-    x = L_init * (1 / pr.sqrt() - 1 / sqrt_beta)
-    y = L_init * (pr.sqrt() - sqrt_alpha)
-    S_init = x * pr + y
+    x_s = L_init * (1 / pr_s.sqrt() - 1 / sqrt_beta)
+    y_s = L_init * (pr_s.sqrt() - sqrt_alpha)
+
+    # Use configured target amounts, if any. AT MOST ONE may be configured.
+    # Configured amounts are rate-scaled but not decimal-scaled.
+    # SOMEDAY would be nice to configured non-rate-scaled amounts but I don't need it rn.
+    if x_s_tgt := maybe_get_env(f"AMOUNT_RS_{tokens[0]}", QuantizedDecimal):
+        x_s *= x_s_tgt / x_s
+        y_s *= x_s_tgt / x_s
+    elif y_s_tgt := maybe_get_env(f"AMOUNT_RS_{tokens[1]}", QuantizedDecimal):
+        x_s *= y_s_tgt / y_s
+        y_s *= y_s_tgt / y_s
+
+    # Go from rate-scaled to non-rate-scaled amounts
+    x = x_s / rx
+    y = y_s / ry
+
+    S_init = x_s * pr_s + y_s
     p_bpt = (x * px + y * py) / S_init
     # ^ p_bpt = py up to rounding errors by design
 
     return {
         "amounts": {
-            token_addresses[0]: round(x * 10**dx),
-            token_addresses[1]: round(y * 10**dy),
+            token_addresses[0]: int(x * 10**dx),
+            token_addresses[1]: int(y * 10**dy),
         },
+        "unscaled_amounts": {
+            token_addresses[0]: float(x),
+            token_addresses[1]: float(y),
+        },
+        "scaled_relative_price": float(pr_s),
         "sqrts": [str(sqrt_alpha), str(sqrt_beta)],
         "prices": {
             token_addresses[0]: float(px),
             token_addresses[1]: float(py),
+        },
+        "values_usd": {
+            token_addresses[0]: float(px * x),
+            token_addresses[1]: float(py * y),
         },
         "initial_supply": float(S_init),
         "price_bpt": float(p_bpt),
@@ -273,6 +322,10 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
             token_addresses[0]: float(px),
             token_addresses[1]: float(py),
         },
+        "values_usd": {
+            token_addresses[0]: float(px * x),
+            token_addresses[1]: float(py * y),
+        },
         "initial_supply": float(S_init),
         "price_bpt": float(p_bpt),
     }
@@ -292,6 +345,7 @@ def main(config: str, output: str = None):
         else:
             raise ValueError(f"invalid pool type {pool_type}")
     if output:
+        pprint.pprint(result)
         with open(output, "w") as f:
             json.dump(result, f, indent=2)
     else:
