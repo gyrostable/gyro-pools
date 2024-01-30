@@ -1,0 +1,22 @@
+{
+  "pool_type": "eclp",
+  "name": "TEST ECLP p-GYD/TV-aDAIv2",
+  "symbol": "ECLP-pGYD-TVaDAIv2",
+  "tokens": ["PGYD", "TVaDAIv2"],
+  "swap_fee_percentage": "0.0001",
+  "pause": {
+    "window_duration_days": 365,
+    "buffer_duration_days": 30
+  },
+  "rate_providers": {
+     "TVaDAIv2":  "0x15e86Be6084C6A5a8c17732D398dFbC2Ec574CEC"
+  },
+  "params": {
+    "alpha": "0.999000000000000000",
+    "beta": "1.001000000000000000",
+    "l": "3500.000000000000000000",
+    "s": "0.707106781186547524",
+    "c": "0.707106781186547524"
+  }
+}
+

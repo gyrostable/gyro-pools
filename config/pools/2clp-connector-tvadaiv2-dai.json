@@ -1,0 +1,15 @@
+{
+  "pool_type": "2clp",
+  "name": "TEST 2CLP TV-aDAIv2/DAI",
+  "symbol": "2CLP-TVaDAIv2-DAI",
+  "tokens": ["TVaDAIv2", "DAI"],
+  "bounds": ["0.9999", "1.0001"],
+  "swap_fee_percentage": "0.0001",
+  "rate_providers": {
+    "TVaDAIv2": "0x15e86Be6084C6A5a8c17732D398dFbC2Ec574CEC"
+  },
+  "pause": {
+    "window_duration_days": 365,
+    "buffer_duration_days": 30
+  }
+}

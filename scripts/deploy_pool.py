@@ -86,6 +86,7 @@ def c2lp():
     pool_config = _get_config()
     tokens = get_tokens(pool_config, sort=False)
     rate_providers = get_rate_providers(tokens, pool_config)
+    # NB compute_bounds_sqrts() also sorts transforms the sqrts wrt token sort order.
     sqrts = compute_bounds_sqrts(tokens, pool_config["bounds"])
     tokens.sort(key=lambda v: v.lower())
     params = TwoPoolFactoryCreateParams(
@@ -97,11 +98,7 @@ def c2lp():
         swapFeePercentage=scale(pool_config["swap_fee_percentage"]),
         owner=PoolOwner[0],
         cap_manager=POOL_OWNER[chain.id],
-        cap_params=CapParams(
-            cap_enabled=pool_config["cap"]["enabled"],
-            global_cap=int(scale(pool_config["cap"]["global"])),
-            per_address_cap=int(scale(pool_config["cap"]["per_address"])),
-        ),
+        cap_params=get_cap_params(pool_config),
         pause_manager=PAUSE_MANAGER[chain.id],
         pause_params=PauseParams(
             pause_window_duration=int(
