@@ -141,6 +141,8 @@ DECIMALS = {
     "TVaDAIv2": 18,
     "GYD": 18,
     "GHO": 18,
+    "FRAX": 18,
+    "sFRAX": 18,
 }
 
 STABLE_COINS = [
@@ -154,6 +156,7 @@ STABLE_COINS = [
     "LUSD",
     "R",
     "crvUSD",
+    "FRAX",
 ]
 
 TOKEN_ADDRESSES = {
@@ -215,6 +218,8 @@ TOKEN_ADDRESSES = {
         "wstETH": "0x5979D7b546E38E414F7E9822514be443A4800529",
         "USDC": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
         "USDT": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+        "FRAX": "0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F",
+        "sFRAX": "0xe3b3FE7bcA19cA77Ad877A5Bebab186bEcfAD906",
     },
     1101: {
         "WETH": "0x4F9A0e7FD2Bf6067db6994CF12E4495Df938E6e9",
