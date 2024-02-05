@@ -1,0 +1,21 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP GHO/USDC 2",
+  "symbol": "ECLP-GHO-USDC-2",
+  "tokens": [
+    "GHO",
+    "USDC"
+  ],
+  "swap_fee_percentage": "0.0001",
+  "params": {
+    "alpha": "0.993000000000000000",
+    "beta": "1.003000000000000000",
+    "c": "0.707460422921222410",
+    "s": "0.706752962498301188",
+    "l": "750.000000000000000000"
+  },
+  "pause": {
+    "window_duration_days": 3650,
+    "buffer_duration_days": 30
+  }
+}
