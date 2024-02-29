@@ -293,11 +293,13 @@ def compute_amounts_eclp(pool_config: dict, chain_id: int):
     # Configured amounts are rate-scaled but not decimal-scaled.
     # SOMEDAY would be nice to configured non-rate-scaled amounts but I don't need it rn.
     if x_s_tgt := maybe_get_env(f"AMOUNT_RS_{tokens[0]}", QuantizedDecimal):
-        x_s *= x_s_tgt / x_s
-        y_s *= x_s_tgt / x_s
+        scaling_factor = x_s_tgt / x_s
+        x_s *= scaling_factor
+        y_s *= scaling_factor
     elif y_s_tgt := maybe_get_env(f"AMOUNT_RS_{tokens[1]}", QuantizedDecimal):
-        x_s *= y_s_tgt / y_s
-        y_s *= y_s_tgt / y_s
+        scaling_factor = y_s_tgt / y_s
+        x_s *= scaling_factor
+        y_s *= scaling_factor
 
     # Go from rate-scaled to non-rate-scaled amounts
     x = x_s / rx
