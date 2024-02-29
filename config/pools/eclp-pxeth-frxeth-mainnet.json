@@ -1,0 +1,21 @@
+{
+  "pool_type": "eclp",
+  "name": "Gyroscope ECLP pxETH/frxETH",
+  "symbol": "ECLP-pxETH-frxETH",
+  "tokens": [
+    "pxETH",
+    "frxETH"
+  ],
+  "swap_fee_percentage": "0.0004",
+  "params": {
+    "alpha": "0.998000000000000000",
+    "beta": "1.003000000000000000",
+    "c": "0.707000723125513492",
+    "s": "0.707212823342451146",
+    "l": "550.000000000000000000"
+  },
+  "pause": {
+    "window_duration_days": 3650,
+    "buffer_duration_days": 30
+  }
+}
