@@ -35,7 +35,7 @@ const config: HardhatUserConfig = {
     polygon: {
       url: "https://polygon-rpc.com",
     },
-    optimism: {
+    optimisticEthereum: {
       url: "https://mainnet.optimism.io",
     },
     arbitrumOne: {
@@ -55,6 +55,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       mainnet: process.env.ETHERSCAN_TOKEN || "",
       polygon: process.env.POLYGONSCAN_TOKEN || "",
+      optimisticEthereum: process.env.OPTISCAN_TOKEN || "",
       arbitrumOne: process.env.ARBISCAN_TOKEN || "",
       zkevm: process.env.ZKEVM_TOKEN || "",
     },

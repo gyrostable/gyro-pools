@@ -12,7 +12,8 @@ def _deploy_factory(contract):
         contract,
         BALANCER_ADDRESSES[chain.id]["vault"],
         GYROSCOPE_ADDRESSES[chain.id]["gyro_config"],
-        **make_tx_params()
+        **make_tx_params(),
+        publish_source=True
     )
 
 
