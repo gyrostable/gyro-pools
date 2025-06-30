@@ -1,6 +1,6 @@
 # Gyroscope Concentrated Liquidity Pools
 
-Gyroscope concentrated liquidity pools based on Balancer V2. 2-CLPs and 3-CLPs.
+Gyro concentrated liquidity pools based on Balancer V2. Gyro's pools include E-CLPs, 2-CLPs and 3-CLPs.
 
 For docs see: https://docs.gyro.finance/gyroscope-protocol/concentrated-liquidity-pools
 
